@@ -34,3 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## To run the local development
+service-center$ pnpx supabase start
+supabase start is already running.
+Stopped services: [supabase_imgproxy_service-center supabase_edge_runtime_service-center supabase_pooler_service-center]
+supabase local development setup is running.
+
+         API URL: http://127.0.0.1:54321
+     GraphQL URL: http://127.0.0.1:54321/graphql/v1
+  S3 Storage URL: http://127.0.0.1:54321/storage/v1/s3
+    Database URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      Studio URL: http://127.0.0.1:54323
+     Mailpit URL: http://127.0.0.1:54324
+ Publishable key: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      Secret key: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+   S3 Access Key: 625729a08b95bf1b7ff351a663f3a23c
+   S3 Secret Key: 850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907
+       S3 Region: local

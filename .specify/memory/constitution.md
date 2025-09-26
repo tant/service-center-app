@@ -1,50 +1,45 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: None -> 1.0.0
+- Added sections: All initial sections and principles.
+- Removed sections: None
+- Templates requiring updates:
+  - ✅ /home/khanh/service-center/.specify/templates/plan-template.md
+- Follow-up TODOs: None
+-->
+# Service Center Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Modern Web Stack
+This project is built on a modern, robust technology stack. All new development must adhere to this stack to ensure consistency, performance, and maintainability.
+- **Frontend**: Next.js with TypeScript
+- **Styling**: Tailwind CSS v4
+- **Backend & Database**: Supabase (using local development environment for consistency)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Service Center Domain
+The primary purpose of this application is to serve as a comprehensive solution for service centers, managing warranties, repairs, and inventory for electronic and IT products. All features must be aligned with improving this core business process.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Reproducible Development
+Every developer must use the local Supabase development environment to ensure a consistent and isolated workspace. This minimizes environment-related bugs and simplifies onboarding. The setup and migration process must be clearly documented.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Code Quality and Consistency
+Code must be clean, well-documented, and strongly typed using TypeScript. We will enforce a component-based architecture in the frontend and follow best practices for backend service implementation.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Comprehensive Testing
+To ensure reliability, a Test-Driven Development (TDD) approach is encouraged. All critical business logic and components must be covered by unit and integration tests before they are considered complete.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technology Stack
+The following technologies are approved for this project. Any deviation requires a formal amendment to this constitution.
+- **Framework**: Next.js
+- **Language**: TypeScript
+- **Backend**: Supabase
+- **Styling**: Tailwind CSS v4
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow
+The development process will follow a structured workflow involving specifications, planning, and task execution. All work should be traceable to a specification and a plan.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+This constitution is the single source of truth for project standards. Any proposed changes must be reviewed and approved by the project maintainers. All pull requests will be checked for compliance with these principles.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-09-26 | **Last Amended**: 2025-09-26

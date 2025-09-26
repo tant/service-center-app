@@ -47,7 +47,11 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+*   **I. Modern Web Stack**: Does the plan adhere to Next.js, TypeScript, Tailwind CSS v4, and Supabase?
+*   **II. Service Center Domain**: Is the feature aligned with the core business of a service center?
+*   **III. Reproducible Development**: Does the setup rely on the local Supabase environment?
+*   **IV. Code Quality and Consistency**: Does the design promote clean, typed, and component-based code?
+*   **V. Comprehensive Testing**: Does the plan include unit and integration tests for critical logic?
 
 ## Project Structure
 
@@ -216,4 +220,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

@@ -14,7 +14,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
 | `user_id` | UUID | ✅ | ID người tạo bình luận (khóa ngoại tới profiles.user_id) |
 | `comment_text` | Text | ✅ | Nội dung bình luận/ghi chú |
 | `comment_type` | Enum | ✅ | Loại bình luận |
-| `is_internal` | Boolean | ✅ | Bình luận nội bộ hay công khai với khách hàng |
+| `is_internal` | Boolean | ✅ | Bình luận nội bộ hay công khai với khách hàng - Mặc định true |
 
 ### 2. Metadata và audit (Metadata & Audit)
 

@@ -17,7 +17,7 @@ Bảng `profiles` liên kết với Supabase Auth thông qua `user_id` (foreign 
 | `user_id` | UUID | ✅ | ID liên kết với auth.users (unique) |
 | `full_name` | String | ✅ | Tên đầy đủ của user |
 | `avatar_url` | String/URL | ❌ | URL avatar của user |
-| `email` | String | ✅ | Email (sync từ auth.users, không đổi được) |
+| `email` | String | ✅ | Email (sync từ auth.users) |
 
 ### 2. Thông tin phân quyền (Authorization)
 

@@ -3,7 +3,6 @@
 import * as React from "react"
 import {
   IconCamera,
-  IconChartBar,
   IconDashboard,
   IconDatabase,
   IconFileAi,
@@ -17,6 +16,12 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconUser,
+  IconDevices,
+  IconTool,
+  IconClipboardList,
+  IconPhone,
+  IconComponents,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -46,24 +51,19 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
+      title: "Phiếu dịch vụ",
+      url: "/tickets",
+      icon: IconClipboardList,
     },
     {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
+      title: "Khách hàng",
+      url: "/customers",
+      icon: IconUser,
     },
     {
       title: "Projects",
       url: "#",
       icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
     },
   ],
   navClouds: [
@@ -116,36 +116,41 @@ const data = {
   ],
   navSecondary: [
     {
-      title: "Settings",
+      title: "Thiết lập",
       url: "#",
       icon: IconSettings,
     },
     {
-      title: "Get Help",
+      title: "Hướng dẫn",
       url: "#",
       icon: IconHelp,
     },
     {
-      title: "Search",
+      title: "Gọi hỗ trợ",
       url: "#",
-      icon: IconSearch,
+      icon: IconPhone,
     },
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
+      name: "Sản phẩm",
+      url: "products",
+      icon: IconDevices,
     },
     {
-      name: "Reports",
+      name: "Linh kiện",
+      url: "parts",
+      icon: IconComponents,
+    },
+    {
+      name: "Nhân sự",
+      url: "/team",
+      icon: IconUsers,
+    },
+    {
+      name: "Báo cáo",
       url: "#",
       icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
     },
   ],
 }
@@ -162,7 +167,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="#">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">SSTC Service Center</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

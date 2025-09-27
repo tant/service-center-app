@@ -2,6 +2,18 @@
 
 This directory contains the complete database schema for the Service Center application, designed for use with Supabase. The schemas are structured to follow Supabase's declarative schema approach for easy migration management.
 
+## Schema Management Strategy
+
+**This project uses Supabase's Declarative Schema approach (Option 2):**
+
+- **Source of Truth**: Schema files in `docs/data/schemas/` serve as documentation and master templates
+- **Working Directory**: Schema files are copied to `supabase/schemas/` for declarative schema management
+- **Migration Generation**: Supabase CLI automatically generates migrations by comparing declared schemas with database state
+- **Benefits**: Single source of truth, automatic migration generation, better schema organization
+- **Workflow**: Edit schemas in `docs/` → Copy to `supabase/schemas/` → Generate migrations → Apply changes
+
+This hybrid approach gives us the best of both worlds: well-documented schemas in our docs directory and the power of Supabase's declarative schema management.
+
 ## Schema Files Overview
 
 The schema files are numbered to ensure proper creation order due to foreign key dependencies:
@@ -325,7 +337,31 @@ supabase db reset
 supabase migration up
 ```
 
-#### Migration conflicts or errors
+####### Migration conflicts or errors
+```bash
+# Check current migration status
+supabase migration list
+
+# Reset to specific version
+supabase db reset --version <timestamp>
+
+# Or clean start
+./docs/data/schemas/cleanup_schema.sh
+./docs/data/schemas/setup_schema.sh
+```
+
+## Security & Access Control
+
+### Row Level Security (RLS) Implementation
+
+All tables have RLS enabled with role-based policies.
+
+#### Role-Based Access:
+- **Admins**: Full access to all data
+- **Managers**: Access to customers, products, and service tickets  
+- **Technicians**: Access to tickets assigned to them
+- **Reception**: Create/view tickets and customer information
+- **Service tickets**: Accessible only to assigned technicians or management
 ```bash
 # Check current migration status
 supabase migration list
@@ -392,7 +428,7 @@ When moving these schemas to the `supabase/` folder for actual deployment:
 
 1. **Order matters**: Files are processed alphabetically, hence the numbering
 2. **Dependencies**: Foreign key relationships require parent tables to exist first
-3. **RLS policies**: May need adjustment based on your specific auth setup
+3. **RLS policies**: Compatible with Supabase
 4. **Functions**: All functions are in SQL - no external dependencies
 5. **Triggers**: Automatic timestamp and calculation triggers included
 
@@ -400,7 +436,7 @@ When moving these schemas to the `supabase/` folder for actual deployment:
 
 Before production deployment:
 1. Test all RLS policies with different user roles
-2. Verify trigger behavior (cost calculations, auto-comments)
+2. Verify trigger behavior (cost calculations, auto-comments)  
 3. Performance test with realistic data volumes
 4. Validate all constraints and business rules
 5. Test migration rollback scenarios

@@ -5,8 +5,7 @@
 
 set -e
 
-echo "🧹 Service Center Database Schema Cleanup"
-echo "=========================================="
+echo "🧹 Service Center Schema Cleanup"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,162 +14,106 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Check if we're in the project root
+# Silent checks
 if [ ! -f "package.json" ] || [ ! -d "supabase" ]; then
-    echo -e "${RED}❌ Error: Please run this script from the project root directory${NC}"
-    echo "   Make sure you have a 'supabase' folder and 'package.json' file"
+    echo -e "${RED}❌ Error: Run from project root (need package.json and supabase/ folder)${NC}"
     exit 1
 fi
 
-# Check if pnpm is available (we'll use pnpx supabase)
 if ! command -v pnpm &> /dev/null && ! command -v pnpx &> /dev/null; then
-    echo -e "${RED}❌ Error: pnpm/pnpx is not available${NC}"
-    echo "   Please install pnpm first or ensure pnpx is available"
+    echo -e "${RED}❌ Error: pnpm/pnpx not available${NC}"
     exit 1
 fi
-
-echo -e "${BLUE}📋 Current status:${NC}"
 
 # Check what will be cleaned up
-SCHEMA_FILES=0
-MIGRATION_FILES=0
-
-if [ -d "supabase/schemas" ]; then
-    SCHEMA_FILES=$(find supabase/schemas -name "*.sql" 2>/dev/null | wc -l)
-    if [ $SCHEMA_FILES -gt 0 ]; then
-        echo -e "${YELLOW}   📁 Found ${SCHEMA_FILES} schema files in supabase/schemas/${NC}"
-    fi
-fi
-
-if [ -d "supabase/migrations" ]; then
-    MIGRATION_FILES=$(find supabase/migrations -name "*.sql" 2>/dev/null | wc -l)
-    if [ $MIGRATION_FILES -gt 0 ]; then
-        echo -e "${YELLOW}   📁 Found ${MIGRATION_FILES} migration files in supabase/migrations/${NC}"
-    fi
-fi
+SCHEMA_FILES=$(find supabase/schemas -name "*.sql" 2>/dev/null | wc -l || echo "0")
+MIGRATION_FILES=$(find supabase/migrations -name "*.sql" 2>/dev/null | wc -l || echo "0")
 
 # Check if local database is running
 DB_RUNNING=false
 if pnpx supabase status --output pretty 2>/dev/null | grep -q "API URL"; then
     DB_RUNNING=true
-    echo -e "${BLUE}   🔄 Local Supabase database is running${NC}"
-else
-    echo -e "${YELLOW}   ⏸️  Local Supabase database is not running${NC}"
 fi
 
 if [ $SCHEMA_FILES -eq 0 ] && [ $MIGRATION_FILES -eq 0 ] && [ "$DB_RUNNING" = false ]; then
-    echo -e "${GREEN}✨ Already clean! Nothing to clean up.${NC}"
+    echo -e "${GREEN}✨ Already clean!${NC}"
     exit 0
 fi
 
-echo
-echo -e "${RED}⚠️  WARNING: This will permanently delete:${NC}"
-if [ $SCHEMA_FILES -gt 0 ]; then
-    echo -e "${RED}   - All schema files in supabase/schemas/ (${SCHEMA_FILES} files)${NC}"
-fi
-if [ $MIGRATION_FILES -gt 0 ]; then
-    echo -e "${RED}   - All migration files in supabase/migrations/ (${MIGRATION_FILES} files)${NC}"
-fi
+# Show current database state (before cleanup)
 if [ "$DB_RUNNING" = true ]; then
-    echo -e "${RED}   - Reset local database to initial state${NC}"
+    echo -e "${BLUE}📊 Current database state:${NC}"
+    psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "SELECT 'Tables' as object_type, count(*) as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' UNION ALL SELECT 'Views' as object_type, count(*) as count FROM information_schema.views WHERE table_schema = 'public';" 2>/dev/null || echo -e "${YELLOW}   (Database not accessible)${NC}"
 fi
-echo -e "${RED}   - This action cannot be undone!${NC}"
-echo
 
-read -p "Are you sure you want to continue? Type 'yes' to confirm: " -r
+echo -e "${YELLOW}Will clean: ${SCHEMA_FILES} schemas, ${MIGRATION_FILES} migrations${NC}"
+
+echo -e "${RED}⚠️  WARNING: Will delete all schemas, migrations, and reset database${NC}"
+read -p "Continue? Type 'yes': " -r
 echo
 if [[ ! $REPLY == "yes" ]]; then
-    echo -e "${YELLOW}🚫 Operation cancelled${NC}"
+    echo -e "${YELLOW}🚫 Cancelled${NC}"
     exit 0
 fi
 
-echo -e "${BLUE}🧹 Starting cleanup process...${NC}"
-
-# Step 1: Remove migration files FIRST (before database reset)
+# Remove migration files
 if [ $MIGRATION_FILES -gt 0 ]; then
-    echo -e "${BLUE}🗑️  Removing migration files...${NC}"
-    
-    # List files to be deleted
-    find supabase/migrations -name "*.sql" -exec basename {} \; | while read file; do
-        echo -e "${YELLOW}   - Removing: $file${NC}"
-    done
-    
-    # Remove migration files
+    echo -e "${BLUE}🗑️  Removing ${MIGRATION_FILES} migration files...${NC}"
     find supabase/migrations -name "*.sql" -delete
-    echo -e "${GREEN}   ✅ Migration files removed${NC}"
+    echo -e "${GREEN}✅ Migrations removed${NC}"
 fi
 
-# Step 2: Reset database after removing migrations
+# Reset database
 if [ "$DB_RUNNING" = true ]; then
-    echo -e "${BLUE}🔄 Resetting local database...${NC}"
-    echo -e "${YELLOW}   Note: 'Using project host: supabase.co' is normal - you're still working locally${NC}"
-    if pnpx supabase db reset --local --debug; then
-        echo -e "${GREEN}   ✅ Database reset successfully${NC}"
+    echo -e "${BLUE}🔄 Resetting database...${NC}"
+    pnpx supabase stop 2>/dev/null || true
+    if pnpx supabase db reset --local 2>/dev/null; then
+        echo -e "${GREEN}✅ Database reset${NC}"
+        
+        # Start database again to show clean state
+        pnpx supabase start 2>/dev/null || true
+        echo -e "${BLUE}� Clean database state:${NC}"
+        psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "SELECT 'Tables' as object_type, count(*) as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' UNION ALL SELECT 'Views' as object_type, count(*) as count FROM information_schema.views WHERE table_schema = 'public';" 2>/dev/null || echo -e "${YELLOW}   (Database not accessible)${NC}"
     else
-        echo -e "${YELLOW}   ⚠️  Database reset failed or was cancelled${NC}"
-        echo -e "${YELLOW}   Continuing with file cleanup...${NC}"
+        echo -e "${YELLOW}⚠️  Database reset failed${NC}"
     fi
 fi
 
-# Step 3: Remove schema files
+# Remove schema files
 if [ $SCHEMA_FILES -gt 0 ]; then
-    echo -e "${BLUE}🗑️  Removing schema files...${NC}"
-    
-    # List files to be deleted
-    find supabase/schemas -name "*.sql" -exec basename {} \; | while read file; do
-        echo -e "${YELLOW}   - Removing: $file${NC}"
-    done
-    
-    # Remove schema files
+    echo -e "${BLUE}🗑️  Removing ${SCHEMA_FILES} schema files...${NC}"
     find supabase/schemas -name "*.sql" -delete
-    
-    # Remove README if it exists
-    if [ -f "supabase/schemas/README.md" ]; then
-        rm supabase/schemas/README.md
-        echo -e "${YELLOW}   - Removing: README.md${NC}"
-    fi
-    
-    echo -e "${GREEN}   ✅ Schema files removed${NC}"
+    [ -f "supabase/schemas/README.md" ] && rm supabase/schemas/README.md
+    echo -e "${GREEN}✅ Schemas removed${NC}"
 fi
 
-# Step 4: Clean up empty directories
+# Clean up temp files and directories
+echo -e "${BLUE}🗑️  Cleaning temp files...${NC}"
+[ -d "supabase/.temp" ] && rm -rf supabase/.temp
+[ -d "supabase/.branches" ] && find supabase/.branches -type f -delete 2>/dev/null || true
+
+# Ensure clean schemas directory
 if [ -d "supabase/schemas" ] && [ -z "$(ls -A supabase/schemas)" ]; then
-    echo -e "${BLUE}🗑️  Removing empty schemas directory...${NC}"
     rmdir supabase/schemas
-    echo -e "${GREEN}   ✅ Empty schemas directory removed${NC}"
 fi
+mkdir -p supabase/schemas
+echo -e "${GREEN}✅ Cleanup completed${NC}"
 
-# Step 5: Verify cleanup
-echo -e "${BLUE}🔍 Verifying cleanup...${NC}"
-
+# Verify cleanup
 REMAINING_SCHEMAS=$(find supabase/schemas -name "*.sql" 2>/dev/null | wc -l || echo "0")
 REMAINING_MIGRATIONS=$(find supabase/migrations -name "*.sql" 2>/dev/null | wc -l || echo "0")
+SOURCE_SCHEMAS=$(find docs/data/schemas -name "*.sql" 2>/dev/null | wc -l || echo "0")
 
 if [ $REMAINING_SCHEMAS -eq 0 ] && [ $REMAINING_MIGRATIONS -eq 0 ]; then
-    echo -e "${GREEN}   ✅ Cleanup verified - all files removed${NC}"
+    echo -e "${GREEN}✅ Environment clean - ${SOURCE_SCHEMAS} source schemas preserved${NC}"
 else
-    echo -e "${YELLOW}   ⚠️  Some files may still remain:${NC}"
-    [ $REMAINING_SCHEMAS -gt 0 ] && echo -e "${YELLOW}     - ${REMAINING_SCHEMAS} schema files${NC}"
-    [ $REMAINING_MIGRATIONS -gt 0 ] && echo -e "${YELLOW}     - ${REMAINING_MIGRATIONS} migration files${NC}"
+    echo -e "${YELLOW}⚠️  ${REMAINING_SCHEMAS} schemas, ${REMAINING_MIGRATIONS} migrations remain${NC}"
 fi
 
 echo
 echo -e "${GREEN}🎉 Cleanup completed!${NC}"
-echo
-echo -e "${BLUE}📋 What was cleaned:${NC}"
-[ $SCHEMA_FILES -gt 0 ] && echo -e "${BLUE}   ✅ Removed ${SCHEMA_FILES} schema files${NC}"
-[ $MIGRATION_FILES -gt 0 ] && echo -e "${BLUE}   ✅ Removed ${MIGRATION_FILES} migration files${NC}"
-[ "$DB_RUNNING" = true ] && echo -e "${BLUE}   ✅ Reset local database${NC}"
-
-echo
-echo -e "${BLUE}📋 Next steps:${NC}"
-echo -e "${BLUE}   1. Your environment is now clean and ready${NC}"
-echo -e "${BLUE}   2. Run setup script to reinstall schemas:${NC}"
-echo -e "${BLUE}      ./docs/data/schemas/setup_schema.sh${NC}"
-echo -e "${BLUE}   3. Or start Supabase fresh:${NC}"
-echo -e "${BLUE}      pnpx supabase start${NC}"
-
-echo
-echo -e "${GREEN}✨ Ready to start fresh!${NC}"
+echo -e "${BLUE}Next steps:${NC}"
+echo -e "${BLUE}  • Setup: ./docs/data/schemas/setup_schema.sh${NC}"
+echo -e "${BLUE}  • Start: pnpx supabase start${NC}"
 
 exit 0

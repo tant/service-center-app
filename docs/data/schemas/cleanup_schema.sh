@@ -22,10 +22,10 @@ if [ ! -f "package.json" ] || [ ! -d "supabase" ]; then
     exit 1
 fi
 
-# Check if Supabase CLI is installed
-if ! command -v supabase &> /dev/null; then
-    echo -e "${RED}❌ Error: Supabase CLI is not installed${NC}"
-    echo "   Please install it first: https://supabase.com/docs/reference/cli/installing-the-cli"
+# Check if pnpm is available (we'll use pnpx supabase)
+if ! command -v pnpm &> /dev/null && ! command -v pnpx &> /dev/null; then
+    echo -e "${RED}❌ Error: pnpm/pnpx is not available${NC}"
+    echo "   Please install pnpm first or ensure pnpx is available"
     exit 1
 fi
 
@@ -51,7 +51,7 @@ fi
 
 # Check if local database is running
 DB_RUNNING=false
-if supabase status --output pretty 2>/dev/null | grep -q "API URL"; then
+if pnpx supabase status --output pretty 2>/dev/null | grep -q "API URL"; then
     DB_RUNNING=true
     echo -e "${BLUE}   🔄 Local Supabase database is running${NC}"
 else
@@ -86,18 +86,7 @@ fi
 
 echo -e "${BLUE}🧹 Starting cleanup process...${NC}"
 
-# Step 1: Reset database if running
-if [ "$DB_RUNNING" = true ]; then
-    echo -e "${BLUE}🔄 Resetting local database...${NC}"
-    if supabase db reset --debug; then
-        echo -e "${GREEN}   ✅ Database reset successfully${NC}"
-    else
-        echo -e "${YELLOW}   ⚠️  Database reset failed or was cancelled${NC}"
-        echo -e "${YELLOW}   Continuing with file cleanup...${NC}"
-    fi
-fi
-
-# Step 2: Remove migration files
+# Step 1: Remove migration files FIRST (before database reset)
 if [ $MIGRATION_FILES -gt 0 ]; then
     echo -e "${BLUE}🗑️  Removing migration files...${NC}"
     
@@ -109,6 +98,18 @@ if [ $MIGRATION_FILES -gt 0 ]; then
     # Remove migration files
     find supabase/migrations -name "*.sql" -delete
     echo -e "${GREEN}   ✅ Migration files removed${NC}"
+fi
+
+# Step 2: Reset database after removing migrations
+if [ "$DB_RUNNING" = true ]; then
+    echo -e "${BLUE}🔄 Resetting local database...${NC}"
+    echo -e "${YELLOW}   Note: 'Using project host: supabase.co' is normal - you're still working locally${NC}"
+    if pnpx supabase db reset --local --debug; then
+        echo -e "${GREEN}   ✅ Database reset successfully${NC}"
+    else
+        echo -e "${YELLOW}   ⚠️  Database reset failed or was cancelled${NC}"
+        echo -e "${YELLOW}   Continuing with file cleanup...${NC}"
+    fi
 fi
 
 # Step 3: Remove schema files
@@ -167,7 +168,7 @@ echo -e "${BLUE}   1. Your environment is now clean and ready${NC}"
 echo -e "${BLUE}   2. Run setup script to reinstall schemas:${NC}"
 echo -e "${BLUE}      ./docs/data/schemas/setup_schema.sh${NC}"
 echo -e "${BLUE}   3. Or start Supabase fresh:${NC}"
-echo -e "${BLUE}      supabase start${NC}"
+echo -e "${BLUE}      pnpx supabase start${NC}"
 
 echo
 echo -e "${GREEN}✨ Ready to start fresh!${NC}"

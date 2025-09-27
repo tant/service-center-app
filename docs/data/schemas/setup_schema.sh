@@ -22,10 +22,10 @@ if [ ! -f "package.json" ] || [ ! -d "supabase" ]; then
     exit 1
 fi
 
-# Check if Supabase CLI is installed
-if ! command -v supabase &> /dev/null; then
-    echo -e "${RED}❌ Error: Supabase CLI is not installed${NC}"
-    echo "   Please install it first: https://supabase.com/docs/reference/cli/installing-the-cli"
+# Check if pnpm is available (we'll use pnpx supabase)
+if ! command -v pnpm &> /dev/null && ! command -v pnpx &> /dev/null; then
+    echo -e "${RED}❌ Error: pnpm/pnpx is not available${NC}"
+    echo "   Please install pnpm first or ensure pnpx is available"
     exit 1
 fi
 
@@ -89,15 +89,15 @@ if [ ! -f "supabase/config.toml" ]; then
 fi
 
 # Check if local database is running
-if ! supabase status --output pretty | grep -q "API URL"; then
+if ! pnpx supabase status --output pretty | grep -q "API URL"; then
     echo -e "${YELLOW}⚠️  Local Supabase is not running${NC}"
     read -p "   Start local Supabase? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}🚀 Starting Supabase...${NC}"
-        supabase start
+        pnpx supabase start
     else
-        echo -e "${YELLOW}📝 Note: Start Supabase later with 'supabase start'${NC}"
+        echo -e "${YELLOW}📝 Note: Start Supabase later with 'pnpx supabase start'${NC}"
     fi
 fi
 
@@ -110,7 +110,7 @@ if [ $EXISTING_SCHEMAS -gt 0 ]; then
 fi
 
 # Generate migration
-if supabase db diff -f "$MIGRATION_NAME" --schema-only; then
+if pnpx supabase db diff --local -f "$MIGRATION_NAME"; then
     echo -e "${GREEN}   ✅ Migration generated successfully${NC}"
     
     # Show the generated migration
@@ -122,14 +122,15 @@ if supabase db diff -f "$MIGRATION_NAME" --schema-only; then
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             echo -e "${BLUE}🔄 Applying migration...${NC}"
-            if supabase migration up; then
+            echo -e "${YELLOW}   Note: Any 'Using project host: supabase.co' messages are normal - you're working locally${NC}"
+            if pnpx supabase migration up --local; then
                 echo -e "${GREEN}   ✅ Migration applied successfully${NC}"
             else
                 echo -e "${RED}   ❌ Failed to apply migration${NC}"
                 exit 1
             fi
         else
-            echo -e "${YELLOW}   📝 Apply migration later with 'supabase migration up'${NC}"
+            echo -e "${YELLOW}   📝 Apply migration later with 'pnpx supabase migration up'${NC}"
         fi
     fi
 else
@@ -143,12 +144,12 @@ echo -e "${BLUE}📋 Next steps:${NC}"
 echo -e "${BLUE}   1. Review the generated migration file${NC}"
 echo -e "${BLUE}   2. Test the schema in local environment${NC}"
 echo -e "${BLUE}   3. When ready, deploy to production:${NC}"
-echo -e "${BLUE}      supabase db push${NC}"
+echo -e "${BLUE}      pnpx supabase db push${NC}"
 echo
 echo -e "${BLUE}📚 Useful commands:${NC}"
-echo -e "${BLUE}   - View local dashboard: supabase start${NC}"
-echo -e "${BLUE}   - Reset database: supabase db reset${NC}"
-echo -e "${BLUE}   - Generate new migration: supabase db diff -f migration_name${NC}"
-echo -e "${BLUE}   - Deploy to production: supabase db push${NC}"
+echo -e "${BLUE}   - View local dashboard: pnpx supabase start${NC}"
+echo -e "${BLUE}   - Reset database: pnpx supabase db reset${NC}"
+echo -e "${BLUE}   - Generate new migration: pnpx supabase db diff --local -f migration_name${NC}"
+echo -e "${BLUE}   - Deploy to production: pnpx supabase db push${NC}"
 
 exit 0

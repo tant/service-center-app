@@ -36,7 +36,6 @@ fi
 # Copy schema files (simple copy of all .sql files)
 echo -e "${BLUE}📁 Copying schema files...${NC}"
 cp docs/data/schemas/*.sql supabase/schemas/ 2>/dev/null || true
-[ -f "docs/data/schemas/README.md" ] && cp docs/data/schemas/README.md supabase/schemas/
 echo -e "${GREEN}✅ Schema files copied${NC}"
 
 # Generate migration (simple, may take some time)
@@ -55,6 +54,18 @@ else
     echo -e "${RED}❌ Migration application failed${NC}"
     exit 1
 fi
+
+# Cleanup: remove SQL files from migrations and schemas (no backup)
+echo -e "${BLUE}🧹 Removing SQL files from supabase/migrations and supabase/schemas (no backup)...${NC}"
+# Remove any .sql files directly
+rm -f supabase/migrations/*.sql 2>/dev/null || true
+rm -f supabase/schemas/*.sql 2>/dev/null || true
+
+echo -e "${GREEN}✅ Cleanup completed. SQL files removed from supabase/migrations and supabase/schemas${NC}"
+
+echo -e "${GREEN}🎉 Schema setup completed!${NC}"
+echo
+exit 0
 
 echo -e "${GREEN}🎉 Schema setup completed!${NC}"
 echo

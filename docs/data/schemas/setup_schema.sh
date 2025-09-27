@@ -1,36 +1,7 @@
 #!/bin/bash
 
 # Service Center Database Schema Setup Script
-# # Check if database is running (suppre    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}🔄 Applying migration...${NC}"
-        if pnpx supabase migration up --local 2>/dev/null; then
-            echo -e "${GREEN}✅ Migration applied${NC}"
-            
-            # Show updated database state (after migration)
-            echo -e "${BLUE}📊 Updated database state:${NC}"
-            psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "SELECT 'Tables' as object_type, count(*) as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' UNION ALL SELECT 'Views' as object_type, count(*) as count FROM information_schema.views WHERE table_schema = 'public';" 2>/dev/null || echo -e "${YELLOW}   (Database not accessible)${NC}"
-        else
-            echo -e "${RED}❌ Migration failed${NC}"
-            exit 1
-        fi
-    else
-        echo -e "${YELLOW}💡 Apply later: pnpx supabase migration up${NC}"
-    fiutput)
-if ! pnpx supabase status --output pretty 2>/dev/null | grep -q "API URL"; then
-    echo -e "${YELLOW}⚠️  Local Supabase not running${NC}"
-    read -p "Start it now? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}🚀 Starting Supabase...${NC}"
-        pnpx supabase start
-    else
-        echo -e "${YELLOW}💡 Start later: pnpx supabase start${NC}"
-    fi
-fi
-
-# Check current database state (before migration)
-echo -e "${BLUE}📊 Current database state:${NC}"
-psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "SELECT 'Tables' as object_type, count(*) as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' UNION ALL SELECT 'Views' as object_type, count(*) as count FROM information_schema.views WHERE table_schema = 'public';" 2>/dev/null || echo -e "${YELLOW}   (Database not accessible)${NC}"helps copy schema files to Supabase folder and generate migrations
+# This script helps copy schema files to Supabase folder and generate migrations
 
 set -e
 
@@ -62,75 +33,29 @@ if [ ! -d "docs/data/schemas" ]; then
     exit 1
 fi
 
-SCHEMA_COUNT=$(find docs/data/schemas -name "*.sql" | wc -l)
-EXISTING_SCHEMAS=$(find supabase/schemas -name "*.sql" 2>/dev/null | wc -l)
-
-if [ $EXISTING_SCHEMAS -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  Will overwrite ${EXISTING_SCHEMAS} existing schema files${NC}"
-    read -p "Continue? (y/n): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}🚫 Cancelled${NC}"
-        exit 0
-    fi
-fi
-
-# Copy schema files
-echo -e "${BLUE}📁 Copying ${SCHEMA_COUNT} schema files...${NC}"
+# Copy schema files (simple copy of all .sql files)
+echo -e "${BLUE}📁 Copying schema files...${NC}"
 cp docs/data/schemas/*.sql supabase/schemas/ 2>/dev/null || true
 [ -f "docs/data/schemas/README.md" ] && cp docs/data/schemas/README.md supabase/schemas/
-
 echo -e "${GREEN}✅ Schema files copied${NC}"
 
-# Check Supabase setup
-if [ ! -f "supabase/config.toml" ]; then
-    echo -e "${RED}❌ Error: Run 'supabase init' first${NC}"
-    exit 1
-fi
-
-# Check if database is running (suppress status output)
-if ! pnpx supabase status --output pretty 2>/dev/null | grep -q "API URL"; then
-    echo -e "${YELLOW}⚠️  Local Supabase not running${NC}"
-    read -p "Start it now? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}🚀 Starting Supabase...${NC}"
-        pnpx supabase start
-    else
-        echo -e "${YELLOW}� Start later: pnpx supabase start${NC}"
-    fi
-fi
-
-# Generate migration
-MIGRATION_NAME=$([ $EXISTING_SCHEMAS -gt 0 ] && echo "update_service_center_schema" || echo "initial_service_center_schema")
-
-echo -e "${BLUE}📊 Generating migration...${NC}"
-if pnpx supabase db diff --local -f "$MIGRATION_NAME" 2>/dev/null; then
-    LATEST_MIGRATION=$(ls -t supabase/migrations/*.sql 2>/dev/null | head -n1)
-    echo -e "${GREEN}✅ Generated: $(basename "$LATEST_MIGRATION")${NC}"
-    
-    read -p "Apply migration now? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${BLUE}🔄 Applying migration...${NC}"
-        if pnpx supabase migration up --local 2>/dev/null; then
-            echo -e "${GREEN}✅ Migration applied${NC}"
-        else
-            echo -e "${RED}❌ Migration failed${NC}"
-            exit 1
-        fi
-    else
-        echo -e "${YELLOW}� Apply later: pnpx supabase migration up${NC}"
-    fi
+# Generate migration (simple, may take some time)
+echo -e "${BLUE}📊 Generating migration (this may take a little while)...${NC}"
+if pnpx supabase db diff -f init_schema --debug; then
+    echo -e "${GREEN}✅ Migration generated (init_schema)${NC}"
 else
-    echo -e "${YELLOW}⚠️  No changes detected (schemas may already be applied)${NC}"
+    echo -e "${YELLOW}⚠️  Migration generation failed or no changes detected; continuing to attempt to apply migrations${NC}"
+fi
+
+# Apply migration
+echo -e "${BLUE}🔄 Applying migration...${NC}"
+if pnpx supabase migration up; then
+    echo -e "${GREEN}✅ Migration applied${NC}"
+else
+    echo -e "${RED}❌ Migration application failed${NC}"
+    exit 1
 fi
 
 echo -e "${GREEN}🎉 Schema setup completed!${NC}"
 echo
-echo -e "${BLUE}Next steps:${NC}"
-echo -e "${BLUE}  • Test: pnpx supabase start (then visit dashboard)${NC}"
-echo -e "${BLUE}  • Deploy: pnpx supabase db push${NC}"
-echo -e "${BLUE}  • Reset: pnpx supabase db reset${NC}"
-
 exit 0

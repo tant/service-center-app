@@ -115,8 +115,12 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
    - `parts_total` được tính tự động từ bảng `service_ticket_parts`
    - `total_cost` được tự động tính từ các trường chi phí
    - Trigger đồng bộ `parts_total` từ bảng `service_ticket_parts`
+   - **Status Change Tracking**: Khi thay đổi `status`, hệ thống tự động tạo một record trong bảng `service_ticket_comments` với `comment_type = 'status_change'` để ghi nhận thay đổi
 5. **Default Values**:
    - `priority_level`: "normal"
    - `diagnosis_fee`: 0
    - `discount_amount`: 0
-6. **Status Management**: Quản lý trạng thái theo quy trình nghiệp vụ từ tiếp nhận đến hoàn thành
+6. **Status Management**: 
+   - Quản lý trạng thái theo quy trình nghiệp vụ từ tiếp nhận đến hoàn thành
+   - **Auto-logging**: Mỗi lần thay đổi status sẽ tự động tạo comment trong `service_ticket_comments` để audit trail hoàn chỉnh
+   - Format comment tự động: "Trạng thái đã thay đổi từ '{old_status}' sang '{new_status}'"

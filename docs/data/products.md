@@ -9,7 +9,7 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của sản phẩm 
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
-| `id` | UUID/String | ✅ | Mã định danh duy nhất của sản phẩm |
+| `id` | UUID | ✅ | ID tự động generate bởi Supabase |
 | `name` | String | ✅ | Tên sản phẩm |
 | `sku` | String | ❌ | Mã SKU (Stock Keeping Unit) |
 | `short_description` | String(255) | ❌ | Mô tả ngắn gọn về sản phẩm |
@@ -34,8 +34,8 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của sản phẩm 
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian tạo |
 | `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `created_by` | UUID/String | ❌ | ID người tạo |
-| `updated_by` | UUID/String | ❌ | ID người cập nhật cuối |
+| `created_by` | UUID | ❌ | ID người tạo |
+| `updated_by` | UUID | ❌ | ID người cập nhật cuối |
 
 ## Ví dụ JSON Schema
 

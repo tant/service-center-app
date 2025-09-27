@@ -9,7 +9,7 @@ Tài liệu này mô tả cấu trúc dữ liệu đơn giản của khách hàn
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Unique | Mô tả |
 |--------|-------------|----------|--------|-------|
-| `id` | UUID/String | ✅ | ✅ | Mã định danh duy nhất của khách hàng |
+| `id` | UUID | ✅ | ✅ | ID tự động generate bởi Supabase |
 | `name` | String | ✅ | ❌ | Tên khách hàng |
 | `phone` | String | ✅ | ✅ | Số điện thoại (unique) |
 | `email` | String | ❌ | ❌ | Email khách hàng |

@@ -9,8 +9,8 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của linh kiện t
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
-| `id` | UUID/String | ✅ | Mã định danh duy nhất của linh kiện |
-| `product_id` | UUID/String | ✅ | ID sản phẩm (khóa ngoại tới products) |
+| `id` | UUID | ✅ | ID tự động generate bởi Supabase |
+| `product_id` | UUID | ✅ | ID sản phẩm (khóa ngoại tới products) |
 | `name` | String | ✅ | Tên linh kiện |
 | `part_number` | String | ❌ | Mã số linh kiện của nhà sản xuất |
 | `sku` | String | ❌ | Mã SKU nội bộ |
@@ -24,8 +24,8 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của linh kiện t
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian tạo |
 | `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `created_by` | UUID/String | ❌ | ID người tạo |
-| `updated_by` | UUID/String | ❌ | ID người cập nhật cuối |
+| `created_by` | UUID | ❌ | ID người tạo |
+| `updated_by` | UUID | ❌ | ID người cập nhật cuối |
 
 ## Ví dụ JSON Schema
 

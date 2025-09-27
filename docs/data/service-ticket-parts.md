@@ -22,7 +22,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_p
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian thêm linh kiện |
 | `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `created_by` | UUID | ❌ | ID người thêm linh kiện |
+| `created_by` | UUID | ❌ | ID người thêm linh kiện (khóa ngoại tới profiles) |
 
 ## Ví dụ JSON Schema
 
@@ -70,7 +70,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_p
 ### Foreign Keys:
 - `ticket_id` → `service_tickets.id`
 - `part_id` → `parts.id`
-- `created_by` → `users.id`
+- `created_by` → `profiles.user_id`
 
 ### Unique Constraints:
 - Composite unique constraint trên (`ticket_id`, `part_id`) để tránh trùng lặp linh kiện trong cùng phiếu dịch vụ

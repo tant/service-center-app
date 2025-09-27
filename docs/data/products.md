@@ -34,8 +34,8 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của sản phẩm 
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian tạo |
 | `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `created_by` | UUID | ❌ | ID người tạo |
-| `updated_by` | UUID | ❌ | ID người cập nhật cuối |
+| `created_by` | UUID | ❌ | ID người tạo (khóa ngoại tới profiles.user_id) |
+| `updated_by` | UUID | ❌ | ID người cập nhật cuối (khóa ngoại tới profiles.user_id) |
 
 ## Ví dụ JSON Schema
 

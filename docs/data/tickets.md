@@ -15,7 +15,6 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
 | `product_id` | UUID | ✅ | ID sản phẩm (khóa ngoại tới products) |
 | `issue_description` | Text | ✅ | Mô tả vấn đề/lỗi của sản phẩm |
 | `status` | Enum | ✅ | Trạng thái phiếu dịch vụ |
-| `technician_id` | UUID | ❌ | Kỹ thuật viên phụ trách |
 | `priority_level` | Enum | ❌ | Mức độ ưu tiên (low/normal/high/urgent) |
 | `warranty_type` | Enum | ❌ | Loại bảo hành (warranty/paid/goodwill) |
 
@@ -50,8 +49,8 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian tạo |
 | `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `created_by` | UUID | ❌ | ID nhân viên tạo phiếu |
-| `assigned_to` | UUID | ❌ | ID kỹ thuật viên được giao |
+| `created_by` | UUID | ❌ | ID nhân viên tạo phiếu (khóa ngoại tới profiles) |
+| `assigned_to` | UUID | ❌ | ID kỹ thuật viên được giao (khóa ngoại tới profiles) |
 
 ## Ví dụ JSON Schema
 
@@ -63,7 +62,6 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
   "product_id": "product-uuid-iphone15promax",
   "issue_description": "Màn hình bị vỡ, không hiển thị được",
   "status": "in_progress",
-  "technician_id": "technician-uuid-001",
   "priority_level": "high",
   "warranty_type": "paid",
   "service_fee": 500000,
@@ -102,7 +100,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
 
 ## Ghi chú quan trọng
 
-1. **Indexing**: Các trường `id`, `ticket_number`, `customer_id`, `product_id`, `status`, `technician_id`, `priority_level` nên được index
+1. **Indexing**: Các trường `id`, `ticket_number`, `customer_id`, `product_id`, `status`, `assigned_to`, `priority_level` nên được index
 2. **Validation**: 
    - `ticket_number` phải unique
    - `total_cost` = `parts_total` + `service_fee` + `diagnosis_fee` - `discount_amount`
@@ -112,7 +110,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
    - Liên kết với bảng customers thông qua `customer_id`
    - Liên kết với bảng products thông qua `product_id`
    - Liên kết với bảng service_ticket_parts thông qua `ticket_id` (1-nhiều)
-   - Liên kết với bảng users/technicians thông qua `technician_id`, `created_by`, `assigned_to`
+   - Liên kết với bảng profiles thông qua `created_by`, `assigned_to`
 4. **Business Logic**: 
    - `parts_total` được tính tự động từ bảng `service_ticket_parts`
    - `total_cost` được tự động tính từ các trường chi phí

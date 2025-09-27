@@ -21,8 +21,6 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
 | `created_at` | Timestamp | ✅ | Thời gian tạo bình luận |
-| `updated_at` | Timestamp | ✅ | Thời gian cập nhật cuối |
-| `updated_by` | UUID | ❌ | ID người cập nhật cuối (khóa ngoại tới profiles.user_id) |
 
 ## Enum Values
 
@@ -47,8 +45,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
   "comment_text": "Đã kiểm tra thiết bị, màn hình bị vỡ hoàn toàn, cần thay thế nguyên bộ",
   "comment_type": "diagnosis",
   "is_internal": true,
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:00Z"
+  "created_at": "2024-01-15T10:30:00Z"
 }
 ```
 
@@ -61,8 +58,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
   "comment_text": "Đã liên hệ khách hàng, xác nhận chi phí sửa chữa 10.050.000 VND. Khách hàng đồng ý tiến hành sửa chữa.",
   "comment_type": "customer_communication",
   "is_internal": false,
-  "created_at": "2024-01-15T11:15:00Z",
-  "updated_at": "2024-01-15T11:15:00Z"
+  "created_at": "2024-01-15T11:15:00Z"
 }
 ```
 
@@ -75,8 +71,7 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
   "comment_text": "Đã hoàn thành thay thế màn hình và kiểm tra chất lượng. Chuyển trạng thái sang 'completed'",
   "comment_type": "status_change",
   "is_internal": true,
-  "created_at": "2024-01-15T16:45:00Z",
-  "updated_at": "2024-01-15T16:45:00Z"
+  "created_at": "2024-01-15T16:45:00Z"
 }
 ```
 
@@ -85,7 +80,6 @@ Tài liệu này mô tả cấu trúc dữ liệu của bảng `service_ticket_c
 ### Foreign Keys:
 - `ticket_id` → `service_tickets.id`
 - `user_id` → `profiles.user_id`
-- `updated_by` → `profiles.user_id`
 
 ### Indexes:
 - Index trên `ticket_id` để query nhanh theo phiếu dịch vụ
@@ -157,8 +151,8 @@ ORDER BY total_comments DESC;
 
 1. **Permissions**: 
    - Tất cả nhân viên có thể tạo bình luận
-   - Chỉ author hoặc manager+ mới có thể chỉnh sửa
-   - Admin có thể xóa bình luận
+   - **Không cho phép chỉnh sửa comment** sau khi tạo (immutable)
+   - Admin có thể xóa bình luận (trong trường hợp đặc biệt)
 
 2. **Validation**:
    - `comment_text` không được rỗng

@@ -10,6 +10,7 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của linh kiện t
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
 | `id` | UUID/String | ✅ | Mã định danh duy nhất của linh kiện |
+| `product_id` | UUID/String | ✅ | ID sản phẩm (khóa ngoại tới products) |
 | `name` | String | ✅ | Tên linh kiện |
 | `part_number` | String | ❌ | Mã số linh kiện của nhà sản xuất |
 | `sku` | String | ❌ | Mã SKU nội bộ |
@@ -31,6 +32,7 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của linh kiện t
 ```json
 {
   "id": "part-uuid-001",
+  "product_id": "product-uuid-iphone15promax",
   "name": "Màn hình iPhone 15 Pro Max",
   "part_number": "A3108-LCD-001",
   "sku": "LCD-IP15PM-001",
@@ -44,9 +46,15 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của linh kiện t
 
 ## Ghi chú quan trọng
 
-1. **Indexing**: Các trường `id`, `part_number`, `sku` nên được index để tìm kiếm nhanh
-2. **Validation**: Validate giá tiền phải > 0
-3. **Relationships**: Có thể liên kết với bảng service_tickets khi sử dụng linh kiện
+1. **Indexing**: Các trường `id`, `product_id`, `part_number`, `sku` nên được index để tìm kiếm nhanh
+2. **Validation**: 
+   - Validate giá tiền phải > 0
+   - Validate `product_id` phải tồn tại trong bảng products
+3. **Relationships**: 
+   - Khóa ngoại `product_id` liên kết với bảng products (1 sản phẩm có nhiều linh kiện)
+   - Có thể liên kết với bảng service_tickets khi sử dụng linh kiện
 4. **Security**: Kiểm soát quyền truy cập thông tin giá cả
 5. **Price History**: Nên lưu lịch sử thay đổi giá để theo dõi
-6. **Search**: Hỗ trợ tìm kiếm theo tên, part_number, sku để dễ dàng chọn linh kiện khi tạo phiếu sửa chữa
+6. **Search**: 
+   - Hỗ trợ tìm kiếm theo tên, part_number, sku
+   - Có thể lọc linh kiện theo sản phẩm thông qua `product_id`

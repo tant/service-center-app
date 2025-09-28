@@ -227,7 +227,7 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <IconUserCircle />
-                Account
+                Tài khoản
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <IconCreditCard />

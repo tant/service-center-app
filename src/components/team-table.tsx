@@ -174,7 +174,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
   },
   {
     accessorKey: "roles",
-    header: "Phân quyền",
+    header: "Nhóm quyền",
     cell: ({ row }) => (
       <div className="flex flex-wrap gap-1">
         {row.original.roles.map((role) => (
@@ -430,7 +430,7 @@ export function TeamTable({
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Search by name or email..."
+            placeholder="Tìm theo tên hoặc email..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
@@ -599,9 +599,6 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
           </Avatar>
           <div className="flex flex-col items-start">
             <div className="font-medium">{member.full_name}</div>
-            <div className="text-muted-foreground text-sm">
-              ID: {member.id.slice(0, 8)}...
-            </div>
           </div>
         </Button>
       </DrawerTrigger>

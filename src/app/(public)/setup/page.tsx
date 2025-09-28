@@ -1,40 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { trpc } from '@/components/providers/trpc-provider';
 
 export default function SetupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const setupMutation = trpc.admin.setup.useMutation({
+    onMutate: (variables) => {
+      console.log('🚀 CLIENT: Starting setup mutation with variables:', variables);
+      return variables;
+    },
+    onSuccess: (data, variables) => {
+      console.log('✅ CLIENT: Setup mutation successful');
+      console.log('📦 CLIENT: Response data:', data);
+      console.log('📝 CLIENT: Original variables:', variables);
+      alert('Setup completed successfully!');
+      router.push('/'); // Redirect to home after successful setup
+    },
+    onError: (error, variables) => {
+      console.error('❌ CLIENT: Setup mutation failed');
+      console.error('🔴 CLIENT: Error details:', error);
+      console.error('📝 CLIENT: Failed variables:', variables);
+      setError(error.message || 'An error occurred during setup');
+    },
+    onSettled: (data, error, variables) => {
+      console.log('🏁 CLIENT: Setup mutation settled');
+      console.log('📊 CLIENT: Final state - data:', data, 'error:', error, 'variables:', variables);
+    },
+  });
+
+  // Debug: expose mutation object shape at runtime once
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      // eslint-disable-next-line no-console
+      console.log('🔎 CLIENT: setupMutation keys ->', Object.keys(setupMutation));
+    } catch (e) {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
-    try {
-      const response = await fetch('/api/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
+    console.log('📝 CLIENT: Form submitted');
+    console.log('🔐 CLIENT: Password length:', password.length);
+    console.log('🎯 CLIENT: Mutation payload:', { password });
+    console.log('🚀 CLIENT: Calling setupMutation.mutate()');
 
-      const data = await response.json();
+    setupMutation.mutate({ password });
 
-      if (response.ok) {
-        alert('Setup completed successfully!');
-        router.push('/'); // Redirect to home after successful setup
-      } else {
-        setError(data.error || 'Invalid setup password');
-      }
-    } catch (err) {
-      setError('An error occurred during setup');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    console.log('⏳ CLIENT: Mutation call initiated, waiting for response...');
   };
 
   return (
@@ -64,12 +86,12 @@ export default function SetupPage() {
           
           <button
             type="submit"
-            disabled={loading}
+            disabled={setupMutation.status === 'pending'}
             className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-              loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+              setupMutation.status === 'pending' ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
             } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
           >
-            {loading ? 'Setting up...' : 'Complete Setup'}
+            {setupMutation.status === 'pending' ? 'Setting up...' : 'Complete Setup'}
           </button>
         </form>
       </div>

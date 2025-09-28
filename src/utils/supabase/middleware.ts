@@ -1,6 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// TODO: Add a runtime env-var guard (hasEnvVars) to skip middleware when the
+// required Supabase env vars aren't set in development. This prevents the
+// middleware from throwing when `.env.local` is missing. Example:
+//
+// if (!process.env.NEXT_PUBLIC_SUPABASE_URL ||
+//     !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY) {
+//   return NextResponse.next({ request })
+// }
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -37,17 +46,16 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/error')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
+  // NOTE: DO NOT perform redirects from middleware here. The app uses a
+  // dedicated `(auth)` layout (`src/app/(auth)/layout.tsx`) to enforce
+  // authentication for pages that require it. Keeping redirects in the
+  // layout instead of middleware avoids having to update the middleware
+  // allow-list whenever you add/remove public pages or route groups.
+  //
+  // If you need middleware-only protection for specific path prefixes you
+  // can still use `matcher` in `src/middleware.ts` or add targeted checks
+  // here, but the current approach keeps middleware focused on session
+  // syncing only.
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

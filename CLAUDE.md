@@ -88,3 +88,4 @@ The project is migrating from REST API to tRPC + TanStack Query. Check `TODOS.md
 - Setup requires `SETUP_PASSWORD` environment variable
 - please note we use .env, we dont use .env.local
 - include pnpx when you run supabase
+- after you change code a lot, in serveral files, make sure to pass pnpm build before marking the task done

@@ -18,10 +18,10 @@ export const adminRouter = router({
     return { success: true, received: input };
   }),
 
-  manual: publicProcedure.mutation(async ({ rawInput }) => {
-    console.log("🔧 Manual mutation called with raw input:", rawInput);
-    console.log("🔧 Raw input type:", typeof rawInput);
-    return { success: true, received: rawInput };
+  manual: publicProcedure.mutation(async ({ input }) => {
+    console.log("🔧 Manual mutation called with input:", input);
+    console.log("🔧 Input type:", typeof input);
+    return { success: true, received: input };
   }),
 
   test: publicProcedure

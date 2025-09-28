@@ -1,10 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
 import {
   IconCamera,
+  IconClipboardList,
+  IconComponents,
   IconDashboard,
   IconDatabase,
+  IconDevices,
   IconFileAi,
   IconFileDescription,
   IconFileWord,
@@ -12,22 +14,20 @@ import {
   IconHelp,
   IconInnerShadowTop,
   IconListDetails,
+  IconPhone,
   IconReport,
   IconSearch,
   IconSettings,
-  IconUsers,
-  IconUser,
-  IconDevices,
   IconTool,
-  IconClipboardList,
-  IconPhone,
-  IconComponents,
-} from "@tabler/icons-react"
+  IconUser,
+  IconUsers,
+} from "@tabler/icons-react";
+import type * as React from "react";
 
-import { NavDocuments } from "@/components/nav-documents"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavDocuments } from "@/components/nav-documents";
+import { NavMain } from "@/components/nav-main";
+import { NavSecondary } from "@/components/nav-secondary";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -36,7 +36,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const data = {
   user: {
@@ -153,7 +153,7 @@ const data = {
       icon: IconReport,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -167,7 +167,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="#">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">SSTC Service Center</span>
+                <span className="text-base font-semibold">
+                  SSTC Service Center
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -182,5 +184,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavUser user={data.user} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

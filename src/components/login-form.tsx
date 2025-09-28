@@ -1,17 +1,21 @@
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { login } from "@/app/(public)/login/action"
+import { login } from "@/app/(public)/login/action";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
-  console.log('📋 [LOGIN FORM] Rendering login form')
+  console.log("📋 [LOGIN FORM] Rendering login form");
 
   return (
-    <form className={cn("flex flex-col gap-6", className)} action={login} {...props}>
+    <form
+      className={cn("flex flex-col gap-6", className)}
+      action={login}
+      {...props}
+    >
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Login to your account</h1>
         <p className="text-muted-foreground text-sm text-balance">
@@ -30,7 +34,7 @@ export function LoginForm({
             autoComplete="email"
             defaultValue={
               process.env.NODE_ENV === "development"
-                ? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@gmail.com"
+                ? (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@gmail.com")
                 : ""
             }
           />
@@ -53,7 +57,7 @@ export function LoginForm({
             autoComplete="current-password"
             defaultValue={
               process.env.NODE_ENV === "development"
-                ? process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "Admin@123"
+                ? (process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "Admin@123")
                 : ""
             }
           />
@@ -62,7 +66,6 @@ export function LoginForm({
           Login
         </Button>
       </div>
-
     </form>
-  )
+  );
 }

@@ -42,7 +42,7 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
@@ -54,54 +54,6 @@ const data = {
       title: "Khách hàng",
       url: "/customers",
       icon: IconUser,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
     },
   ],
   navSecondary: [
@@ -124,12 +76,12 @@ const data = {
   documents: [
     {
       name: "Sản phẩm",
-      url: "products",
+      url: "/products",
       icon: IconDevices,
     },
     {
       name: "Linh kiện",
-      url: "parts",
+      url: "/parts",
       icon: IconComponents,
     },
     {
@@ -139,7 +91,7 @@ const data = {
     },
     {
       name: "Báo cáo",
-      url: "#",
+      url: "/report",
       icon: IconReport,
     },
   ],

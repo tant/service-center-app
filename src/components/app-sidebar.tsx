@@ -60,11 +60,6 @@ const data = {
       url: "/customers",
       icon: IconUser,
     },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
   ],
   navClouds: [
     {

@@ -34,7 +34,7 @@ export function LoginForm({
             autoComplete="email"
             defaultValue={
               process.env.NODE_ENV === "development"
-                ? (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@gmail.com")
+                ? "admin@gmail.com"
                 : ""
             }
           />
@@ -57,7 +57,7 @@ export function LoginForm({
             autoComplete="current-password"
             defaultValue={
               process.env.NODE_ENV === "development"
-                ? (process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "Admin@123")
+                ? "Admin@123"
                 : ""
             }
           />

@@ -60,9 +60,7 @@ export default async function AuthLayout({
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
-        {children}
-      </SidebarInset>
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }

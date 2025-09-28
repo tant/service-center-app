@@ -22,14 +22,14 @@ BEGIN
     JOIN pg_namespace n ON c.relnamespace = n.oid
     WHERE n.nspname = 'public'
       AND (
-        (pg_get_expr(p.polqual, p.polrelid) IS NOT NULL
-         AND lower(pg_get_expr(p.polqual, p.polrelid)) LIKE '%auth.%'
-         AND lower(pg_get_expr(p.polqual, p.polrelid)) NOT LIKE '%(select auth.%')
+  (pg_get_expr(p.polqual, p.polrelid) IS NOT NULL
+   AND lower(pg_get_expr(p.polqual, p.polrelid)) LIKE '%auth.%'
+   AND position('(select auth.' in lower(pg_get_expr(p.polqual, p.polrelid))) = 0 )
         OR
-        (pg_get_expr(p.polwithcheck, p.polrelid) IS NOT NULL
-         AND lower(pg_get_expr(p.polwithcheck, p.polrelid)) LIKE '%auth.%'
-         AND lower(pg_get_expr(p.polwithcheck, p.polrelid)) NOT LIKE '%(select auth.%')
-      );
+  (pg_get_expr(p.polwithcheck, p.polrelid) IS NOT NULL
+   AND lower(pg_get_expr(p.polwithcheck, p.polrelid)) LIKE '%auth.%'
+   AND position('(select auth.' in lower(pg_get_expr(p.polwithcheck, p.polrelid))) = 0 )
+      )
   LOOP
     new_using := NULL;
     new_check := NULL;

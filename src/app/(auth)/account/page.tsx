@@ -1,30 +1,125 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
 import { trpc } from "@/components/providers/trpc-provider";
-import Link from "next/link";
-import { User, Mail, Calendar, Shield, Edit } from "lucide-react";
+import { Pencil, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { uploadAvatar } from "@/lib/supabase/storage";
 
 export default function Page() {
   const {
     data: profile,
     isLoading,
     error,
+    refetch,
   } = trpc.profile.getCurrentUser.useQuery();
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const utils = trpc.useUtils();
+  const updateProfileMutation = trpc.profile.updateProfile.useMutation();
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Update local state when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || "");
+    }
+  }, [profile]);
+
+  // Focus name input when editing starts
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
+
+  const handleNameSave = async () => {
+    if (!profile || fullName.trim() === profile.full_name) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      await updateProfileMutation.mutateAsync({
+        full_name: fullName.trim(),
+        email: profile.email,
+        avatar_url: profile.avatar_url,
+      });
+
+      toast.success("Name updated successfully!");
+      setIsEditingName(false);
+      // Invalidate cache to update both account page and nav-user
+      utils.profile.getCurrentUser.invalidate();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update name");
+      setFullName(profile.full_name || "");
+      setIsEditingName(false);
+    }
+  };
+
+  const handleNameCancel = () => {
+    setFullName(profile?.full_name || "");
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleNameSave();
+    } else if (e.key === "Escape") {
+      handleNameCancel();
+    }
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile) return;
+
+    // 1. Immediate preview (keep your UX pattern)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Store actual file for optimized upload
+    setSelectedFile(file);
+
+    // 3. Start upload process
+    setIsUploading(true);
+    try {
+      const result = await uploadAvatar(file, profile.user_id);
+
+      // Update profile with storage URL
+      await updateProfileMutation.mutateAsync({
+        full_name: profile.full_name,
+        email: profile.email,
+        avatar_url: result.url,
+      });
+
+      toast.success("Avatar updated successfully!");
+      // Invalidate cache to update both account page and nav-user
+      utils.profile.getCurrentUser.invalidate();
+      setSelectedFile(null);
+      setAvatarPreview("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload avatar");
+      setAvatarPreview("");
+      setSelectedFile(null);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -61,12 +156,14 @@ export default function Page() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="animate-pulse space-y-4">
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <Card className="w-full">
+                  <CardContent className="p-8">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="animate-pulse space-y-4 text-center">
+                        <div className="h-24 w-24 bg-gray-200 rounded-full mx-auto"></div>
+                        <div className="h-6 bg-gray-200 rounded w-48 mx-auto"></div>
+                        <div className="h-4 bg-gray-200 rounded w-64 mx-auto"></div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -86,8 +183,8 @@ export default function Page() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <Card>
-                  <CardContent className="p-6">
+                <Card className="w-full">
+                  <CardContent className="p-8">
                     <div className="text-center text-red-600">
                       <p>Error loading profile: {error.message}</p>
                     </div>
@@ -109,8 +206,8 @@ export default function Page() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <Card>
-                  <CardContent className="p-6">
+                <Card className="w-full">
+                  <CardContent className="p-8">
                     <div className="text-center text-gray-600">
                       <p>No profile data found.</p>
                     </div>
@@ -124,6 +221,8 @@ export default function Page() {
     );
   }
 
+  const displayAvatar = avatarPreview || profile.avatar_url;
+
   return (
     <>
       <PageHeader title="Account" />
@@ -131,121 +230,100 @@ export default function Page() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6">
-              <div className="max-w-2xl space-y-6">
-                {/* Profile Header */}
-                <Card>
-                  <CardHeader className="flex-row items-center justify-between space-y-0 pb-6">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage
-                          src={profile.avatar_url || undefined}
-                          alt={profile.full_name}
+              <Card className="w-full">
+                <CardContent className="p-8">
+                  <div className="flex flex-col items-center justify-center space-y-6 max-w-md mx-auto">
+
+                    {/* Avatar Section */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="cursor-pointer group relative outline-none bg-transparent border-0 p-0"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        aria-label="Change avatar"
+                      >
+                        <Avatar className="w-24 h-24">
+                          <AvatarImage
+                            src={displayAvatar || undefined}
+                            alt={profile.full_name || "User"}
+                            className="object-cover w-full h-full"
+                          />
+                          <AvatarFallback className="text-2xl">
+                            {getInitials(profile.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Pencil icon overlay */}
+                        <span className="absolute top-0 right-0 bg-white rounded-full p-1 shadow transform translate-x-1/3 -translate-y-1/3">
+                          {isUploading ? (
+                            <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
+                          ) : (
+                            <Pencil className="w-4 h-4 text-gray-600" />
+                          )}
+                        </span>
+
+                        {/* Hover overlay */}
+                        {!isUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                            <span className="text-white text-xs">Change Photo</span>
+                          </div>
+                        )}
+                      </button>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {/* Name Section */}
+                    <div className="flex items-center gap-2">
+                      {isEditingName ? (
+                        <Input
+                          ref={nameInputRef}
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          onBlur={handleNameSave}
+                          onKeyDown={handleNameKeyDown}
+                          className="text-center text-xl font-semibold w-auto min-w-[200px]"
+                          placeholder="Enter your name"
+                          disabled={updateProfileMutation.isPending}
                         />
-                        <AvatarFallback className="text-lg">
-                          {getInitials(profile.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-2xl">
-                          {profile.full_name}
-                        </CardTitle>
-                        <p className="text-muted-foreground">{profile.email}</p>
-                      </div>
-                    </div>
-                    <Button asChild>
-                      <Link href="/account/edit">
-                        <Edit className="h-4 w-4" />
-                        Edit Profile
-                      </Link>
-                    </Button>
-                  </CardHeader>
-                </Card>
-
-                {/* Profile Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Profile Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Full Name
-                        </Label>
-                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                          {profile.full_name}
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          Email Address
-                        </Label>
-                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                          {profile.email}
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          Roles
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.roles.map((role: string) => (
-                            <Badge key={role} variant={getRoleColor(role)}>
-                              {role.charAt(0).toUpperCase() + role.slice(1)}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Account Status</Label>
-                        <div>
-                          <Badge
-                            variant={profile.is_active ? "default" : "outline"}
+                      ) : (
+                        <>
+                          <h1 className="text-xl font-semibold">
+                            {profile.full_name || "Name not set"}
+                          </h1>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingName(true)}
+                            className="p-1 hover:bg-muted rounded-full transition-colors"
+                            aria-label="Edit name"
                           >
-                            {profile.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                      </div>
+                            <Pencil className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Account Details */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Account Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Account Created</Label>
-                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                          {formatDate(profile.created_at)}
-                        </p>
-                      </div>
+                    {/* Email */}
+                    <p className="text-muted-foreground">{profile.email}</p>
 
-                      <div className="space-y-2">
-                        <Label>Last Updated</Label>
-                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                          {formatDate(profile.updated_at)}
-                        </p>
-                      </div>
+                    {/* Roles */}
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {profile.roles.map((role: string) => (
+                        <Badge key={role} variant={getRoleColor(role)}>
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </Badge>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

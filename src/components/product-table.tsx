@@ -25,16 +25,13 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconCopy,
+  IconEdit,
   IconGripVertical,
-  IconKey,
   IconLayoutColumns,
+  IconPackage,
   IconPlus,
-  IconShield,
-  IconToggleLeft,
-  IconToggleRight,
-  IconUser,
-  IconUserCheck,
-  IconUserX,
+  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -102,16 +99,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export const teamSchema = z.object({
+export const productSchema = z.object({
   id: z.string(),
-  user_id: z.string(),
-  full_name: z.string(),
-  email: z.string().email(),
-  avatar_url: z.string().nullable(),
-  roles: z.array(z.enum(["admin", "manager", "technician", "reception"])),
-  is_active: z.boolean(),
+  name: z.string(),
+  sku: z.string().nullable(),
+  short_description: z.string().nullable(),
+  brand: z.string().nullable(),
+  model: z.string().nullable(),
+  type: z.enum(["hardware", "software", "accessory"]),
+  primary_image: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  created_by: z.string().nullable(),
+  updated_by: z.string().nullable(),
 });
 
 function DragHandle({ id }: { id: string }) {
@@ -133,7 +133,7 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
+const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
   {
     id: "drag",
     header: () => null,
@@ -166,184 +166,166 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "full_name",
-    header: "Tài khoản",
+    accessorKey: "name",
+    header: "Sản phẩm",
     cell: ({ row }) => {
-      return <TeamMemberViewer member={row.original} />;
+      return <ProductViewer product={row.original} />;
     },
     enableHiding: false,
   },
   {
-    accessorKey: "email",
-    header: "Email",
+    accessorKey: "sku",
+    header: "SKU",
     cell: ({ row }) => (
-      <div className="text-muted-foreground">{row.original.email}</div>
-    ),
-  },
-  {
-    accessorKey: "roles",
-    header: "Nhóm quyền",
-    cell: ({ row }) => (
-      <div className="flex flex-wrap gap-1">
-        {row.original.roles.map((role) => (
-          <Badge
-            key={role}
-            variant={role === "admin" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {role}
-          </Badge>
-        ))}
+      <div className="font-mono text-sm">
+        {row.original.sku || (
+          <span className="text-muted-foreground italic">No SKU</span>
+        )}
       </div>
     ),
   },
   {
-    accessorKey: "is_active",
-    header: "Trạng thái",
+    accessorKey: "brand",
+    header: "Thương hiệu",
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {row.original.brand || (
+          <span className="text-muted-foreground italic">No brand</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "model",
+    header: "Model",
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {row.original.model || (
+          <span className="text-muted-foreground italic">No model</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "type",
+    header: "Loại",
     cell: ({ row }) => (
       <Badge
-        variant={row.original.is_active ? "default" : "destructive"}
-        className="gap-1"
+        variant={
+          row.original.type === "hardware"
+            ? "default"
+            : row.original.type === "software"
+            ? "secondary"
+            : "outline"
+        }
+        className="text-xs"
       >
-        {row.original.is_active ? (
-          <IconUserCheck className="size-3" />
-        ) : (
-          <IconUserX className="size-3" />
-        )}
-        {row.original.is_active ? "Active" : "Inactive"}
+        {row.original.type}
       </Badge>
     ),
   },
   {
-    accessorKey: "created_at",
-    header: "Tạo lúc",
+    accessorKey: "updated_at",
+    header: "Cập nhật",
     cell: ({ row }) => (
       <div className="text-muted-foreground text-sm">
-        {new Date(row.original.created_at).toLocaleDateString()}
+        {new Date(row.original.updated_at).toLocaleDateString()}
       </div>
     ),
   },
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => <QuickActions member={row.original} />,
+    cell: ({ row }) => <QuickActions product={row.original} />,
   },
 ];
 
-function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
-  const [isActive, setIsActive] = React.useState(member.is_active);
-
-  const handleRoleChange = (newRole: string) => {
+function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
+  const handleEdit = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Updating role for ${member.full_name}...`,
-      success: `Role updated to ${newRole}`,
-      error: "Failed to update role",
+      loading: `Opening editor for ${product.name}...`,
+      success: "Product editor opened",
+      error: "Failed to open editor",
     });
   };
 
-  const handlePasswordChange = () => {
-    const newPassword = prompt(`Enter new password for ${member.full_name}:`);
-    if (!newPassword) return;
+  const handleClone = () => {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: `Cloning ${product.name}...`,
+      success: "Product cloned successfully",
+      error: "Failed to clone product",
+    });
+  };
 
-    if (newPassword.trim().length < 6) {
-      toast.error("Password must be at least 6 characters long");
+  const handleDelete = () => {
+    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
       return;
     }
 
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Changing password for ${member.full_name}...`,
-      success: "Password updated successfully",
-      error: "Failed to update password",
-    });
-  };
-
-  const handleToggleActive = () => {
-    const newStatus = !isActive;
-    setIsActive(newStatus);
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `${newStatus ? "Activating" : "Deactivating"} ${member.full_name}...`,
-      success: `Account ${newStatus ? "activated" : "deactivated"} successfully`,
-      error: `Failed to ${newStatus ? "activate" : "deactivate"} account`,
+      loading: `Deleting ${product.name}...`,
+      success: "Product deleted successfully",
+      error: "Failed to delete product",
     });
   };
 
   return (
     <div className="flex items-center gap-1">
-      {/* Change Role */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-9 p-0 text-muted-foreground hover:text-foreground"
-              >
-                <IconShield className="size-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Change Role</p>
-            </TooltipContent>
-          </Tooltip>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <div className="px-2 py-1.5 text-sm font-medium">Change Role</div>
-          <DropdownMenuSeparator />
-          {["admin", "manager", "technician", "reception"].map((role) => (
-            <DropdownMenuItem
-              key={role}
-              onClick={() => handleRoleChange(role)}
-              className={member.roles.includes(role as any) ? "bg-accent" : ""}
-            >
-              {role}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* Change Password */}
+      {/* Edit Product */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
             className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handlePasswordChange}
+            onClick={handleEdit}
           >
-            <IconKey className="size-5" />
+            <IconEdit className="size-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Change Password</p>
+          <p>Edit Product</p>
         </TooltipContent>
       </Tooltip>
 
-      {/* Toggle Active/Inactive */}
+      {/* Clone Product */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
             className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handleToggleActive}
+            onClick={handleClone}
           >
-            {isActive ? (
-              <IconToggleRight className="size-5 text-green-600" />
-            ) : (
-              <IconToggleLeft className="size-5 text-red-600" />
-            )}
+            <IconCopy className="size-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{isActive ? "Deactivate Account" : "Activate Account"}</p>
+          <p>Clone Product</p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Delete Product */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-9 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleDelete}
+          >
+            <IconTrash className="size-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Delete Product</p>
         </TooltipContent>
       </Tooltip>
     </div>
   );
 }
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof teamSchema>> }) {
+function DraggableRow({ row }: { row: Row<z.infer<typeof productSchema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   });
@@ -368,10 +350,10 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof teamSchema>> }) {
   );
 }
 
-export function TeamTable({
+export function ProductTable({
   data: initialData,
 }: {
-  data: z.infer<typeof teamSchema>[];
+  data: z.infer<typeof productSchema>[];
 }) {
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -399,8 +381,10 @@ export function TeamTable({
     return data.filter((item) => {
       const searchLower = searchValue.toLowerCase();
       return (
-        item.full_name.toLowerCase().includes(searchLower) ||
-        item.email.toLowerCase().includes(searchLower)
+        item.name.toLowerCase().includes(searchLower) ||
+        item.brand?.toLowerCase().includes(searchLower) ||
+        item.model?.toLowerCase().includes(searchLower) ||
+        item.sku?.toLowerCase().includes(searchLower)
       );
     });
   }, [data, searchValue]);
@@ -448,14 +432,14 @@ export function TeamTable({
 
   return (
     <Tabs
-      defaultValue="team-list"
+      defaultValue="product-list"
       className="w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
         <Label htmlFor="view-selector" className="sr-only">
           View
         </Label>
-        <Select defaultValue="team-list">
+        <Select defaultValue="product-list">
           <SelectTrigger
             className="flex w-fit @4xl/main:hidden"
             size="sm"
@@ -464,23 +448,21 @@ export function TeamTable({
             <SelectValue placeholder="Select a view" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="team-list">DS Nhân viên</SelectItem>
-            <SelectItem value="role-management">Role Management</SelectItem>
-            <SelectItem value="permissions">Permissions</SelectItem>
-            <SelectItem value="activity-log">Activity Log</SelectItem>
+            <SelectItem value="product-list">DS Sản phẩm</SelectItem>
+            <SelectItem value="categories">Danh mục</SelectItem>
+            <SelectItem value="brands">Thương hiệu</SelectItem>
+            <SelectItem value="inventory">Tồn kho</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="team-list">Team List</TabsTrigger>
-          <TabsTrigger value="role-management">
-            Quản lý <Badge variant="secondary">4</Badge>
+          <TabsTrigger value="product-list">DS Sản phẩm</TabsTrigger>
+          <TabsTrigger value="categories">
+            Danh mục <Badge variant="secondary">5</Badge>
           </TabsTrigger>
-          <TabsTrigger value="permissions">
-            Nhân viên <Badge variant="secondary">12</Badge>
+          <TabsTrigger value="brands">
+            Thương hiệu <Badge variant="secondary">8</Badge>
           </TabsTrigger>
-          <TabsTrigger value="permissions">
-            Đã vô hiệu <Badge variant="secondary">2</Badge>
-          </TabsTrigger>
+          <TabsTrigger value="inventory">Tồn kho</TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
           <DropdownMenu>
@@ -518,17 +500,17 @@ export function TeamTable({
           </DropdownMenu>
           <Button variant="outline" size="sm">
             <IconPlus />
-            <span className="hidden lg:inline">Thêm nhân viên</span>
+            <span className="hidden lg:inline">Thêm sản phẩm</span>
           </Button>
         </div>
       </div>
       <TabsContent
-        value="team-list"
+        value="product-list"
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên hoặc email..."
+            placeholder="Tìm theo tên, thương hiệu, model hoặc SKU..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
@@ -577,7 +559,7 @@ export function TeamTable({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No team members found.
+                      No products found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -588,7 +570,7 @@ export function TeamTable({
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} user(s) selected.
+            {table.getFilteredRowModel().rows.length} product(s) selected.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -664,16 +646,16 @@ export function TeamTable({
         </div>
       </TabsContent>
       <TabsContent
-        value="role-management"
+        value="categories"
         className="flex flex-col px-4 lg:px-6"
       >
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
-      <TabsContent value="permissions" className="flex flex-col px-4 lg:px-6">
+      <TabsContent value="brands" className="flex flex-col px-4 lg:px-6">
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
       <TabsContent
-        value="activity-log"
+        value="inventory"
         className="flex flex-col px-4 lg:px-6"
       >
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
@@ -682,7 +664,7 @@ export function TeamTable({
   );
 }
 
-function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
+function ProductViewer({ product }: { product: z.infer<typeof productSchema> }) {
   const isMobile = useIsMobile();
 
   return (
@@ -690,13 +672,13 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
       <DrawerTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
           <Avatar className="size-8">
-            <AvatarImage src={member.avatar_url || ""} />
+            <AvatarImage src={product.primary_image || ""} />
             <AvatarFallback>
-              <IconUser className="size-4" />
+              <IconPackage className="size-4" />
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start">
-            <div className="font-medium">{member.full_name}</div>
+            <div className="font-medium">{product.name}</div>
           </div>
         </Button>
       </DrawerTrigger>
@@ -704,74 +686,77 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
         <DrawerHeader className="gap-1">
           <DrawerTitle className="flex items-center gap-3">
             <Avatar className="size-10">
-              <AvatarImage src={member.avatar_url || ""} />
+              <AvatarImage src={product.primary_image || ""} />
               <AvatarFallback>
-                <IconUser className="size-5" />
+                <IconPackage className="size-5" />
               </AvatarFallback>
             </Avatar>
-            {member.full_name}
+            {product.name}
           </DrawerTitle>
           <DrawerDescription>
-            Team member details and management options
+            Product details and management options
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input id="full_name" defaultValue={member.full_name} />
+              <Label htmlFor="name">Product Name</Label>
+              <Input id="name" defaultValue={product.name} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="sku">SKU</Label>
+                <Input id="sku" defaultValue={product.sku || ""} />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="type">Type</Label>
+                <Select defaultValue={product.type}>
+                  <SelectTrigger id="type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hardware">Hardware</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                    <SelectItem value="accessory">Accessory</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="brand">Brand</Label>
+                <Input id="brand" defaultValue={product.brand || ""} />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="model">Model</Label>
+                <Input id="model" defaultValue={product.model || ""} />
+              </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={member.email} />
+              <Label htmlFor="description">Description</Label>
+              <Input id="description" defaultValue={product.short_description || ""} />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="avatar_url">Avatar URL</Label>
-              <Input id="avatar_url" defaultValue={member.avatar_url || ""} />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="roles">Roles</Label>
-              <Select defaultValue={member.roles[0]}>
-                <SelectTrigger id="roles" className="w-full">
-                  <SelectValue placeholder="Select primary role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="technician">Technician</SelectItem>
-                  <SelectItem value="reception">Reception</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="is_active">Status</Label>
-              <Select defaultValue={member.is_active ? "active" : "inactive"}>
-                <SelectTrigger id="is_active" className="w-full">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="image">Image URL</Label>
+              <Input id="image" defaultValue={product.primary_image || ""} />
             </div>
             <Separator />
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <Label className="text-muted-foreground">User ID</Label>
-                <div className="font-mono text-xs">{member.user_id}</div>
+                <Label className="text-muted-foreground">Product ID</Label>
+                <div className="font-mono text-xs">{product.id}</div>
               </div>
               <div>
-                <Label className="text-muted-foreground">Profile ID</Label>
-                <div className="font-mono text-xs">{member.id}</div>
+                <Label className="text-muted-foreground">Type</Label>
+                <div>{product.type}</div>
               </div>
               <div>
                 <Label className="text-muted-foreground">Created</Label>
-                <div>{new Date(member.created_at).toLocaleDateString()}</div>
+                <div>{new Date(product.created_at).toLocaleDateString()}</div>
               </div>
               <div>
                 <Label className="text-muted-foreground">Updated</Label>
-                <div>{new Date(member.updated_at).toLocaleDateString()}</div>
+                <div>{new Date(product.updated_at).toLocaleDateString()}</div>
               </div>
             </div>
           </form>
@@ -780,9 +765,9 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
           <Button
             onClick={() =>
               toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-                loading: `Updating ${member.full_name}...`,
-                success: "User updated successfully",
-                error: "Failed to update user",
+                loading: `Updating ${product.name}...`,
+                success: "Product updated successfully",
+                error: "Failed to update product",
               })
             }
           >

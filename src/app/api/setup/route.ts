@@ -1,6 +1,5 @@
-import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/utils/supabase/admin';
+import type { NextRequest } from "next/server";
+import { supabaseAdmin } from "@/utils/supabase/admin";
 
 interface SetupRequestBody {
   password: string;
@@ -15,13 +14,21 @@ export async function POST(req: NextRequest) {
     const adminName = process.env.ADMIN_NAME;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-    
-    if (!setupPassword || !adminEmail || !adminPassword || !adminName || !supabaseUrl || !supabaseAnonKey) {
+
+    if (
+      !setupPassword ||
+      !adminEmail ||
+      !adminPassword ||
+      !adminName ||
+      !supabaseUrl ||
+      !supabaseAnonKey
+    ) {
       return Response.json(
-        { 
-          error: 'Missing required environment variables for setup. Please check SETUP_PASSWORD, ADMIN_EMAIL, ADMIN_PASSWORD, and ADMIN_NAME.' 
+        {
+          error:
+            "Missing required environment variables for setup. Please check SETUP_PASSWORD, ADMIN_EMAIL, ADMIN_PASSWORD, and ADMIN_NAME.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -32,93 +39,104 @@ export async function POST(req: NextRequest) {
     // Check if the provided password matches the setup password
     if (password !== setupPassword) {
       return Response.json(
-        { error: 'Invalid setup password' },
-        { status: 401 }
+        { error: "Invalid setup password" },
+        { status: 401 },
       );
     }
 
     // For this approach, we'll first check if the user exists in the profiles table
     // Since we might not be able to use the admin API with just the anon key
     try {
-      const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
-        .from('profiles')
-        .select('user_id')
-        .eq('email', adminEmail)
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id")
+        .eq("email", adminEmail)
         .single();
 
       if (existingProfile) {
         return Response.json(
-          { error: 'Admin user already exists' },
-          { status: 400 }
+          { error: "Admin user already exists" },
+          { status: 400 },
         );
       }
-    } catch (profileCheckError: any) {
+    } catch (profileCheckError: unknown) {
       // If the profiles table doesn't exist yet, we can continue with setup
-      if (profileCheckError.code !== '42P01') { // 42P01 is "UndefinedTable"
-        console.error('Profile check error:', profileCheckError);
+      if (
+        profileCheckError &&
+        typeof profileCheckError === "object" &&
+        "code" in profileCheckError &&
+        profileCheckError.code !== "42P01"
+      ) {
+        // 42P01 is "UndefinedTable"
+        console.error("Profile check error:", profileCheckError);
         return Response.json(
-          { error: `Error checking existing profile: ${profileCheckError.message}` },
-          { status: 500 }
+          {
+            error: `Error checking existing profile: ${profileCheckError && typeof profileCheckError === "object" && "message" in profileCheckError ? profileCheckError.message : "Unknown error"}`,
+          },
+          { status: 500 },
         );
       }
     }
 
     // For the initial setup, let's first sign up the user normally, then update their profile
-    const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
-      email: adminEmail,
-      password: adminPassword,
-    });
+    const { data: signUpData, error: signUpError } =
+      await supabaseAdmin.auth.signUp({
+        email: adminEmail,
+        password: adminPassword,
+      });
 
     if (signUpError) {
-      console.error('Sign up error:', signUpError);
+      console.error("Sign up error:", signUpError);
       return Response.json(
         { error: `Failed to sign up admin user: ${signUpError.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const userId = signUpData.user?.id;
-    
+
     if (!userId) {
       return Response.json(
-        { error: 'Failed to get user ID after sign up' },
-        { status: 500 }
+        { error: "Failed to get user ID after sign up" },
+        { status: 500 },
       );
     }
 
     // Now add the user to the profiles table with admin role
     const { error: profileError } = await supabaseAdmin
-      .from('profiles')
+      .from("profiles")
       .insert([
         {
           user_id: userId,
           full_name: adminName,
           email: adminEmail,
-          roles: ['admin'], // Admin role
+          roles: ["admin"], // Admin role
           is_active: true,
         },
       ]);
 
     if (profileError) {
-      console.error('Error creating admin profile:', profileError);
-      
+      console.error("Error creating admin profile:", profileError);
+
       // If profile creation fails, the user remains in auth but without profile
       // This is less than ideal but we'll return an error
       return Response.json(
         { error: `Failed to create admin profile: ${profileError.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return Response.json(
-      { message: 'Setup completed successfully' },
-      { status: 200 }
+      { message: "Setup completed successfully" },
+      { status: 200 },
     );
-  } catch (error: any) {
-    console.error('Setup error:', error);
+  } catch (error: unknown) {
+    console.error("Setup error:", error);
     return Response.json(
-      { error: `An error occurred during setup: ${error.message}` },
-      { status: 500 }
+      {
+        error: `An error occurred during setup: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
+      { status: 500 },
     );
   }
 }

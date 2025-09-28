@@ -1,110 +1,127 @@
-'use server'
+"use server";
 
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from "@/utils/supabase/server";
 
 export async function login(formData: FormData) {
-  console.log('🔐 [LOGIN ACTION] Starting login process')
+  console.log("🔐 [LOGIN ACTION] Starting login process");
 
   // call cookies() before any Supabase calls to opt-out of Next.js fetch caching
   // for authenticated requests (per Supabase Next.js server-side auth guide)
-  cookies()
-  console.log('🔐 [LOGIN ACTION] Cookies initialized')
+  cookies();
+  console.log("🔐 [LOGIN ACTION] Cookies initialized");
 
-  const supabase = await createClient()
-  console.log('🔐 [LOGIN ACTION] Supabase client created')
+  const supabase = await createClient();
+  console.log("🔐 [LOGIN ACTION] Supabase client created");
 
   // type-casting here for convenience
   // in practice, you should validate your inputs
   const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  }
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
+  };
 
-  console.log('🔐 [LOGIN ACTION] Form data extracted:', {
+  console.log("🔐 [LOGIN ACTION] Form data extracted:", {
     email: data.email,
-    password: data.password ? '[REDACTED]' : 'missing',
+    password: data.password ? "[REDACTED]" : "missing",
     hasEmail: !!data.email,
-    hasPassword: !!data.password
-  })
+    hasPassword: !!data.password,
+  });
 
-  console.log('🔐 [LOGIN ACTION] Attempting sign in with Supabase...')
-  const { error, data: authData } = await supabase.auth.signInWithPassword(data)
+  console.log("🔐 [LOGIN ACTION] Attempting sign in with Supabase...");
+  const { error, data: authData } =
+    await supabase.auth.signInWithPassword(data);
 
-  console.log('🔐 [LOGIN ACTION] Supabase signInWithPassword response:', {
+  console.log("🔐 [LOGIN ACTION] Supabase signInWithPassword response:", {
     success: !error,
-    error: error ? {
-      message: error.message,
-      status: error.status,
-      name: error.name
-    } : null,
-    user: authData?.user ? {
-      id: authData.user.id,
-      email: authData.user.email
-    } : null,
-    session: authData?.session ? 'session_exists' : 'no_session'
-  })
+    error: error
+      ? {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        }
+      : null,
+    user: authData?.user
+      ? {
+          id: authData.user.id,
+          email: authData.user.email,
+        }
+      : null,
+    session: authData?.session ? "session_exists" : "no_session",
+  });
 
   if (error) {
-    console.error('🔐 [LOGIN ACTION] Authentication failed, redirecting to /error')
-    redirect('/error')
+    console.error(
+      "🔐 [LOGIN ACTION] Authentication failed, redirecting to /error",
+    );
+    redirect("/error");
   }
 
-  console.log('🔐 [LOGIN ACTION] Authentication successful, revalidating and redirecting to /')
-  revalidatePath('/')
-  redirect('/')
+  console.log(
+    "🔐 [LOGIN ACTION] Authentication successful, revalidating and redirecting to /",
+  );
+  revalidatePath("/");
+  redirect("/");
 }
 
 export async function signup(formData: FormData) {
-  console.log('📝 [SIGNUP ACTION] Starting signup process')
+  console.log("📝 [SIGNUP ACTION] Starting signup process");
 
   // call cookies() before any Supabase calls to opt-out of Next.js fetch caching
-  cookies()
-  console.log('📝 [SIGNUP ACTION] Cookies initialized')
+  cookies();
+  console.log("📝 [SIGNUP ACTION] Cookies initialized");
 
-  const supabase = await createClient()
-  console.log('📝 [SIGNUP ACTION] Supabase client created')
+  const supabase = await createClient();
+  console.log("📝 [SIGNUP ACTION] Supabase client created");
 
   // type-casting here for convenience
   // in practice, you should validate your inputs
   const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  }
+    email: formData.get("email") as string,
+    password: formData.get("password") as string,
+  };
 
-  console.log('📝 [SIGNUP ACTION] Form data extracted:', {
+  console.log("📝 [SIGNUP ACTION] Form data extracted:", {
     email: data.email,
-    password: data.password ? '[REDACTED]' : 'missing',
+    password: data.password ? "[REDACTED]" : "missing",
     hasEmail: !!data.email,
-    hasPassword: !!data.password
-  })
+    hasPassword: !!data.password,
+  });
 
-  console.log('📝 [SIGNUP ACTION] Attempting sign up with Supabase...')
-  const { error, data: authData } = await supabase.auth.signUp(data)
+  console.log("📝 [SIGNUP ACTION] Attempting sign up with Supabase...");
+  const { error, data: authData } = await supabase.auth.signUp(data);
 
-  console.log('📝 [SIGNUP ACTION] Supabase signUp response:', {
+  console.log("📝 [SIGNUP ACTION] Supabase signUp response:", {
     success: !error,
-    error: error ? {
-      message: error.message,
-      status: error.status,
-      name: error.name
-    } : null,
-    user: authData?.user ? {
-      id: authData.user.id,
-      email: authData.user.email
-    } : null,
-    session: authData?.session ? 'session_exists' : 'no_session'
-  })
+    error: error
+      ? {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        }
+      : null,
+    user: authData?.user
+      ? {
+          id: authData.user.id,
+          email: authData.user.email,
+        }
+      : null,
+    session: authData?.session ? "session_exists" : "no_session",
+  });
 
   if (error) {
-    console.error('📝 [SIGNUP ACTION] Registration failed, redirecting to /error')
-    redirect('/error')
+    console.error(
+      "📝 [SIGNUP ACTION] Registration failed, redirecting to /error",
+    );
+    redirect("/error");
   }
 
-  console.log('📝 [SIGNUP ACTION] Registration successful, revalidating and redirecting to /dashboard')
-  revalidatePath('/')
-  redirect('/dashboard')
+  console.log(
+    "📝 [SIGNUP ACTION] Registration successful, revalidating and redirecting to /dashboard",
+  );
+  revalidatePath("/");
+  redirect("/dashboard");
 }

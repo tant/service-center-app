@@ -1,5 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
 
 // TODO: Add a runtime env-var guard (hasEnvVars) to skip middleware when the
 // required Supabase env vars aren't set in development. This prevents the
@@ -11,36 +11,49 @@ import { NextResponse, type NextRequest } from 'next/server'
 // }
 
 export async function updateSession(request: NextRequest) {
-  console.log('🔄 [MIDDLEWARE] Processing request for path:', request.nextUrl.pathname)
+  console.log(
+    "🔄 [MIDDLEWARE] Processing request for path:",
+    request.nextUrl.pathname,
+  );
 
   let supabaseResponse = NextResponse.next({
     request,
-  })
+  });
 
-  console.log('🔄 [MIDDLEWARE] Creating Supabase client...')
+  console.log("🔄 [MIDDLEWARE] Creating Supabase client...");
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
-          const cookies = request.cookies.getAll()
-          console.log('🔄 [MIDDLEWARE] Getting all cookies:', cookies.length, 'cookies found')
-          return cookies
+          const cookies = request.cookies.getAll();
+          console.log(
+            "🔄 [MIDDLEWARE] Getting all cookies:",
+            cookies.length,
+            "cookies found",
+          );
+          return cookies;
         },
         setAll(cookiesToSet) {
-          console.log('🔄 [MIDDLEWARE] Setting cookies:', cookiesToSet.length, 'cookies to set')
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          console.log(
+            "🔄 [MIDDLEWARE] Setting cookies:",
+            cookiesToSet.length,
+            "cookies to set",
+          );
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value),
+          );
           supabaseResponse = NextResponse.next({
             request,
-          })
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+            supabaseResponse.cookies.set(name, value, options),
+          );
         },
       },
-    }
-  )
+    },
+  );
 
   // Do not run code between createServerClient and
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
@@ -48,24 +61,26 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
-  console.log('🔄 [MIDDLEWARE] Getting user from session...')
+  console.log("🔄 [MIDDLEWARE] Getting user from session...");
   const {
     data: { user },
-    error
-  } = await supabase.auth.getUser()
+    error,
+  } = await supabase.auth.getUser();
 
-  console.log('🔄 [MIDDLEWARE] User check result:', {
+  console.log("🔄 [MIDDLEWARE] User check result:", {
     path: request.nextUrl.pathname,
     hasUser: !!user,
-    userId: user?.id || 'none',
-    userEmail: user?.email || 'none',
+    userId: user?.id || "none",
+    userEmail: user?.email || "none",
     hasError: !!error,
-    error: error ? {
-      message: error.message,
-      status: error.status,
-      name: error.name
-    } : null
-  })
+    error: error
+      ? {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        }
+      : null,
+  });
 
   // NOTE: DO NOT perform redirects from middleware here. The app uses a
   // dedicated `(auth)` layout (`src/app/(auth)/layout.tsx`) to enforce
@@ -91,6 +106,9 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  console.log('🔄 [MIDDLEWARE] Middleware processing complete for:', request.nextUrl.pathname)
-  return supabaseResponse
+  console.log(
+    "🔄 [MIDDLEWARE] Middleware processing complete for:",
+    request.nextUrl.pathname,
+  );
+  return supabaseResponse;
 }

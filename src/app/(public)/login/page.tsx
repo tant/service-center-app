@@ -26,6 +26,7 @@ export default function LoginPage() {
           src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=1200&q=80"
           alt="Samsung Service Center"
           fill
+          priority
           className="object-cover dark:brightness-[0.2] dark:grayscale"
           sizes="(max-width: 1024px) 0px, 50vw"
         />

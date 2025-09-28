@@ -4,7 +4,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   allowedDevOrigins: ["https://service-center.tantran.dev"],
   images: {
-    domains: ["images.unsplash.com"],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      }
+    ],
   },
 };
 

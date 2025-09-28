@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type React from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/utils/supabase/server";
 
 // Force dynamic rendering since we use cookies for authentication
@@ -104,6 +105,7 @@ export default async function AuthLayout({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>{children}</SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }

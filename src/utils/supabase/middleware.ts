@@ -11,19 +11,25 @@ import { NextResponse, type NextRequest } from 'next/server'
 // }
 
 export async function updateSession(request: NextRequest) {
+  console.log('🔄 [MIDDLEWARE] Processing request for path:', request.nextUrl.pathname)
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
+  console.log('🔄 [MIDDLEWARE] Creating Supabase client...')
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          const cookies = request.cookies.getAll()
+          console.log('🔄 [MIDDLEWARE] Getting all cookies:', cookies.length, 'cookies found')
+          return cookies
         },
         setAll(cookiesToSet) {
+          console.log('🔄 [MIDDLEWARE] Setting cookies:', cookiesToSet.length, 'cookies to set')
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
@@ -42,9 +48,24 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
+  console.log('🔄 [MIDDLEWARE] Getting user from session...')
   const {
     data: { user },
+    error
   } = await supabase.auth.getUser()
+
+  console.log('🔄 [MIDDLEWARE] User check result:', {
+    path: request.nextUrl.pathname,
+    hasUser: !!user,
+    userId: user?.id || 'none',
+    userEmail: user?.email || 'none',
+    hasError: !!error,
+    error: error ? {
+      message: error.message,
+      status: error.status,
+      name: error.name
+    } : null
+  })
 
   // NOTE: DO NOT perform redirects from middleware here. The app uses a
   // dedicated `(auth)` layout (`src/app/(auth)/layout.tsx`) to enforce
@@ -70,5 +91,6 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
+  console.log('🔄 [MIDDLEWARE] Middleware processing complete for:', request.nextUrl.pathname)
   return supabaseResponse
 }

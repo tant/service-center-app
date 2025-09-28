@@ -34,7 +34,7 @@ const handler = async (req: Request) => {
     endpoint: "/api/trpc",
     req,
     router: appRouter,
-    createContext: createTRPCContext,
+    createContext: () => createTRPCContext({ req }),
   });
 
   const duration = Date.now() - startTime;

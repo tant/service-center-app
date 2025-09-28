@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 
 /**
  * Create Supabase clients for tRPC context
  */
-function createSupabaseClients() {
+function createSupabaseClients(req: Request) {
   console.log("🗄️ DATABASE: Creating Supabase clients...");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,9 +59,51 @@ function createSupabaseClients() {
     );
   }
 
-  console.log("🔧 DATABASE: Creating anon client...");
-  // Client with anon key (for regular operations)
-  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  console.log("🔧 DATABASE: Creating server client with request cookies...");
+
+  // Parse cookies from the request
+  const cookies = req.headers.get("cookie") || "";
+  const cookieMap = new Map<string, string>();
+
+  // Parse cookie string into map
+  cookies.split(";").forEach((cookie) => {
+    const trimmed = cookie.trim();
+    const equalIndex = trimmed.indexOf("=");
+    if (equalIndex > 0) {
+      const name = trimmed.slice(0, equalIndex);
+      const value = trimmed.slice(equalIndex + 1);
+      if (name && value) {
+        try {
+          // Some cookies like auth tokens might be URL encoded
+          cookieMap.set(name, decodeURIComponent(value));
+        } catch {
+          // If decode fails, use raw value
+          cookieMap.set(name, value);
+        }
+      }
+    }
+  });
+
+  console.log("🍪 DATABASE: Parsed cookies:", Array.from(cookieMap.keys()));
+
+  // Client with anon key and request cookies (for authenticated operations)
+  const supabaseClient = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        const cookieArray = Array.from(cookieMap.entries()).map(([name, value]) => ({
+          name,
+          value,
+        }));
+        console.log("🔧 DATABASE: Getting all cookies for supabase client:", cookieArray.length);
+        return cookieArray;
+      },
+      setAll(cookiesToSet) {
+        console.log("🔧 DATABASE: Setting cookies (tRPC context - ignored):", cookiesToSet.length);
+        // In tRPC context, we can't set cookies on the response
+        // This is expected behavior for server-side contexts
+      },
+    },
+  });
 
   console.log("🔒 DATABASE: Creating admin client...");
   // Admin client with service role key (bypasses RLS)
@@ -78,11 +121,11 @@ function createSupabaseClients() {
 /**
  * Create context for tRPC
  */
-export function createTRPCContext() {
+export function createTRPCContext(opts: { req: Request }) {
   console.log("🏗️ CONTEXT: Creating tRPC context...");
 
   try {
-    const { supabaseClient, supabaseAdmin } = createSupabaseClients();
+    const { supabaseClient, supabaseAdmin } = createSupabaseClients(opts.req);
 
     console.log("✅ CONTEXT: tRPC context created successfully");
     console.log("📋 CONTEXT: Supabase client created:", !!supabaseClient);

@@ -2,69 +2,47 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { initTRPC } from "@trpc/server";
 
+// Global counters for tracking duplicate calls
+let clientCreationCount = 0;
+let contextCreationCount = 0;
+const requestTracker = new Map<string, number>();
+
 /**
  * Create Supabase clients for tRPC context
  */
 function createSupabaseClients(req: Request) {
-  console.log("🗄️ DATABASE: Creating Supabase clients...");
+  const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  clientCreationCount++;
 
+  console.log(`🔧 [TRPC-${requestId}] Creating Supabase clients (call #${clientCreationCount})`);
+  console.log(`🔧 [TRPC-${requestId}] Request URL: ${req.url}`);
+  console.log(`🔧 [TRPC-${requestId}] Request method: ${req.method}`);
+
+  // Track request frequency
+  const urlPath = new URL(req.url).pathname;
+  const currentCount = requestTracker.get(urlPath) || 0;
+  requestTracker.set(urlPath, currentCount + 1);
+  console.log(`🔧 [TRPC-${requestId}] Path "${urlPath}" call count: ${currentCount + 1}`);
+
+  const startTime = performance.now();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseServiceRoleJWT = process.env.SUPABASE_SERVICE_ROLE_JWT;
 
-  console.log("🔍 DATABASE: Environment variables check:");
-  console.log(
-    "   - SUPABASE_URL:",
-    !!supabaseUrl,
-    supabaseUrl ? `(${supabaseUrl.substring(0, 30)}...)` : "(missing)",
-  );
-  console.log(
-    "   - ANON_KEY:",
-    !!supabaseAnonKey,
-    supabaseAnonKey ? `(${supabaseAnonKey.substring(0, 20)}...)` : "(missing)",
-  );
-  console.log(
-    "   - SERVICE_ROLE_KEY:",
-    !!supabaseServiceRoleKey,
-    supabaseServiceRoleKey
-      ? `(${supabaseServiceRoleKey.substring(0, 20)}...)`
-      : "(missing)",
-  );
-
-  if (!supabaseUrl) {
-    console.error(
-      "❌ DATABASE: Missing NEXT_PUBLIC_SUPABASE_URL in environment variables",
-    );
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL in environment variables",
-    );
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleJWT) {
+    console.error(`❌ [TRPC-${requestId}] Missing environment variables:`, {
+      hasUrl: !!supabaseUrl,
+      hasAnonKey: !!supabaseAnonKey,
+      hasServiceRole: !!supabaseServiceRoleJWT
+    });
+    throw new Error("Missing required Supabase environment variables");
   }
-
-  if (!supabaseAnonKey) {
-    console.error(
-      "❌ DATABASE: Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in environment variables",
-    );
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in environment variables",
-    );
-  }
-
-  if (!supabaseServiceRoleKey) {
-    console.error(
-      "❌ DATABASE: Missing SUPABASE_SERVICE_ROLE_KEY in environment variables",
-    );
-    throw new Error(
-      "Missing SUPABASE_SERVICE_ROLE_KEY in environment variables",
-    );
-  }
-
-  console.log("🔧 DATABASE: Creating server client with request cookies...");
 
   // Parse cookies from the request
   const cookies = req.headers.get("cookie") || "";
   const cookieMap = new Map<string, string>();
+  let cookieParseCount = 0;
 
-  // Parse cookie string into map
   cookies.split(";").forEach((cookie) => {
     const trimmed = cookie.trim();
     const equalIndex = trimmed.indexOf("=");
@@ -72,56 +50,51 @@ function createSupabaseClients(req: Request) {
       const name = trimmed.slice(0, equalIndex);
       const value = trimmed.slice(equalIndex + 1);
       if (name && value) {
+        cookieParseCount++;
         try {
-          // Some cookies like auth tokens might be URL encoded
           cookieMap.set(name, decodeURIComponent(value));
         } catch {
-          // If decode fails, use raw value
           cookieMap.set(name, value);
         }
       }
     }
   });
 
-  console.log("🍪 DATABASE: Parsed cookies:", Array.from(cookieMap.keys()));
+  console.log(`🍪 [TRPC-${requestId}] Parsed ${cookieParseCount} cookies:`, Array.from(cookieMap.keys()));
+
+  // Track cookie access patterns
+  let cookieAccessCount = 0;
 
   // Client with anon key and request cookies (for authenticated operations)
   const supabaseClient = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        const cookieArray = Array.from(cookieMap.entries()).map(
-          ([name, value]) => ({
-            name,
-            value,
-          }),
-        );
-        console.log(
-          "🔧 DATABASE: Getting all cookies for supabase client:",
-          cookieArray.length,
-        );
-        return cookieArray;
+        cookieAccessCount++;
+        console.log(`🍪 [TRPC-${requestId}] Cookie access #${cookieAccessCount} - returning ${cookieMap.size} cookies`);
+        return Array.from(cookieMap.entries()).map(([name, value]) => ({
+          name,
+          value,
+        }));
       },
       setAll(cookiesToSet) {
-        console.log(
-          "🔧 DATABASE: Setting cookies (tRPC context - ignored):",
-          cookiesToSet.length,
-        );
+        console.log(`🍪 [TRPC-${requestId}] Attempt to set ${cookiesToSet.length} cookies (ignored in tRPC context)`);
         // In tRPC context, we can't set cookies on the response
-        // This is expected behavior for server-side contexts
       },
     },
   });
 
-  console.log("🔒 DATABASE: Creating admin client...");
-  // Admin client with service role key (bypasses RLS)
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  // Admin client with service role JWT (bypasses RLS)
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleJWT, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
 
-  console.log("✅ DATABASE: Supabase clients created successfully");
+  const endTime = performance.now();
+  console.log(`⏱️ [TRPC-${requestId}] Client creation took ${(endTime - startTime).toFixed(2)}ms`);
+  console.log(`✅ [TRPC-${requestId}] Clients created - Cookie access count: ${cookieAccessCount}`);
+
   return { supabaseClient, supabaseAdmin };
 }
 
@@ -129,23 +102,24 @@ function createSupabaseClients(req: Request) {
  * Create context for tRPC
  */
 export function createTRPCContext(opts: { req: Request }) {
-  console.log("🏗️ CONTEXT: Creating tRPC context...");
+  contextCreationCount++;
+  const requestId = opts.req.headers.get("x-request-id") || `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  try {
-    const { supabaseClient, supabaseAdmin } = createSupabaseClients(opts.req);
+  console.log(`🏗️ [TRPC-CTX-${requestId}] Creating tRPC context (call #${contextCreationCount})`);
+  console.log(`🏗️ [TRPC-CTX-${requestId}] Stack trace:`, new Error().stack?.split('\n').slice(1, 4).join('\n'));
 
-    console.log("✅ CONTEXT: tRPC context created successfully");
-    console.log("📋 CONTEXT: Supabase client created:", !!supabaseClient);
-    console.log("🔒 CONTEXT: Supabase admin created:", !!supabaseAdmin);
+  const contextStartTime = performance.now();
+  const { supabaseClient, supabaseAdmin } = createSupabaseClients(opts.req);
+  const contextEndTime = performance.now();
 
-    return {
-      supabaseClient,
-      supabaseAdmin,
-    };
-  } catch (error) {
-    console.error("❌ CONTEXT: Failed to create tRPC context:", error);
-    throw error;
-  }
+  console.log(`⏱️ [TRPC-CTX-${requestId}] Context creation took ${(contextEndTime - contextStartTime).toFixed(2)}ms`);
+  console.log(`📊 [TRPC-CTX-${requestId}] Global stats - Contexts: ${contextCreationCount}, Clients: ${clientCreationCount}`);
+
+  return {
+    supabaseClient,
+    supabaseAdmin,
+    requestId,
+  };
 }
 
 export type TRPCContext = ReturnType<typeof createTRPCContext>;

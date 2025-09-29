@@ -23,6 +23,7 @@ interface ComboboxProps {
   options: Array<{
     value: string
     label: React.ReactNode
+    searchKeywords?: string
   }>
   value?: string
   onValueChange: (value: string) => void
@@ -70,9 +71,9 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
+                  value={option.searchKeywords || option.value}
                   onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                    onValueChange(option.value)
                     setOpen(false)
                   }}
                 >

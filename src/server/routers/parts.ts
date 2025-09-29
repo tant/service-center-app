@@ -89,7 +89,7 @@ export const partsRouter = router({
     .query(async ({ ctx }) => {
       const { data: products, error } = await ctx.supabaseAdmin
         .from("products")
-        .select("id, name, type, brand")
+        .select("id, name, type, brand, short_description")
         .order("name", { ascending: true });
 
       if (error) {

@@ -76,17 +76,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const customerSchema = z.object({
   id: z.string(),
   name: z.string(),
+  phone: z.string(),
   email: z.string().nullable(),
-  phone: z.string().nullable(),
   address: z.string().nullable(),
-  city: z.string().nullable(),
-  company: z.string().nullable(),
-  notes: z.string().nullable(),
-  is_active: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
-  created_by: z.string(),
-  updated_by: z.string(),
 });
 
 export type Customer = z.infer<typeof customerSchema>;
@@ -359,23 +353,10 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       header: "Địa chỉ",
       cell: ({ row }) => {
         const customer = row.original;
-        const address = customer.address || customer.city;
         return (
           <div className="text-sm text-muted-foreground max-w-[200px] truncate">
-            {address || "—"}
+            {customer.address || "—"}
           </div>
-        );
-      },
-    },
-    {
-      accessorKey: "is_active",
-      header: "Trạng thái",
-      cell: ({ row }) => {
-        const isActive = row.getValue("is_active") as boolean;
-        return (
-          <Badge variant={isActive ? "default" : "secondary"}>
-            {isActive ? "Hoạt động" : "Không hoạt động"}
-          </Badge>
         );
       },
     },
@@ -437,14 +418,14 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       const name = item.name?.toLowerCase() || "";
       const email = item.email?.toLowerCase() || "";
       const phone = item.phone?.toLowerCase() || "";
-      const company = item.company?.toLowerCase() || "";
+      const address = item.address?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
       return (
         name.includes(search) ||
         email.includes(search) ||
         phone.includes(search) ||
-        company.includes(search)
+        address.includes(search)
       );
     });
   }, [data, searchValue]);

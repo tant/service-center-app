@@ -31,6 +31,7 @@ import {
   IconLayoutColumns,
   IconPackage,
   IconPlus,
+  IconDatabase,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -79,7 +80,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -108,24 +108,11 @@ export const partSchema = z.object({
   price: z.number(),
   cost_price: z.number(),
   stock_quantity: z.number(),
-  stock_value: z.number().nullable(),
   image_url: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.string().nullable(),
   updated_by: z.string().nullable(),
-  product_parts: z
-    .array(
-      z.object({
-        products: z.object({
-          id: z.string(),
-          name: z.string(),
-          type: z.string(),
-          brand: z.string().nullable(),
-        }),
-      }),
-    )
-    .optional(),
 });
 
 function DragHandle({ id }: { id: string }) {
@@ -142,7 +129,7 @@ function DragHandle({ id }: { id: string }) {
       className="text-muted-foreground size-7 hover:bg-transparent"
     >
       <IconGripVertical className="text-muted-foreground size-3" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">Kéo để sắp xếp lại</span>
     </Button>
   );
 }
@@ -163,7 +150,7 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
+          aria-label="Chọn tất cả"
         />
       </div>
     ),
@@ -172,7 +159,7 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
+          aria-label="Chọn hàng"
         />
       </div>
     ),
@@ -193,7 +180,7 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
     cell: ({ row }) => (
       <div className="font-mono text-sm">
         {row.original.part_number || (
-          <span className="text-muted-foreground italic">No part number</span>
+          <span className="text-muted-foreground italic">Không có mã linh kiện</span>
         )}
       </div>
     ),
@@ -204,53 +191,10 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
     cell: ({ row }) => (
       <div className="font-mono text-sm">
         {row.original.sku || (
-          <span className="text-muted-foreground italic">No SKU</span>
+          <span className="text-muted-foreground italic">Không có SKU</span>
         )}
       </div>
     ),
-  },
-  {
-    accessorKey: "product_parts",
-    header: "Sản phẩm",
-    cell: ({ row }) => {
-      const products =
-        row.original.product_parts?.map((pp) => pp.products) || [];
-      if (products.length === 0) {
-        return (
-          <span className="text-muted-foreground italic">No products</span>
-        );
-      }
-      if (products.length === 1) {
-        const product = products[0];
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {product.type}
-            </Badge>
-            <span className="font-medium">{product.name}</span>
-          </div>
-        );
-      }
-      return (
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium">
-            {products.length} products
-          </span>
-          <div className="flex flex-wrap gap-1">
-            {products.slice(0, 2).map((product, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs">
-                {product.type}
-              </Badge>
-            ))}
-            {products.length > 2 && (
-              <Badge variant="secondary" className="text-xs">
-                +{products.length - 2}
-              </Badge>
-            )}
-          </div>
-        </div>
-      );
-    },
   },
   {
     accessorKey: "price",
@@ -306,7 +250,7 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <QuickActions part={row.original} />,
   },
 ];
@@ -314,9 +258,9 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
 function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
   const handleClone = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Cloning ${part.name}...`,
-      success: "Part cloned successfully",
-      error: "Failed to clone part",
+      loading: `Đang sao chép ${part.name}...`,
+      success: "Sao chép linh kiện thành công",
+      error: "Sao chép linh kiện thất bại",
     });
   };
 
@@ -338,7 +282,7 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Edit Part</p>
+              <p>Chỉnh sửa linh kiện</p>
             </TooltipContent>
           </Tooltip>
         }
@@ -358,7 +302,7 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Clone Part</p>
+          <p>Sao chép linh kiện</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -420,13 +364,10 @@ export function PartsTable({
 
     return data.filter((item) => {
       const searchLower = searchValue.toLowerCase();
-      const productNames =
-        item.product_parts?.map((pp) => pp.products.name.toLowerCase()) || [];
       return (
         item.name.toLowerCase().includes(searchLower) ||
         item.part_number?.toLowerCase().includes(searchLower) ||
-        item.sku?.toLowerCase().includes(searchLower) ||
-        productNames.some((name) => name.includes(searchLower))
+        item.sku?.toLowerCase().includes(searchLower)
       );
     });
   }, [data, searchValue]);
@@ -487,7 +428,7 @@ export function PartsTable({
             size="sm"
             id="view-selector"
           >
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder="Chọn chế độ xem" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="parts-list">DS Linh kiện</SelectItem>
@@ -508,7 +449,7 @@ export function PartsTable({
               <Button variant="outline" size="sm">
                 <IconLayoutColumns />
                 <span className="hidden lg:inline">Tùy chỉnh cột</span>
-                <span className="lg:hidden">Columns</span>
+                <span className="lg:hidden">Cột</span>
                 <IconChevronDown />
               </Button>
             </DropdownMenuTrigger>
@@ -546,6 +487,7 @@ export function PartsTable({
             }
             onSuccess={() => window.location.reload()}
           />
+          <AddSamplePartsButton onSuccess={() => window.location.reload()} />
         </div>
       </div>
       <TabsContent
@@ -554,7 +496,7 @@ export function PartsTable({
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên, mã linh kiện, SKU hoặc sản phẩm..."
+            placeholder="Tìm theo tên, mã linh kiện hoặc SKU..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
@@ -603,7 +545,7 @@ export function PartsTable({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No parts found.
+                      Không tìm thấy linh kiện nào.
                     </TableCell>
                   </TableRow>
                 )}
@@ -613,13 +555,13 @@ export function PartsTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} part(s) selected.
+            Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
+            {table.getFilteredRowModel().rows.length} linh kiện.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                Hàng trên trang
               </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
@@ -642,7 +584,7 @@ export function PartsTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Trang {table.getState().pagination.pageIndex + 1} của{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
@@ -652,7 +594,7 @@ export function PartsTable({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">Đến trang đầu</span>
                 <IconChevronsLeft />
               </Button>
               <Button
@@ -662,7 +604,7 @@ export function PartsTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">Trang trước</span>
                 <IconChevronLeft />
               </Button>
               <Button
@@ -672,7 +614,7 @@ export function PartsTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">Trang tiếp</span>
                 <IconChevronRight />
               </Button>
               <Button
@@ -682,7 +624,7 @@ export function PartsTable({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">Đến trang cuối</span>
                 <IconChevronsRight />
               </Button>
             </div>
@@ -747,31 +689,27 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
     cost_price: 0,
     stock_quantity: 0,
     image_url: "",
-    selected_products: [] as string[],
   });
-
-  // tRPC queries and mutations
-  const { data: products } = trpc.parts.getProducts.useQuery();
 
   const createPartMutation = trpc.parts.createPart.useMutation({
     onSuccess: () => {
-      toast.success("Part created successfully");
+      toast.success("Tạo linh kiện thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to create part");
+      toast.error(error.message || "Tạo linh kiện thất bại");
     },
   });
 
   const updatePartMutation = trpc.parts.updatePart.useMutation({
     onSuccess: () => {
-      toast.success("Part updated successfully");
+      toast.success("Cập nhật linh kiện thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update part");
+      toast.error(error.message || "Cập nhật linh kiện thất bại");
     },
   });
 
@@ -782,8 +720,6 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
   // Reset form when modal opens or mode/part changes
   React.useEffect(() => {
     if (open) {
-      const selectedProducts =
-        part?.product_parts?.map((pp) => pp.products.id) || [];
       setFormData({
         name: part?.name || "",
         part_number: part?.part_number || "",
@@ -793,7 +729,6 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
         cost_price: part?.cost_price || 0,
         stock_quantity: part?.stock_quantity || 0,
         image_url: part?.image_url || "",
-        selected_products: selectedProducts,
       });
     }
   }, [open, part]);
@@ -802,22 +737,22 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
     e.preventDefault();
 
     if (!formData.name) {
-      toast.error("Please enter a part name");
+      toast.error("Vui lòng nhập tên linh kiện");
       return;
     }
 
     if (formData.price <= 0) {
-      toast.error("Please enter a valid price");
+      toast.error("Vui lòng nhập giá hợp lệ");
       return;
     }
 
     if (formData.cost_price < 0) {
-      toast.error("Cost price cannot be negative");
+      toast.error("Giá vốn không thể âm");
       return;
     }
 
     if (formData.stock_quantity < 0) {
-      toast.error("Stock quantity cannot be negative");
+      toast.error("Số lượng tồn kho không thể âm");
       return;
     }
 
@@ -831,7 +766,6 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
         cost_price: formData.cost_price,
         stock_quantity: formData.stock_quantity,
         image_url: formData.image_url || null,
-        product_ids: formData.selected_products,
       });
     } else if (part) {
       updatePartMutation.mutate({
@@ -844,7 +778,6 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
         cost_price: formData.cost_price,
         stock_quantity: formData.stock_quantity,
         image_url: formData.image_url || null,
-        product_ids: formData.selected_products,
       });
     }
   };
@@ -867,94 +800,38 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                 </AvatarFallback>
               </Avatar>
             )}
-            {mode === "add" ? "Add New Part" : part?.name}
+            {mode === "add" ? "Thêm linh kiện mới" : part?.name}
           </DrawerTitle>
           <DrawerDescription>
             {mode === "add"
-              ? "Create a new part with the required information."
-              : "Part details and management options"}
+              ? "Tạo linh kiện mới với thông tin cần thiết."
+              : "Chi tiết linh kiện và tùy chọn quản lý"}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="products">Associated Products</Label>
-              <div className="text-sm text-muted-foreground mb-2">
-                Select which products this part can be used with (optional)
-              </div>
-              {products && products.length > 0 && (
-                <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox
-                        id={`product-${product.id}`}
-                        checked={formData.selected_products.includes(
-                          product.id,
-                        )}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setFormData({
-                              ...formData,
-                              selected_products: [
-                                ...formData.selected_products,
-                                product.id,
-                              ],
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              selected_products:
-                                formData.selected_products.filter(
-                                  (id) => id !== product.id,
-                                ),
-                            });
-                          }
-                        }}
-                      />
-                      <Label
-                        htmlFor={`product-${product.id}`}
-                        className="flex items-center gap-2 text-sm cursor-pointer"
-                      >
-                        <Badge variant="outline" className="text-xs">
-                          {product.type}
-                        </Badge>
-                        {product.name}
-                        {product.brand && (
-                          <span className="text-muted-foreground text-xs">
-                            - {product.brand}
-                          </span>
-                        )}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="name">Part Name *</Label>
+              <Label htmlFor="name">Tên linh kiện *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Enter part name"
+                placeholder="Nhập tên linh kiện"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="part_number">Part Number</Label>
+                <Label htmlFor="part_number">Mã linh kiện</Label>
                 <Input
                   id="part_number"
                   value={formData.part_number}
                   onChange={(e) =>
                     setFormData({ ...formData, part_number: e.target.value })
                   }
-                  placeholder="Enter part number (optional)"
+                  placeholder="Nhập mã linh kiện (tùy chọn)"
                 />
               </div>
               <div className="flex flex-col gap-3">
@@ -965,13 +842,13 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                   onChange={(e) =>
                     setFormData({ ...formData, sku: e.target.value })
                   }
-                  placeholder="Enter SKU (optional)"
+                  placeholder="Nhập SKU (tùy chọn)"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="price">Sale Price * (VND)</Label>
+                <Label htmlFor="price">Giá bán * (VND)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -981,12 +858,12 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                   onChange={(e) =>
                     setFormData({ ...formData, price: Number(e.target.value) })
                   }
-                  placeholder="Enter sale price"
+                  placeholder="Nhập giá bán"
                   required
                 />
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="cost_price">Cost Price * (VND)</Label>
+                <Label htmlFor="cost_price">Giá vốn * (VND)</Label>
                 <Input
                   id="cost_price"
                   type="number"
@@ -999,13 +876,13 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                       cost_price: Number(e.target.value),
                     })
                   }
-                  placeholder="Enter cost price"
+                  placeholder="Nhập giá vốn"
                   required
                 />
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="stock_quantity">Stock Quantity *</Label>
+              <Label htmlFor="stock_quantity">Số lượng tồn kho *</Label>
               <Input
                 id="stock_quantity"
                 type="number"
@@ -1018,31 +895,31 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                     stock_quantity: Number(e.target.value),
                   })
                 }
-                placeholder="Enter stock quantity"
+                placeholder="Nhập số lượng tồn kho"
                 required
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Mô tả</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Enter part description (optional)"
+                placeholder="Nhập mô tả linh kiện (tùy chọn)"
                 rows={3}
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="image_url">Image URL</Label>
+              <Label htmlFor="image_url">Đường dẫn hình ảnh</Label>
               <Input
                 id="image_url"
                 value={formData.image_url}
                 onChange={(e) =>
                   setFormData({ ...formData, image_url: e.target.value })
                 }
-                placeholder="Enter image URL (optional)"
+                placeholder="Nhập đường dẫn hình ảnh (tùy chọn)"
               />
             </div>
             {mode === "edit" && part && (
@@ -1050,11 +927,11 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <Label className="text-muted-foreground">Part ID</Label>
+                    <Label className="text-muted-foreground">ID Linh kiện</Label>
                     <div className="font-mono text-xs">{part.id}</div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Sale Price</Label>
+                    <Label className="text-muted-foreground">Giá bán</Label>
                     <div>
                       {new Intl.NumberFormat("vi-VN", {
                         style: "currency",
@@ -1063,7 +940,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Cost Price</Label>
+                    <Label className="text-muted-foreground">Giá vốn</Label>
                     <div>
                       {new Intl.NumberFormat("vi-VN", {
                         style: "currency",
@@ -1073,7 +950,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">
-                      Stock Quantity
+                      Số lượng tồn kho
                     </Label>
                     <div className="flex items-center gap-2">
                       <span>{part.stock_quantity}</span>
@@ -1087,15 +964,15 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                         }`}
                       >
                         {part.stock_quantity > 10
-                          ? "In Stock"
+                          ? "Còn hàng"
                           : part.stock_quantity > 0
-                            ? "Low Stock"
-                            : "Out of Stock"}
+                            ? "Sắp hết hàng"
+                            : "Hết hàng"}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Stock Value</Label>
+                    <Label className="text-muted-foreground">Giá trị tồn kho</Label>
                     <div>
                       {new Intl.NumberFormat("vi-VN", {
                         style: "currency",
@@ -1105,7 +982,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">
-                      Profit Margin
+                      Tỷ lệ lợi nhuận
                     </Label>
                     <div>
                       {part.price > 0 ? (
@@ -1131,11 +1008,11 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Created</Label>
+                    <Label className="text-muted-foreground">Ngày tạo</Label>
                     <div>{new Date(part.created_at).toLocaleDateString()}</div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Updated</Label>
+                    <Label className="text-muted-foreground">Ngày cập nhật</Label>
                     <div>{new Date(part.updated_at).toLocaleDateString()}</div>
                   </div>
                 </div>
@@ -1145,27 +1022,178 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
         </div>
         <DrawerFooter>
           <Button
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit(e);
-            }}
+            onClick={handleSubmit}
             disabled={isLoading}
           >
             {isLoading
               ? mode === "add"
-                ? "Creating..."
-                : "Updating..."
+                ? "Đang tạo..."
+                : "Đang cập nhật..."
               : mode === "add"
-                ? "Create Part"
-                : "Save Changes"}
+                ? "Tạo linh kiện"
+                : "Lưu thay đổi"}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Cancel
+              Hủy
             </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const createPartMutation = trpc.parts.createPart.useMutation({
+    onSuccess: () => {
+      // Success is handled in the batch operation
+    },
+    onError: (error) => {
+      toast.error(error.message || "Lỗi khi tạo linh kiện mẫu");
+    },
+  });
+
+  const sampleParts = [
+    {
+      name: "Ốc GPU - Ốc lò xo (6.8mm)",
+      part_number: "OC-GPU-6.8",
+      sku: "SKU-001",
+      description: "Ốc lò xo cho GPU, kích thước 6.8mm",
+      price: Math.floor(Math.random() * 50000) + 10000, // 10k-60k VND
+      cost_price: Math.floor(Math.random() * 30000) + 5000, // 5k-35k VND
+      stock_quantity: Math.floor(Math.random() * 100) + 10, // 10-110
+      image_url: null,
+    },
+    {
+      name: "Ốc Backplate - Ốc tròn 5.7x2.2mm",
+      part_number: "OC-BP-5.7x2.2",
+      sku: "SKU-002",
+      description: "Ốc tròn cho backplate, kích thước 5.7x2.2mm",
+      price: Math.floor(Math.random() * 40000) + 8000,
+      cost_price: Math.floor(Math.random() * 25000) + 4000,
+      stock_quantity: Math.floor(Math.random() * 80) + 15,
+      image_url: null,
+    },
+    {
+      name: "Ốc gắn FE - Ốc dù 4.6x2.2mm",
+      part_number: "OC-FE-4.6x2.2-DU",
+      sku: "SKU-003",
+      description: "Ốc dù cho FE, kích thước 4.6x2.2mm",
+      price: Math.floor(Math.random() * 35000) + 12000,
+      cost_price: Math.floor(Math.random() * 20000) + 6000,
+      stock_quantity: Math.floor(Math.random() * 60) + 20,
+      image_url: null,
+    },
+    {
+      name: "Ốc gắn FE - Ốc dù 3.3x1.8mm",
+      part_number: "OC-FE-3.3x1.8-DU",
+      sku: "SKU-004",
+      description: "Ốc dù cho FE, kích thước 3.3x1.8mm",
+      price: Math.floor(Math.random() * 30000) + 10000,
+      cost_price: Math.floor(Math.random() * 18000) + 5000,
+      stock_quantity: Math.floor(Math.random() * 70) + 15,
+      image_url: null,
+    },
+    {
+      name: "Ốc gắn FE - Ốc tròn 4.6x2.2mm",
+      part_number: "OC-FE-4.6x2.2-TRON",
+      sku: "SKU-005",
+      description: "Ốc tròn cho FE, kích thước 4.6x2.2mm",
+      price: Math.floor(Math.random() * 32000) + 11000,
+      cost_price: Math.floor(Math.random() * 19000) + 5500,
+      stock_quantity: Math.floor(Math.random() * 90) + 10,
+      image_url: null,
+    },
+    {
+      name: "Tấm backplate - Backplate Zotac ZT-B50620H-10M",
+      part_number: "BP-ZOTAC-ZT-B50620H-10M",
+      sku: "SKU-006",
+      description: "Tấm backplate cho card đồ họa Zotac ZT-B50620H-10M",
+      price: Math.floor(Math.random() * 200000) + 150000,
+      cost_price: Math.floor(Math.random() * 120000) + 80000,
+      stock_quantity: Math.floor(Math.random() * 30) + 5,
+      image_url: null,
+    },
+    {
+      name: "Miếng FE - FE Zotac Gaming mã 144600",
+      part_number: "FE-ZOTAC-144600",
+      sku: "SKU-007",
+      description: "Miếng FE cho card đồ họa Zotac Gaming mã 144600",
+      price: Math.floor(Math.random() * 180000) + 120000,
+      cost_price: Math.floor(Math.random() * 100000) + 70000,
+      stock_quantity: Math.floor(Math.random() * 25) + 8,
+      image_url: null,
+    },
+    {
+      name: "Cụm Tản Nhiệt + ốp - Bộ tản nhiệt Zotac mã 251-20927-732TF",
+      part_number: "TN-ZOTAC-251-20927-732TF",
+      sku: "SKU-008",
+      description: "Bộ tản nhiệt hoàn chỉnh cho card đồ họa Zotac mã 251-20927-732TF",
+      price: Math.floor(Math.random() * 500000) + 300000,
+      cost_price: Math.floor(Math.random() * 300000) + 180000,
+      stock_quantity: Math.floor(Math.random() * 20) + 3,
+      image_url: null,
+    },
+    {
+      name: "Quạt tản nhiệt - Quạt VGA 87.5mm 12V-0.6A (TF90S12H-15DAA)",
+      part_number: "FAN-TF90S12H-15DAA",
+      sku: "SKU-009",
+      description: "Quạt tản nhiệt VGA 87.5mm 12V-0.6A model TF90S12H-15DAA",
+      price: Math.floor(Math.random() * 250000) + 100000,
+      cost_price: Math.floor(Math.random() * 150000) + 60000,
+      stock_quantity: Math.floor(Math.random() * 40) + 12,
+      image_url: null,
+    },
+  ];
+
+  const handleAddSampleParts = async () => {
+    setIsLoading(true);
+
+    try {
+      let successCount = 0;
+      const totalParts = sampleParts.length;
+
+      for (const part of sampleParts) {
+        try {
+          await createPartMutation.mutateAsync(part);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create part: ${part.name}`, error);
+        }
+      }
+
+      if (successCount === totalParts) {
+        toast.success(`Đã thêm thành công ${successCount} linh kiện mẫu`);
+      } else if (successCount > 0) {
+        toast.success(`Đã thêm thành công ${successCount}/${totalParts} linh kiện mẫu`);
+      } else {
+        toast.error("Không thể thêm linh kiện mẫu nào");
+      }
+
+      if (successCount > 0 && onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      toast.error("Lỗi khi thêm linh kiện mẫu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleAddSampleParts}
+      disabled={isLoading}
+    >
+      <IconDatabase />
+      <span className="hidden lg:inline">
+        {isLoading ? "Đang thêm..." : "Thêm mẫu"}
+      </span>
+    </Button>
   );
 }

@@ -8,7 +8,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-
+import { trpc } from "@/components/providers/trpc-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -25,7 +25,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { trpc } from "@/components/providers/trpc-provider";
 import { createClient } from "@/utils/supabase/client";
 
 export function NavUser() {
@@ -34,18 +33,22 @@ export function NavUser() {
   const supabase = createClient();
 
   // Use the same tRPC query as the account page
-  const { data: profile, isLoading: loading, error } = trpc.profile.getCurrentUser.useQuery();
+  const {
+    data: profile,
+    isLoading: loading,
+    error,
+  } = trpc.profile.getCurrentUser.useQuery();
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Logout error:', error);
+        console.error("Logout error:", error);
       } else {
-        router.push('/login');
+        router.push("/login");
       }
     } catch (error) {
-      console.error('Exception during logout:', error);
+      console.error("Exception during logout:", error);
     }
   };
 
@@ -59,7 +62,9 @@ export function NavUser() {
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Loading...</span>
-              <span className="text-muted-foreground truncate text-xs">...</span>
+              <span className="text-muted-foreground truncate text-xs">
+                ...
+              </span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -77,7 +82,9 @@ export function NavUser() {
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">No user found</span>
-              <span className="text-muted-foreground truncate text-xs">Please log in</span>
+              <span className="text-muted-foreground truncate text-xs">
+                Please log in
+              </span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -87,9 +94,9 @@ export function NavUser() {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -105,14 +112,18 @@ export function NavUser() {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={profile.avatar_url || ''}
+                  src={profile.avatar_url || ""}
                   alt={profile.full_name}
                   className="object-cover w-full h-full"
                 />
-                <AvatarFallback className="rounded-lg">{getInitials(profile.full_name)}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {getInitials(profile.full_name)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{profile.full_name}</span>
+                <span className="truncate font-medium">
+                  {profile.full_name}
+                </span>
                 <span className="text-muted-foreground truncate text-xs">
                   {profile.email}
                 </span>
@@ -130,14 +141,18 @@ export function NavUser() {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
-                    src={profile.avatar_url || ''}
+                    src={profile.avatar_url || ""}
                     alt={profile.full_name}
                     className="object-cover w-full h-full"
                   />
-                  <AvatarFallback className="rounded-lg">{getInitials(profile.full_name)}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {getInitials(profile.full_name)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{profile.full_name}</span>
+                  <span className="truncate font-medium">
+                    {profile.full_name}
+                  </span>
                   <span className="text-muted-foreground truncate text-xs">
                     {profile.email}
                   </span>
@@ -146,7 +161,7 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/account')}>
+              <DropdownMenuItem onClick={() => router.push("/account")}>
                 <IconUserCircle />
                 Tài khoản
               </DropdownMenuItem>

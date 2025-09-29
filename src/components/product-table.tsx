@@ -69,8 +69,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -82,11 +80,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -97,6 +90,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const productSchema = z.object({
@@ -215,8 +213,8 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
           row.original.type === "hardware"
             ? "default"
             : row.original.type === "software"
-            ? "secondary"
-            : "outline"
+              ? "secondary"
+              : "outline"
         }
         className="text-xs"
       >
@@ -645,26 +643,24 @@ export function ProductTable({
           </div>
         </div>
       </TabsContent>
-      <TabsContent
-        value="categories"
-        className="flex flex-col px-4 lg:px-6"
-      >
+      <TabsContent value="categories" className="flex flex-col px-4 lg:px-6">
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
       <TabsContent value="brands" className="flex flex-col px-4 lg:px-6">
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
-      <TabsContent
-        value="inventory"
-        className="flex flex-col px-4 lg:px-6"
-      >
+      <TabsContent value="inventory" className="flex flex-col px-4 lg:px-6">
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
     </Tabs>
   );
 }
 
-function ProductViewer({ product }: { product: z.infer<typeof productSchema> }) {
+function ProductViewer({
+  product,
+}: {
+  product: z.infer<typeof productSchema>;
+}) {
   const isMobile = useIsMobile();
 
   return (
@@ -734,7 +730,10 @@ function ProductViewer({ product }: { product: z.infer<typeof productSchema> }) 
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="description">Description</Label>
-              <Input id="description" defaultValue={product.short_description || ""} />
+              <Input
+                id="description"
+                defaultValue={product.short_description || ""}
+              />
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="image">Image URL</Label>
@@ -764,11 +763,14 @@ function ProductViewer({ product }: { product: z.infer<typeof productSchema> }) 
         <DrawerFooter>
           <Button
             onClick={() =>
-              toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-                loading: `Updating ${product.name}...`,
-                success: "Product updated successfully",
-                error: "Failed to update product",
-              })
+              toast.promise(
+                new Promise((resolve) => setTimeout(resolve, 1000)),
+                {
+                  loading: `Updating ${product.name}...`,
+                  success: "Product updated successfully",
+                  error: "Failed to update product",
+                },
+              )
             }
           >
             Save Changes

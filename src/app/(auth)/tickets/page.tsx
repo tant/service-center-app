@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { TicketTable, ticketSchema } from "@/components/ticket-table";
-import { z } from "zod";
+import { TicketTable, type ticketSchema } from "@/components/ticket-table";
 
 // Sample data for demonstration - in a real app this would come from your database
 const sampleTicketData: z.infer<typeof ticketSchema>[] = [
@@ -10,7 +10,8 @@ const sampleTicketData: z.infer<typeof ticketSchema>[] = [
     customer_id: "1",
     customer_name: "Nguyễn Văn Anh",
     title: "Thay màn hình Samsung Galaxy S23 Ultra",
-    description: "Khách hàng làm rơi điện thoại, màn hình bị vỡ và không hiển thị được",
+    description:
+      "Khách hàng làm rơi điện thoại, màn hình bị vỡ và không hiển thị được",
     status: "in_progress" as const,
     priority: "high" as const,
     assigned_to: "c3d4e5f6-g7h8-9012-cdef-345678901234",

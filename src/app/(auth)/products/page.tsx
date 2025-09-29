@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { ProductTable, productSchema } from "@/components/product-table";
-import { z } from "zod";
+import { ProductTable, type productSchema } from "@/components/product-table";
 
 // Sample data for demonstration - in a real app this would come from your database
 const sampleProductData: z.infer<typeof productSchema>[] = [
@@ -34,7 +34,7 @@ const sampleProductData: z.infer<typeof productSchema>[] = [
   },
   {
     id: "3",
-    name: "Samsung Smart TV 65\" QLED",
+    name: 'Samsung Smart TV 65" QLED',
     sku: "QN65Q70C",
     short_description: "4K QLED Smart TV with Quantum HDR",
     brand: "Samsung",

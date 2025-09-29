@@ -1,39 +1,23 @@
 "use client";
 
-import * as React from "react";
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type Row,
-} from "@tanstack/react-table";
-import {
+  closestCenter,
   DndContext,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  closestCenter,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
-  type UniqueIdentifier,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
-  SortableContext,
   arrayMove,
-  verticalListSortingStrategy,
+  SortableContext,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   IconChevronDown,
   IconEdit,
@@ -43,18 +27,42 @@ import {
   IconPlus,
   IconUserCheck,
 } from "@tabler/icons-react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type Row,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import * as React from "react";
+import { toast } from "sonner";
 import { z } from "zod";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -63,32 +71,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ticketStatusEnum = z.enum(["open", "in_progress", "resolved", "closed"]);
 const ticketPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
@@ -133,7 +116,11 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-function DraggableRow<TData extends { id: string }>({ row }: { row: Row<TData> }) {
+function DraggableRow<TData extends { id: string }>({
+  row,
+}: {
+  row: Row<TData>;
+}) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   });
@@ -223,69 +210,72 @@ function DataTable<TData extends { id: string }, TValue>({
 
   return (
     <div className="overflow-hidden rounded-lg border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-          id={sortableId}
-        >
-          <Table>
-            <TableHeader className="bg-muted sticky top-0 z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="**:data-[slot=table-cell]:first:w-8">
-              {table.getRowModel().rows?.length ? (
-                <SortableContext
-                  items={dataIds}
-                  strategy={verticalListSortingStrategy}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToVerticalAxis]}
+        id={sortableId}
+      >
+        <Table>
+          <TableHeader className="bg-muted sticky top-0 z-10">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} colSpan={header.colSpan}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+            {table.getRowModel().rows?.length ? (
+              <SortableContext
+                items={dataIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {table.getRowModel().rows.map((row) => (
+                  <DraggableRow<TData> key={row.id} row={row} />
+                ))}
+              </SortableContext>
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
                 >
-                  {table.getRowModel().rows.map((row) => (
-                    <DraggableRow<TData> key={row.id} row={row} />
-                  ))}
-                </SortableContext>
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No tickets found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </DndContext>
-      </div>
-    );
-  }
+                  No tickets found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </DndContext>
+    </div>
+  );
+}
 
 interface TicketTableProps {
   data: Ticket[];
 }
 
 export function TicketTable({ data: initialData }: TicketTableProps) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, _setData] = React.useState(() => initialData);
   const [searchValue, setSearchValue] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const sortableId = React.useId();
   const sensors = useSensors(
@@ -313,20 +303,27 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       resolved: { label: "Đã giải quyết", variant: "secondary" as const },
       closed: { label: "Đã đóng", variant: "outline" as const },
     };
-    const statusConfig = statusMap[status as keyof typeof statusMap] || statusMap.open;
+    const statusConfig =
+      statusMap[status as keyof typeof statusMap] || statusMap.open;
     return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
   };
 
   const getPriorityBadge = (priority: string) => {
     const priorityMap = {
       low: { label: "Thấp", className: "bg-gray-100 text-gray-800" },
-      medium: { label: "Trung bình", className: "bg-yellow-100 text-yellow-800" },
+      medium: {
+        label: "Trung bình",
+        className: "bg-yellow-100 text-yellow-800",
+      },
       high: { label: "Cao", className: "bg-orange-100 text-orange-800" },
       urgent: { label: "Khẩn cấp", className: "bg-red-100 text-red-800" },
     };
-    const priorityConfig = priorityMap[priority as keyof typeof priorityMap] || priorityMap.medium;
+    const priorityConfig =
+      priorityMap[priority as keyof typeof priorityMap] || priorityMap.medium;
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.className}`}>
+      <span
+        className={`px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.className}`}
+      >
         {priorityConfig.label}
       </span>
     );
@@ -347,7 +344,9 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Select all"
           />
         </div>
@@ -426,7 +425,9 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       header: "Ngày tạo",
       cell: ({ row }) => {
         const date = new Date(row.getValue("created_at"));
-        return <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>;
+        return (
+          <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
+        );
       },
     },
     {
@@ -478,10 +479,12 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       const description = item.description?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
-      return ticketNumber.includes(search) ||
-             customerName.includes(search) ||
-             title.includes(search) ||
-             description.includes(search);
+      return (
+        ticketNumber.includes(search) ||
+        customerName.includes(search) ||
+        title.includes(search) ||
+        description.includes(search)
+      );
     });
   }, [data, searchValue]);
 
@@ -629,7 +632,8 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
             <h3 className="mt-4 text-lg font-semibold">Phân tích</h3>
             <p className="mb-4 mt-2 text-sm text-muted-foreground">
-              Phân tích hiệu suất xử lý, thời gian phản hồi và độ hài lòng khách hàng.
+              Phân tích hiệu suất xử lý, thời gian phản hồi và độ hài lòng khách
+              hàng.
             </p>
           </div>
         </div>

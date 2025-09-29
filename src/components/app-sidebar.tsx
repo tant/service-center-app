@@ -1,24 +1,15 @@
 "use client";
 
 import {
-  IconCamera,
   IconClipboardList,
   IconComponents,
   IconDashboard,
-  IconDatabase,
   IconDevices,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
   IconHelp,
   IconInnerShadowTop,
-  IconListDetails,
   IconPhone,
   IconReport,
-  IconSearch,
   IconSettings,
-  IconTool,
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";

@@ -1,25 +1,11 @@
 "use client";
 
-import {
-  type Icon,
-  IconDots,
-  IconFolder,
-  IconShare3,
-  IconTrash,
-} from "@tabler/icons-react";
+import type { Icon } from "@tabler/icons-react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -34,6 +20,7 @@ export function NavDocuments({
     icon: Icon;
   }[];
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { isMobile } = useSidebar();
 
   return (

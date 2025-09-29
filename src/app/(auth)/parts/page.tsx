@@ -1,6 +1,6 @@
+import type { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { PartsTable, partSchema } from "@/components/parts-table";
-import { z } from "zod";
+import { PartsTable, type partSchema } from "@/components/parts-table";
 
 // Sample data for demonstration - in a real app this would come from your database
 const samplePartsData: z.infer<typeof partSchema>[] = [

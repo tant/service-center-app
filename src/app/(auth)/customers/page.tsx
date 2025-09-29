@@ -1,6 +1,9 @@
+import type { z } from "zod";
+import {
+  CustomerTable,
+  type customerSchema,
+} from "@/components/customer-table";
 import { PageHeader } from "@/components/page-header";
-import { CustomerTable, customerSchema } from "@/components/customer-table";
-import { z } from "zod";
 
 // Sample data for demonstration - in a real app this would come from your database
 const sampleCustomerData: z.infer<typeof customerSchema>[] = [

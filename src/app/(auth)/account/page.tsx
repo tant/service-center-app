@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { trpc } from "@/components/providers/trpc-provider";
-import { Pencil, Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { uploadAvatar } from "@/lib/supabase/storage";
 
 export default function Page() {
@@ -16,7 +16,6 @@ export default function Page() {
     data: profile,
     isLoading,
     error,
-    refetch,
   } = trpc.profile.getCurrentUser.useQuery();
 
   const utils = trpc.useUtils();
@@ -25,7 +24,7 @@ export default function Page() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [fullName, setFullName] = useState("");
   const [avatarPreview, setAvatarPreview] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -62,8 +61,8 @@ export default function Page() {
       setIsEditingName(false);
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update name");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update name");
       setFullName(profile.full_name || "");
       setIsEditingName(false);
     }
@@ -82,7 +81,9 @@ export default function Page() {
     }
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !profile) return;
 
@@ -113,8 +114,8 @@ export default function Page() {
       utils.profile.getCurrentUser.invalidate();
       setSelectedFile(null);
       setAvatarPreview("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to upload avatar");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload avatar");
       setAvatarPreview("");
       setSelectedFile(null);
     } finally {
@@ -233,7 +234,6 @@ export default function Page() {
               <Card className="w-full">
                 <CardContent className="p-8">
                   <div className="flex flex-col items-center justify-center space-y-6 max-w-md mx-auto">
-
                     {/* Avatar Section */}
                     <div className="relative">
                       <button
@@ -266,7 +266,9 @@ export default function Page() {
                         {/* Hover overlay */}
                         {!isUploading && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                            <span className="text-white text-xs">Change Photo</span>
+                            <span className="text-white text-xs">
+                              Change Photo
+                            </span>
                           </div>
                         )}
                       </button>

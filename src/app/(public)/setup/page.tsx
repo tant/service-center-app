@@ -56,7 +56,7 @@ export default function SetupPage() {
       // ignore
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setupMutation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,39 +1,23 @@
 "use client";
 
-import * as React from "react";
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type Row,
-} from "@tanstack/react-table";
-import {
+  closestCenter,
   DndContext,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  closestCenter,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
-  type UniqueIdentifier,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
-  SortableContext,
   arrayMove,
-  verticalListSortingStrategy,
+  SortableContext,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   IconChevronDown,
   IconEdit,
@@ -43,18 +27,42 @@ import {
   IconPhone,
   IconPlus,
 } from "@tabler/icons-react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type Row,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import * as React from "react";
+import { toast } from "sonner";
 import { z } from "zod";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -63,32 +71,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const customerSchema = z.object({
   id: z.string(),
@@ -127,7 +110,11 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-function DraggableRow<TData extends { id: string }>({ row }: { row: Row<TData> }) {
+function DraggableRow<TData extends { id: string }>({
+  row,
+}: {
+  row: Row<TData>;
+}) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   });
@@ -151,7 +138,6 @@ function DraggableRow<TData extends { id: string }>({ row }: { row: Row<TData> }
     </TableRow>
   );
 }
-
 
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -218,69 +204,72 @@ function DataTable<TData extends { id: string }, TValue>({
 
   return (
     <div className="overflow-hidden rounded-lg border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-          id={sortableId}
-        >
-          <Table>
-            <TableHeader className="bg-muted sticky top-0 z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="**:data-[slot=table-cell]:first:w-8">
-              {table.getRowModel().rows?.length ? (
-                <SortableContext
-                  items={dataIds}
-                  strategy={verticalListSortingStrategy}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToVerticalAxis]}
+        id={sortableId}
+      >
+        <Table>
+          <TableHeader className="bg-muted sticky top-0 z-10">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} colSpan={header.colSpan}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+            {table.getRowModel().rows?.length ? (
+              <SortableContext
+                items={dataIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {table.getRowModel().rows.map((row) => (
+                  <DraggableRow<TData> key={row.id} row={row} />
+                ))}
+              </SortableContext>
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
                 >
-                  {table.getRowModel().rows.map((row) => (
-                    <DraggableRow<TData> key={row.id} row={row} />
-                  ))}
-                </SortableContext>
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No customers found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </DndContext>
-      </div>
-    );
-  }
+                  No customers found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </DndContext>
+    </div>
+  );
+}
 
 interface CustomerTableProps {
   data: Customer[];
 }
 
 export function CustomerTable({ data: initialData }: CustomerTableProps) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, _setData] = React.useState(() => initialData);
   const [searchValue, setSearchValue] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const sortableId = React.useId();
   const sensors = useSensors(
@@ -324,7 +313,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Select all"
           />
         </div>
@@ -353,18 +344,14 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("email") || "—"}
-        </div>
+        <div className="text-sm">{row.getValue("email") || "—"}</div>
       ),
     },
     {
       accessorKey: "phone",
       header: "Số điện thoại",
       cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("phone") || "—"}
-        </div>
+        <div className="text-sm">{row.getValue("phone") || "—"}</div>
       ),
     },
     {
@@ -397,7 +384,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       header: "Ngày tạo",
       cell: ({ row }) => {
         const date = new Date(row.getValue("created_at"));
-        return <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>;
+        return (
+          <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
+        );
       },
     },
     {
@@ -451,10 +440,12 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       const company = item.company?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
-      return name.includes(search) ||
-             email.includes(search) ||
-             phone.includes(search) ||
-             company.includes(search);
+      return (
+        name.includes(search) ||
+        email.includes(search) ||
+        phone.includes(search) ||
+        company.includes(search)
+      );
     });
   }, [data, searchValue]);
 

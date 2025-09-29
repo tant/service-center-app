@@ -87,6 +87,25 @@ else
     warn "⚠️  No schemas directory found"
 fi
 
+# Ensure required directories exist (create if missing)
+info "📁 Ensuring required Supabase directories exist..."
+REQUIRED_DIRS=("supabase/migrations" "supabase/schemas" "supabase/storage/avatars" "supabase/storage/product_images" "supabase/storage/service_media")
+CREATED=()
+EXISTED=0
+for DIR in "${REQUIRED_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        EXISTED=$((EXISTED + 1))
+    else
+        mkdir -p "$DIR"
+        CREATED+=("$DIR")
+    fi
+done
+
+if [ ${#CREATED[@]} -gt 0 ]; then
+    success "   ✅ Created ${#CREATED[@]} directories: ${CREATED[*]}"
+fi
+info "   • ${EXISTED} directories already existed"
+
 # Note: Supabase is not started automatically by this script. You should run it manually.
 info "🚀 Start Supabase manually when you're ready:"
 info "  • To start Supabase: pnpx supabase start"

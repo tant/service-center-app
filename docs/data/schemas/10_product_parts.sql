@@ -1,4 +1,3 @@
-```sql
 -- Junction table between products and parts (N:N)
 -- Keeps mapping of which parts are associated with which products.
 
@@ -34,5 +33,3 @@ create policy "product_parts_delete_policy" on "product_parts"
       select 1 from profiles p where p.user_id = auth.uid() and ('manager' = any(p.roles) or 'admin' = any(p.roles))
     )
   );
-
-```

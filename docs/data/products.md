@@ -18,9 +18,9 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của sản phẩm 
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
-| `brand` | String | ❌ | Thương hiệu sản phẩm |
+| `brand` | Enum | ❌ | Thương hiệu sản phẩm (ZOTAC, SSTC, Other) |
 | `model` | String | ❌ | Mẫu mã sản phẩm |
-| `type` | Enum | ❌ | Loại sản phẩm (hardware, software, accessory, etc.) |
+| `type` | Enum | ❌ | Loại sản phẩm (VGA, MiniPC, SSD, RAM, Mainboard, Other) |
 
 ### 3. Thông tin media và hình ảnh (Media Information)
 
@@ -45,9 +45,9 @@ Tài liệu này mô tả cấu trúc dữ liệu chi tiết của sản phẩm 
   "name": "iPhone 15 Pro Max",
   "sku": "IPH15PM-256-NTL",
   "short_description": "Premium smartphone",
-  "brand": "Apple",
+  "brand": "ZOTAC",
   "model": "A3108",
-  "type": "hardware",
+  "type": "VGA",
   "primary_image": "https://example.com/iphone15.jpg",
   "created_at": "2024-01-15T10:30:00Z",
   "updated_at": "2024-01-15T10:30:00Z"

@@ -31,6 +31,7 @@ import {
   IconLayoutColumns,
   IconPackage,
   IconPlus,
+  IconDatabase,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -480,6 +481,7 @@ export function ProductTable({
             }
             onSuccess={() => window.location.reload()}
           />
+          <AddSampleProductsButton onSuccess={() => window.location.reload()} />
         </div>
       </div>
       <TabsContent
@@ -986,5 +988,178 @@ function ProductModal({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const createProductMutation = trpc.products.createProduct.useMutation({
+    onSuccess: () => {
+      // Success is handled in the batch operation
+    },
+    onError: (error) => {
+      toast.error(error.message || "Lỗi khi tạo sản phẩm mẫu");
+    },
+  });
+
+  // Sample products from VGA data file (selected variety)
+  const sampleProducts = [
+    {
+      name: "GAMING GeForce RTX 3050 ECO Edition 8GB",
+      sku: "14-500-567",
+      short_description: "ZOTAC GAMING GeForce RTX 3050 ECO Edition 8GB GDDR6 128-bit 14 Gbps PCIE 4.0 Gaming Graphics Card, Active Fan Control, FREEZE Fan Stop, ZT-A30500K-10M",
+      brand: "ZOTAC" as const,
+      model: "ZT-A30500K-10M",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-567-02.jpg",
+    },
+    {
+      name: "ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB",
+      sku: "14-500-630",
+      short_description: "ZOTAC ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5090 ARCTICSTORM AIO ZT-B50900K-30P",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50900K-30P",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-630-01.jpg",
+    },
+    {
+      name: "SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB",
+      sku: "14-500-631",
+      short_description: "ZOTAC SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5070 Ti SOLID CORE White Edition ZT-B50710Q2-10P",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50710Q2-10P",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-631-01.jpg",
+    },
+    {
+      name: "AMP Extreme Infinity GeForce RTX 5080 16GB",
+      sku: "14-500-595",
+      short_description: "ZOTAC AMP Extreme Infinity GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card ZT-B50800B-10P",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50800B-10P",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-595-02.jpg",
+    },
+    {
+      name: "GAMING GeForce RTX 3060 Twin Edge 12GB",
+      sku: "14-500-509",
+      short_description: "ZOTAC GAMING GeForce RTX 3060 Twin Edge 12GB GDDR6 192-bit 15 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Cooling, Active Fan Control, FREEZE Fan Stop, ZT-A30600E-10M",
+      brand: "ZOTAC" as const,
+      model: "ZT-A30600E-10M",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-509-V08.jpg",
+    },
+    {
+      name: "Twin Edge OC GeForce RTX 5060 Ti 16GB",
+      sku: "14-500-612",
+      short_description: "ZOTAC Twin Edge OC GeForce RTX 5060 Ti PCI Express 5.0 x8 16GB 128-Bit GDDR7 Graphics Card ZT-B50620H-10M",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50620H-10M",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-612-10.jpg",
+    },
+    {
+      name: "AMP GeForce RTX 5070 12GB White Edition",
+      sku: "14-500-617",
+      short_description: "ZOTAC AMP GeForce RTX 5070 12GB 192-Bit GDDR7 PCI Express 5.0 x16 Graphics Card RTX 5070 AMP White Edition ZT-B50700FQ-10P",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50700FQ-10P",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-617-10.jpg",
+    },
+    {
+      name: "SOLO GeForce RTX 5050 8GB",
+      sku: "14-500-625",
+      short_description: "ZOTAC SOLO GeForce RTX 5050 8GB GDDR6 PCI Express 5.0 x8 ATX Graphics Card GeForce RTX 5050 SOLO ZT-B50500G-10L",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50500G-10L",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-625-02.jpg",
+    },
+    {
+      name: "GAMING GeForce RTX 5060 Twin Edge OC 8GB",
+      sku: "14-500-623",
+      short_description: "ZOTAC GAMING GeForce RTX 5060 Twin Edge OC DLSS 4 8GB GDDR7 128-bit 28 Gbps PCIE 5.0 Gaming Graphics Card, SFF-ready compact card, ZT-B50600H-10M",
+      brand: "ZOTAC" as const,
+      model: "ZT-B50600H-10M",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-623-02.jpg",
+    },
+    {
+      name: "GAMING GeForce GTX 1660 SUPER Twin Fan 6GB",
+      sku: "9SIADT2KAU1283",
+      short_description: "ZOTAC GAMING GeForce GTX 1660 SUPER Twin Fan Black 6GB GDDR6 192-bit Gaming Graphics Card, ZT-T16620J-10M",
+      brand: "ZOTAC" as const,
+      model: "ZT-T16620J-10M",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/1FT-000M-003U0-S08.jpg",
+    },
+    {
+      name: "GAMING GeForce RTX 3090 Trinity OC 24GB",
+      sku: "9SIABKXKBC4109",
+      short_description: "ZOTAC GAMING GeForce RTX 3090 Trinity OC 24GB GDDR6X 384-bit 19.5 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Advanced Cooling, SPECTRA 2.0 RGB Lighting, ZT-A30900J-10P",
+      brand: "ZOTAC" as const,
+      model: "ZT-A30900J-10P",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-510-V01.jpg",
+    },
+    {
+      name: "GAMING GeForce RTX 4060 8GB Solo",
+      sku: "9SIBTK0KCK4538",
+      short_description: "ZOTAC GAMING GeForce RTX 4060 8GB Solo DLSS 3 8GB GDDR6 128-bit 17 Gbps PCIE 4.0 Super Compact Gaming Graphics Card, ZT-D40600G-10L",
+      brand: "ZOTAC" as const,
+      model: "ZT-D40600G-10L",
+      type: "VGA" as const,
+      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-558-S09.jpg",
+    },
+  ];
+
+  const handleAddSampleProducts = async () => {
+    setIsLoading(true);
+
+    try {
+      let successCount = 0;
+      const totalProducts = sampleProducts.length;
+
+      for (const product of sampleProducts) {
+        try {
+          await createProductMutation.mutateAsync(product);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create product: ${product.name}`, error);
+        }
+      }
+
+      if (successCount === totalProducts) {
+        toast.success(`Đã thêm thành công ${successCount} sản phẩm mẫu`);
+      } else if (successCount > 0) {
+        toast.success(`Đã thêm thành công ${successCount}/${totalProducts} sản phẩm mẫu`);
+      } else {
+        toast.error("Không thể thêm sản phẩm mẫu nào");
+      }
+
+      if (successCount > 0 && onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      toast.error("Lỗi khi thêm sản phẩm mẫu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleAddSampleProducts}
+      disabled={isLoading}
+    >
+      <IconDatabase />
+      <span className="hidden lg:inline">
+        {isLoading ? "Đang thêm..." : "Thêm mẫu"}
+      </span>
+    </Button>
   );
 }

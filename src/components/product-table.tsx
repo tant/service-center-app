@@ -634,6 +634,35 @@ export function ProductTable({
   );
 }
 
+function ProductImage({
+  src,
+  alt,
+  className = "",
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+}) {
+  const [hasError, setHasError] = React.useState(false);
+
+  return (
+    <div className={`relative bg-muted rounded-md overflow-hidden flex-shrink-0 ${className}`}>
+      {src && !hasError ? (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-contain"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <IconPackage className="size-4 text-muted-foreground" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductViewer({
   product,
 }: {
@@ -645,14 +674,19 @@ function ProductViewer({
       mode="edit"
       trigger={
         <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
-          <Avatar className="size-8">
-            <AvatarImage src={product.primary_image || ""} />
-            <AvatarFallback>
-              <IconPackage className="size-4" />
-            </AvatarFallback>
-          </Avatar>
+          <ProductImage
+            src={product.primary_image}
+            alt={product.name}
+            className="w-10 h-8"
+          />
           <div className="flex flex-col items-start">
             <div className="font-medium">{product.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {product.brand && product.model
+                ? `${product.brand} - ${product.model}`
+                : product.brand || product.model || product.type
+              }
+            </div>
           </div>
         </Button>
       }
@@ -769,12 +803,11 @@ function ProductModal({
         <DrawerHeader className="gap-1">
           <DrawerTitle className="flex items-center gap-3">
             {mode === "edit" && (
-              <Avatar className="size-10">
-                <AvatarImage src={product?.primary_image || ""} />
-                <AvatarFallback>
-                  <IconPackage className="size-5" />
-                </AvatarFallback>
-              </Avatar>
+              <ProductImage
+                src={product?.primary_image}
+                alt={product?.name || "Product"}
+                className="w-10 h-10"
+              />
             )}
             {mode === "add" ? "Add New Product" : product?.name}
           </DrawerTitle>

@@ -102,6 +102,9 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// TODO: REMOVE IN PRODUCTION - Sample data generator imports for development/testing only
+import { IconDatabase } from "@tabler/icons-react";
+
 export const teamSchema = z.object({
   id: z.string(),
   user_id: z.string(),
@@ -582,6 +585,9 @@ export function TeamTable({
             }
             onSuccess={() => window.location.reload()}
           />
+
+          {/* TODO: REMOVE IN PRODUCTION - Sample data generator for development/testing only */}
+          <SampleDataGenerator onSuccess={() => window.location.reload()} />
         </div>
       </div>
       <TabsContent
@@ -1003,6 +1009,121 @@ function TeamMemberModal({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+// TODO: REMOVE IN PRODUCTION - Sample data generator component for development/testing only
+function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  // Random data generators
+  const firstNames = ["John", "Jane", "Mike", "Sarah", "David", "Lisa", "Tom", "Anna", "Chris", "Maria", "Alex", "Emma", "Ryan", "Sofia", "James", "Luna", "Kevin", "Nina", "Paul", "Zoe"];
+  const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"];
+  const roles = ["admin", "manager", "technician", "reception"];
+  const domains = ["testcompany.com", "example.org", "demo.net", "sample.io", "test.co"];
+
+  const generateRandomName = () => {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    return `${firstName} ${lastName}`;
+  };
+
+  const generateRandomEmail = (name: string) => {
+    const domain = domains[Math.floor(Math.random() * domains.length)];
+    const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+    const randomNum = Math.floor(Math.random() * 1000);
+    return `${cleanName}.${randomNum}@${domain}`;
+  };
+
+  const generateRandomRole = () => {
+    return roles[Math.floor(Math.random() * roles.length)] as "admin" | "manager" | "technician" | "reception";
+  };
+
+  const handleGenerateSampleData = async () => {
+    if (!confirm("This will create 100 test accounts. Are you sure?")) {
+      return;
+    }
+
+    setIsLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      toast.info("Creating 100 sample accounts... This may take a moment.");
+
+      // Create accounts in batches of 10 to avoid overwhelming the server
+      for (let batch = 0; batch < 10; batch++) {
+        const batchPromises = [];
+
+        for (let i = 0; i < 10; i++) {
+          const accountNumber = batch * 10 + i + 1;
+          const fullName = generateRandomName();
+          const email = generateRandomEmail(fullName);
+          const role = generateRandomRole();
+
+          const accountData = {
+            full_name: fullName,
+            email: email,
+            password: "123456",
+            role: role,
+          };
+
+          const promise = fetch("/api/staff", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(accountData),
+          }).then(async (response) => {
+            if (response.ok) {
+              successCount++;
+            } else {
+              errorCount++;
+              const error = await response.json();
+              console.error(`Failed to create account ${accountNumber}:`, error);
+            }
+          }).catch((error) => {
+            errorCount++;
+            console.error(`Error creating account ${accountNumber}:`, error);
+          });
+
+          batchPromises.push(promise);
+        }
+
+        // Wait for current batch to complete before starting next batch
+        await Promise.all(batchPromises);
+
+        // Show progress
+        toast.info(`Created ${(batch + 1) * 10} accounts...`);
+
+        // Small delay between batches to prevent overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      toast.success(`Sample data generation complete! Created ${successCount} accounts successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`);
+
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Error generating sample data:", error);
+      toast.error("Failed to generate sample data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleGenerateSampleData}
+      disabled={isLoading}
+      className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+    >
+      <IconDatabase className="size-4" />
+      <span className="hidden lg:inline">
+        {isLoading ? "Creating..." : "Add Sample"}
+      </span>
+    </Button>
   );
 }
 

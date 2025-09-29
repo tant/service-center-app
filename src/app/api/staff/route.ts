@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createStaffSchema.parse(body);
 
-    // Create user in Supabase Auth
+    // Create user in Supabase Auth using admin privileges (consistent with setup pattern)
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email: validatedData.email,

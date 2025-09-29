@@ -6,9 +6,11 @@ create table "products" (
   "name" text not null,
   "sku" text,
   "short_description" text,
-  "brand" text check ("brand" in ('ZOTAC', 'SSTC', 'Other')),
+  -- brand is an optional enum-like text column. Add common brands here; leave room for 'Other'.
+  "brand" text check ("brand" in ('ZOTAC', 'SSTC', 'Apple', 'Other')),
   "model" text,
-  "type" text check ("type" in ('VGA', 'MiniPC', 'SSD', 'RAM', 'Mainboard', 'Other')),
+  -- type classifies the product. Examples include VGA, MiniPC, Smartphone, etc.
+  "type" text check ("type" in ('VGA', 'MiniPC', 'SSD', 'RAM', 'Mainboard', 'Smartphone', 'Other')),
   "primary_image" text,
   "created_at" timestamptz not null default now(),
   "updated_at" timestamptz not null default now(),

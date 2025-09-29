@@ -117,6 +117,7 @@ export const partSchema = z.object({
     name: z.string(),
     type: z.string(),
     brand: z.string().nullable(),
+    short_description: z.string().nullable().optional(),
   }).nullable().optional(),
 });
 
@@ -826,6 +827,7 @@ function PartsModal({
                         )}
                       </div>
                     ),
+                    searchKeywords: `${product.name} ${product.short_description || ''}`.toLowerCase(),
                   })) || []
                 }
                 placeholder="Select product"

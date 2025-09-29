@@ -90,6 +90,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -496,10 +497,16 @@ export function ProductTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Thêm sản phẩm</span>
-          </Button>
+          <ProductModal
+            mode="add"
+            trigger={
+              <Button variant="outline" size="sm">
+                <IconPlus />
+                <span className="hidden lg:inline">Thêm sản phẩm</span>
+              </Button>
+            }
+            onSuccess={() => window.location.reload()}
+          />
         </div>
       </div>
       <TabsContent
@@ -777,6 +784,267 @@ function ProductViewer({
           </Button>
           <DrawerClose asChild>
             <Button variant="outline">Cancel</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+interface ProductModalProps {
+  product?: z.infer<typeof productSchema>;
+  mode: "add" | "edit";
+  trigger: React.ReactNode;
+  onSuccess?: () => void;
+}
+
+function ProductModal({
+  product,
+  mode,
+  trigger,
+  onSuccess,
+}: ProductModalProps) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    name: "",
+    sku: "",
+    short_description: "",
+    brand: "",
+    model: "",
+    type: "hardware" as "hardware" | "software" | "accessory",
+    primary_image: "",
+  });
+
+  // Reset form when modal opens or mode/product changes
+  React.useEffect(() => {
+    if (open) {
+      setFormData({
+        name: product?.name || "",
+        sku: product?.sku || "",
+        short_description: product?.short_description || "",
+        brand: product?.brand || "",
+        model: product?.model || "",
+        type: product?.type || "hardware",
+        primary_image: product?.primary_image || "",
+      });
+    }
+  }, [open, product]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name) {
+      toast.error("Please enter a product name");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (mode === "add") {
+        const response = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            sku: formData.sku || null,
+            short_description: formData.short_description || null,
+            brand: formData.brand || null,
+            model: formData.model || null,
+            type: formData.type,
+            primary_image: formData.primary_image || null,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+
+        toast.success("Product created successfully");
+      } else {
+        // TODO: Implement update functionality
+        toast.success("Update functionality coming soon");
+      }
+
+      setOpen(false);
+
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader className="gap-1">
+          <DrawerTitle className="flex items-center gap-3">
+            {mode === "edit" && (
+              <Avatar className="size-10">
+                <AvatarImage src={product?.primary_image || ""} />
+                <AvatarFallback>
+                  <IconPackage className="size-5" />
+                </AvatarFallback>
+              </Avatar>
+            )}
+            {mode === "add" ? "Add New Product" : product?.name}
+          </DrawerTitle>
+          <DrawerDescription>
+            {mode === "add"
+              ? "Create a new product with the required information."
+              : "Product details and management options"}
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="name">Product Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Enter product name"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sku: e.target.value })
+                  }
+                  placeholder="Enter SKU (optional)"
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="type">Type *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: "hardware" | "software" | "accessory") =>
+                    setFormData({ ...formData, type: value })
+                  }
+                >
+                  <SelectTrigger id="type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hardware">Hardware</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                    <SelectItem value="accessory">Accessory</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="brand">Brand</Label>
+                <Input
+                  id="brand"
+                  value={formData.brand}
+                  onChange={(e) =>
+                    setFormData({ ...formData, brand: e.target.value })
+                  }
+                  placeholder="Enter brand (optional)"
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  value={formData.model}
+                  onChange={(e) =>
+                    setFormData({ ...formData, model: e.target.value })
+                  }
+                  placeholder="Enter model (optional)"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="short_description">Description</Label>
+              <Textarea
+                id="short_description"
+                value={formData.short_description}
+                onChange={(e) =>
+                  setFormData({ ...formData, short_description: e.target.value })
+                }
+                placeholder="Enter product description (optional)"
+                rows={3}
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="primary_image">Image URL</Label>
+              <Input
+                id="primary_image"
+                value={formData.primary_image}
+                onChange={(e) =>
+                  setFormData({ ...formData, primary_image: e.target.value })
+                }
+                placeholder="Enter image URL (optional)"
+              />
+            </div>
+            {mode === "edit" && product && (
+              <>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-muted-foreground">Product ID</Label>
+                    <div className="font-mono text-xs">{product.id}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Type</Label>
+                    <div>{product.type}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <div>
+                      {new Date(product.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Updated</Label>
+                    <div>
+                      {new Date(product.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <DrawerFooter>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isLoading}
+          >
+            {isLoading
+              ? mode === "add"
+                ? "Creating..."
+                : "Updating..."
+              : mode === "add"
+                ? "Create Product"
+                : "Save Changes"}
+          </Button>
+          <DrawerClose asChild>
+            <Button variant="outline" disabled={isLoading}>
+              Cancel
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>

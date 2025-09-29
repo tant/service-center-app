@@ -85,11 +85,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -100,6 +95,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const teamSchema = z.object({
@@ -231,40 +231,22 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
 ];
 
 function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
-  const [isActive, setIsActive] = React.useState(member.is_active);
-
   const handleRoleChange = (newRole: string) => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Updating role for ${member.full_name}...`,
-      success: `Role updated to ${newRole}`,
-      error: "Failed to update role",
-    });
+    // TODO: Implement actual role change API call
+    toast.success(`Role would be updated to ${newRole}`);
   };
 
   const handlePasswordChange = () => {
-    const newPassword = prompt(`Enter new password for ${member.full_name}:`);
-    if (!newPassword) return;
-
-    if (newPassword.trim().length < 6) {
-      toast.error("Password must be at least 6 characters long");
-      return;
-    }
-
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Changing password for ${member.full_name}...`,
-      success: "Password updated successfully",
-      error: "Failed to update password",
-    });
+    // TODO: Implement password change modal/form
+    toast.success("Password change feature coming soon");
   };
 
   const handleToggleActive = () => {
-    const newStatus = !isActive;
-    setIsActive(newStatus);
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `${newStatus ? "Activating" : "Deactivating"} ${member.full_name}...`,
-      success: `Account ${newStatus ? "activated" : "deactivated"} successfully`,
-      error: `Failed to ${newStatus ? "activate" : "deactivate"} account`,
-    });
+    // TODO: Implement active status toggle API call
+    const newStatus = !member.is_active;
+    toast.success(
+      `Account would be ${newStatus ? "activated" : "deactivated"}`,
+    );
   };
 
   return (
@@ -328,7 +310,7 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
             className="size-9 p-0 text-muted-foreground hover:text-foreground"
             onClick={handleToggleActive}
           >
-            {isActive ? (
+            {member.is_active ? (
               <IconToggleRight className="size-5 text-green-600" />
             ) : (
               <IconToggleLeft className="size-5 text-red-600" />
@@ -336,7 +318,7 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{isActive ? "Deactivate Account" : "Activate Account"}</p>
+          <p>{member.is_active ? "Deactivate Account" : "Activate Account"}</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -465,21 +447,41 @@ export function TeamTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="team-list">DS Nhân viên</SelectItem>
-            <SelectItem value="role-management">Role Management</SelectItem>
-            <SelectItem value="permissions">Permissions</SelectItem>
-            <SelectItem value="activity-log">Activity Log</SelectItem>
+            <SelectItem value="role-management">Quản lý</SelectItem>
+            <SelectItem value="staff">Nhân viên</SelectItem>
+            <SelectItem value="inactive">Đã vô hiệu</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
           <TabsTrigger value="team-list">Team List</TabsTrigger>
           <TabsTrigger value="role-management">
-            Quản lý <Badge variant="secondary">4</Badge>
+            Quản lý{" "}
+            <Badge variant="secondary">
+              {
+                data.filter(
+                  (m) =>
+                    m.roles.includes("admin") || m.roles.includes("manager"),
+                ).length
+              }
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="permissions">
-            Nhân viên <Badge variant="secondary">12</Badge>
+          <TabsTrigger value="staff">
+            Nhân viên{" "}
+            <Badge variant="secondary">
+              {
+                data.filter(
+                  (m) =>
+                    m.roles.includes("technician") ||
+                    m.roles.includes("reception"),
+                ).length
+              }
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="permissions">
-            Đã vô hiệu <Badge variant="secondary">2</Badge>
+          <TabsTrigger value="inactive">
+            Đã vô hiệu{" "}
+            <Badge variant="secondary">
+              {data.filter((m) => !m.is_active).length}
+            </Badge>
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
@@ -516,10 +518,16 @@ export function TeamTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Thêm nhân viên</span>
-          </Button>
+          <TeamMemberModal
+            mode="add"
+            trigger={
+              <Button variant="outline" size="sm">
+                <IconPlus />
+                <span className="hidden lg:inline">Thêm nhân viên</span>
+              </Button>
+            }
+            onSuccess={() => window.location.reload()}
+          />
         </div>
       </div>
       <TabsContent
@@ -667,73 +675,201 @@ export function TeamTable({
         value="role-management"
         className="flex flex-col px-4 lg:px-6"
       >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          Role management functionality coming soon
+        </div>
       </TabsContent>
-      <TabsContent value="permissions" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+      <TabsContent value="staff" className="flex flex-col px-4 lg:px-6">
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          Staff filtering functionality coming soon
+        </div>
       </TabsContent>
-      <TabsContent
-        value="activity-log"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+      <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          Inactive users view coming soon
+        </div>
       </TabsContent>
     </Tabs>
   );
 }
 
-function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
+interface TeamMemberModalProps {
+  member?: z.infer<typeof teamSchema>;
+  mode: "add" | "edit";
+  trigger: React.ReactNode;
+  onSuccess?: () => void;
+}
+
+function TeamMemberModal({
+  member,
+  mode,
+  trigger,
+  onSuccess,
+}: TeamMemberModalProps) {
   const isMobile = useIsMobile();
+  const [open, setOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    full_name: "",
+    email: "",
+    password: "",
+    avatar_url: "",
+    role: "technician",
+    is_active: true,
+  });
+
+  // Reset form when modal opens or mode/member changes
+  React.useEffect(() => {
+    if (open) {
+      setFormData({
+        full_name: member?.full_name || "",
+        email: member?.email || "",
+        password: "",
+        avatar_url: member?.avatar_url || "",
+        role: member?.roles[0] || "technician",
+        is_active: member?.is_active ?? true,
+      });
+    }
+  }, [open, member]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.full_name || !formData.email || !formData.role) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (mode === "add" && formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (mode === "add") {
+        const response = await fetch("/api/staff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: formData.full_name,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+
+        toast.success("Staff member created successfully");
+      } else {
+        // TODO: Implement update functionality
+        toast.success("Update functionality coming soon");
+      }
+
+      setOpen(false);
+
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
-          <Avatar className="size-8">
-            <AvatarImage src={member.avatar_url || ""} />
-            <AvatarFallback>
-              <IconUser className="size-4" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col items-start">
-            <div className="font-medium">{member.full_name}</div>
-          </div>
-        </Button>
-      </DrawerTrigger>
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle className="flex items-center gap-3">
-            <Avatar className="size-10">
-              <AvatarImage src={member.avatar_url || ""} />
-              <AvatarFallback>
-                <IconUser className="size-5" />
-              </AvatarFallback>
-            </Avatar>
-            {member.full_name}
+            {mode === "edit" && (
+              <Avatar className="size-10">
+                <AvatarImage src={member?.avatar_url || ""} />
+                <AvatarFallback>
+                  <IconUser className="size-5" />
+                </AvatarFallback>
+              </Avatar>
+            )}
+            {mode === "add" ? "Add New Staff Member" : member?.full_name}
           </DrawerTitle>
           <DrawerDescription>
-            Team member details and management options
+            {mode === "add"
+              ? "Create a new staff account with the required information."
+              : "Team member details and management options"}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          <form className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="full_name">Full Name</Label>
-              <Input id="full_name" defaultValue={member.full_name} />
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, full_name: e.target.value })
+                }
+                placeholder="Enter full name"
+                required
+              />
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={member.email} />
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                placeholder="Enter email address"
+                required
+              />
             </div>
+            {mode === "add" && (
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder="Enter password (min 6 characters)"
+                  minLength={6}
+                  required
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-3">
               <Label htmlFor="avatar_url">Avatar URL</Label>
-              <Input id="avatar_url" defaultValue={member.avatar_url || ""} />
+              <Input
+                id="avatar_url"
+                value={formData.avatar_url}
+                onChange={(e) =>
+                  setFormData({ ...formData, avatar_url: e.target.value })
+                }
+                placeholder="Enter avatar URL (optional)"
+              />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="roles">Roles</Label>
-              <Select defaultValue={member.roles[0]}>
+              <Label htmlFor="roles">Role</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, role: value as any })
+                }
+              >
                 <SelectTrigger id="roles" className="w-full">
-                  <SelectValue placeholder="Select primary role" />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
@@ -745,7 +881,12 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="is_active">Status</Label>
-              <Select defaultValue={member.is_active ? "active" : "inactive"}>
+              <Select
+                value={formData.is_active ? "active" : "inactive"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, is_active: value === "active" })
+                }
+              >
                 <SelectTrigger id="is_active" className="w-full">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -755,44 +896,81 @@ function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
                 </SelectContent>
               </Select>
             </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <Label className="text-muted-foreground">User ID</Label>
-                <div className="font-mono text-xs">{member.user_id}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Profile ID</Label>
-                <div className="font-mono text-xs">{member.id}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Created</Label>
-                <div>{new Date(member.created_at).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Updated</Label>
-                <div>{new Date(member.updated_at).toLocaleDateString()}</div>
-              </div>
-            </div>
-          </form>
+            {mode === "edit" && member && (
+              <>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-muted-foreground">User ID</Label>
+                    <div className="font-mono text-xs">{member.user_id}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Profile ID</Label>
+                    <div className="font-mono text-xs">{member.id}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <div>
+                      {new Date(member.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Updated</Label>
+                    <div>
+                      {new Date(member.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
         <DrawerFooter>
           <Button
-            onClick={() =>
-              toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-                loading: `Updating ${member.full_name}...`,
-                success: "User updated successfully",
-                error: "Failed to update user",
-              })
-            }
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isLoading}
           >
-            Save Changes
+            {isLoading
+              ? mode === "add"
+                ? "Creating..."
+                : "Updating..."
+              : mode === "add"
+                ? "Create Staff"
+                : "Save Changes"}
           </Button>
           <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isLoading}>
+              Cancel
+            </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
+  return (
+    <TeamMemberModal
+      member={member}
+      mode="edit"
+      trigger={
+        <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
+          <Avatar className="size-8">
+            <AvatarImage src={member.avatar_url || ""} />
+            <AvatarFallback>
+              <IconUser className="size-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col items-start">
+            <div className="font-medium">{member.full_name}</div>
+          </div>
+        </Button>
+      }
+      onSuccess={() => window.location.reload()}
+    />
   );
 }

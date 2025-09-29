@@ -15,7 +15,10 @@ export const profileRouter = router({
     const { supabaseClient } = ctx;
 
     try {
-      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseClient.auth.getUser();
 
       if (authError) {
         console.error("❌ [PROFILE] Auth error:", authError);
@@ -57,7 +60,10 @@ export const profileRouter = router({
         });
       }
 
-      console.log("✅ [PROFILE] Profile fetched successfully for user:", user.id);
+      console.log(
+        "✅ [PROFILE] Profile fetched successfully for user:",
+        user.id,
+      );
 
       return {
         id: profile.id,
@@ -88,12 +94,18 @@ export const profileRouter = router({
     .input(updateProfileInputSchema)
     .mutation(async ({ input, ctx }) => {
       console.log("🔧 [PROFILE] Updating user profile...");
-      console.log("📥 [PROFILE] Input received:", JSON.stringify(input, null, 2));
+      console.log(
+        "📥 [PROFILE] Input received:",
+        JSON.stringify(input, null, 2),
+      );
 
       const { supabaseClient } = ctx;
 
       try {
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        const {
+          data: { user },
+          error: authError,
+        } = await supabaseClient.auth.getUser();
 
         if (authError) {
           console.error("❌ [PROFILE] Auth error:", authError);
@@ -123,12 +135,13 @@ export const profileRouter = router({
 
         console.log("📊 [PROFILE] Update data:", updateData);
 
-        const { data: updatedProfile, error: updateError } = await supabaseClient
-          .from("profiles")
-          .update(updateData)
-          .eq("user_id", user.id)
-          .select()
-          .single();
+        const { data: updatedProfile, error: updateError } =
+          await supabaseClient
+            .from("profiles")
+            .update(updateData)
+            .eq("user_id", user.id)
+            .select()
+            .single();
 
         if (updateError) {
           console.error("❌ [PROFILE] Profile update error:", updateError);
@@ -146,7 +159,10 @@ export const profileRouter = router({
           });
         }
 
-        console.log("✅ [PROFILE] Profile updated successfully for user:", user.id);
+        console.log(
+          "✅ [PROFILE] Profile updated successfully for user:",
+          user.id,
+        );
 
         return {
           id: updatedProfile.id,

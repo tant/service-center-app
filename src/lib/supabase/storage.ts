@@ -41,7 +41,6 @@ export async function uploadFile(
     throw new Error(`Failed to create signed URL: ${urlError.message}`);
   }
 
-
   return {
     url: urlData.signedUrl,
     path: uploadData.path,
@@ -75,7 +74,6 @@ export async function uploadAvatar(
   const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const timestamp = Date.now();
   const filePath = `${userId}/${timestamp}.${fileExtension}`;
-
 
   return uploadFile(file, "avatars", filePath);
 }

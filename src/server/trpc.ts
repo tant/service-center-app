@@ -1,7 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { initTRPC, TRPCError } from "@trpc/server";
-import superjson from "superjson";
+import { createClient } from "@supabase/supabase-js";
+import { initTRPC } from "@trpc/server";
 
 /**
  * Create Supabase clients for tRPC context
@@ -90,15 +89,23 @@ function createSupabaseClients(req: Request) {
   const supabaseClient = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        const cookieArray = Array.from(cookieMap.entries()).map(([name, value]) => ({
-          name,
-          value,
-        }));
-        console.log("🔧 DATABASE: Getting all cookies for supabase client:", cookieArray.length);
+        const cookieArray = Array.from(cookieMap.entries()).map(
+          ([name, value]) => ({
+            name,
+            value,
+          }),
+        );
+        console.log(
+          "🔧 DATABASE: Getting all cookies for supabase client:",
+          cookieArray.length,
+        );
         return cookieArray;
       },
       setAll(cookiesToSet) {
-        console.log("🔧 DATABASE: Setting cookies (tRPC context - ignored):", cookiesToSet.length);
+        console.log(
+          "🔧 DATABASE: Setting cookies (tRPC context - ignored):",
+          cookiesToSet.length,
+        );
         // In tRPC context, we can't set cookies on the response
         // This is expected behavior for server-side contexts
       },

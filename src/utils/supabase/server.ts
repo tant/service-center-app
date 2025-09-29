@@ -8,10 +8,13 @@ export async function createClient() {
     console.log("🏗️ [SUPABASE SERVER] Environment variables:", {
       hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       urlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length || 0,
-      urlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) || 'none',
+      urlPrefix:
+        process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) || "none",
       hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
       keyLength: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.length || 0,
-      keyPrefix: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) || 'none'
+      keyPrefix:
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) ||
+        "none",
     });
 
     console.log("🏗️ [SUPABASE SERVER] Getting cookie store...");
@@ -33,10 +36,16 @@ export async function createClient() {
                 cookies.length,
                 "cookies found",
               );
-              console.log("🏗️ [SUPABASE SERVER] Cookie names:", cookies.map(c => c.name));
+              console.log(
+                "🏗️ [SUPABASE SERVER] Cookie names:",
+                cookies.map((c) => c.name),
+              );
               return cookies;
             } catch (error) {
-              console.error("🏗️ [SUPABASE SERVER] Error getting cookies:", error);
+              console.error(
+                "🏗️ [SUPABASE SERVER] Error getting cookies:",
+                error,
+              );
               return [];
             }
           },
@@ -46,17 +55,25 @@ export async function createClient() {
               cookiesToSet.length,
               "cookies to set",
             );
-            console.log("🏗️ [SUPABASE SERVER] Cookie names to set:", cookiesToSet.map(c => c.name));
+            console.log(
+              "🏗️ [SUPABASE SERVER] Cookie names to set:",
+              cookiesToSet.map((c) => c.name),
+            );
             try {
               cookiesToSet.forEach(({ name, value, options }) => {
-                console.log("🏗️ [SUPABASE SERVER] Setting cookie:", name, "with options:", options);
+                console.log(
+                  "🏗️ [SUPABASE SERVER] Setting cookie:",
+                  name,
+                  "with options:",
+                  options,
+                );
                 cookieStore.set(name, value, options);
               });
               console.log("🏗️ [SUPABASE SERVER] Cookies set successfully");
             } catch (error) {
               console.log(
                 "🏗️ [SUPABASE SERVER] Cookie setting skipped (Server Component context):",
-                error instanceof Error ? error.message : String(error)
+                error instanceof Error ? error.message : String(error),
               );
               // The `setAll` method was called from a Server Component.
               // This can be ignored if you have middleware refreshing
@@ -71,13 +88,16 @@ export async function createClient() {
     console.log("🏗️ [SUPABASE SERVER] Client properties:", {
       hasAuth: !!client.auth,
       hasFrom: !!client.from,
-      hasRealtime: !!client.realtime
+      hasRealtime: !!client.realtime,
     });
 
     return client;
   } catch (error) {
     console.error("🏗️ [SUPABASE SERVER] Error creating server client:", error);
-    console.error("🏗️ [SUPABASE SERVER] Error stack:", error instanceof Error ? error.stack : 'No stack trace available');
+    console.error(
+      "🏗️ [SUPABASE SERVER] Error stack:",
+      error instanceof Error ? error.stack : "No stack trace available",
+    );
     throw error;
   }
 }

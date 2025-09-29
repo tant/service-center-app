@@ -255,7 +255,7 @@ export const adminRouter = router({
 
         const mutationDuration = Date.now() - mutationStartTime;
         console.log("🏁 MUTATION: Setup completed successfully");
-        console.log("⏱️ MUTATION: Total duration:", mutationDuration + "ms");
+        console.log("⏱️ MUTATION: Total duration:", `${mutationDuration}ms`);
 
         return {
           message: "Setup completed successfully",
@@ -264,7 +264,7 @@ export const adminRouter = router({
         const mutationDuration = Date.now() - mutationStartTime;
         console.error(
           "❌ MUTATION: Setup failed after",
-          mutationDuration + "ms",
+          `${mutationDuration}ms`,
         );
         console.error("🔴 MUTATION: Error details:", {
           name: error.name,

@@ -232,7 +232,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
     cell: ({ row, table }) => (
       <QuickActions
         member={row.original}
-        allMembers={(table.options.data as z.infer<typeof teamSchema>[])}
+        allMembers={table.options.data as z.infer<typeof teamSchema>[]}
       />
     ),
   },
@@ -251,7 +251,7 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
     }
 
     const activeAdmins = allMembers.filter(
-      m => m.is_active && m.roles.includes("admin")
+      (m) => m.is_active && m.roles.includes("admin"),
     );
 
     return activeAdmins.length === 1;
@@ -259,7 +259,11 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
 
   const handleRoleChange = (newRole: string) => {
     // Prevent changing role of last active admin
-    if (member.roles.includes("admin") && isLastActiveAdmin && newRole !== "admin") {
+    if (
+      member.roles.includes("admin") &&
+      isLastActiveAdmin &&
+      newRole !== "admin"
+    ) {
       toast.error("Cannot change role of the last active admin");
       return;
     }
@@ -278,7 +282,7 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
     if (isLastActiveAdmin && member.is_active) {
       toast.error(
         "Cannot deactivate the last active admin account. Please promote another user to admin first.",
-        { duration: 5000 }
+        { duration: 5000 },
       );
       return;
     }
@@ -315,7 +319,10 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
           <DropdownMenuSeparator />
           {["admin", "manager", "technician", "reception"].map((role) => {
             const isCurrentRole = member.roles.includes(role as any);
-            const isDisabled = member.roles.includes("admin") && isLastActiveAdmin && role !== "admin";
+            const isDisabled =
+              member.roles.includes("admin") &&
+              isLastActiveAdmin &&
+              role !== "admin";
 
             return (
               <DropdownMenuItem
@@ -325,7 +332,9 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
                 disabled={isDisabled}
               >
                 {role}
-                {isDisabled && <span className="ml-auto text-xs">(Protected)</span>}
+                {isDisabled && (
+                  <span className="ml-auto text-xs">(Protected)</span>
+                )}
               </DropdownMenuItem>
             );
           })}
@@ -356,7 +365,9 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
             variant="ghost"
             size="sm"
             className={`size-9 p-0 text-muted-foreground hover:text-foreground ${
-              isLastActiveAdmin && member.is_active ? "opacity-50 cursor-not-allowed" : ""
+              isLastActiveAdmin && member.is_active
+                ? "opacity-50 cursor-not-allowed"
+                : ""
             }`}
             onClick={handleToggleActive}
             disabled={isLastActiveAdmin && member.is_active}
@@ -373,8 +384,8 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
             {isLastActiveAdmin && member.is_active
               ? "Cannot deactivate last admin"
               : member.is_active
-              ? "Deactivate Account"
-              : "Activate Account"}
+                ? "Deactivate Account"
+                : "Activate Account"}
           </p>
         </TooltipContent>
       </Tooltip>
@@ -1017,10 +1028,58 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   // Random data generators
-  const firstNames = ["John", "Jane", "Mike", "Sarah", "David", "Lisa", "Tom", "Anna", "Chris", "Maria", "Alex", "Emma", "Ryan", "Sofia", "James", "Luna", "Kevin", "Nina", "Paul", "Zoe"];
-  const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"];
+  const firstNames = [
+    "John",
+    "Jane",
+    "Mike",
+    "Sarah",
+    "David",
+    "Lisa",
+    "Tom",
+    "Anna",
+    "Chris",
+    "Maria",
+    "Alex",
+    "Emma",
+    "Ryan",
+    "Sofia",
+    "James",
+    "Luna",
+    "Kevin",
+    "Nina",
+    "Paul",
+    "Zoe",
+  ];
+  const lastNames = [
+    "Smith",
+    "Johnson",
+    "Williams",
+    "Brown",
+    "Jones",
+    "Garcia",
+    "Miller",
+    "Davis",
+    "Rodriguez",
+    "Martinez",
+    "Hernandez",
+    "Lopez",
+    "Gonzalez",
+    "Wilson",
+    "Anderson",
+    "Thomas",
+    "Taylor",
+    "Moore",
+    "Jackson",
+    "Martin",
+  ];
   const roles = ["admin", "manager", "technician", "reception"];
-  const domains = ["testcompany.com", "example.org", "demo.net", "sample.io", "test.co"];
+  const domains = [
+    "testcompany.com",
+    "example.org",
+    "demo.net",
+    "sample.io",
+    "test.co",
+  ];
 
   const generateRandomName = () => {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -1030,13 +1089,17 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
 
   const generateRandomEmail = (name: string) => {
     const domain = domains[Math.floor(Math.random() * domains.length)];
-    const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+    const cleanName = name.toLowerCase().replace(/\s+/g, ".");
     const randomNum = Math.floor(Math.random() * 1000);
     return `${cleanName}.${randomNum}@${domain}`;
   };
 
   const generateRandomRole = () => {
-    return roles[Math.floor(Math.random() * roles.length)] as "admin" | "manager" | "technician" | "reception";
+    return roles[Math.floor(Math.random() * roles.length)] as
+      | "admin"
+      | "manager"
+      | "technician"
+      | "reception";
   };
 
   const handleGenerateSampleData = async () => {
@@ -1072,18 +1135,23 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(accountData),
-          }).then(async (response) => {
-            if (response.ok) {
-              successCount++;
-            } else {
+          })
+            .then(async (response) => {
+              if (response.ok) {
+                successCount++;
+              } else {
+                errorCount++;
+                const error = await response.json();
+                console.error(
+                  `Failed to create account ${accountNumber}:`,
+                  error,
+                );
+              }
+            })
+            .catch((error) => {
               errorCount++;
-              const error = await response.json();
-              console.error(`Failed to create account ${accountNumber}:`, error);
-            }
-          }).catch((error) => {
-            errorCount++;
-            console.error(`Error creating account ${accountNumber}:`, error);
-          });
+              console.error(`Error creating account ${accountNumber}:`, error);
+            });
 
           batchPromises.push(promise);
         }
@@ -1095,10 +1163,12 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
         toast.info(`Created ${(batch + 1) * 10} accounts...`);
 
         // Small delay between batches to prevent overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      toast.success(`Sample data generation complete! Created ${successCount} accounts successfully. ${errorCount > 0 ? `${errorCount} failed.` : ''}`);
+      toast.success(
+        `Sample data generation complete! Created ${successCount} accounts successfully. ${errorCount > 0 ? `${errorCount} failed.` : ""}`,
+      );
 
       if (onSuccess) {
         onSuccess();

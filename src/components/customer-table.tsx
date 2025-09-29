@@ -391,11 +391,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               customer={customer}
               mode="edit"
               trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <IconEdit className="h-5 w-5" />
                   <span className="sr-only">Chỉnh sửa</span>
                 </Button>
@@ -662,7 +658,9 @@ function CustomerModal({
     },
   });
 
-  const isLoading = createCustomerMutation.status === "pending" || updateCustomerMutation.status === "pending";
+  const isLoading =
+    createCustomerMutation.status === "pending" ||
+    updateCustomerMutation.status === "pending";
 
   // Reset form when modal opens or mode/customer changes
   React.useEffect(() => {
@@ -780,7 +778,9 @@ function CustomerModal({
                 <div className="border-t pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <Label className="text-muted-foreground">Customer ID</Label>
+                      <Label className="text-muted-foreground">
+                        Customer ID
+                      </Label>
                       <div className="font-mono text-xs">{customer.id}</div>
                     </div>
                     <div>

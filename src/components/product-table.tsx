@@ -213,7 +213,9 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
         variant={
           row.original.type === "VGA" || row.original.type === "MiniPC"
             ? "default"
-            : row.original.type === "SSD" || row.original.type === "RAM" || row.original.type === "Mainboard"
+            : row.original.type === "SSD" ||
+                row.original.type === "RAM" ||
+                row.original.type === "Mainboard"
               ? "secondary"
               : "outline"
         }
@@ -646,7 +648,9 @@ function ProductImage({
   const [hasError, setHasError] = React.useState(false);
 
   return (
-    <div className={`relative bg-muted rounded-md overflow-hidden flex-shrink-0 ${className}`}>
+    <div
+      className={`relative bg-muted rounded-md overflow-hidden flex-shrink-0 ${className}`}
+    >
       {src && !hasError ? (
         <img
           src={src}
@@ -684,8 +688,7 @@ function ProductViewer({
             <div className="text-sm text-muted-foreground">
               {product.brand && product.model
                 ? `${product.brand} - ${product.model}`
-                : product.brand || product.model || product.type
-              }
+                : product.brand || product.model || product.type}
             </div>
           </div>
         </Button>
@@ -743,7 +746,9 @@ function ProductModal({
     },
   });
 
-  const isLoading = createProductMutation.status === "pending" || updateProductMutation.status === "pending";
+  const isLoading =
+    createProductMutation.status === "pending" ||
+    updateProductMutation.status === "pending";
 
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
@@ -847,9 +852,15 @@ function ProductModal({
                 <Label htmlFor="type">Type *</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other") =>
-                    setFormData({ ...formData, type: value })
-                  }
+                  onValueChange={(
+                    value:
+                      | "VGA"
+                      | "MiniPC"
+                      | "SSD"
+                      | "RAM"
+                      | "Mainboard"
+                      | "Other",
+                  ) => setFormData({ ...formData, type: value })}
                 >
                   <SelectTrigger id="type" className="w-full">
                     <SelectValue placeholder="Select type" />
@@ -902,7 +913,10 @@ function ProductModal({
                 id="short_description"
                 value={formData.short_description}
                 onChange={(e) =>
-                  setFormData({ ...formData, short_description: e.target.value })
+                  setFormData({
+                    ...formData,
+                    short_description: e.target.value,
+                  })
                 }
                 placeholder="Enter product description (optional)"
                 rows={3}

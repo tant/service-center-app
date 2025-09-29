@@ -101,24 +101,31 @@ import { trpc } from "@/components/providers/trpc-provider";
 
 export const partSchema = z.object({
   id: z.string(),
-  product_id: z.string().nullable(),
   name: z.string(),
   part_number: z.string().nullable(),
   sku: z.string().nullable(),
   description: z.string().nullable(),
   price: z.number(),
+  cost_price: z.number(),
+  stock_quantity: z.number(),
+  stock_value: z.number().nullable(),
   image_url: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.string().nullable(),
   updated_by: z.string().nullable(),
-  products: z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    brand: z.string().nullable(),
-    short_description: z.string().nullable().optional(),
-  }).nullable().optional(),
+  product_parts: z
+    .array(
+      z.object({
+        products: z.object({
+          id: z.string(),
+          name: z.string(),
+          type: z.string(),
+          brand: z.string().nullable(),
+        }),
+      }),
+    )
+    .optional(),
 });
 
 function DragHandle({ id }: { id: string }) {
@@ -203,32 +210,88 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
     ),
   },
   {
-    accessorKey: "products",
+    accessorKey: "product_parts",
     header: "Sản phẩm",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        {row.original.products ? (
-          <>
+    cell: ({ row }) => {
+      const products =
+        row.original.product_parts?.map((pp) => pp.products) || [];
+      if (products.length === 0) {
+        return (
+          <span className="text-muted-foreground italic">No products</span>
+        );
+      }
+      if (products.length === 1) {
+        const product = products[0];
+        return (
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              {row.original.products.type}
+              {product.type}
             </Badge>
-            <span className="font-medium">{row.original.products.name}</span>
-          </>
-        ) : (
-          <span className="text-muted-foreground italic">No product</span>
-        )}
+            <span className="font-medium">{product.name}</span>
+          </div>
+        );
+      }
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">
+            {products.length} products
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {products.slice(0, 2).map((product, idx) => (
+              <Badge key={idx} variant="outline" className="text-xs">
+                {product.type}
+              </Badge>
+            ))}
+            {products.length > 2 && (
+              <Badge variant="secondary" className="text-xs">
+                +{products.length - 2}
+              </Badge>
+            )}
+          </div>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "price",
+    header: "Giá bán",
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }).format(row.original.price)}
       </div>
     ),
   },
   {
-    accessorKey: "price",
-    header: "Giá",
+    accessorKey: "cost_price",
+    header: "Giá vốn",
     cell: ({ row }) => (
-      <div className="font-medium">
-        {new Intl.NumberFormat('vi-VN', {
-          style: 'currency',
-          currency: 'VND'
-        }).format(row.original.price)}
+      <div className="text-sm">
+        {new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }).format(row.original.cost_price)}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "stock_quantity",
+    header: "Tồn kho",
+    cell: ({ row }) => (
+      <div className="text-center">
+        <span
+          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            row.original.stock_quantity > 10
+              ? "bg-green-100 text-green-800"
+              : row.original.stock_quantity > 0
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-red-100 text-red-800"
+          }`}
+        >
+          {row.original.stock_quantity}
+        </span>
       </div>
     ),
   },
@@ -357,11 +420,13 @@ export function PartsTable({
 
     return data.filter((item) => {
       const searchLower = searchValue.toLowerCase();
+      const productNames =
+        item.product_parts?.map((pp) => pp.products.name.toLowerCase()) || [];
       return (
         item.name.toLowerCase().includes(searchLower) ||
         item.part_number?.toLowerCase().includes(searchLower) ||
         item.sku?.toLowerCase().includes(searchLower) ||
-        item.products?.name.toLowerCase().includes(searchLower)
+        productNames.some((name) => name.includes(searchLower))
       );
     });
   }, [data, searchValue]);
@@ -634,11 +699,7 @@ export function PartsTable({
   );
 }
 
-function PartViewer({
-  part,
-}: {
-  part: z.infer<typeof partSchema>;
-}) {
+function PartViewer({ part }: { part: z.infer<typeof partSchema> }) {
   return (
     <PartsModal
       part={part}
@@ -654,9 +715,9 @@ function PartViewer({
           <div className="flex flex-col items-start">
             <div className="font-medium">{part.name}</div>
             <div className="text-sm text-muted-foreground">
-              {new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
+              {new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
               }).format(part.price)}
             </div>
           </div>
@@ -674,22 +735,19 @@ interface PartsModalProps {
   onSuccess?: () => void;
 }
 
-function PartsModal({
-  part,
-  mode,
-  trigger,
-  onSuccess,
-}: PartsModalProps) {
+function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    product_id: "",
     name: "",
     part_number: "",
     sku: "",
     description: "",
     price: 0,
+    cost_price: 0,
+    stock_quantity: 0,
     image_url: "",
+    selected_products: [] as string[],
   });
 
   // tRPC queries and mutations
@@ -717,19 +775,25 @@ function PartsModal({
     },
   });
 
-  const isLoading = createPartMutation.status === "pending" || updatePartMutation.status === "pending";
+  const isLoading =
+    createPartMutation.status === "pending" ||
+    updatePartMutation.status === "pending";
 
   // Reset form when modal opens or mode/part changes
   React.useEffect(() => {
     if (open) {
+      const selectedProducts =
+        part?.product_parts?.map((pp) => pp.products.id) || [];
       setFormData({
-        product_id: part?.product_id || "",
         name: part?.name || "",
         part_number: part?.part_number || "",
         sku: part?.sku || "",
         description: part?.description || "",
         price: part?.price || 0,
+        cost_price: part?.cost_price || 0,
+        stock_quantity: part?.stock_quantity || 0,
         image_url: part?.image_url || "",
+        selected_products: selectedProducts,
       });
     }
   }, [open, part]);
@@ -742,36 +806,45 @@ function PartsModal({
       return;
     }
 
-    if (!formData.product_id) {
-      toast.error("Please select a product");
-      return;
-    }
-
     if (formData.price <= 0) {
       toast.error("Please enter a valid price");
       return;
     }
 
+    if (formData.cost_price < 0) {
+      toast.error("Cost price cannot be negative");
+      return;
+    }
+
+    if (formData.stock_quantity < 0) {
+      toast.error("Stock quantity cannot be negative");
+      return;
+    }
+
     if (mode === "add") {
       createPartMutation.mutate({
-        product_id: formData.product_id,
         name: formData.name,
         part_number: formData.part_number || null,
         sku: formData.sku || null,
         description: formData.description || null,
         price: formData.price,
+        cost_price: formData.cost_price,
+        stock_quantity: formData.stock_quantity,
         image_url: formData.image_url || null,
+        product_ids: formData.selected_products,
       });
     } else if (part) {
       updatePartMutation.mutate({
         id: part.id,
-        product_id: formData.product_id,
         name: formData.name,
         part_number: formData.part_number || null,
         sku: formData.sku || null,
         description: formData.description || null,
         price: formData.price,
+        cost_price: formData.cost_price,
+        stock_quantity: formData.stock_quantity,
         image_url: formData.image_url || null,
+        product_ids: formData.selected_products,
       });
     }
   };
@@ -805,17 +878,46 @@ function PartsModal({
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="product_id">Product *</Label>
-              <Combobox
-                value={formData.product_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, product_id: value })
-                }
-                options={
-                  products?.map((product) => ({
-                    value: product.id,
-                    label: (
-                      <div className="flex items-center gap-2">
+              <Label htmlFor="products">Associated Products</Label>
+              <div className="text-sm text-muted-foreground mb-2">
+                Select which products this part can be used with (optional)
+              </div>
+              {products && products.length > 0 && (
+                <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                  {products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`product-${product.id}`}
+                        checked={formData.selected_products.includes(
+                          product.id,
+                        )}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData({
+                              ...formData,
+                              selected_products: [
+                                ...formData.selected_products,
+                                product.id,
+                              ],
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              selected_products:
+                                formData.selected_products.filter(
+                                  (id) => id !== product.id,
+                                ),
+                            });
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`product-${product.id}`}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
                         <Badge variant="outline" className="text-xs">
                           {product.type}
                         </Badge>
@@ -825,16 +927,11 @@ function PartsModal({
                             - {product.brand}
                           </span>
                         )}
-                      </div>
-                    ),
-                    searchKeywords: `${product.name} ${product.short_description || ''}`.toLowerCase(),
-                  })) || []
-                }
-                placeholder="Select product"
-                searchPlaceholder="Search products..."
-                emptyMessage="No products found."
-                className="w-full"
-              />
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="name">Part Name *</Label>
@@ -872,18 +969,56 @@ function PartsModal({
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="price">Sale Price * (VND)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: Number(e.target.value) })
+                  }
+                  placeholder="Enter sale price"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="cost_price">Cost Price * (VND)</Label>
+                <Input
+                  id="cost_price"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.cost_price}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      cost_price: Number(e.target.value),
+                    })
+                  }
+                  placeholder="Enter cost price"
+                  required
+                />
+              </div>
+            </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="price">Price *</Label>
+              <Label htmlFor="stock_quantity">Stock Quantity *</Label>
               <Input
-                id="price"
+                id="stock_quantity"
                 type="number"
                 min="0"
-                step="1000"
-                value={formData.price}
+                step="1"
+                value={formData.stock_quantity}
                 onChange={(e) =>
-                  setFormData({ ...formData, price: Number(e.target.value) })
+                  setFormData({
+                    ...formData,
+                    stock_quantity: Number(e.target.value),
+                  })
                 }
-                placeholder="Enter price in VND"
+                placeholder="Enter stock quantity"
                 required
               />
             </div>
@@ -919,25 +1054,89 @@ function PartsModal({
                     <div className="font-mono text-xs">{part.id}</div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Price</Label>
+                    <Label className="text-muted-foreground">Sale Price</Label>
                     <div>
-                      {new Intl.NumberFormat('vi-VN', {
-                        style: 'currency',
-                        currency: 'VND'
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
                       }).format(part.price)}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Created</Label>
+                    <Label className="text-muted-foreground">Cost Price</Label>
                     <div>
-                      {new Date(part.created_at).toLocaleDateString()}
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(part.cost_price)}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Updated</Label>
-                    <div>
-                      {new Date(part.updated_at).toLocaleDateString()}
+                    <Label className="text-muted-foreground">
+                      Stock Quantity
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <span>{part.stock_quantity}</span>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          part.stock_quantity > 10
+                            ? "bg-green-100 text-green-800"
+                            : part.stock_quantity > 0
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {part.stock_quantity > 10
+                          ? "In Stock"
+                          : part.stock_quantity > 0
+                            ? "Low Stock"
+                            : "Out of Stock"}
+                      </span>
                     </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Stock Value</Label>
+                    <div>
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(part.cost_price * part.stock_quantity)}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">
+                      Profit Margin
+                    </Label>
+                    <div>
+                      {part.price > 0 ? (
+                        <span
+                          className={`font-medium ${
+                            (
+                              ((part.price - part.cost_price) / part.price) *
+                                100
+                            ) > 20
+                              ? "text-green-600"
+                              : "text-yellow-600"
+                          }`}
+                        >
+                          {(
+                            ((part.price - part.cost_price) / part.price) *
+                            100
+                          ).toFixed(1)}
+                          %
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <div>{new Date(part.created_at).toLocaleDateString()}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Updated</Label>
+                    <div>{new Date(part.updated_at).toLocaleDateString()}</div>
                   </div>
                 </div>
               </>

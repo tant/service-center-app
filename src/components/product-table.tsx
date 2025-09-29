@@ -26,11 +26,11 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconCopy,
+  IconEdit,
   IconGripVertical,
   IconLayoutColumns,
   IconPackage,
   IconPlus,
-  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -240,6 +240,8 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
 ];
 
 function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
+  const [editOpen, setEditOpen] = React.useState(false);
+
   const handleClone = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
       loading: `Cloning ${product.name}...`,
@@ -248,20 +250,31 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
     });
   };
 
-  const handleDelete = () => {
-    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
-      return;
-    }
-
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Deleting ${product.name}...`,
-      success: "Product deleted successfully",
-      error: "Failed to delete product",
-    });
-  };
-
   return (
     <div className="flex items-center gap-1">
+      {/* Edit Product */}
+      <ProductModal
+        product={product}
+        mode="edit"
+        trigger={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-9 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <IconEdit className="size-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit Product</p>
+            </TooltipContent>
+          </Tooltip>
+        }
+        onSuccess={() => window.location.reload()}
+      />
+
       {/* Clone Product */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -276,23 +289,6 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
         </TooltipTrigger>
         <TooltipContent>
           <p>Clone Product</p>
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Delete Product */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-destructive"
-            onClick={handleDelete}
-          >
-            <IconTrash className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete Product</p>
         </TooltipContent>
       </Tooltip>
     </div>

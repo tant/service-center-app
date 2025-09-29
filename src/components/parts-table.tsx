@@ -3,6 +3,7 @@
 import {
   closestCenter,
   DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -20,12 +21,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsLeft,
+  IconChevronsRight,
   IconCopy,
   IconEdit,
   IconGripVertical,
   IconLayoutColumns,
+  IconPackage,
   IconPlus,
-  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -45,9 +50,20 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -63,6 +79,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -72,6 +89,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { trpc } from "@/components/providers/trpc-provider";
 
 export const partSchema = z.object({
   id: z.string(),
@@ -80,15 +105,19 @@ export const partSchema = z.object({
   part_number: z.string().nullable(),
   sku: z.string().nullable(),
   description: z.string().nullable(),
-  price: z.number().nullable(),
+  price: z.number(),
   image_url: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
-  created_by: z.string(),
-  updated_by: z.string(),
+  created_by: z.string().nullable(),
+  updated_by: z.string().nullable(),
+  products: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    brand: z.string().nullable(),
+  }).nullable().optional(),
 });
-
-export type Part = z.infer<typeof partSchema>;
 
 function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
@@ -109,11 +138,169 @@ function DragHandle({ id }: { id: string }) {
   );
 }
 
-function DraggableRow<TData extends { id: string }>({
-  row,
-}: {
-  row: Row<TData>;
-}) {
+const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
+  {
+    id: "drag",
+    header: () => null,
+    cell: ({ row }) => <DragHandle id={row.original.id} />,
+  },
+  {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "name",
+    header: "Linh kiện",
+    cell: ({ row }) => {
+      return <PartViewer part={row.original} />;
+    },
+    enableHiding: false,
+  },
+  {
+    accessorKey: "part_number",
+    header: "Mã linh kiện",
+    cell: ({ row }) => (
+      <div className="font-mono text-sm">
+        {row.original.part_number || (
+          <span className="text-muted-foreground italic">No part number</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "sku",
+    header: "SKU",
+    cell: ({ row }) => (
+      <div className="font-mono text-sm">
+        {row.original.sku || (
+          <span className="text-muted-foreground italic">No SKU</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "products",
+    header: "Sản phẩm",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        {row.original.products ? (
+          <>
+            <Badge variant="outline" className="text-xs">
+              {row.original.products.type}
+            </Badge>
+            <span className="font-medium">{row.original.products.name}</span>
+          </>
+        ) : (
+          <span className="text-muted-foreground italic">No product</span>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "price",
+    header: "Giá",
+    cell: ({ row }) => (
+      <div className="font-medium">
+        {new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND'
+        }).format(row.original.price)}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "updated_at",
+    header: "Cập nhật",
+    cell: ({ row }) => (
+      <div className="text-muted-foreground text-sm">
+        {new Date(row.original.updated_at).toLocaleDateString()}
+      </div>
+    ),
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => <QuickActions part={row.original} />,
+  },
+];
+
+function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
+  const handleClone = () => {
+    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+      loading: `Cloning ${part.name}...`,
+      success: "Part cloned successfully",
+      error: "Failed to clone part",
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      {/* Edit Part */}
+      <PartsModal
+        part={part}
+        mode="edit"
+        trigger={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-9 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <IconEdit className="size-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit Part</p>
+            </TooltipContent>
+          </Tooltip>
+        }
+        onSuccess={() => window.location.reload()}
+      />
+
+      {/* Clone Part */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-9 p-0 text-muted-foreground hover:text-foreground"
+            onClick={handleClone}
+          >
+            <IconCopy className="size-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Clone Part</p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+function DraggableRow({ row }: { row: Row<z.infer<typeof partSchema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   });
@@ -138,138 +325,24 @@ function DraggableRow<TData extends { id: string }>({
   );
 }
 
-interface DataTableProps<TData extends { id: string }, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-}
-
-function DataTable<TData extends { id: string }, TValue>({
-  columns,
-  data,
-  searchValue,
-  sensors,
-  sortableId,
-  dataIds,
-}: DataTableProps<TData, TValue> & {
-  searchValue: string;
-  sensors: any;
-  sortableId: string;
-  dataIds: UniqueIdentifier[];
+export function PartsTable({
+  data: initialData,
+}: {
+  data: z.infer<typeof partSchema>[];
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [data, setData] = React.useState(() => initialData);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
-  const [tableData, setTableData] = React.useState<TData[]>(data);
-
-  React.useEffect(() => {
-    setTableData(data);
-  }, [data]);
-
-  const table = useReactTable({
-    data: tableData,
-    columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
   });
-
-  function handleDragEnd(event: any) {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setTableData((data) => {
-        const oldIndex = data.findIndex((item: any) => item.id === active.id);
-        const newIndex = data.findIndex((item: any) => item.id === over.id);
-
-        return arrayMove(data, oldIndex, newIndex);
-      });
-    }
-  }
-
-  return (
-    <div className="overflow-hidden rounded-lg border">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToVerticalAxis]}
-        id={sortableId}
-      >
-        <Table>
-          <TableHeader className="bg-muted sticky top-0 z-10">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} colSpan={header.colSpan}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className="**:data-[slot=table-cell]:first:w-8">
-            {table.getRowModel().rows?.length ? (
-              <SortableContext
-                items={dataIds}
-                strategy={verticalListSortingStrategy}
-              >
-                {table.getRowModel().rows.map((row) => (
-                  <DraggableRow<TData> key={row.id} row={row} />
-                ))}
-              </SortableContext>
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No parts found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </DndContext>
-    </div>
-  );
-}
-
-interface PartsTableProps {
-  data: Part[];
-}
-
-export function PartsTable({ data: initialData }: PartsTableProps) {
-  const [data, _setData] = React.useState(() => initialData);
   const [searchValue, setSearchValue] = React.useState("");
-  const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  );
-  const [sorting, setSorting] = React.useState<SortingState>([]);
   const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -277,154 +350,16 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
     useSensor(KeyboardSensor, {}),
   );
 
-  const handleEdit = (part: Part) => {
-    toast.success(`Chỉnh sửa phụ kiện: ${part.name}`);
-  };
-
-  const handleClone = (part: Part) => {
-    toast.success(`Sao chép phụ kiện: ${part.name}`);
-  };
-
-  const handleDelete = (part: Part) => {
-    toast.success(`Xóa phụ kiện: ${part.name}`);
-  };
-
-  const columns: ColumnDef<Part>[] = [
-    {
-      id: "drag",
-      header: () => null,
-      cell: ({ row }) => <DragHandle id={row.original.id} />,
-    },
-    {
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "name",
-      header: "Tên phụ kiện",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
-      ),
-      enableHiding: false,
-    },
-    {
-      accessorKey: "part_number",
-      header: "Mã phụ kiện",
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {row.getValue("part_number") || "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "sku",
-      header: "SKU",
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {row.getValue("sku") || "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "price",
-      header: "Giá",
-      cell: ({ row }) => {
-        const price = row.getValue("price") as number | null;
-        return (
-          <div className="text-sm">
-            {price ? `${price.toLocaleString("vi-VN")} ₫` : "—"}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "created_at",
-      header: "Ngày tạo",
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
-        return (
-          <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: "Thao tác",
-      cell: ({ row }) => {
-        const part = row.original;
-
-        return (
-          <div className="flex items-center justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(part)}
-              className="h-8 w-8 p-0"
-            >
-              <IconEdit className="h-5 w-5" />
-              <span className="sr-only">Chỉnh sửa</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleClone(part)}
-              className="h-8 w-8 p-0"
-            >
-              <IconCopy className="h-5 w-5" />
-              <span className="sr-only">Sao chép</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(part)}
-              className="h-8 w-8 p-0"
-            >
-              <IconTrash className="h-5 w-5" />
-              <span className="sr-only">Xóa</span>
-            </Button>
-          </div>
-        );
-      },
-    },
-  ];
-
   const filteredData = React.useMemo(() => {
-    return data.filter((item) => {
-      const name = item.name?.toLowerCase() || "";
-      const partNumber = item.part_number?.toLowerCase() || "";
-      const sku = item.sku?.toLowerCase() || "";
-      const description = item.description?.toLowerCase() || "";
-      const search = searchValue.toLowerCase();
+    if (!searchValue) return data;
 
+    return data.filter((item) => {
+      const searchLower = searchValue.toLowerCase();
       return (
-        name.includes(search) ||
-        partNumber.includes(search) ||
-        sku.includes(search) ||
-        description.includes(search)
+        item.name.toLowerCase().includes(searchLower) ||
+        item.part_number?.toLowerCase().includes(searchLower) ||
+        item.sku?.toLowerCase().includes(searchLower) ||
+        item.products?.name.toLowerCase().includes(searchLower)
       );
     });
   }, [data, searchValue]);
@@ -442,6 +377,7 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
       columnVisibility,
       rowSelection,
       columnFilters,
+      pagination,
     },
     getRowId: (row) => row.id,
     enableRowSelection: true,
@@ -449,6 +385,7 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -456,6 +393,17 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (active && over && active.id !== over.id) {
+      setData((currentData) => {
+        const oldIndex = currentData.findIndex((item) => item.id === active.id);
+        const newIndex = currentData.findIndex((item) => item.id === over.id);
+        return arrayMove(currentData, oldIndex, newIndex);
+      });
+    }
+  }
 
   return (
     <Tabs
@@ -475,21 +423,17 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
             <SelectValue placeholder="Select a view" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="parts-list">Danh sách phụ kiện</SelectItem>
-            <SelectItem value="inventory">Quản lý tồn kho</SelectItem>
-            <SelectItem value="suppliers">Nhà cung cấp</SelectItem>
-            <SelectItem value="reports">Báo cáo</SelectItem>
+            <SelectItem value="parts-list">DS Linh kiện</SelectItem>
+            <SelectItem value="categories">Danh mục</SelectItem>
+            <SelectItem value="inventory">Tồn kho</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="parts-list">Danh sách phụ kiện</TabsTrigger>
-          <TabsTrigger value="inventory">
-            Quản lý tồn kho <Badge variant="secondary">12</Badge>
+          <TabsTrigger value="parts-list">DS Linh kiện</TabsTrigger>
+          <TabsTrigger value="categories">
+            Danh mục <Badge variant="secondary">5</Badge>
           </TabsTrigger>
-          <TabsTrigger value="suppliers">
-            Nhà cung cấp <Badge variant="secondary">5</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="reports">Báo cáo</TabsTrigger>
+          <TabsTrigger value="inventory">Tồn kho</TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
           <DropdownMenu>
@@ -525,10 +469,16 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Thêm phụ kiện</span>
-          </Button>
+          <PartsModal
+            mode="add"
+            trigger={
+              <Button variant="outline" size="sm">
+                <IconPlus />
+                <span className="hidden lg:inline">Thêm linh kiện</span>
+              </Button>
+            }
+            onSuccess={() => window.location.reload()}
+          />
         </div>
       </div>
       <TabsContent
@@ -537,62 +487,481 @@ export function PartsTable({ data: initialData }: PartsTableProps) {
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên, mã phụ kiện, SKU hoặc mô tả..."
+            placeholder="Tìm theo tên, mã linh kiện, SKU hoặc sản phẩm..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
           />
         </div>
-        <DataTable
-          columns={columns}
-          data={data}
-          searchValue={searchValue}
-          sensors={sensors}
-          sortableId={sortableId}
-          dataIds={dataIds}
-        />
-      </TabsContent>
-      <TabsContent
-        value="inventory"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
-        <div className="flex h-[200px] shrink-0 items-center justify-center rounded-md border border-dashed">
-          <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-            <h3 className="mt-4 text-lg font-semibold">Quản lý tồn kho</h3>
-            <p className="mb-4 mt-2 text-sm text-muted-foreground">
-              Theo dõi số lượng tồn kho, cảnh báo hết hàng và quản lý nhập xuất
-              kho.
-            </p>
+        <div className="overflow-hidden rounded-lg border">
+          <DndContext
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis]}
+            onDragEnd={handleDragEnd}
+            sensors={sensors}
+            id={sortableId}
+          >
+            <Table>
+              <TableHeader className="bg-muted sticky top-0 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody className="**:data-[slot=table-cell]:first:w-8">
+                {table.getRowModel().rows?.length ? (
+                  <SortableContext
+                    items={dataIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {table.getRowModel().rows.map((row) => (
+                      <DraggableRow key={row.id} row={row} />
+                    ))}
+                  </SortableContext>
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No parts found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </DndContext>
+        </div>
+        <div className="flex items-center justify-between px-4">
+          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} part(s) selected.
+          </div>
+          <div className="flex w-full items-center gap-8 lg:w-fit">
+            <div className="hidden items-center gap-2 lg:flex">
+              <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                Rows per page
+              </Label>
+              <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value));
+                }}
+              >
+                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                  <SelectValue
+                    placeholder={table.getState().pagination.pageSize}
+                  />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-fit items-center justify-center text-sm font-medium">
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </div>
+            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Go to first page</span>
+                <IconChevronsLeft />
+              </Button>
+              <Button
+                variant="outline"
+                className="size-8"
+                size="icon"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Go to previous page</span>
+                <IconChevronLeft />
+              </Button>
+              <Button
+                variant="outline"
+                className="size-8"
+                size="icon"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Go to next page</span>
+                <IconChevronRight />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden size-8 lg:flex"
+                size="icon"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Go to last page</span>
+                <IconChevronsRight />
+              </Button>
+            </div>
           </div>
         </div>
       </TabsContent>
-      <TabsContent
-        value="suppliers"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
-        <div className="flex h-[200px] shrink-0 items-center justify-center rounded-md border border-dashed">
-          <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-            <h3 className="mt-4 text-lg font-semibold">Nhà cung cấp</h3>
-            <p className="mb-4 mt-2 text-sm text-muted-foreground">
-              Quản lý thông tin nhà cung cấp, đơn đặt hàng và lịch sử giao dịch.
-            </p>
-          </div>
-        </div>
+      <TabsContent value="categories" className="flex flex-col px-4 lg:px-6">
+        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
-      <TabsContent
-        value="reports"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
-        <div className="flex h-[200px] shrink-0 items-center justify-center rounded-md border border-dashed">
-          <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-            <h3 className="mt-4 text-lg font-semibold">Báo cáo</h3>
-            <p className="mb-4 mt-2 text-sm text-muted-foreground">
-              Báo cáo chi tiết về tình trạng phụ kiện, doanh thu và xu hướng sử
-              dụng.
-            </p>
-          </div>
-        </div>
+      <TabsContent value="inventory" className="flex flex-col px-4 lg:px-6">
+        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
     </Tabs>
+  );
+}
+
+function PartViewer({
+  part,
+}: {
+  part: z.infer<typeof partSchema>;
+}) {
+  return (
+    <PartsModal
+      part={part}
+      mode="edit"
+      trigger={
+        <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
+          <Avatar className="size-8">
+            <AvatarImage src={part.image_url || ""} />
+            <AvatarFallback>
+              <IconPackage className="size-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col items-start">
+            <div className="font-medium">{part.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+              }).format(part.price)}
+            </div>
+          </div>
+        </Button>
+      }
+      onSuccess={() => window.location.reload()}
+    />
+  );
+}
+
+interface PartsModalProps {
+  part?: z.infer<typeof partSchema>;
+  mode: "add" | "edit";
+  trigger: React.ReactNode;
+  onSuccess?: () => void;
+}
+
+function PartsModal({
+  part,
+  mode,
+  trigger,
+  onSuccess,
+}: PartsModalProps) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    product_id: "",
+    name: "",
+    part_number: "",
+    sku: "",
+    description: "",
+    price: 0,
+    image_url: "",
+  });
+
+  // tRPC queries and mutations
+  const { data: products } = trpc.parts.getProducts.useQuery();
+
+  const createPartMutation = trpc.parts.createPart.useMutation({
+    onSuccess: (data) => {
+      console.log("✅ [PARTS MODAL] Part created successfully:", data);
+      toast.success("Part created successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      console.error("❌ [PARTS MODAL] Part creation failed:", error);
+      toast.error(error.message || "Failed to create part");
+    },
+  });
+
+  const updatePartMutation = trpc.parts.updatePart.useMutation({
+    onSuccess: (data) => {
+      console.log("✅ [PARTS MODAL] Part updated successfully:", data);
+      toast.success("Part updated successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      console.error("❌ [PARTS MODAL] Part update failed:", error);
+      toast.error(error.message || "Failed to update part");
+    },
+  });
+
+  const isLoading = createPartMutation.status === "pending" || updatePartMutation.status === "pending";
+
+  // Reset form when modal opens or mode/part changes
+  React.useEffect(() => {
+    if (open) {
+      setFormData({
+        product_id: part?.product_id || "",
+        name: part?.name || "",
+        part_number: part?.part_number || "",
+        sku: part?.sku || "",
+        description: part?.description || "",
+        price: part?.price || 0,
+        image_url: part?.image_url || "",
+      });
+    }
+  }, [open, part]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name) {
+      toast.error("Please enter a part name");
+      return;
+    }
+
+    if (!formData.product_id) {
+      toast.error("Please select a product");
+      return;
+    }
+
+    if (formData.price <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    if (mode === "add") {
+      createPartMutation.mutate({
+        product_id: formData.product_id,
+        name: formData.name,
+        part_number: formData.part_number || null,
+        sku: formData.sku || null,
+        description: formData.description || null,
+        price: formData.price,
+        image_url: formData.image_url || null,
+      });
+    } else if (part) {
+      updatePartMutation.mutate({
+        id: part.id,
+        product_id: formData.product_id,
+        name: formData.name,
+        part_number: formData.part_number || null,
+        sku: formData.sku || null,
+        description: formData.description || null,
+        price: formData.price,
+        image_url: formData.image_url || null,
+      });
+    }
+  };
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader className="gap-1">
+          <DrawerTitle className="flex items-center gap-3">
+            {mode === "edit" && (
+              <Avatar className="size-10">
+                <AvatarImage src={part?.image_url || ""} />
+                <AvatarFallback>
+                  <IconPackage className="size-5" />
+                </AvatarFallback>
+              </Avatar>
+            )}
+            {mode === "add" ? "Add New Part" : part?.name}
+          </DrawerTitle>
+          <DrawerDescription>
+            {mode === "add"
+              ? "Create a new part with the required information."
+              : "Part details and management options"}
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="product_id">Product *</Label>
+              <Select
+                value={formData.product_id}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, product_id: value })
+                }
+              >
+                <SelectTrigger id="product_id" className="w-full">
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products?.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {product.type}
+                        </Badge>
+                        {product.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="name">Part Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Enter part name"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="part_number">Part Number</Label>
+                <Input
+                  id="part_number"
+                  value={formData.part_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, part_number: e.target.value })
+                  }
+                  placeholder="Enter part number (optional)"
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sku: e.target.value })
+                  }
+                  placeholder="Enter SKU (optional)"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="price">Price *</Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="1000"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: Number(e.target.value) })
+                }
+                placeholder="Enter price in VND"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Enter part description (optional)"
+                rows={3}
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="image_url">Image URL</Label>
+              <Input
+                id="image_url"
+                value={formData.image_url}
+                onChange={(e) =>
+                  setFormData({ ...formData, image_url: e.target.value })
+                }
+                placeholder="Enter image URL (optional)"
+              />
+            </div>
+            {mode === "edit" && part && (
+              <>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-muted-foreground">Part ID</Label>
+                    <div className="font-mono text-xs">{part.id}</div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Price</Label>
+                    <div>
+                      {new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
+                      }).format(part.price)}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Created</Label>
+                    <div>
+                      {new Date(part.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Updated</Label>
+                    <div>
+                      {new Date(part.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <DrawerFooter>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isLoading}
+          >
+            {isLoading
+              ? mode === "add"
+                ? "Creating..."
+                : "Updating..."
+              : mode === "add"
+                ? "Create Part"
+                : "Save Changes"}
+          </Button>
+          <DrawerClose asChild>
+            <Button variant="outline" disabled={isLoading}>
+              Cancel
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

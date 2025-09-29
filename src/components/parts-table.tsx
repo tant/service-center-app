@@ -79,6 +79,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -694,27 +695,23 @@ function PartsModal({
   const { data: products } = trpc.parts.getProducts.useQuery();
 
   const createPartMutation = trpc.parts.createPart.useMutation({
-    onSuccess: (data) => {
-      console.log("✅ [PARTS MODAL] Part created successfully:", data);
+    onSuccess: () => {
       toast.success("Part created successfully");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      console.error("❌ [PARTS MODAL] Part creation failed:", error);
       toast.error(error.message || "Failed to create part");
     },
   });
 
   const updatePartMutation = trpc.parts.updatePart.useMutation({
-    onSuccess: (data) => {
-      console.log("✅ [PARTS MODAL] Part updated successfully:", data);
+    onSuccess: () => {
       toast.success("Part updated successfully");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      console.error("❌ [PARTS MODAL] Part update failed:", error);
       toast.error(error.message || "Failed to update part");
     },
   });
@@ -808,28 +805,34 @@ function PartsModal({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="product_id">Product *</Label>
-              <Select
+              <Combobox
                 value={formData.product_id}
                 onValueChange={(value) =>
                   setFormData({ ...formData, product_id: value })
                 }
-              >
-                <SelectTrigger id="product_id" className="w-full">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products?.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
+                options={
+                  products?.map((product) => ({
+                    value: product.id,
+                    label: (
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
                           {product.type}
                         </Badge>
                         {product.name}
+                        {product.brand && (
+                          <span className="text-muted-foreground text-xs">
+                            - {product.brand}
+                          </span>
+                        )}
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    ),
+                  })) || []
+                }
+                placeholder="Select product"
+                searchPlaceholder="Search products..."
+                emptyMessage="No products found."
+                className="w-full"
+              />
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="name">Part Name *</Label>

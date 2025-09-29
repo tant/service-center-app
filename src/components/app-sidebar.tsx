@@ -66,22 +66,27 @@ const data = {
   ],
   documents: [
     {
-      name: "Sản phẩm",
+      name: "Sản phẩm dịch vụ",
       url: "/products",
       icon: IconDevices,
     },
     {
-      name: "Linh kiện",
+      name: "Kho linh kiện",
       url: "/parts",
       icon: IconComponents,
     },
     {
-      name: "Nhân sự",
+      name: "Quản lý nhãn hàng (TODOS)",
+      url: "/brands",
+      icon: IconComponents,
+    },
+    {
+      name: "Quản lý nhân sự",
       url: "/team",
       icon: IconUsers,
     },
     {
-      name: "Báo cáo",
+      name: "Báo cáo (TODOS)",
       url: "/report",
       icon: IconReport,
     },

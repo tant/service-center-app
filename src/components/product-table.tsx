@@ -688,27 +688,23 @@ function ProductModal({
 
   // tRPC mutations
   const createProductMutation = trpc.products.createProduct.useMutation({
-    onSuccess: (data) => {
-      console.log("✅ [PRODUCT MODAL] Product created successfully:", data);
+    onSuccess: () => {
       toast.success("Product created successfully");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      console.error("❌ [PRODUCT MODAL] Product creation failed:", error);
       toast.error(error.message || "Failed to create product");
     },
   });
 
   const updateProductMutation = trpc.products.updateProduct.useMutation({
-    onSuccess: (data) => {
-      console.log("✅ [PRODUCT MODAL] Product updated successfully:", data);
+    onSuccess: () => {
       toast.success("Product updated successfully");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      console.error("❌ [PRODUCT MODAL] Product update failed:", error);
       toast.error(error.message || "Failed to update product");
     },
   });

@@ -26,7 +26,6 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconCopy,
-  IconEdit,
   IconGripVertical,
   IconLayoutColumns,
   IconPackage,
@@ -97,15 +96,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { trpc } from "@/components/providers/trpc-provider";
 
 export const productSchema = z.object({
   id: z.string(),
   name: z.string(),
   sku: z.string().nullable(),
   short_description: z.string().nullable(),
-  brand: z.string().nullable(),
+  brand: z.enum(["ZOTAC", "SSTC", "Other"]).nullable(),
   model: z.string().nullable(),
-  type: z.enum(["hardware", "software", "accessory"]),
+  type: z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]),
   primary_image: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -211,9 +211,9 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     cell: ({ row }) => (
       <Badge
         variant={
-          row.original.type === "hardware"
+          row.original.type === "VGA" || row.original.type === "MiniPC"
             ? "default"
-            : row.original.type === "software"
+            : row.original.type === "SSD" || row.original.type === "RAM" || row.original.type === "Mainboard"
               ? "secondary"
               : "outline"
         }
@@ -240,14 +240,6 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
 ];
 
 function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
-  const handleEdit = () => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Opening editor for ${product.name}...`,
-      success: "Product editor opened",
-      error: "Failed to open editor",
-    });
-  };
-
   const handleClone = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
       loading: `Cloning ${product.name}...`,
@@ -270,23 +262,6 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
 
   return (
     <div className="flex items-center gap-1">
-      {/* Edit Product */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handleEdit}
-          >
-            <IconEdit className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit Product</p>
-        </TooltipContent>
-      </Tooltip>
-
       {/* Clone Product */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -668,11 +643,11 @@ function ProductViewer({
 }: {
   product: z.infer<typeof productSchema>;
 }) {
-  const isMobile = useIsMobile();
-
   return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
+    <ProductModal
+      product={product}
+      mode="edit"
+      trigger={
         <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
           <Avatar className="size-8">
             <AvatarImage src={product.primary_image || ""} />
@@ -684,110 +659,9 @@ function ProductViewer({
             <div className="font-medium">{product.name}</div>
           </div>
         </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle className="flex items-center gap-3">
-            <Avatar className="size-10">
-              <AvatarImage src={product.primary_image || ""} />
-              <AvatarFallback>
-                <IconPackage className="size-5" />
-              </AvatarFallback>
-            </Avatar>
-            {product.name}
-          </DrawerTitle>
-          <DrawerDescription>
-            Product details and management options
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          <form className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="name">Product Name</Label>
-              <Input id="name" defaultValue={product.name} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="sku">SKU</Label>
-                <Input id="sku" defaultValue={product.sku || ""} />
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
-                <Select defaultValue={product.type}>
-                  <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hardware">Hardware</SelectItem>
-                    <SelectItem value="software">Software</SelectItem>
-                    <SelectItem value="accessory">Accessory</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="brand">Brand</Label>
-                <Input id="brand" defaultValue={product.brand || ""} />
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="model">Model</Label>
-                <Input id="model" defaultValue={product.model || ""} />
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                defaultValue={product.short_description || ""}
-              />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="image">Image URL</Label>
-              <Input id="image" defaultValue={product.primary_image || ""} />
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <Label className="text-muted-foreground">Product ID</Label>
-                <div className="font-mono text-xs">{product.id}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Type</Label>
-                <div>{product.type}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Created</Label>
-                <div>{new Date(product.created_at).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Updated</Label>
-                <div>{new Date(product.updated_at).toLocaleDateString()}</div>
-              </div>
-            </div>
-          </form>
-        </div>
-        <DrawerFooter>
-          <Button
-            onClick={() =>
-              toast.promise(
-                new Promise((resolve) => setTimeout(resolve, 1000)),
-                {
-                  loading: `Updating ${product.name}...`,
-                  success: "Product updated successfully",
-                  error: "Failed to update product",
-                },
-              )
-            }
-          >
-            Save Changes
-          </Button>
-          <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      }
+      onSuccess={() => window.location.reload()}
+    />
   );
 }
 
@@ -806,16 +680,44 @@ function ProductModal({
 }: ProductModalProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: "",
     sku: "",
     short_description: "",
-    brand: "",
+    brand: null as "ZOTAC" | "SSTC" | "Other" | null,
     model: "",
-    type: "hardware" as "hardware" | "software" | "accessory",
+    type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
   });
+
+  // tRPC mutations
+  const createProductMutation = trpc.products.createProduct.useMutation({
+    onSuccess: (data) => {
+      console.log("✅ [PRODUCT MODAL] Product created successfully:", data);
+      toast.success("Product created successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      console.error("❌ [PRODUCT MODAL] Product creation failed:", error);
+      toast.error(error.message || "Failed to create product");
+    },
+  });
+
+  const updateProductMutation = trpc.products.updateProduct.useMutation({
+    onSuccess: (data) => {
+      console.log("✅ [PRODUCT MODAL] Product updated successfully:", data);
+      toast.success("Product updated successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      console.error("❌ [PRODUCT MODAL] Product update failed:", error);
+      toast.error(error.message || "Failed to update product");
+    },
+  });
+
+  const isLoading = createProductMutation.status === "pending" || updateProductMutation.status === "pending";
 
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
@@ -824,9 +726,9 @@ function ProductModal({
         name: product?.name || "",
         sku: product?.sku || "",
         short_description: product?.short_description || "",
-        brand: product?.brand || "",
+        brand: product?.brand || null,
         model: product?.model || "",
-        type: product?.type || "hardware",
+        type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
       });
     }
@@ -840,41 +742,27 @@ function ProductModal({
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      if (mode === "add") {
-        const response = await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            sku: formData.sku || null,
-            short_description: formData.short_description || null,
-            brand: formData.brand || null,
-            model: formData.model || null,
-            type: formData.type,
-            primary_image: formData.primary_image || null,
-          }),
-        });
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-
-        toast.success("Product created successfully");
-      } else {
-        // TODO: Implement update functionality
-        toast.success("Update functionality coming soon");
-      }
-
-      setOpen(false);
-
-      if (onSuccess) onSuccess();
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
+    if (mode === "add") {
+      createProductMutation.mutate({
+        name: formData.name,
+        sku: formData.sku || null,
+        short_description: formData.short_description || null,
+        brand: formData.brand || null,
+        model: formData.model || null,
+        type: formData.type,
+        primary_image: formData.primary_image || null,
+      });
+    } else if (product) {
+      updateProductMutation.mutate({
+        id: product.id,
+        name: formData.name,
+        sku: formData.sku || null,
+        short_description: formData.short_description || null,
+        brand: formData.brand || null,
+        model: formData.model || null,
+        type: formData.type,
+        primary_image: formData.primary_image || null,
+      });
     }
   };
 
@@ -934,7 +822,7 @@ function ProductModal({
                 <Label htmlFor="type">Type *</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: "hardware" | "software" | "accessory") =>
+                  onValueChange={(value: "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other") =>
                     setFormData({ ...formData, type: value })
                   }
                 >
@@ -942,9 +830,12 @@ function ProductModal({
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hardware">Hardware</SelectItem>
-                    <SelectItem value="software">Software</SelectItem>
-                    <SelectItem value="accessory">Accessory</SelectItem>
+                    <SelectItem value="VGA">VGA</SelectItem>
+                    <SelectItem value="MiniPC">MiniPC</SelectItem>
+                    <SelectItem value="SSD">SSD</SelectItem>
+                    <SelectItem value="RAM">RAM</SelectItem>
+                    <SelectItem value="Mainboard">Mainboard</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -952,14 +843,21 @@ function ProductModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="brand">Brand</Label>
-                <Input
-                  id="brand"
-                  value={formData.brand}
-                  onChange={(e) =>
-                    setFormData({ ...formData, brand: e.target.value })
+                <Select
+                  value={formData.brand || ""}
+                  onValueChange={(value: "ZOTAC" | "SSTC" | "Other") =>
+                    setFormData({ ...formData, brand: value || null })
                   }
-                  placeholder="Enter brand (optional)"
-                />
+                >
+                  <SelectTrigger id="brand" className="w-full">
+                    <SelectValue placeholder="Select brand (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ZOTAC">ZOTAC</SelectItem>
+                    <SelectItem value="SSTC">SSTC</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="model">Model</Label>

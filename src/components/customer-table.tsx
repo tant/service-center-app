@@ -49,6 +49,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -56,6 +66,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -72,6 +83,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { trpc } from "@/components/providers/trpc-provider";
 
 export const customerSchema = z.object({
   id: z.string(),
@@ -272,10 +285,6 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
     useSensor(KeyboardSensor, {}),
   );
 
-  const handleEdit = (customer: Customer) => {
-    toast.success(`Chỉnh sửa khách hàng: ${customer.name}`);
-  };
-
   const handleCall = (customer: Customer) => {
     if (customer.phone) {
       toast.success(`Gọi điện thoại: ${customer.phone}`);
@@ -378,15 +387,21 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
 
         return (
           <div className="flex items-center justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(customer)}
-              className="h-8 w-8 p-0"
-            >
-              <IconEdit className="h-5 w-5" />
-              <span className="sr-only">Chỉnh sửa</span>
-            </Button>
+            <CustomerModal
+              customer={customer}
+              mode="edit"
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                >
+                  <IconEdit className="h-5 w-5" />
+                  <span className="sr-only">Chỉnh sửa</span>
+                </Button>
+              }
+              onSuccess={() => window.location.reload()}
+            />
             <Button
               variant="ghost"
               size="sm"
@@ -526,10 +541,16 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Thêm khách hàng</span>
-          </Button>
+          <CustomerModal
+            mode="add"
+            trigger={
+              <Button variant="outline" size="sm">
+                <IconPlus />
+                <span className="hidden lg:inline">Thêm khách hàng</span>
+              </Button>
+            }
+            onSuccess={() => window.location.reload()}
+          />
         </div>
       </div>
       <TabsContent
@@ -593,5 +614,216 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
         </div>
       </TabsContent>
     </Tabs>
+  );
+}
+
+interface CustomerModalProps {
+  customer?: z.infer<typeof customerSchema>;
+  mode: "add" | "edit";
+  trigger: React.ReactNode;
+  onSuccess?: () => void;
+}
+
+function CustomerModal({
+  customer,
+  mode,
+  trigger,
+  onSuccess,
+}: CustomerModalProps) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+  });
+
+  // tRPC mutations
+  const createCustomerMutation = trpc.customers.createCustomer.useMutation({
+    onSuccess: () => {
+      toast.success("Customer created successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to create customer");
+    },
+  });
+
+  const updateCustomerMutation = trpc.customers.updateCustomer.useMutation({
+    onSuccess: () => {
+      toast.success("Customer updated successfully");
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update customer");
+    },
+  });
+
+  const isLoading = createCustomerMutation.status === "pending" || updateCustomerMutation.status === "pending";
+
+  // Reset form when modal opens or mode/customer changes
+  React.useEffect(() => {
+    if (open) {
+      setFormData({
+        name: customer?.name || "",
+        phone: customer?.phone || "",
+        email: customer?.email || "",
+        address: customer?.address || "",
+      });
+    }
+  }, [open, customer]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast.error("Please enter a customer name");
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      toast.error("Please enter a phone number");
+      return;
+    }
+
+    if (mode === "add") {
+      createCustomerMutation.mutate({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email || null,
+        address: formData.address || null,
+      });
+    } else if (customer) {
+      updateCustomerMutation.mutate({
+        id: customer.id,
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email || null,
+        address: formData.address || null,
+      });
+    }
+  };
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent>
+        <DrawerHeader className="gap-1">
+          <DrawerTitle className="flex items-center gap-3">
+            {mode === "add" ? "Add New Customer" : customer?.name}
+          </DrawerTitle>
+          <DrawerDescription>
+            {mode === "add"
+              ? "Create a new customer with the required information."
+              : "Customer details and management options"}
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="name">Customer Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Enter customer name"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="Enter phone number"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                placeholder="Enter email address (optional)"
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                placeholder="Enter address (optional)"
+                rows={3}
+              />
+            </div>
+            {mode === "edit" && customer && (
+              <>
+                <div className="border-t pt-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <Label className="text-muted-foreground">Customer ID</Label>
+                      <div className="font-mono text-xs">{customer.id}</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Created</Label>
+                      <div>
+                        {new Date(customer.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Updated</Label>
+                      <div>
+                        {new Date(customer.updated_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <DrawerFooter>
+          <Button
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+            disabled={isLoading}
+          >
+            {isLoading
+              ? mode === "add"
+                ? "Creating..."
+                : "Updating..."
+              : mode === "add"
+                ? "Create Customer"
+                : "Save Changes"}
+          </Button>
+          <DrawerClose asChild>
+            <Button variant="outline" disabled={isLoading}>
+              Cancel
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

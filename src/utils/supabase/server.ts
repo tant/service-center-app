@@ -1,103 +1,74 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// Global counters for server client tracking
+let serverClientCount = 0;
+let cookieStoreCallCount = 0;
+const callerTracker = new Map<string, number>();
+
 export async function createClient() {
-  console.log("🏗️ [SUPABASE SERVER] Creating server client...");
+  serverClientCount++;
+  const clientId = `server-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 
-  try {
-    console.log("🏗️ [SUPABASE SERVER] Environment variables:", {
-      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      urlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length || 0,
-      urlPrefix:
-        process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) || "none",
-      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-      keyLength: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.length || 0,
-      keyPrefix:
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) ||
-        "none",
-    });
+  // Track the caller location
+  const stack = new Error().stack;
+  const caller = stack?.split('\n')[2]?.trim() || 'unknown';
+  const callerCount = callerTracker.get(caller) || 0;
+  callerTracker.set(caller, callerCount + 1);
 
-    console.log("🏗️ [SUPABASE SERVER] Getting cookie store...");
-    const cookieStore = await cookies();
-    console.log("🏗️ [SUPABASE SERVER] Cookie store obtained");
-    console.log("🏗️ [SUPABASE SERVER] Cookie store type:", typeof cookieStore);
+  console.log(`🏗️ [SERVER-${clientId}] Creating server client (call #${serverClientCount})`);
+  console.log(`📍 [SERVER-${clientId}] Called from: ${caller} (${callerCount + 1} times)`);
 
-    console.log("🏗️ [SUPABASE SERVER] Creating server client instance...");
-    const client = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            try {
-              const cookies = cookieStore.getAll();
-              console.log(
-                "🏗️ [SUPABASE SERVER] Getting all cookies:",
-                cookies.length,
-                "cookies found",
-              );
-              console.log(
-                "🏗️ [SUPABASE SERVER] Cookie names:",
-                cookies.map((c) => c.name),
-              );
-              return cookies;
-            } catch (error) {
-              console.error(
-                "🏗️ [SUPABASE SERVER] Error getting cookies:",
-                error,
-              );
-              return [];
-            }
-          },
-          setAll(cookiesToSet) {
-            console.log(
-              "🏗️ [SUPABASE SERVER] Setting cookies:",
-              cookiesToSet.length,
-              "cookies to set",
-            );
-            console.log(
-              "🏗️ [SUPABASE SERVER] Cookie names to set:",
-              cookiesToSet.map((c) => c.name),
-            );
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                console.log(
-                  "🏗️ [SUPABASE SERVER] Setting cookie:",
-                  name,
-                  "with options:",
-                  options,
-                );
-                cookieStore.set(name, value, options);
-              });
-              console.log("🏗️ [SUPABASE SERVER] Cookies set successfully");
-            } catch (error) {
-              console.log(
-                "🏗️ [SUPABASE SERVER] Cookie setting skipped (Server Component context):",
-                error instanceof Error ? error.message : String(error),
-              );
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
+  const startTime = performance.now();
+  const cookieStore = await cookies();
+  const cookieStoreTime = performance.now();
+
+  console.log(`⏱️ [SERVER-${clientId}] Cookie store creation took ${(cookieStoreTime - startTime).toFixed(2)}ms`);
+
+  // Track cookie operations
+  let getAllCallCount = 0;
+  let setAllCallCount = 0;
+
+  const client = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          getAllCallCount++;
+          cookieStoreCallCount++;
+          const cookies = cookieStore.getAll();
+          console.log(`🍪 [SERVER-${clientId}] getAll() call #${getAllCallCount} - returned ${cookies.length} cookies`);
+          console.log(`🍪 [SERVER-${clientId}] Cookie names:`, cookies.map(c => c.name));
+          return cookies;
+        },
+        setAll(cookiesToSet) {
+          setAllCallCount++;
+          console.log(`🍪 [SERVER-${clientId}] setAll() call #${setAllCallCount} - setting ${cookiesToSet.length} cookies`);
+          console.log(`🍪 [SERVER-${clientId}] Cookie names to set:`, cookiesToSet.map(c => c.name));
+
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+            console.log(`✅ [SERVER-${clientId}] Successfully set ${cookiesToSet.length} cookies`);
+          } catch (error) {
+            console.log(`⚠️ [SERVER-${clientId}] Cookie setting failed (Server Component context):`, error);
+          }
         },
       },
-    );
+    },
+  );
 
-    console.log("🏗️ [SUPABASE SERVER] Server client created successfully");
-    console.log("🏗️ [SUPABASE SERVER] Client properties:", {
-      hasAuth: !!client.auth,
-      hasFrom: !!client.from,
-      hasRealtime: !!client.realtime,
-    });
+  const endTime = performance.now();
+  console.log(`⏱️ [SERVER-${clientId}] Total client creation took ${(endTime - startTime).toFixed(2)}ms`);
+  console.log(`📊 [SERVER-${clientId}] Global cookie store calls: ${cookieStoreCallCount}`);
 
-    return client;
-  } catch (error) {
-    console.error("🏗️ [SUPABASE SERVER] Error creating server client:", error);
-    console.error(
-      "🏗️ [SUPABASE SERVER] Error stack:",
-      error instanceof Error ? error.stack : "No stack trace available",
-    );
-    throw error;
+  // Log duplication warning if too many calls
+  if (serverClientCount > 5) {
+    console.warn(`⚠️ [SERVER-${clientId}] HIGH CLIENT COUNT: ${serverClientCount} server clients created!`);
+    console.warn(`⚠️ [SERVER-${clientId}] Top callers:`, Array.from(callerTracker.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3));
   }
+
+  return client;
 }

@@ -27,116 +27,76 @@ export const partsRouter = router({
   createPart: publicProcedure
     .input(createPartSchema)
     .mutation(async ({ input, ctx }) => {
-      console.log("🔧 [PARTS] Creating new part:", {
-        name: input.name,
-        product_id: input.product_id,
-        price: input.price,
-      });
+      const { data: partData, error: partError } = await ctx.supabaseAdmin
+        .from("parts")
+        .insert({
+          product_id: input.product_id,
+          name: input.name,
+          part_number: input.part_number || null,
+          sku: input.sku || null,
+          description: input.description || null,
+          price: input.price,
+          image_url: input.image_url || null,
+        })
+        .select()
+        .single();
 
-      try {
-        // Create part in parts table using admin client (bypasses RLS)
-        const { data: partData, error: partError } = await ctx.supabaseAdmin
-          .from("parts")
-          .insert({
-            product_id: input.product_id,
-            name: input.name,
-            part_number: input.part_number || null,
-            sku: input.sku || null,
-            description: input.description || null,
-            price: input.price,
-            image_url: input.image_url || null,
-            // created_by and updated_by will be handled by database triggers/policies
-          })
-          .select()
-          .single();
-
-        if (partError) {
-          console.error("❌ [PARTS] Part creation error:", partError);
-          throw new Error(`Failed to create part: ${partError.message}`);
-        }
-
-        console.log("✅ [PARTS] Part created successfully:", partData.id);
-
-        return {
-          success: true,
-          part: partData,
-        };
-      } catch (error) {
-        console.error("❌ [PARTS] Part creation failed:", error);
-        throw error;
+      if (partError) {
+        throw new Error(`Failed to create part: ${partError.message}`);
       }
+
+      return {
+        success: true,
+        part: partData,
+      };
     }),
 
   updatePart: publicProcedure
     .input(updatePartSchema)
     .mutation(async ({ input, ctx }) => {
-      console.log("📝 [PARTS] Updating part:", {
-        id: input.id,
-        updates: Object.keys(input).filter(key => key !== 'id' && input[key as keyof typeof input] !== undefined),
-      });
+      // Prepare update data (only include defined fields)
+      const updateData: Record<string, any> = {};
+      if (input.product_id !== undefined) updateData.product_id = input.product_id;
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.part_number !== undefined) updateData.part_number = input.part_number;
+      if (input.sku !== undefined) updateData.sku = input.sku;
+      if (input.description !== undefined) updateData.description = input.description;
+      if (input.price !== undefined) updateData.price = input.price;
+      if (input.image_url !== undefined) updateData.image_url = input.image_url;
 
-      try {
-        // Prepare update data (only include defined fields)
-        const updateData: Record<string, any> = {};
-        if (input.product_id !== undefined) updateData.product_id = input.product_id;
-        if (input.name !== undefined) updateData.name = input.name;
-        if (input.part_number !== undefined) updateData.part_number = input.part_number;
-        if (input.sku !== undefined) updateData.sku = input.sku;
-        if (input.description !== undefined) updateData.description = input.description;
-        if (input.price !== undefined) updateData.price = input.price;
-        if (input.image_url !== undefined) updateData.image_url = input.image_url;
+      const { data: partData, error: partError } = await ctx.supabaseAdmin
+        .from("parts")
+        .update(updateData)
+        .eq("id", input.id)
+        .select()
+        .single();
 
-        // Update part in parts table using admin client
-        const { data: partData, error: partError } = await ctx.supabaseAdmin
-          .from("parts")
-          .update(updateData)
-          .eq("id", input.id)
-          .select()
-          .single();
-
-        if (partError) {
-          console.error("❌ [PARTS] Part update error:", partError);
-          throw new Error(`Failed to update part: ${partError.message}`);
-        }
-
-        if (!partData) {
-          console.error("❌ [PARTS] Part not found for update:", input.id);
-          throw new Error("Part not found");
-        }
-
-        console.log("✅ [PARTS] Part updated successfully:", partData.id);
-
-        return {
-          success: true,
-          part: partData,
-        };
-      } catch (error) {
-        console.error("❌ [PARTS] Part update failed:", error);
-        throw error;
+      if (partError) {
+        throw new Error(`Failed to update part: ${partError.message}`);
       }
+
+      if (!partData) {
+        throw new Error("Part not found");
+      }
+
+      return {
+        success: true,
+        part: partData,
+      };
     }),
 
   getProducts: publicProcedure
     .query(async ({ ctx }) => {
-      console.log("📋 [PARTS] Fetching products for part creation");
+      const { data: products, error } = await ctx.supabaseAdmin
+        .from("products")
+        .select("id, name, type, brand")
+        .order("name", { ascending: true });
 
-      try {
-        const { data: products, error } = await ctx.supabaseAdmin
-          .from("products")
-          .select("id, name, type, brand")
-          .order("name", { ascending: true });
-
-        if (error) {
-          console.error("❌ [PARTS] Error fetching products:", error);
-          throw new Error(`Failed to fetch products: ${error.message}`);
-        }
-
-        console.log("✅ [PARTS] Products fetched successfully:", products?.length || 0);
-        return products || [];
-      } catch (error) {
-        console.error("❌ [PARTS] Products fetch failed:", error);
-        throw error;
+      if (error) {
+        throw new Error(`Failed to fetch products: ${error.message}`);
       }
+
+      return products || [];
     }),
 });
 

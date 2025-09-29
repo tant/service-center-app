@@ -40,11 +40,17 @@ export async function updateSession(request: NextRequest) {
   pathTracker.set(path, pathCount + 1);
   simultaneousRequests.add(requestId);
 
-  console.log(`🔄 [MIDDLEWARE-${requestId}] Starting middleware (call #${middlewareCallCount})`);
-  console.log(`🔄 [MIDDLEWARE-${requestId}] Processing request for path: ${path} (${pathCount + 1} times)`);
+  console.log(
+    `🔄 [MIDDLEWARE-${requestId}] Starting middleware (call #${middlewareCallCount})`,
+  );
+  console.log(
+    `🔄 [MIDDLEWARE-${requestId}] Processing request for path: ${path} (${pathCount + 1} times)`,
+  );
   console.log(`🔄 [MIDDLEWARE-${requestId}] Request method: ${request.method}`);
   console.log(`🔄 [MIDDLEWARE-${requestId}] Request URL: ${request.url}`);
-  console.log(`🔄 [MIDDLEWARE-${requestId}] Simultaneous requests: ${simultaneousRequests.size}`);
+  console.log(
+    `🔄 [MIDDLEWARE-${requestId}] Simultaneous requests: ${simultaneousRequests.size}`,
+  );
 
   try {
     // Validate environment variables first - throw error if missing
@@ -66,9 +72,15 @@ export async function updateSession(request: NextRequest) {
     });
 
     supabaseClientCreateCount++;
-    console.log(`🔄 [MIDDLEWARE-${requestId}] Creating Supabase client (create #${supabaseClientCreateCount})...`);
-    console.log(`🔄 [MIDDLEWARE-${requestId}] Full Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
-    console.log(`🔄 [MIDDLEWARE-${requestId}] Supabase key prefix: ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 30)}...`);
+    console.log(
+      `🔄 [MIDDLEWARE-${requestId}] Creating Supabase client (create #${supabaseClientCreateCount})...`,
+    );
+    console.log(
+      `🔄 [MIDDLEWARE-${requestId}] Full Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`,
+    );
+    console.log(
+      `🔄 [MIDDLEWARE-${requestId}] Supabase key prefix: ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 30)}...`,
+    );
 
     let cookieGetCount = 0;
     let cookieSetCount = 0;
@@ -82,10 +94,12 @@ export async function updateSession(request: NextRequest) {
           getAll() {
             cookieGetCount++;
             const cookies = request.cookies.getAll();
-            console.log(`🍪 [MIDDLEWARE-${requestId}] Cookie getAll() call #${cookieGetCount} - ${cookies.length} cookies found`);
+            console.log(
+              `🍪 [MIDDLEWARE-${requestId}] Cookie getAll() call #${cookieGetCount} - ${cookies.length} cookies found`,
+            );
 
             // Log cookie info without full content
-            cookies.forEach(cookie => {
+            cookies.forEach((cookie) => {
               const value = cookie.value;
               let displayValue;
               if (value.length > 50) {
@@ -93,14 +107,18 @@ export async function updateSession(request: NextRequest) {
               } else {
                 displayValue = value;
               }
-              console.log(`🍪 [MIDDLEWARE-${requestId}] Cookie: ${cookie.name} = ${displayValue}`);
+              console.log(
+                `🍪 [MIDDLEWARE-${requestId}] Cookie: ${cookie.name} = ${displayValue}`,
+              );
             });
 
             return cookies;
           },
           setAll(cookiesToSet) {
             cookieSetCount++;
-            console.log(`🍪 [MIDDLEWARE-${requestId}] Cookie setAll() call #${cookieSetCount} - ${cookiesToSet.length} cookies to set`);
+            console.log(
+              `🍪 [MIDDLEWARE-${requestId}] Cookie setAll() call #${cookieSetCount} - ${cookiesToSet.length} cookies to set`,
+            );
 
             // Log cookies being set with truncated values
             cookiesToSet.forEach(({ name, value }) => {
@@ -110,7 +128,9 @@ export async function updateSession(request: NextRequest) {
               } else {
                 displayValue = value;
               }
-              console.log(`🍪 [MIDDLEWARE-${requestId}] Setting cookie: ${name} = ${displayValue}`);
+              console.log(
+                `🍪 [MIDDLEWARE-${requestId}] Setting cookie: ${name} = ${displayValue}`,
+              );
               request.cookies.set(name, value);
             });
 
@@ -126,7 +146,9 @@ export async function updateSession(request: NextRequest) {
     );
 
     const clientCreateEnd = performance.now();
-    console.log(`⏱️ [MIDDLEWARE-${requestId}] Supabase client creation took ${(clientCreateEnd - clientCreateStart).toFixed(2)}ms`);
+    console.log(
+      `⏱️ [MIDDLEWARE-${requestId}] Supabase client creation took ${(clientCreateEnd - clientCreateStart).toFixed(2)}ms`,
+    );
 
     // Do not run code between createServerClient and
     // supabase.auth.getUser(). A simple mistake could make it very hard to debug
@@ -141,7 +163,9 @@ export async function updateSession(request: NextRequest) {
       const getUserStart = performance.now();
       userResult = await supabase.auth.getUser();
       const getUserEnd = performance.now();
-      console.log(`⏱️ [MIDDLEWARE-${requestId}] getUser() took ${(getUserEnd - getUserStart).toFixed(2)}ms`);
+      console.log(
+        `⏱️ [MIDDLEWARE-${requestId}] getUser() took ${(getUserEnd - getUserStart).toFixed(2)}ms`,
+      );
       console.log(`🔄 [MIDDLEWARE-${requestId}] Raw user result:`, {
         hasData: !!userResult.data,
         hasUser: !!userResult.data?.user,
@@ -217,15 +241,30 @@ export async function updateSession(request: NextRequest) {
     const endTime = performance.now();
     simultaneousRequests.delete(requestId);
 
-    console.log(`⏱️ [MIDDLEWARE-${requestId}] Total processing time: ${(endTime - startTime).toFixed(2)}ms`);
-    console.log(`📊 [MIDDLEWARE-${requestId}] Cookie operations - Get: ${cookieGetCount}, Set: ${cookieSetCount}`);
-    console.log(`🔄 [MIDDLEWARE-${requestId}] Middleware processing complete for: ${request.nextUrl.pathname}`);
-    console.log(`📈 [MIDDLEWARE-${requestId}] Global stats - MW calls: ${middlewareCallCount}, SB clients: ${supabaseClientCreateCount}`);
+    console.log(
+      `⏱️ [MIDDLEWARE-${requestId}] Total processing time: ${(endTime - startTime).toFixed(2)}ms`,
+    );
+    console.log(
+      `📊 [MIDDLEWARE-${requestId}] Cookie operations - Get: ${cookieGetCount}, Set: ${cookieSetCount}`,
+    );
+    console.log(
+      `🔄 [MIDDLEWARE-${requestId}] Middleware processing complete for: ${request.nextUrl.pathname}`,
+    );
+    console.log(
+      `📈 [MIDDLEWARE-${requestId}] Global stats - MW calls: ${middlewareCallCount}, SB clients: ${supabaseClientCreateCount}`,
+    );
 
     // Log duplication warnings
     if (middlewareCallCount > 10) {
-      console.warn(`⚠️ [MIDDLEWARE-${requestId}] HIGH MIDDLEWARE USAGE: ${middlewareCallCount} calls!`);
-      console.warn(`⚠️ [MIDDLEWARE-${requestId}] Top paths:`, Array.from(pathTracker.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3));
+      console.warn(
+        `⚠️ [MIDDLEWARE-${requestId}] HIGH MIDDLEWARE USAGE: ${middlewareCallCount} calls!`,
+      );
+      console.warn(
+        `⚠️ [MIDDLEWARE-${requestId}] Top paths:`,
+        Array.from(pathTracker.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3),
+      );
     }
 
     return supabaseResponse;
@@ -233,7 +272,10 @@ export async function updateSession(request: NextRequest) {
     const errorTime = performance.now();
     simultaneousRequests.delete(requestId);
 
-    console.error(`🔄 [MIDDLEWARE-${requestId}] Error in middleware:`, middlewareError);
+    console.error(
+      `🔄 [MIDDLEWARE-${requestId}] Error in middleware:`,
+      middlewareError,
+    );
     console.error(`🔄 [MIDDLEWARE-${requestId}] Request details:`, {
       path: request.nextUrl.pathname,
       method: request.method,
@@ -246,7 +288,9 @@ export async function updateSession(request: NextRequest) {
       middlewareError instanceof Error &&
       middlewareError.message.includes("Missing required environment variables")
     ) {
-      console.error(`🔄 [MIDDLEWARE-${requestId}] Configuration error - cannot proceed`);
+      console.error(
+        `🔄 [MIDDLEWARE-${requestId}] Configuration error - cannot proceed`,
+      );
       // Return error response for configuration issues
       return NextResponse.json(
         {

@@ -2,7 +2,14 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
 
 // Product schemas for validation
-const productTypeEnum = z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]);
+const productTypeEnum = z.enum([
+  "VGA",
+  "MiniPC",
+  "SSD",
+  "RAM",
+  "Mainboard",
+  "Other",
+]);
 const productBrandEnum = z.enum(["ZOTAC", "SSTC", "Other"]);
 
 const createProductSchema = z.object({
@@ -61,11 +68,13 @@ export const productsRouter = router({
       const updateData: Record<string, any> = {};
       if (input.name !== undefined) updateData.name = input.name;
       if (input.sku !== undefined) updateData.sku = input.sku;
-      if (input.short_description !== undefined) updateData.short_description = input.short_description;
+      if (input.short_description !== undefined)
+        updateData.short_description = input.short_description;
       if (input.brand !== undefined) updateData.brand = input.brand;
       if (input.model !== undefined) updateData.model = input.model;
       if (input.type !== undefined) updateData.type = input.type;
-      if (input.primary_image !== undefined) updateData.primary_image = input.primary_image;
+      if (input.primary_image !== undefined)
+        updateData.primary_image = input.primary_image;
 
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")

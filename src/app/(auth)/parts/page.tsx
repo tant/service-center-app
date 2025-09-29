@@ -10,7 +10,14 @@ async function getPartsData(): Promise<z.infer<typeof partSchema>[]> {
     .from("parts")
     .select(`
       *,
-      products!inner(id, name, type, brand)
+      product_parts(
+        products(
+          id,
+          name,
+          type,
+          brand
+        )
+      )
     `)
     .order("created_at", { ascending: false });
 

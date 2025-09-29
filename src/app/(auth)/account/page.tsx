@@ -62,7 +62,9 @@ export default function Page() {
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update name");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update name",
+      );
       setFullName(profile.full_name || "");
       setIsEditingName(false);
     }
@@ -115,7 +117,9 @@ export default function Page() {
       setSelectedFile(null);
       setAvatarPreview("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload avatar");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload avatar",
+      );
       setAvatarPreview("");
       setSelectedFile(null);
     } finally {

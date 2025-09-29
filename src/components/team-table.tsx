@@ -226,12 +226,41 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => <QuickActions member={row.original} />,
+    cell: ({ row, table }) => (
+      <QuickActions
+        member={row.original}
+        allMembers={(table.options.data as z.infer<typeof teamSchema>[])}
+      />
+    ),
   },
 ];
 
-function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
+interface QuickActionsProps {
+  member: z.infer<typeof teamSchema>;
+  allMembers: z.infer<typeof teamSchema>[];
+}
+
+function QuickActions({ member, allMembers }: QuickActionsProps) {
+  // Check if this member is the last active admin
+  const isLastActiveAdmin = React.useMemo(() => {
+    if (!member.roles.includes("admin") || !member.is_active) {
+      return false;
+    }
+
+    const activeAdmins = allMembers.filter(
+      m => m.is_active && m.roles.includes("admin")
+    );
+
+    return activeAdmins.length === 1;
+  }, [member, allMembers]);
+
   const handleRoleChange = (newRole: string) => {
+    // Prevent changing role of last active admin
+    if (member.roles.includes("admin") && isLastActiveAdmin && newRole !== "admin") {
+      toast.error("Cannot change role of the last active admin");
+      return;
+    }
+
     // TODO: Implement actual role change API call
     toast.success(`Role would be updated to ${newRole}`);
   };
@@ -242,6 +271,15 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
   };
 
   const handleToggleActive = () => {
+    // Prevent deactivating the last active admin
+    if (isLastActiveAdmin && member.is_active) {
+      toast.error(
+        "Cannot deactivate the last active admin account. Please promote another user to admin first.",
+        { duration: 5000 }
+      );
+      return;
+    }
+
     // TODO: Implement active status toggle API call
     const newStatus = !member.is_active;
     toast.success(
@@ -272,15 +310,22 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
         <DropdownMenuContent align="end" className="w-40">
           <div className="px-2 py-1.5 text-sm font-medium">Change Role</div>
           <DropdownMenuSeparator />
-          {["admin", "manager", "technician", "reception"].map((role) => (
-            <DropdownMenuItem
-              key={role}
-              onClick={() => handleRoleChange(role)}
-              className={member.roles.includes(role as any) ? "bg-accent" : ""}
-            >
-              {role}
-            </DropdownMenuItem>
-          ))}
+          {["admin", "manager", "technician", "reception"].map((role) => {
+            const isCurrentRole = member.roles.includes(role as any);
+            const isDisabled = member.roles.includes("admin") && isLastActiveAdmin && role !== "admin";
+
+            return (
+              <DropdownMenuItem
+                key={role}
+                onClick={() => !isDisabled && handleRoleChange(role)}
+                className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={isDisabled}
+              >
+                {role}
+                {isDisabled && <span className="ml-auto text-xs">(Protected)</span>}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -307,8 +352,11 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
           <Button
             variant="ghost"
             size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-foreground"
+            className={`size-9 p-0 text-muted-foreground hover:text-foreground ${
+              isLastActiveAdmin && member.is_active ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             onClick={handleToggleActive}
+            disabled={isLastActiveAdmin && member.is_active}
           >
             {member.is_active ? (
               <IconToggleRight className="size-5 text-green-600" />
@@ -318,7 +366,13 @@ function QuickActions({ member }: { member: z.infer<typeof teamSchema> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{member.is_active ? "Deactivate Account" : "Activate Account"}</p>
+          <p>
+            {isLastActiveAdmin && member.is_active
+              ? "Cannot deactivate last admin"
+              : member.is_active
+              ? "Deactivate Account"
+              : "Activate Account"}
+          </p>
         </TooltipContent>
       </Tooltip>
     </div>

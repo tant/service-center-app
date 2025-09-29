@@ -32,9 +32,7 @@ export function LoginForm({
             placeholder="m@example.com"
             required
             autoComplete="email"
-            defaultValue={
-              process.env.NODE_ENV === "development" ? "admin@gmail.com" : ""
-            }
+            defaultValue="admin@gmail.com"
           />
         </div>
         <div className="grid gap-3">
@@ -53,9 +51,7 @@ export function LoginForm({
             type="password"
             required
             autoComplete="current-password"
-            defaultValue={
-              process.env.NODE_ENV === "development" ? "Admin@123" : ""
-            }
+            defaultValue="Admin@123"
           />
         </div>
         <Button type="submit" className="w-full">

@@ -18,14 +18,13 @@ export default async function AuthLayout({
     const supabase = await createClient();
     console.log("🛡️ [AUTH LAYOUT] Supabase client created successfully");
 
-    console.log("🛡️ [AUTH LAYOUT] Getting current session...");
-    const sessionResult = await supabase.auth.getSession();
-    console.log("🛡️ [AUTH LAYOUT] Raw session result:", {
+    console.log("🛡️ [AUTH LAYOUT] Getting current user...");
+    const sessionResult = await supabase.auth.getUser();
+    console.log("🛡️ [AUTH LAYOUT] Raw user result:", {
       hasData: !!sessionResult.data,
-      hasSession: !!sessionResult.data?.session,
-      hasUser: !!sessionResult.data?.session?.user,
-      userId: sessionResult.data?.session?.user?.id || "none",
-      userEmail: sessionResult.data?.session?.user?.email || "none",
+      hasUser: !!sessionResult.data?.user,
+      userId: sessionResult.data?.user?.id || "none",
+      userEmail: sessionResult.data?.user?.email || "none",
       hasError: !!sessionResult.error,
       errorDetails: sessionResult.error
         ? {
@@ -37,15 +36,18 @@ export default async function AuthLayout({
     });
 
     const {
-      data: { session },
+      data: { user },
       error,
     } = sessionResult;
 
-    console.log("🛡️ [AUTH LAYOUT] Session check result:", {
-      hasSession: !!session,
+    // Create session-like object for compatibility
+    const session = user ? { user } : null;
+
+    console.log("🛡️ [AUTH LAYOUT] User check result:", {
+      hasUser: !!user,
       hasError: !!error,
-      sessionId: session?.user?.id || "none",
-      userEmail: session?.user?.email || "none",
+      userId: user?.id || "none",
+      userEmail: user?.email || "none",
       error: error
         ? {
             message: error.message,
@@ -73,11 +75,11 @@ export default async function AuthLayout({
       }
     }
 
-    if (!session) {
-      console.log("🛡️ [AUTH LAYOUT] No session found, redirecting to /login");
+    if (!user) {
+      console.log("🛡️ [AUTH LAYOUT] No user found, redirecting to /login");
       try {
         console.log(
-          "🛡️ [AUTH LAYOUT] Attempting redirect to /login due to no session",
+          "🛡️ [AUTH LAYOUT] Attempting redirect to /login due to no user",
         );
         redirect("/login");
       } catch (redirectError) {

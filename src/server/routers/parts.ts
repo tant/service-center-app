@@ -156,6 +156,56 @@ export const partsRouter = router({
       };
     }),
 
+  getParts: publicProcedure.query(async ({ ctx }) => {
+    const { data: parts, error } = await ctx.supabaseAdmin
+      .from("parts")
+      .select("id, name, part_number, sku, price, cost_price, stock_quantity, description")
+      .order("name", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch parts: ${error.message}`);
+    }
+
+    return parts || [];
+  }),
+
+  deletePart: publicProcedure
+    .input(z.object({ id: z.string().uuid("Part ID must be a valid UUID") }))
+    .mutation(async ({ input, ctx }) => {
+      // First, delete any product-part relationships
+      const { error: relationError } = await ctx.supabaseAdmin
+        .from("product_parts")
+        .delete()
+        .eq("part_id", input.id);
+
+      if (relationError) {
+        throw new Error(
+          `Failed to delete part relationships: ${relationError.message}`,
+        );
+      }
+
+      // Then, delete the part itself
+      const { data: partData, error: partError } = await ctx.supabaseAdmin
+        .from("parts")
+        .delete()
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (partError) {
+        throw new Error(`Failed to delete part: ${partError.message}`);
+      }
+
+      if (!partData) {
+        throw new Error("Part not found");
+      }
+
+      return {
+        success: true,
+        part: partData,
+      };
+    }),
+
   getProducts: publicProcedure.query(async ({ ctx }) => {
     const { data: products, error } = await ctx.supabaseAdmin
       .from("products")

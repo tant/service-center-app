@@ -264,24 +264,24 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
       isLastActiveAdmin &&
       newRole !== "admin"
     ) {
-      toast.error("Cannot change role of the last active admin");
+      toast.error("Không thể thay đổi vai trò của quản trị viên cuối cùng");
       return;
     }
 
     // TODO: Implement actual role change API call
-    toast.success(`Role would be updated to ${newRole}`);
+    toast.success(`Vai trò sẽ được cập nhật thành ${newRole === 'admin' ? 'Quản trị viên' : newRole === 'manager' ? 'Quản lý' : newRole === 'technician' ? 'Kỹ thuật viên' : 'Lễ tân'}`);
   };
 
   const handlePasswordChange = () => {
     // TODO: Implement password change modal/form
-    toast.success("Password change feature coming soon");
+    toast.success("Tính năng thay đổi mật khẩu sắp ra mắt");
   };
 
   const handleToggleActive = () => {
     // Prevent deactivating the last active admin
     if (isLastActiveAdmin && member.is_active) {
       toast.error(
-        "Cannot deactivate the last active admin account. Please promote another user to admin first.",
+        "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.",
         { duration: 5000 },
       );
       return;
@@ -290,7 +290,7 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
     // TODO: Implement active status toggle API call
     const newStatus = !member.is_active;
     toast.success(
-      `Account would be ${newStatus ? "activated" : "deactivated"}`,
+      `Tài khoản sẽ được ${newStatus ? "ích hoạt" : "vô hiệu hóa"}`,
     );
   };
 
@@ -807,12 +807,12 @@ function TeamMemberModal({
     e.preventDefault();
 
     if (!formData.full_name || !formData.email || !formData.role) {
-      toast.error("Please fill in all required fields");
+      toast.error("Vui lòng điền đầy đủ các trường bắt buộc");
       return;
     }
 
     if (mode === "add" && formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
       return;
     }
 
@@ -834,10 +834,10 @@ function TeamMemberModal({
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
 
-        toast.success("Staff member created successfully");
+        toast.success("Tạo nhân viên thành công");
       } else {
         // TODO: Implement update functionality
-        toast.success("Update functionality coming soon");
+        toast.success("Tính năng cập nhật sắp ra mắt");
       }
 
       setOpen(false);
@@ -845,7 +845,7 @@ function TeamMemberModal({
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Error:", error);
-      toast.error(error instanceof Error ? error.message : "An error occurred");
+      toast.error(error instanceof Error ? error.message : "Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
     }
@@ -1112,7 +1112,7 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
     let errorCount = 0;
 
     try {
-      toast.info("Creating 100 sample accounts... This may take a moment.");
+      toast.info("Tạo 100 tài khoản mẫu... Có thể mất một lút.");
 
       // Create accounts in batches of 10 to avoid overwhelming the server
       for (let batch = 0; batch < 10; batch++) {
@@ -1160,14 +1160,14 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
         await Promise.all(batchPromises);
 
         // Show progress
-        toast.info(`Created ${(batch + 1) * 10} accounts...`);
+        toast.info(`Đã tạo ${(batch + 1) * 10} tài khoản...`);
 
         // Small delay between batches to prevent overwhelming the server
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       toast.success(
-        `Sample data generation complete! Created ${successCount} accounts successfully. ${errorCount > 0 ? `${errorCount} failed.` : ""}`,
+        `Tạo dữ liệu mẫu hoàn thành! Đã tạo thành công ${successCount} tài khoản. ${errorCount > 0 ? `${errorCount} thất bại.` : ""}`,
       );
 
       if (onSuccess) {
@@ -1175,7 +1175,7 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
       }
     } catch (error) {
       console.error("Error generating sample data:", error);
-      toast.error("Failed to generate sample data");
+      toast.error("Tạo dữ liệu mẫu thất bại");
     } finally {
       setIsLoading(false);
     }

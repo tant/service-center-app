@@ -6,8 +6,8 @@ const createCustomerSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
   phone: z
     .string()
-    .min(10, "Phone must be at least 10 characters")
-    .regex(/^[0-9+\-\s()]+$/, "Invalid phone format"),
+    .min(10, "Phone number must be at least 10 characters")
+    .regex(/^[0-9+\-\s()]+$/, "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign"),
   email: z.string().email("Invalid email format").nullable().optional(),
   address: z.string().nullable().optional(),
 });
@@ -17,8 +17,8 @@ const updateCustomerSchema = z.object({
   name: z.string().min(1, "Customer name is required").optional(),
   phone: z
     .string()
-    .min(10, "Phone must be at least 10 characters")
-    .regex(/^[0-9+\-\s()]+$/, "Invalid phone format")
+    .min(10, "Phone number must be at least 10 characters")
+    .regex(/^[0-9+\-\s()]+$/, "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign")
     .optional(),
   email: z.string().email("Invalid email format").nullable().optional(),
   address: z.string().nullable().optional(),

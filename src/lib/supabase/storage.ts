@@ -48,12 +48,19 @@ export async function uploadFile(
 }
 
 /**
- * Upload avatar for a specific user
+ * Upload avatar for the current authenticated user
  */
 export async function uploadAvatar(
   file: File,
-  userId: string,
 ): Promise<UploadResult> {
+  const supabase = createClient();
+
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error("User not authenticated");
+  }
+
   // Validate file type
   const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!allowedTypes.includes(file.type)) {
@@ -73,7 +80,7 @@ export async function uploadAvatar(
   // Generate file path: userId/timestamp.extension
   const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const timestamp = Date.now();
-  const filePath = `${userId}/${timestamp}.${fileExtension}`;
+  const filePath = `${user.id}/${timestamp}.${fileExtension}`;
 
   return uploadFile(file, "avatars", filePath);
 }

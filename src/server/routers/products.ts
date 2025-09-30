@@ -20,6 +20,7 @@ const createProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
+  part_ids: z.array(z.string().uuid()).optional().default([]),
 });
 
 const updateProductSchema = z.object({
@@ -31,12 +32,14 @@ const updateProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum.optional(),
   primary_image: z.string().nullable().optional(),
+  part_ids: z.array(z.string().uuid()).optional(),
 });
 
 export const productsRouter = router({
   createProduct: publicProcedure
     .input(createProductSchema)
     .mutation(async ({ input, ctx }) => {
+      // First, create the product
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")
         .insert({
@@ -53,6 +56,26 @@ export const productsRouter = router({
 
       if (productError) {
         throw new Error(`Failed to create product: ${productError.message}`);
+      }
+
+      // Then, create the product-part relationships if any parts are selected
+      if (input.part_ids && input.part_ids.length > 0) {
+        const productPartInserts = input.part_ids.map((partId) => ({
+          product_id: productData.id,
+          part_id: partId,
+        }));
+
+        const { error: relationError } = await ctx.supabaseAdmin
+          .from("product_parts")
+          .insert(productPartInserts);
+
+        if (relationError) {
+          // If relationship creation fails, we should cleanup the product
+          await ctx.supabaseAdmin.from("products").delete().eq("id", productData.id);
+          throw new Error(
+            `Failed to create product-part relationships: ${relationError.message}`,
+          );
+        }
       }
 
       return {
@@ -91,11 +114,105 @@ export const productsRouter = router({
         throw new Error("Product not found");
       }
 
+      // Update product-part relationships if part_ids is provided
+      if (input.part_ids !== undefined) {
+        // First, delete existing relationships
+        const { error: deleteError } = await ctx.supabaseAdmin
+          .from("product_parts")
+          .delete()
+          .eq("product_id", input.id);
+
+        if (deleteError) {
+          throw new Error(
+            `Failed to update part relationships: ${deleteError.message}`,
+          );
+        }
+
+        // Then, create new relationships if any parts are selected
+        if (input.part_ids.length > 0) {
+          const productPartInserts = input.part_ids.map((partId) => ({
+            product_id: input.id,
+            part_id: partId,
+          }));
+
+          const { error: insertError } = await ctx.supabaseAdmin
+            .from("product_parts")
+            .insert(productPartInserts);
+
+          if (insertError) {
+            throw new Error(
+              `Failed to create new part relationships: ${insertError.message}`,
+            );
+          }
+        }
+      }
+
       return {
         success: true,
         product: productData,
       };
     }),
+
+  getProduct: publicProcedure
+    .input(z.object({ id: z.string().uuid("Product ID must be a valid UUID") }))
+    .query(async ({ input, ctx }) => {
+      // Get product details
+      const { data: product, error: productError } = await ctx.supabaseAdmin
+        .from("products")
+        .select("*")
+        .eq("id", input.id)
+        .single();
+
+      if (productError) {
+        throw new Error(`Failed to fetch product: ${productError.message}`);
+      }
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      // Get related parts
+      const { data: productParts, error: partsError } = await ctx.supabaseAdmin
+        .from("product_parts")
+        .select(`
+          part_id,
+          parts (
+            id,
+            name,
+            part_number,
+            sku,
+            price,
+            cost_price,
+            stock_quantity,
+            description
+          )
+        `)
+        .eq("product_id", input.id);
+
+      if (partsError) {
+        throw new Error(`Failed to fetch product parts: ${partsError.message}`);
+      }
+
+      const parts = productParts?.map(pp => pp.parts).filter(Boolean) || [];
+
+      return {
+        ...product,
+        parts,
+      };
+    }),
+
+  getProducts: publicProcedure.query(async ({ ctx }) => {
+    const { data: products, error } = await ctx.supabaseAdmin
+      .from("products")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch products: ${error.message}`);
+    }
+
+    return products || [];
+  }),
 });
 
 export type ProductsRouter = typeof productsRouter;

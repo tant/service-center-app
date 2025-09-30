@@ -26,11 +26,14 @@ export function NavMain({
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
-              tooltip="Quick Create"
+              asChild
+              tooltip="Tạo phiếu nhanh"
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
             >
-              <IconCirclePlusFilled />
-              <span>Tạo phiếu</span>
+              <a href="/tickets/add" className="flex items-center gap-2">
+                <IconCirclePlusFilled />
+                <span>Tạo phiếu</span>
+              </a>
             </SidebarMenuButton>
             <Button
               size="icon"

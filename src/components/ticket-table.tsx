@@ -285,15 +285,15 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   );
 
   const handleView = (ticket: Ticket) => {
-    toast.success(`Xem chi tiết ticket: ${ticket.ticket_number}`);
+    toast.success(`Xem chi tiết phiếu dịch vụ: ${ticket.ticket_number}`);
   };
 
   const handleEdit = (ticket: Ticket) => {
-    toast.success(`Chỉnh sửa ticket: ${ticket.ticket_number}`);
+    toast.success(`Chỉnh sửa phiếu dịch vụ: ${ticket.ticket_number}`);
   };
 
   const handleAssign = (ticket: Ticket) => {
-    toast.success(`Phân công ticket: ${ticket.ticket_number}`);
+    toast.success(`Phân công phiếu dịch vụ: ${ticket.ticket_number}`);
   };
 
   const getStatusBadge = (status: string) => {

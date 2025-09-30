@@ -57,13 +57,13 @@ export default function Page() {
         avatar_url: profile.avatar_url,
       });
 
-      toast.success("Name updated successfully!");
+      toast.success("Cập nhật tên thành công!");
       setIsEditingName(false);
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update name",
+        error instanceof Error ? error.message : "Cập nhật tên thất bại",
       );
       setFullName(profile.full_name || "");
       setIsEditingName(false);
@@ -111,14 +111,14 @@ export default function Page() {
         avatar_url: result.url,
       });
 
-      toast.success("Avatar updated successfully!");
+      toast.success("Cập nhật ảnh đại diện thành công!");
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
       setSelectedFile(null);
       setAvatarPreview("");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to upload avatar",
+        error instanceof Error ? error.message : "Tải lên ảnh đại diện thất bại",
       );
       setAvatarPreview("");
       setSelectedFile(null);

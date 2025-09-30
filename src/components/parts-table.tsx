@@ -32,6 +32,7 @@ import {
   IconPackage,
   IconPlus,
   IconDatabase,
+  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -256,6 +257,30 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
 ];
 
 function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const deletePartMutation = trpc.parts.deletePart.useMutation({
+    onSuccess: () => {
+      toast.success(`Đã xóa linh kiện "${part.name}"`);
+      window.location.reload();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Xóa linh kiện thất bại");
+    },
+    onSettled: () => {
+      setIsDeleting(false);
+    },
+  });
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa linh kiện "${part.name}"? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    deletePartMutation.mutate({ id: part.id });
+  };
+
   const handleClone = () => {
     toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
       loading: `Đang sao chép ${part.name}...`,
@@ -303,6 +328,24 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
         </TooltipTrigger>
         <TooltipContent>
           <p>Sao chép linh kiện</p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Delete Part */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-9 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            <IconTrash className="size-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Xóa linh kiện</p>
         </TooltipContent>
       </Tooltip>
     </div>

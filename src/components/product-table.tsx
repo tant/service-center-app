@@ -32,6 +32,7 @@ import {
   IconPackage,
   IconPlus,
   IconDatabase,
+  IconX,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -98,6 +99,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { trpc } from "@/components/providers/trpc-provider";
+import { MultiSelectCombobox, type MultiSelectOption } from "@/components/ui/multi-select-combobox";
 
 export const productSchema = z.object({
   id: z.string(),
@@ -723,28 +725,37 @@ function ProductModal({
     model: "",
     type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
+    selected_parts: [] as string[],
   });
 
-  // tRPC mutations
+  // Fetch parts data for selection
+  const { data: parts } = trpc.parts.getParts.useQuery();
+
+  // Fetch product details with parts for edit mode
+  const { data: productWithParts } = trpc.products.getProduct.useQuery(
+    { id: product?.id || "" },
+    { enabled: mode === "edit" && !!product?.id }
+  );
+
   const createProductMutation = trpc.products.createProduct.useMutation({
     onSuccess: () => {
-      toast.success("Product created successfully");
+      toast.success("Tạo sản phẩm thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to create product");
+      toast.error(error.message || "Tạo sản phẩm thất bại");
     },
   });
 
   const updateProductMutation = trpc.products.updateProduct.useMutation({
     onSuccess: () => {
-      toast.success("Product updated successfully");
+      toast.success("Cập nhật sản phẩm thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update product");
+      toast.error(error.message || "Cập nhật sản phẩm thất bại");
     },
   });
 
@@ -755,6 +766,10 @@ function ProductModal({
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
     if (open) {
+      const existingPartIds = mode === "edit" && productWithParts?.parts
+        ? productWithParts.parts.map((part: any) => part.id)
+        : [];
+
       setFormData({
         name: product?.name || "",
         sku: product?.sku || "",
@@ -763,15 +778,30 @@ function ProductModal({
         model: product?.model || "",
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
+        selected_parts: existingPartIds,
       });
     }
-  }, [open, product]);
+  }, [open, product, productWithParts, mode]);
+
+  // Prepare parts options for multi-select
+  const partsOptions: MultiSelectOption[] = React.useMemo(
+    () =>
+      parts?.map((part) => ({
+        label: part.name,
+        value: part.id,
+        part_number: part.part_number || "N/A",
+        stock_quantity: part.stock_quantity,
+        price: part.price,
+        disabled: part.stock_quantity === 0,
+      })) || [],
+    [parts]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name) {
-      toast.error("Please enter a product name");
+      toast.error("Vui lòng nhập tên sản phẩm");
       return;
     }
 
@@ -784,6 +814,7 @@ function ProductModal({
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
+        part_ids: formData.selected_parts,
       });
     } else if (product) {
       updateProductMutation.mutate({
@@ -795,6 +826,7 @@ function ProductModal({
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
+        part_ids: formData.selected_parts,
       });
     }
   };
@@ -933,6 +965,78 @@ function ProductModal({
                   setFormData({ ...formData, primary_image: e.target.value })
                 }
                 placeholder="Enter image URL (optional)"
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="parts">Linh kiện liên quan</Label>
+              <div className="text-sm text-muted-foreground mb-2">
+                Chọn các linh kiện được sử dụng cho sản phẩm này (tùy chọn)
+              </div>
+              <MultiSelectCombobox
+                options={partsOptions}
+                selected={formData.selected_parts}
+                onSelectionChange={(selected) =>
+                  setFormData({ ...formData, selected_parts: selected })
+                }
+                placeholder="Chọn linh kiện..."
+                searchPlaceholder="Tìm linh kiện theo tên hoặc mã..."
+                emptyMessage="Không tìm thấy linh kiện nào."
+                maxDisplayItems={2}
+                renderOption={(option) => (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {option.part_number} • {option.stock_quantity} trong kho
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={option.stock_quantity > 0 ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {option.stock_quantity > 0 ? "Có sẵn" : "Hết hàng"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Intl.NumberFormat('vi-VN', {
+                          style: 'currency',
+                          currency: 'VND'
+                        }).format(option.price)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                renderBadge={(option) => (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs font-normal gap-1 pr-1 max-w-[200px]"
+                  >
+                    <span className="truncate">{option.label}</span>
+                    <button
+                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setFormData({
+                            ...formData,
+                            selected_parts: formData.selected_parts.filter(id => id !== option.value)
+                          });
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          selected_parts: formData.selected_parts.filter(id => id !== option.value)
+                        })
+                      }
+                    >
+                      <IconX className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                    </button>
+                  </Badge>
+                )}
               />
             </div>
             {mode === "edit" && product && (

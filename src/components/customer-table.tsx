@@ -638,23 +638,23 @@ function CustomerModal({
   // tRPC mutations
   const createCustomerMutation = trpc.customers.createCustomer.useMutation({
     onSuccess: () => {
-      toast.success("Customer created successfully");
+      toast.success("Tạo khách hàng thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to create customer");
+      toast.error(error.message || "Tạo khách hàng thất bại");
     },
   });
 
   const updateCustomerMutation = trpc.customers.updateCustomer.useMutation({
     onSuccess: () => {
-      toast.success("Customer updated successfully");
+      toast.success("Cập nhật khách hàng thành công");
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to update customer");
+      toast.error(error.message || "Cập nhật khách hàng thất bại");
     },
   });
 
@@ -678,12 +678,12 @@ function CustomerModal({
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Please enter a customer name");
+      toast.error("Vui lòng nhập tên khách hàng");
       return;
     }
 
     if (!formData.phone.trim()) {
-      toast.error("Please enter a phone number");
+      toast.error("Vui lòng nhập số điện thoại");
       return;
     }
 

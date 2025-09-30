@@ -102,7 +102,7 @@ export default function Page() {
     // 3. Start upload process
     setIsUploading(true);
     try {
-      const result = await uploadAvatar(file, profile.user_id);
+      const result = await uploadAvatar(file);
 
       // Update profile with storage URL
       await updateProfileMutation.mutateAsync({

@@ -26,7 +26,14 @@ import {
   IconLayoutColumns,
   IconPlus,
   IconUserCheck,
+  IconDotsVertical,
+  IconRefresh,
+  IconCheck,
+  IconClock,
+  IconX,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { trpc } from "@/components/providers/trpc-provider";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -52,6 +59,11 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -268,6 +280,7 @@ interface TicketTableProps {
 }
 
 export function TicketTable({ data: initialData }: TicketTableProps) {
+  const router = useRouter();
   const [data, _setData] = React.useState(() => initialData);
   const [searchValue, setSearchValue] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState({});
@@ -284,16 +297,63 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     useSensor(KeyboardSensor, {}),
   );
 
+  const updateStatusMutation = trpc.tickets.updateTicketStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Cập nhật trạng thái thành công");
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  // Show empty state
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
+        <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+          <h3 className="mt-4 text-lg font-semibold">Chưa có phiếu dịch vụ nào</h3>
+          <p className="mb-4 mt-2 text-sm text-muted-foreground">
+            Tạo phiếu dịch vụ đầu tiên để bắt đầu quản lý công việc.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const handleView = (ticket: Ticket) => {
-    toast.success(`Xem chi tiết phiếu dịch vụ: ${ticket.ticket_number}`);
+    router.push(`/tickets/${ticket.id}`);
   };
 
   const handleEdit = (ticket: Ticket) => {
-    toast.success(`Chỉnh sửa phiếu dịch vụ: ${ticket.ticket_number}`);
+    router.push(`/tickets/${ticket.id}/edit`);
   };
 
   const handleAssign = (ticket: Ticket) => {
     toast.success(`Phân công phiếu dịch vụ: ${ticket.ticket_number}`);
+    // TODO: Implement reassign dialog
+  };
+
+  const handleStatusChange = (ticketId: string, newStatus: "pending" | "in_progress" | "completed" | "cancelled") => {
+    updateStatusMutation.mutate({
+      id: ticketId,
+      status: newStatus,
+    });
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <IconClock className="h-4 w-4 mr-2" />;
+      case "in_progress":
+        return <IconRefresh className="h-4 w-4 mr-2" />;
+      case "completed":
+        return <IconCheck className="h-4 w-4 mr-2" />;
+      case "cancelled":
+        return <IconX className="h-4 w-4 mr-2" />;
+      default:
+        return null;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -456,15 +516,58 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               <IconEdit className="h-5 w-5" />
               <span className="sr-only">Chỉnh sửa</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleAssign(ticket)}
-              className="h-8 w-8 p-0"
-            >
-              <IconUserCheck className="h-5 w-5" />
-              <span className="sr-only">Phân công</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                >
+                  <IconDotsVertical className="h-5 w-5" />
+                  <span className="sr-only">Thao tác khác</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <IconRefresh className="h-4 w-4 mr-2" />
+                    Đổi trạng thái
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "pending")}>
+                      {getStatusIcon("pending")}
+                      Chờ xử lý
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "in_progress")}>
+                      {getStatusIcon("in_progress")}
+                      Đang xử lý
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "completed")}>
+                      {getStatusIcon("completed")}
+                      Hoàn thành
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "cancelled")}>
+                      {getStatusIcon("cancelled")}
+                      Đã hủy
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleAssign(ticket)}>
+                  <IconUserCheck className="h-4 w-4 mr-2" />
+                  Phân công lại
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleView(ticket)}>
+                  <IconEye className="h-4 w-4 mr-2" />
+                  Xem chi tiết
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleEdit(ticket)}>
+                  <IconEdit className="h-4 w-4 mr-2" />
+                  Chỉnh sửa
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },
@@ -604,7 +707,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
         </div>
         <DataTable
           columns={columns}
-          data={data}
+          data={filteredData}
           searchValue={searchValue}
           sensors={sensors}
           sortableId={sortableId}

@@ -29,6 +29,19 @@ const updateTicketStatusSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
 });
 
+const updateTicketSchema = z.object({
+  id: z.string().uuid("Ticket ID must be a valid UUID"),
+  issue_description: z.string().min(1, "Issue description is required").optional(),
+  priority_level: z.enum(["low", "normal", "high", "urgent"]).optional(),
+  warranty_type: z.enum(["warranty", "paid", "goodwill"]).optional(),
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+  service_fee: z.number().min(0, "Service fee must be non-negative").optional(),
+  diagnosis_fee: z.number().min(0, "Diagnosis fee must be non-negative").optional(),
+  discount_amount: z.number().min(0, "Discount amount must be non-negative").optional(),
+  notes: z.string().nullable().optional(),
+  assigned_to: z.string().uuid().nullable().optional(),
+});
+
 export const ticketsRouter = router({
   createTicket: publicProcedure
     .input(createTicketSchema)
@@ -290,6 +303,123 @@ export const ticketsRouter = router({
       return {
         success: true,
         ticket: ticketData,
+      };
+    }),
+
+  updateTicket: publicProcedure
+    .input(updateTicketSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updateData } = input;
+
+      // Build update object with only provided fields
+      const updateObject: any = {};
+
+      if (updateData.issue_description !== undefined) updateObject.issue_description = updateData.issue_description;
+      if (updateData.priority_level !== undefined) updateObject.priority_level = updateData.priority_level;
+      if (updateData.warranty_type !== undefined) updateObject.warranty_type = updateData.warranty_type;
+      if (updateData.status !== undefined) {
+        updateObject.status = updateData.status;
+        if (updateData.status === "in_progress") updateObject.started_at = new Date().toISOString();
+        if (updateData.status === "completed") updateObject.completed_at = new Date().toISOString();
+      }
+      if (updateData.service_fee !== undefined) updateObject.service_fee = updateData.service_fee;
+      if (updateData.diagnosis_fee !== undefined) updateObject.diagnosis_fee = updateData.diagnosis_fee;
+      if (updateData.discount_amount !== undefined) updateObject.discount_amount = updateData.discount_amount;
+      if (updateData.notes !== undefined) updateObject.notes = updateData.notes;
+      if (updateData.assigned_to !== undefined) updateObject.assigned_to = updateData.assigned_to;
+
+      const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .update(updateObject)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (ticketError) {
+        throw new Error(`Failed to update ticket: ${ticketError.message}`);
+      }
+
+      if (!ticketData) {
+        throw new Error("Ticket not found");
+      }
+
+      return {
+        success: true,
+        ticket: ticketData,
+      };
+    }),
+
+  addTicketPart: publicProcedure
+    .input(z.object({
+      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+      part_id: z.string().uuid("Part ID must be a valid UUID"),
+      quantity: z.number().int().min(1, "Quantity must be at least 1"),
+      unit_price: z.number().min(0, "Unit price must be non-negative"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { data: partData, error: partError } = await ctx.supabaseAdmin
+        .from("service_ticket_parts")
+        .insert({
+          ticket_id: input.ticket_id,
+          part_id: input.part_id,
+          quantity: input.quantity,
+          unit_price: input.unit_price,
+        })
+        .select()
+        .single();
+
+      if (partError) {
+        throw new Error(`Failed to add part to ticket: ${partError.message}`);
+      }
+
+      return {
+        success: true,
+        part: partData,
+      };
+    }),
+
+  updateTicketPart: publicProcedure
+    .input(z.object({
+      id: z.string().uuid("Part ID must be a valid UUID"),
+      quantity: z.number().int().min(1, "Quantity must be at least 1").optional(),
+      unit_price: z.number().min(0, "Unit price must be non-negative").optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updateData } = input;
+
+      const { data: partData, error: partError } = await ctx.supabaseAdmin
+        .from("service_ticket_parts")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (partError) {
+        throw new Error(`Failed to update part: ${partError.message}`);
+      }
+
+      return {
+        success: true,
+        part: partData,
+      };
+    }),
+
+  deleteTicketPart: publicProcedure
+    .input(z.object({
+      id: z.string().uuid("Part ID must be a valid UUID"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { error: partError } = await ctx.supabaseAdmin
+        .from("service_ticket_parts")
+        .delete()
+        .eq("id", input.id);
+
+      if (partError) {
+        throw new Error(`Failed to delete part: ${partError.message}`);
+      }
+
+      return {
+        success: true,
       };
     }),
 

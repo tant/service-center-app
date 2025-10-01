@@ -48,6 +48,14 @@ export function AddTicketForm() {
   const [step, setStep] = React.useState(1);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Validation errors state
+  const [errors, setErrors] = React.useState({
+    phone: "",
+    name: "",
+    description: "",
+    product: "",
+  });
+
   // Customer data
   const [customerData, setCustomerData] = React.useState<CustomerData>({
     name: "",
@@ -153,6 +161,50 @@ export function AddTicketForm() {
     setPhoneSearch(value);
     // Store the original format as database expects it
     setCustomerData(prev => ({ ...prev, phone: value }));
+    // Clear error when user starts typing
+    if (errors.phone) {
+      setErrors(prev => ({ ...prev, phone: "" }));
+    }
+  };
+
+  const validatePhone = () => {
+    if (!customerData.phone) {
+      setErrors(prev => ({ ...prev, phone: "Số điện thoại là bắt buộc" }));
+      return false;
+    }
+    if (!isValidPhone(customerData.phone)) {
+      setErrors(prev => ({ ...prev, phone: "Số điện thoại cần có ít nhất 10 ký tự và chỉ chứa số, dấu cách, gạch ngang, ngoặc đơn, dấu cộng" }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, phone: "" }));
+    return true;
+  };
+
+  const validateName = () => {
+    if (!customerData.name.trim()) {
+      setErrors(prev => ({ ...prev, name: "Tên khách hàng là bắt buộc" }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, name: "" }));
+    return true;
+  };
+
+  const validateDescription = () => {
+    if (!ticketData.description.trim()) {
+      setErrors(prev => ({ ...prev, description: "Mô tả vấn đề là bắt buộc" }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, description: "" }));
+    return true;
+  };
+
+  const validateProduct = () => {
+    if (!ticketData.product_id) {
+      setErrors(prev => ({ ...prev, product: "Vui lòng chọn sản phẩm cần sửa" }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, product: "" }));
+    return true;
   };
 
   const handlePartQuantityChange = (partId: string, quantity: number) => {
@@ -166,17 +218,12 @@ export function AddTicketForm() {
   };
 
   const addPart = (part: any) => {
-    const existingPart = selectedParts.find(p => p.id === part.id);
-    if (existingPart) {
-      handlePartQuantityChange(part.id, existingPart.quantity + 1);
-    } else {
-      setSelectedParts(prev => [...prev, {
-        id: part.id,
-        name: part.name,
-        price: part.price,
-        quantity: 1,
-      }]);
-    }
+    setSelectedParts(prev => [...prev, {
+      id: part.id,
+      name: part.name,
+      price: part.price,
+      quantity: 1,
+    }]);
   };
 
   const removePart = (partId: string) => {
@@ -194,9 +241,10 @@ export function AddTicketForm() {
     return phone.length >= 10 && /^[0-9+\-\s()]+$/.test(phone);
   };
 
-  const canProceedToStep2 = customerData.name && customerData.phone && isValidPhone(customerData.phone) && ticketData.description.trim();
-  const canProceedToStep3 = ticketData.product_id;
-  const canSubmit = canProceedToStep2 && canProceedToStep3 && ticketData.service_fee >= 0;
+  const canProceedToStep2 = customerData.name && customerData.phone && isValidPhone(customerData.phone);
+  const canProceedToStep3 = canProceedToStep2 && ticketData.description.trim();
+  const canProceedToStep4 = canProceedToStep3 && ticketData.product_id;
+  const canSubmit = canProceedToStep4 && ticketData.service_fee >= 0;
 
   const handleSubmit = async () => {
     if (!canSubmit) {
@@ -277,13 +325,14 @@ export function AddTicketForm() {
                 id="phone"
                 value={phoneSearch}
                 onChange={(e) => handlePhoneChange(e.target.value)}
+                onBlur={validatePhone}
                 placeholder="Nhập số điện thoại (tối thiểu 10 ký tự)"
                 type="tel"
-                className={phoneSearch && !isValidPhone(customerData.phone) ? "border-red-500" : ""}
+                className={errors.phone ? "border-red-500" : ""}
               />
-              {phoneSearch && !isValidPhone(customerData.phone) && (
+              {errors.phone && (
                 <p className="text-sm text-red-500">
-                  Số điện thoại cần có ít nhất 10 ký tự và chỉ chứa số, dấu cách, gạch ngang, ngoặc đơn, dấu cộng
+                  {errors.phone}
                 </p>
               )}
             </div>
@@ -296,9 +345,21 @@ export function AddTicketForm() {
               <Input
                 id="name"
                 value={customerData.name}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  setCustomerData(prev => ({ ...prev, name: e.target.value }));
+                  if (errors.name) {
+                    setErrors(prev => ({ ...prev, name: "" }));
+                  }
+                }}
+                onBlur={validateName}
                 placeholder="Nhập tên khách hàng"
+                className={errors.name ? "border-red-500" : ""}
               />
+              {errors.name && (
+                <p className="text-sm text-red-500">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -330,7 +391,16 @@ export function AddTicketForm() {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!canProceedToStep2}>
+              <Button
+                onClick={() => {
+                  const phoneValid = validatePhone();
+                  const nameValid = validateName();
+                  if (phoneValid && nameValid) {
+                    setStep(2);
+                  }
+                }}
+                disabled={!canProceedToStep2}
+              >
                 Tiếp theo
               </Button>
             </div>
@@ -417,14 +487,20 @@ export function AddTicketForm() {
               <Textarea
                 id="description"
                 value={ticketData.description}
-                onChange={(e) => setTicketData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => {
+                  setTicketData(prev => ({ ...prev, description: e.target.value }));
+                  if (errors.description) {
+                    setErrors(prev => ({ ...prev, description: "" }));
+                  }
+                }}
+                onBlur={validateDescription}
                 placeholder="Mô tả chi tiết vấn đề của sản phẩm..."
                 rows={3}
-                className={!ticketData.description.trim() ? "border-red-500" : ""}
+                className={errors.description ? "border-red-500" : ""}
               />
-              {!ticketData.description.trim() && (
+              {errors.description && (
                 <p className="text-sm text-red-500">
-                  Mô tả vấn đề là bắt buộc
+                  {errors.description}
                 </p>
               )}
             </div>
@@ -433,7 +509,14 @@ export function AddTicketForm() {
               <Button variant="outline" onClick={() => setStep(1)}>
                 Quay lại
               </Button>
-              <Button onClick={() => setStep(3)} disabled={!ticketData.description.trim()}>
+              <Button
+                onClick={() => {
+                  if (validateDescription()) {
+                    setStep(3);
+                  }
+                }}
+                disabled={!canProceedToStep3}
+              >
                 Tiếp theo
               </Button>
             </div>
@@ -459,7 +542,12 @@ export function AddTicketForm() {
               <SearchableSelect
                 options={productsOptions}
                 value={ticketData.product_id}
-                onValueChange={(value) => setTicketData(prev => ({ ...prev, product_id: value }))}
+                onValueChange={(value) => {
+                  setTicketData(prev => ({ ...prev, product_id: value }));
+                  if (errors.product) {
+                    setErrors(prev => ({ ...prev, product: "" }));
+                  }
+                }}
                 placeholder={productsOptions.length > 0
                   ? `Chọn sản phẩm cần sửa... (${productsOptions.length} sản phẩm)`
                   : "Đang tải danh sách sản phẩm..."
@@ -475,6 +563,11 @@ export function AddTicketForm() {
                   </div>
                 )}
               />
+              {errors.product && (
+                <p className="text-sm text-red-500">
+                  {errors.product}
+                </p>
+              )}
             </div>
 
             {/* Available Parts */}
@@ -484,37 +577,47 @@ export function AddTicketForm() {
                 <div>
                   <Label className="text-base font-medium">Linh kiện có thể sử dụng</Label>
                   <p className="text-sm text-muted-foreground">
-                    Các linh kiện được cấu hình cho sản phẩm này ({availableParts.length} linh kiện)
+                    Các linh kiện được cấu hình cho sản phẩm này ({availableParts.filter(part => !selectedParts.find(sp => sp.id === part.id)).length} linh kiện)
                   </p>
                 </div>
 
                 {availableParts.length > 0 ? (
-                  <div className="grid gap-3">
-                    {availableParts.map((part) => (
-                    <div key={part.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{part.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {part.part_number} • Tồn kho: {part.stock_quantity}
-                        </span>
-                        <span className="text-sm font-medium text-primary">
-                          {new Intl.NumberFormat('vi-VN', {
-                            style: 'currency',
-                            currency: 'VND'
-                          }).format(part.price)}
-                        </span>
+                  <>
+                    {availableParts.filter(part => !selectedParts.find(sp => sp.id === part.id)).length > 0 ? (
+                      <div className="grid gap-3">
+                        {availableParts
+                          .filter(part => !selectedParts.find(sp => sp.id === part.id))
+                          .map((part) => (
+                            <div key={part.id} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{part.name}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {part.part_number} • Tồn kho: {part.stock_quantity}
+                                </span>
+                                <span className="text-sm font-medium text-primary">
+                                  {new Intl.NumberFormat('vi-VN', {
+                                    style: 'currency',
+                                    currency: 'VND'
+                                  }).format(part.price)}
+                                </span>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => addPart(part)}
+                                disabled={part.stock_quantity === 0}
+                              >
+                                <IconPlus className="h-4 w-4" />
+                                Thêm
+                              </Button>
+                            </div>
+                          ))}
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => addPart(part)}
-                        disabled={part.stock_quantity === 0}
-                      >
-                        <IconPlus className="h-4 w-4" />
-                        Thêm
-                      </Button>
-                    </div>
-                    ))}
-                  </div>
+                    ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <p className="text-sm">Tất cả linh kiện đã được thêm vào danh sách bên dưới.</p>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Sản phẩm này chưa có linh kiện nào được cấu hình.</p>
@@ -570,7 +673,14 @@ export function AddTicketForm() {
               <Button variant="outline" onClick={() => setStep(2)}>
                 Quay lại
               </Button>
-              <Button onClick={() => setStep(4)} disabled={!canProceedToStep3}>
+              <Button
+                onClick={() => {
+                  if (validateProduct()) {
+                    setStep(4);
+                  }
+                }}
+                disabled={!canProceedToStep4}
+              >
                 Tiếp theo
               </Button>
             </div>

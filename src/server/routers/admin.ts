@@ -125,46 +125,65 @@ export const adminRouter = router({
 
         console.log("✅ MUTATION: Password validated successfully");
 
+        // Check if admin user already exists in auth.users table
+        console.log("🔍 AUTH: Checking for existing auth user...");
+        const { data: existingAuthUser, error: authUserError } =
+          await supabaseAdmin.auth.admin.listUsers();
+
+        console.log("📊 AUTH: User list result:", {
+          userCount: existingAuthUser?.users?.length || 0,
+          error: authUserError,
+        });
+
+        if (authUserError) {
+          console.error("❌ AUTH: Failed to list users:", authUserError);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to check existing users: ${authUserError.message}`,
+          });
+        }
+
+        const existingAuthUserRecord = existingAuthUser.users.find(
+          (user) => user.email === adminEmail,
+        );
+
         // Check if admin user already exists in profiles table
         console.log("🔍 DATABASE: Checking for existing admin profile...");
+        let existingProfile = null;
+        let profilesTableExists = true;
+
         try {
-          const { data: existingProfile, error: profileFetchError } =
+          const { data: profileData, error: profileFetchError } =
             await supabaseAdmin
               .from("profiles")
-              .select("user_id")
+              .select("user_id, email, roles, full_name")
               .eq("email", adminEmail)
               .single();
 
           console.log("📊 DATABASE: Profile check result:", {
-            data: existingProfile,
+            data: profileData,
             error: profileFetchError,
           });
 
-          if (existingProfile) {
-            console.log(
-              "❌ DATABASE: Admin user already exists with user_id:",
-              existingProfile.user_id,
-            );
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Admin user already exists",
-            });
-          }
-
-          console.log(
-            "✅ DATABASE: No existing admin profile found, proceeding with setup",
-          );
+          existingProfile = profileData;
         } catch (profileCheckError: any) {
           console.log(
             "🔍 DATABASE: Profile check threw error:",
             profileCheckError,
           );
           console.log("🔍 DATABASE: Error code:", profileCheckError.code);
-          console.log("🔍 DATABASE: Error message:", profileCheckError.message);
 
-          // If the profiles table doesn't exist yet, we can continue with setup
-          if (profileCheckError.code !== "42P01") {
+          // Check if profiles table doesn't exist
+          if (profileCheckError.code === "42P01") {
             // 42P01 is "UndefinedTable"
+            console.log(
+              "⚠️ DATABASE: Profiles table does not exist (42P01), will create admin from scratch",
+            );
+            profilesTableExists = false;
+          } else if (profileCheckError.code === "PGRST116") {
+            // PGRST116 is "No rows returned" - this is fine, means no profile exists
+            console.log("✅ DATABASE: No existing admin profile found");
+          } else {
             console.error(
               "❌ DATABASE: Profile check failed with unexpected error:",
               profileCheckError,
@@ -174,11 +193,125 @@ export const adminRouter = router({
               message: `Error checking existing profile: ${profileCheckError.message}`,
             });
           }
-
-          console.log(
-            "⚠️ DATABASE: Profiles table may not exist (42P01), continuing with setup",
-          );
         }
+
+        // Determine the setup scenario
+        console.log("🔍 SETUP: Analyzing current state...");
+        console.log("   - Auth user exists:", !!existingAuthUserRecord);
+        console.log("   - Profile exists:", !!existingProfile);
+        console.log("   - Profiles table exists:", profilesTableExists);
+
+        // Scenario 1: Both auth user and profile exist - Reset password
+        if (existingAuthUserRecord && existingProfile) {
+          console.log(
+            "🔄 SETUP: Admin fully configured. Resetting password...",
+          );
+          console.log("   - User ID:", existingAuthUserRecord.id);
+          console.log("   - Email:", adminEmail);
+
+          const { error: updateError } =
+            await supabaseAdmin.auth.admin.updateUserById(
+              existingAuthUserRecord.id,
+              { password: adminPassword },
+            );
+
+          if (updateError) {
+            console.error("❌ AUTH: Password reset failed:", updateError);
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to reset admin password: ${updateError.message}`,
+            });
+          }
+
+          console.log("✅ SETUP: Admin password reset successfully");
+          return {
+            message:
+              "Setup already completed. Admin password has been reset to the configured value.",
+            action: "password_reset",
+          };
+        }
+
+        // Scenario 2: Auth user exists but no profile - Create profile
+        if (existingAuthUserRecord && !existingProfile && profilesTableExists) {
+          console.log(
+            "🔧 SETUP: Auth user exists but profile missing. Creating profile...",
+          );
+          console.log("   - User ID:", existingAuthUserRecord.id);
+
+          const profileData = {
+            user_id: existingAuthUserRecord.id,
+            full_name: adminName,
+            email: adminEmail,
+            roles: ["admin"],
+            is_active: true,
+          };
+
+          console.log("📊 DATABASE: Profile data to insert:", profileData);
+
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .insert([profileData]);
+
+          if (profileError) {
+            console.error("❌ DATABASE: Profile creation failed:", profileError);
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to create admin profile: ${profileError.message}`,
+            });
+          }
+
+          console.log("✅ SETUP: Missing profile created successfully");
+
+          // Also reset password to ensure it matches
+          const { error: updateError } =
+            await supabaseAdmin.auth.admin.updateUserById(
+              existingAuthUserRecord.id,
+              { password: adminPassword },
+            );
+
+          if (updateError) {
+            console.warn("⚠️ AUTH: Password reset failed:", updateError);
+          } else {
+            console.log("✅ AUTH: Password synchronized");
+          }
+
+          return {
+            message:
+              "Setup repaired. Missing admin profile has been created and password synchronized.",
+            action: "profile_created",
+          };
+        }
+
+        // Scenario 3: Profile exists but no auth user - Delete profile and recreate everything
+        if (!existingAuthUserRecord && existingProfile) {
+          console.log(
+            "🔧 SETUP: Profile exists but auth user missing. Cleaning up orphaned profile...",
+          );
+          console.log("   - Orphaned profile user_id:", existingProfile.user_id);
+
+          const { error: deleteError } = await supabaseAdmin
+            .from("profiles")
+            .delete()
+            .eq("email", adminEmail);
+
+          if (deleteError) {
+            console.error(
+              "❌ DATABASE: Failed to delete orphaned profile:",
+              deleteError,
+            );
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to clean up orphaned profile: ${deleteError.message}`,
+            });
+          }
+
+          console.log("✅ DATABASE: Orphaned profile deleted, will create fresh admin account");
+        }
+
+        // Scenario 4: Neither exists OR profile was orphaned - Create everything from scratch
+        console.log(
+          "🆕 SETUP: Creating admin account from scratch (first-time setup or after cleanup)...",
+        );
 
         // Sign up the admin user
         console.log("👤 AUTH: Creating admin user account...");
@@ -258,7 +391,8 @@ export const adminRouter = router({
         console.log("⏱️ MUTATION: Total duration:", `${mutationDuration}ms`);
 
         return {
-          message: "Setup completed successfully",
+          message: "Setup completed successfully. Admin account created.",
+          action: "created",
         };
       } catch (error: any) {
         const mutationDuration = Date.now() - mutationStartTime;

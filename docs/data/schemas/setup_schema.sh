@@ -104,7 +104,3 @@ echo -e "${GREEN}✅ Cleanup completed. SQL files removed from supabase/migratio
 echo -e "${GREEN}🎉 Schema setup completed!${NC}"
 echo
 exit 0
-
-echo -e "${GREEN}🎉 Schema setup completed!${NC}"
-echo
-exit 0

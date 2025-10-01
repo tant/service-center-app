@@ -47,6 +47,7 @@ SCHEMA_FILES=(
     "core_06_service_tickets.sql"
     "core_07_service_ticket_parts.sql"
     "core_08_service_ticket_comments.sql"
+    "core_09_service_ticket_attachments.sql"
     "functions_inventory.sql"
     "storage_policies.sql"
 )

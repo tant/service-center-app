@@ -81,7 +81,6 @@ fi
 info "🗑️  Removing schema files..."
 if [ -d "supabase/schemas" ]; then
     rm -f supabase/schemas/*.sql
-    rm -f supabase/schemas/README.md
     success "✅ Schema files removed"
 else
     warn "⚠️  No schemas directory found"

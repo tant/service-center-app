@@ -105,9 +105,8 @@ if [ ${#CREATED[@]} -gt 0 ]; then
 fi
 info "   • ${EXISTED} directories already existed"
 
-# Note: Supabase is not started automatically by this script. You should run it manually.
-info "🚀 Start Supabase manually when you're ready:"
-info "  • To start Supabase: pnpx supabase start"
-info "  • To check status: pnpx supabase status"
+# Start Supabase in the foreground (this will block until Supabase exits)
+info "🚀 Starting Supabase (foreground) — this will block until Supabase exits or is stopped..."
+pnpx supabase start
 
 exit 0

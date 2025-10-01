@@ -281,7 +281,7 @@ interface TicketTableProps {
 
 export function TicketTable({ data: initialData }: TicketTableProps) {
   const router = useRouter();
-  const [data, _setData] = React.useState(() => initialData);
+  const [data, setData] = React.useState(() => initialData);
   const [searchValue, setSearchValue] = React.useState("");
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -297,15 +297,50 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     useSensor(KeyboardSensor, {}),
   );
 
+  // Update data when initialData changes
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
   const updateStatusMutation = trpc.tickets.updateTicketStatus.useMutation({
-    onSuccess: () => {
+    onSuccess: (result, variables) => {
       toast.success("Cập nhật trạng thái thành công");
+
+      // Optimistically update the UI
+      setData((prevData) =>
+        prevData.map((ticket) =>
+          ticket.id === variables.id
+            ? {
+                ...ticket,
+                status: mapDatabaseStatusToUI(variables.status),
+              }
+            : ticket
+        )
+      );
+
+      // Also refresh from server
       router.refresh();
     },
     onError: (error) => {
       toast.error(`Lỗi: ${error.message}`);
     },
   });
+
+  // Helper to map database status back to UI status
+  const mapDatabaseStatusToUI = (dbStatus: string): "open" | "in_progress" | "resolved" | "closed" => {
+    switch (dbStatus) {
+      case "pending":
+        return "open";
+      case "in_progress":
+        return "in_progress";
+      case "completed":
+        return "resolved";
+      case "cancelled":
+        return "closed";
+      default:
+        return "open";
+    }
+  };
 
   // Show empty state
   if (!data || data.length === 0) {

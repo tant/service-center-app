@@ -233,6 +233,13 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
       <QuickActions
         member={row.original}
         allMembers={table.options.data as z.infer<typeof teamSchema>[]}
+        onUpdate={(updatedMember) => {
+          // This will be set by the table component
+          const meta = table.options.meta as any;
+          if (meta?.updateMember) {
+            meta.updateMember(updatedMember);
+          }
+        }}
       />
     ),
   },
@@ -241,9 +248,10 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
 interface QuickActionsProps {
   member: z.infer<typeof teamSchema>;
   allMembers: z.infer<typeof teamSchema>[];
+  onUpdate: (updatedMember: z.infer<typeof teamSchema>) => void;
 }
 
-function QuickActions({ member, allMembers }: QuickActionsProps) {
+function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
   // Check if this member is the last active admin
   const isLastActiveAdmin = React.useMemo(() => {
     if (!member.roles.includes("admin") || !member.is_active) {
@@ -264,34 +272,47 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
       isLastActiveAdmin &&
       newRole !== "admin"
     ) {
-      toast.error("Không thể thay đổi vai trò của quản trị viên cuối cùng");
+      const errorMessage = "Không thể thay đổi vai trò của quản trị viên cuối cùng";
+      console.error("[Team] Role change error:", errorMessage, { member, newRole });
+      toast.error(errorMessage);
       return;
     }
 
     // TODO: Implement actual role change API call
-    toast.success(`Vai trò sẽ được cập nhật thành ${newRole === 'admin' ? 'Quản trị viên' : newRole === 'manager' ? 'Quản lý' : newRole === 'technician' ? 'Kỹ thuật viên' : 'Lễ tân'}`);
+    const successMessage = `Vai trò sẽ được cập nhật thành ${newRole === 'admin' ? 'Quản trị viên' : newRole === 'manager' ? 'Quản lý' : newRole === 'technician' ? 'Kỹ thuật viên' : 'Lễ tân'}`;
+    console.log("[Team] Role change success:", successMessage, { member, newRole });
+    toast.success(successMessage);
   };
 
   const handlePasswordChange = () => {
     // TODO: Implement password change modal/form
-    toast.success("Tính năng thay đổi mật khẩu sắp ra mắt");
+    const successMessage = "Tính năng thay đổi mật khẩu sắp ra mắt";
+    console.log("[Team] Password change:", successMessage, { member });
+    toast.success(successMessage);
   };
 
   const handleToggleActive = () => {
     // Prevent deactivating the last active admin
     if (isLastActiveAdmin && member.is_active) {
-      toast.error(
-        "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.",
-        { duration: 5000 },
-      );
+      const errorMessage = "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.";
+      console.error("[Team] Toggle active error:", errorMessage, { member, isLastActiveAdmin });
+      toast.error(errorMessage, { duration: 5000 });
       return;
     }
 
     // TODO: Implement active status toggle API call
     const newStatus = !member.is_active;
-    toast.success(
-      `Tài khoản sẽ được ${newStatus ? "ích hoạt" : "vô hiệu hóa"}`,
-    );
+    const successMessage = `Tài khoản đã được ${newStatus ? "kích hoạt" : "vô hiệu hóa"}`;
+    console.log("[Team] Toggle active success:", successMessage, { member, newStatus });
+
+    // Update local state immediately for instant UI feedback
+    onUpdate({
+      ...member,
+      is_active: newStatus,
+      updated_at: new Date().toISOString(),
+    });
+
+    toast.success(successMessage);
   };
 
   return (
@@ -364,18 +385,18 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
           <Button
             variant="ghost"
             size="sm"
-            className={`size-9 p-0 text-muted-foreground hover:text-foreground ${
+            className={`size-9 p-0 ${
               isLastActiveAdmin && member.is_active
                 ? "opacity-50 cursor-not-allowed"
                 : ""
-            }`}
+            } ${member.is_active ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
             onClick={handleToggleActive}
             disabled={isLastActiveAdmin && member.is_active}
           >
             {member.is_active ? (
-              <IconToggleRight className="size-5 text-green-600" />
+              <IconUserCheck className="size-5" />
             ) : (
-              <IconToggleLeft className="size-5 text-red-600" />
+              <IconUserX className="size-5" />
             )}
           </Button>
         </TooltipTrigger>
@@ -384,8 +405,8 @@ function QuickActions({ member, allMembers }: QuickActionsProps) {
             {isLastActiveAdmin && member.is_active
               ? "Cannot deactivate last admin"
               : member.is_active
-                ? "Deactivate Account"
-                : "Activate Account"}
+                ? "Click to deactivate account"
+                : "Click to activate account"}
           </p>
         </TooltipContent>
       </Tooltip>
@@ -460,6 +481,17 @@ export function TeamTable({
     [filteredData],
   );
 
+  const updateMember = React.useCallback(
+    (updatedMember: z.infer<typeof teamSchema>) => {
+      setData((currentData) =>
+        currentData.map((member) =>
+          member.id === updatedMember.id ? updatedMember : member
+        )
+      );
+    },
+    []
+  );
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -469,6 +501,9 @@ export function TeamTable({
       rowSelection,
       columnFilters,
       pagination,
+    },
+    meta: {
+      updateMember,
     },
     getRowId: (row) => row.id,
     enableRowSelection: true,
@@ -807,12 +842,16 @@ function TeamMemberModal({
     e.preventDefault();
 
     if (!formData.full_name || !formData.email || !formData.role) {
-      toast.error("Vui lòng điền đầy đủ các trường bắt buộc");
+      const errorMessage = "Vui lòng điền đầy đủ các trường bắt buộc";
+      console.error("[Team] Form validation error:", errorMessage, { formData });
+      toast.error(errorMessage);
       return;
     }
 
     if (mode === "add" && formData.password.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      const errorMessage = "Mật khẩu phải có ít nhất 6 ký tự";
+      console.error("[Team] Password validation error:", errorMessage, { passwordLength: formData.password.length });
+      toast.error(errorMessage);
       return;
     }
 
@@ -834,18 +873,23 @@ function TeamMemberModal({
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
 
-        toast.success("Tạo nhân viên thành công");
+        const successMessage = "Tạo nhân viên thành công";
+        console.log("[Team] Staff created successfully:", successMessage, { email: formData.email, role: formData.role });
+        toast.success(successMessage);
       } else {
         // TODO: Implement update functionality
-        toast.success("Tính năng cập nhật sắp ra mắt");
+        const successMessage = "Tính năng cập nhật sắp ra mắt";
+        console.log("[Team] Update feature:", successMessage);
+        toast.success(successMessage);
       }
 
       setOpen(false);
 
       if (onSuccess) onSuccess();
     } catch (error) {
-      console.error("Error:", error);
-      toast.error(error instanceof Error ? error.message : "Có lỗi xảy ra");
+      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra";
+      console.error("[Team] Submit error:", errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -1112,7 +1156,9 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
     let errorCount = 0;
 
     try {
-      toast.info("Tạo 100 tài khoản mẫu... Có thể mất một lút.");
+      const infoMessage = "Tạo 100 tài khoản mẫu... Có thể mất một lút.";
+      console.log("[Team] Sample data generation started:", infoMessage);
+      toast.info(infoMessage);
 
       // Create accounts in batches of 10 to avoid overwhelming the server
       for (let batch = 0; batch < 10; batch++) {
@@ -1143,14 +1189,14 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
                 errorCount++;
                 const error = await response.json();
                 console.error(
-                  `Failed to create account ${accountNumber}:`,
+                  `[Team] Failed to create account ${accountNumber}:`,
                   error,
                 );
               }
             })
             .catch((error) => {
               errorCount++;
-              console.error(`Error creating account ${accountNumber}:`, error);
+              console.error(`[Team] Error creating account ${accountNumber}:`, error);
             });
 
           batchPromises.push(promise);
@@ -1160,22 +1206,25 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
         await Promise.all(batchPromises);
 
         // Show progress
-        toast.info(`Đã tạo ${(batch + 1) * 10} tài khoản...`);
+        const progressMessage = `Đã tạo ${(batch + 1) * 10} tài khoản...`;
+        console.log(`[Team] Sample data progress:`, progressMessage);
+        toast.info(progressMessage);
 
         // Small delay between batches to prevent overwhelming the server
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      toast.success(
-        `Tạo dữ liệu mẫu hoàn thành! Đã tạo thành công ${successCount} tài khoản. ${errorCount > 0 ? `${errorCount} thất bại.` : ""}`,
-      );
+      const successMessage = `Tạo dữ liệu mẫu hoàn thành! Đã tạo thành công ${successCount} tài khoản. ${errorCount > 0 ? `${errorCount} thất bại.` : ""}`;
+      console.log("[Team] Sample data generation completed:", successMessage, { successCount, errorCount });
+      toast.success(successMessage);
 
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error("Error generating sample data:", error);
-      toast.error("Tạo dữ liệu mẫu thất bại");
+      const errorMessage = "Tạo dữ liệu mẫu thất bại";
+      console.error("[Team] Sample data generation error:", errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

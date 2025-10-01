@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
 import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar } from "@tabler/icons-react";
 import Link from "next/link";
+import { TicketComments } from "@/components/ticket-comments";
 
 interface PageProps {
   params: Promise<{ "ticket-id": string }>;
@@ -45,12 +46,17 @@ async function getTicketData(ticketId: string) {
           sku
         )
       ),
-      service_ticket_comments (
+      service_ticket_comments!service_ticket_comments_ticket_id_fkey (
         id,
         comment,
         is_internal,
         created_at,
-        created_by
+        created_by,
+        profiles!service_ticket_comments_created_by_fkey (
+          id,
+          name,
+          role
+        )
       )
     `)
     .eq("id", ticketId)
@@ -273,6 +279,12 @@ export default async function Page({ params }: PageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Comments Section */}
+        <TicketComments
+          ticketId={ticketId}
+          initialComments={ticket.service_ticket_comments || []}
+        />
       </div>
     </>
   );

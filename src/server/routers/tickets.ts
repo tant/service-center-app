@@ -1,36 +1,9 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
-
-// Status flow validation
-const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
-  completed: [], // Terminal state - cannot transition
-  cancelled: [], // Terminal state - cannot transition
-};
-
-export const STATUS_FLOW = {
-  pending: {
-    label: 'Chờ xử lý',
-    next: ['in_progress', 'cancelled'],
-    terminal: false,
-  },
-  in_progress: {
-    label: 'Đang sửa chữa',
-    next: ['completed', 'cancelled'],
-    terminal: false,
-  },
-  completed: {
-    label: 'Hoàn thành',
-    next: [],
-    terminal: true,
-  },
-  cancelled: {
-    label: 'Hủy bỏ',
-    next: [],
-    terminal: true,
-  },
-} as const;
+import { createAutoComment } from "../utils/auto-comment";
+import { formatCurrency } from "../utils/format-currency";
+import { PRIORITY_LABELS, WARRANTY_LABELS } from "../utils/label-helpers";
+import { STATUS_FLOW, VALID_STATUS_TRANSITIONS } from "@/lib/constants/ticket-status";
 
 function validateStatusTransition(currentStatus: string, newStatus: string): void {
   // If status hasn't changed, allow it
@@ -107,6 +80,11 @@ export const ticketsRouter = router({
   createTicket: publicProcedure
     .input(createTicketSchema)
     .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to create tickets");
+      }
       // Generate ticket number
       const currentYear = new Date().getFullYear();
       const { data: ticketCount } = await ctx.supabaseAdmin
@@ -230,6 +208,40 @@ export const ticketsRouter = router({
         }
       }
 
+      // Fetch customer and product information for auto-comment
+      const { data: customerData } = await ctx.supabaseAdmin
+        .from("customers")
+        .select("name, phone")
+        .eq("id", customerId)
+        .single();
+
+      const { data: productData } = await ctx.supabaseAdmin
+        .from("products")
+        .select("name, brand, type")
+        .eq("id", input.product_id)
+        .single();
+
+      // Create auto-comment for ticket creation
+      const priorityLabel = PRIORITY_LABELS[input.priority_level as keyof typeof PRIORITY_LABELS];
+      const warrantyLabel = WARRANTY_LABELS[input.warranty_type as keyof typeof WARRANTY_LABELS];
+      const productName = productData?.name || "Sản phẩm";
+      const productBrand = productData?.brand || "";
+      const productType = productData?.type || "";
+      const customerName = customerData?.name || "Khách hàng";
+      const customerPhone = customerData?.phone || "";
+
+      await createAutoComment({
+        ticketId: ticketData.id,
+        userId: user.id,
+        comment: `🎫 Phiếu dịch vụ mới được tạo
+📱 Sản phẩm: ${productName} (${productBrand} ${productType})
+👤 Khách hàng: ${customerName} - ${customerPhone}
+📋 Loại: ${warrantyLabel} | Ưu tiên: ${priorityLabel}
+💰 Ước tính chi phí: ${formatCurrency(ticketData.total_cost)}`,
+        isInternal: false, // Customer should see this initial ticket creation
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
+
       return {
         success: true,
         ticket: ticketData,
@@ -342,6 +354,12 @@ export const ticketsRouter = router({
   updateTicketStatus: publicProcedure
     .input(updateTicketStatusSchema)
     .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to update ticket status");
+      }
+
       // Fetch current ticket to validate status transition
       const { data: currentTicket, error: fetchError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -353,8 +371,10 @@ export const ticketsRouter = router({
         throw new Error("Ticket not found");
       }
 
+      const oldStatus = currentTicket.status;
+
       // Validate status transition
-      validateStatusTransition(currentTicket.status, input.status);
+      validateStatusTransition(oldStatus, input.status);
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -375,6 +395,20 @@ export const ticketsRouter = router({
         throw new Error("Ticket not found");
       }
 
+      // Create auto-comment for status change (only if status actually changed)
+      if (oldStatus !== input.status) {
+        const oldLabel = STATUS_FLOW[oldStatus as keyof typeof STATUS_FLOW]?.label;
+        const newLabel = STATUS_FLOW[input.status as keyof typeof STATUS_FLOW]?.label;
+
+        await createAutoComment({
+          ticketId: input.id,
+          userId: user.id,
+          comment: `🔄 Trạng thái đã thay đổi từ '${oldLabel}' sang '${newLabel}'`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
       return {
         success: true,
         ticket: ticketData,
@@ -386,19 +420,50 @@ export const ticketsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { id, ...updateData } = input;
 
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to update ticket");
+      }
+
+      // Fetch current ticket data for comparison
+      const { data: currentTicket, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(`
+          status,
+          priority_level,
+          warranty_type,
+          service_fee,
+          diagnosis_fee,
+          discount_amount,
+          assigned_to,
+          total_cost,
+          issue_description,
+          notes
+        `)
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !currentTicket) {
+        throw new Error("Ticket not found");
+      }
+
+      // Fetch assigned technician name if needed (for assignment change comments)
+      let assignedTechnicianName: string | null = null;
+      if (currentTicket.assigned_to) {
+        const { data: techProfile } = await ctx.supabaseAdmin
+          .from("profiles")
+          .select("name")
+          .eq("user_id", currentTicket.assigned_to)
+          .single();
+        assignedTechnicianName = techProfile?.name || null;
+      }
+
+      const oldStatus = currentTicket.status;
+
       // If status is being updated, validate the transition
       if (updateData.status !== undefined) {
-        const { data: currentTicket, error: fetchError } = await ctx.supabaseAdmin
-          .from("service_tickets")
-          .select("status")
-          .eq("id", id)
-          .single();
-
-        if (fetchError || !currentTicket) {
-          throw new Error("Ticket not found");
-        }
-
-        validateStatusTransition(currentTicket.status, updateData.status);
+        validateStatusTransition(oldStatus, updateData.status);
       }
 
       // Build update object with only provided fields
@@ -433,6 +498,154 @@ export const ticketsRouter = router({
         throw new Error("Ticket not found");
       }
 
+      // Create auto-comments for various changes
+
+      // 1. Status change
+      if (updateData.status !== undefined && oldStatus !== updateData.status) {
+        const oldLabel = STATUS_FLOW[oldStatus as keyof typeof STATUS_FLOW]?.label;
+        const newLabel = STATUS_FLOW[updateData.status as keyof typeof STATUS_FLOW]?.label;
+
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `🔄 Trạng thái đã thay đổi từ '${oldLabel}' sang '${newLabel}'`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 2. Service fee change
+      if (updateData.service_fee !== undefined && updateData.service_fee !== currentTicket.service_fee) {
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `💵 Phí dịch vụ đã thay đổi: ${formatCurrency(currentTicket.service_fee)} → ${formatCurrency(updateData.service_fee)}
+💰 Tổng hóa đơn mới: ${formatCurrency(ticketData.total_cost)}`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 3. Diagnosis fee change
+      if (updateData.diagnosis_fee !== undefined && updateData.diagnosis_fee !== currentTicket.diagnosis_fee) {
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `🔍 Phí kiểm tra đã thay đổi: ${formatCurrency(currentTicket.diagnosis_fee)} → ${formatCurrency(updateData.diagnosis_fee)}
+💰 Tổng hóa đơn mới: ${formatCurrency(ticketData.total_cost)}`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 4. Discount change
+      if (updateData.discount_amount !== undefined && updateData.discount_amount !== currentTicket.discount_amount) {
+        let discountComment = "";
+        if (currentTicket.discount_amount === 0 && updateData.discount_amount > 0) {
+          // New discount
+          discountComment = `🎁 Đã áp dụng giảm giá: ${formatCurrency(updateData.discount_amount)}`;
+        } else if (updateData.discount_amount === 0 && currentTicket.discount_amount > 0) {
+          // Remove discount
+          discountComment = `🎁 Đã hủy giảm giá: ${formatCurrency(currentTicket.discount_amount)}`;
+        } else {
+          // Change discount
+          discountComment = `🎁 Giảm giá đã thay đổi: ${formatCurrency(currentTicket.discount_amount)} → ${formatCurrency(updateData.discount_amount)}`;
+        }
+
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `${discountComment}
+💰 Tổng hóa đơn sau giảm giá: ${formatCurrency(ticketData.total_cost)}`,
+          isInternal: false, // Customer should know about discounts
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 5. Priority change
+      if (updateData.priority_level !== undefined && updateData.priority_level !== currentTicket.priority_level) {
+        const oldPriorityLabel = PRIORITY_LABELS[currentTicket.priority_level as keyof typeof PRIORITY_LABELS];
+        const newPriorityLabel = PRIORITY_LABELS[updateData.priority_level as keyof typeof PRIORITY_LABELS];
+
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `⚠️ Độ ưu tiên đã thay đổi: ${oldPriorityLabel} → ${newPriorityLabel}`,
+          isInternal: false, // Customer should know about priority changes
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 6. Warranty type change
+      if (updateData.warranty_type !== undefined && updateData.warranty_type !== currentTicket.warranty_type) {
+        const oldWarrantyLabel = WARRANTY_LABELS[currentTicket.warranty_type as keyof typeof WARRANTY_LABELS];
+        const newWarrantyLabel = WARRANTY_LABELS[updateData.warranty_type as keyof typeof WARRANTY_LABELS];
+
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `📋 Loại bảo hành đã thay đổi: ${oldWarrantyLabel} → ${newWarrantyLabel}`,
+          isInternal: false, // Customer should know about warranty changes
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 7. Assignment change
+      if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+        let assignmentComment = "";
+
+        if (currentTicket.assigned_to === null && updateData.assigned_to !== null) {
+          // New assignment
+          const { data: newTechnician } = await ctx.supabaseAdmin
+            .from("profiles")
+            .select("name")
+            .eq("user_id", updateData.assigned_to)
+            .single();
+          assignmentComment = `👤 Đã phân công cho: ${newTechnician?.name || "Kỹ thuật viên"}`;
+        } else if (updateData.assigned_to === null && currentTicket.assigned_to !== null) {
+          // Remove assignment
+          assignmentComment = `👤 Đã hủy phân công cho ${assignedTechnicianName || "Kỹ thuật viên"}`;
+        } else {
+          // Change assignment
+          const { data: newTechnician } = await ctx.supabaseAdmin
+            .from("profiles")
+            .select("name")
+            .eq("user_id", updateData.assigned_to)
+            .single();
+          assignmentComment = `👤 Chuyển giao từ ${assignedTechnicianName || "Kỹ thuật viên"} sang ${newTechnician?.name || "Kỹ thuật viên"}`;
+        }
+
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: assignmentComment,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 8. Issue description update
+      if (updateData.issue_description !== undefined && updateData.issue_description !== currentTicket.issue_description) {
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `📝 Mô tả vấn đề đã được cập nhật`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
+      // 9. Notes update
+      if (updateData.notes !== undefined && updateData.notes !== currentTicket.notes) {
+        await createAutoComment({
+          ticketId: id,
+          userId: user.id,
+          comment: `📌 Ghi chú đã được cập nhật`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
+      }
+
       return {
         success: true,
         ticket: ticketData,
@@ -447,6 +660,19 @@ export const ticketsRouter = router({
       unit_price: z.number().min(0, "Unit price must be non-negative"),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to add parts");
+      }
+
+      // Get part information for the comment
+      const { data: partInfo, error: partInfoError } = await ctx.supabaseAdmin
+        .from("parts")
+        .select("name, sku, part_number")
+        .eq("id", input.part_id)
+        .single();
+
       const { data: partData, error: partError } = await ctx.supabaseAdmin
         .from("service_ticket_parts")
         .insert({
@@ -461,6 +687,27 @@ export const ticketsRouter = router({
       if (partError) {
         throw new Error(`Failed to add part to ticket: ${partError.message}`);
       }
+
+      // Get updated ticket totals
+      const { data: ticketData } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("parts_total, total_cost")
+        .eq("id", input.ticket_id)
+        .single();
+
+      // Create auto-comment for adding part
+      const totalPrice = input.quantity * input.unit_price;
+      const partName = partInfo?.name || "Linh kiện";
+      const partSKU = partInfo?.sku || partInfo?.part_number || "N/A";
+
+      await createAutoComment({
+        ticketId: input.ticket_id,
+        userId: user.id,
+        comment: `➕ Đã thêm linh kiện: ${partName} (SKU: ${partSKU}) - SL: ${input.quantity} × ${formatCurrency(input.unit_price)} = ${formatCurrency(totalPrice)}
+💰 Tổng chi phí linh kiện: ${formatCurrency(ticketData?.parts_total || 0)} | Tổng hóa đơn: ${formatCurrency(ticketData?.total_cost || 0)}`,
+        isInternal: true,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
 
       return {
         success: true,
@@ -477,6 +724,23 @@ export const ticketsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { id, ...updateData } = input;
 
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to update parts");
+      }
+
+      // Get current part data for comparison
+      const { data: currentPart, error: currentPartError } = await ctx.supabaseAdmin
+        .from("service_ticket_parts")
+        .select("ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
+        .eq("id", id)
+        .single();
+
+      if (currentPartError || !currentPart) {
+        throw new Error("Part not found");
+      }
+
       const { data: partData, error: partError } = await ctx.supabaseAdmin
         .from("service_ticket_parts")
         .update(updateData)
@@ -486,6 +750,43 @@ export const ticketsRouter = router({
 
       if (partError) {
         throw new Error(`Failed to update part: ${partError.message}`);
+      }
+
+      // Get updated ticket totals
+      const { data: ticketData } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("parts_total, total_cost")
+        .eq("id", currentPart.ticket_id)
+        .single();
+
+      // Create auto-comment for updating part
+      const partName = (currentPart.parts as any)?.name || "Linh kiện";
+      const changes: string[] = [];
+
+      if (updateData.quantity !== undefined && updateData.quantity !== currentPart.quantity) {
+        changes.push(`  • Số lượng: ${currentPart.quantity} → ${updateData.quantity}`);
+      }
+
+      if (updateData.unit_price !== undefined && updateData.unit_price !== currentPart.unit_price) {
+        changes.push(`  • Đơn giá: ${formatCurrency(currentPart.unit_price)} → ${formatCurrency(updateData.unit_price)}`);
+      }
+
+      const oldTotal = currentPart.total_price;
+      const newTotal = partData.total_price;
+      if (oldTotal !== newTotal) {
+        changes.push(`  • Thành tiền: ${formatCurrency(oldTotal)} → ${formatCurrency(newTotal)}`);
+      }
+
+      if (changes.length > 0) {
+        await createAutoComment({
+          ticketId: currentPart.ticket_id,
+          userId: user.id,
+          comment: `✏️ Đã cập nhật linh kiện: ${partName}
+${changes.join('\n')}
+💰 Tổng chi phí linh kiện: ${formatCurrency(ticketData?.parts_total || 0)} | Tổng hóa đơn: ${formatCurrency(ticketData?.total_cost || 0)}`,
+          isInternal: true,
+          supabaseAdmin: ctx.supabaseAdmin,
+        });
       }
 
       return {
@@ -499,6 +800,23 @@ export const ticketsRouter = router({
       id: z.string().uuid("Part ID must be a valid UUID"),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to delete parts");
+      }
+
+      // Get part data before deletion for the auto-comment
+      const { data: partData, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_ticket_parts")
+        .select("ticket_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
+        .eq("id", input.id)
+        .single();
+
+      if (fetchError || !partData) {
+        throw new Error("Part not found");
+      }
+
       const { error: partError } = await ctx.supabaseAdmin
         .from("service_ticket_parts")
         .delete()
@@ -507,6 +825,26 @@ export const ticketsRouter = router({
       if (partError) {
         throw new Error(`Failed to delete part: ${partError.message}`);
       }
+
+      // Get updated ticket totals
+      const { data: ticketData } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("parts_total, total_cost")
+        .eq("id", partData.ticket_id)
+        .single();
+
+      // Create auto-comment for deleting part
+      const partName = (partData.parts as any)?.name || "Linh kiện";
+      const partSKU = (partData.parts as any)?.sku || (partData.parts as any)?.part_number || "N/A";
+
+      await createAutoComment({
+        ticketId: partData.ticket_id,
+        userId: user.id,
+        comment: `➖ Đã xóa linh kiện: ${partName} (SKU: ${partSKU}) - SL: ${partData.quantity} × ${formatCurrency(partData.unit_price)} = ${formatCurrency(partData.total_price)}
+💰 Tổng chi phí linh kiện: ${formatCurrency(ticketData?.parts_total || 0)} | Tổng hóa đơn: ${formatCurrency(ticketData?.total_cost || 0)}`,
+        isInternal: true,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
 
       return {
         success: true,
@@ -520,14 +858,20 @@ export const ticketsRouter = router({
       is_internal: z.boolean().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Get authenticated user from context
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to add comments");
+      }
+
       const { data: commentData, error: commentError } = await ctx.supabaseAdmin
         .from("service_ticket_comments")
         .insert({
           ticket_id: input.ticket_id,
           comment: input.comment,
           is_internal: input.is_internal,
-          // TODO: Get current user ID from context
-          created_by: "system", // Placeholder
+          created_by: user.id,
         })
         .select(`
           *,

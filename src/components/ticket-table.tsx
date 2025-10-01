@@ -34,7 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
-import { STATUS_FLOW } from "@/server/routers/tickets";
+import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import {
   type ColumnDef,
   type ColumnFiltersState,

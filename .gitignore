@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local and AI assistant artifacts
+/.github/prompts/
+/.claude
+/.specify
+/.vscode/
+CLAUDE.md
+QWEN.md

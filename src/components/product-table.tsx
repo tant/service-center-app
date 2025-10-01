@@ -26,12 +26,12 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconCopy,
+  IconDatabase,
   IconEdit,
   IconGripVertical,
   IconLayoutColumns,
   IconPackage,
   IconPlus,
-  IconDatabase,
   IconX,
 } from "@tabler/icons-react";
 import {
@@ -52,7 +52,7 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -74,6 +74,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from "@/components/ui/multi-select-combobox";
 import {
   Select,
   SelectContent,
@@ -98,8 +102,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { trpc } from "@/components/providers/trpc-provider";
-import { MultiSelectCombobox, type MultiSelectOption } from "@/components/ui/multi-select-combobox";
 
 export const productSchema = z.object({
   id: z.string(),
@@ -245,14 +247,39 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
 ];
 
 function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
-  const [editOpen, setEditOpen] = React.useState(false);
-
   const handleClone = () => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Cloning ${product.name}...`,
-      success: "Product cloned successfully",
-      error: "Failed to clone product",
+    const loadingMessage = `Cloning ${product.name}...`;
+    const successMessage = "Product cloned successfully";
+    const errorMessage = "Failed to clone product";
+
+    console.log("[Products] Clone product initiated:", loadingMessage, {
+      productId: product.id,
+      productName: product.name,
     });
+
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 1000))
+        .then(() => {
+          console.log("[Products] Clone product success:", successMessage, {
+            productId: product.id,
+            productName: product.name,
+          });
+          return successMessage;
+        })
+        .catch((error) => {
+          console.error("[Products] Clone product error:", errorMessage, {
+            productId: product.id,
+            productName: product.name,
+            error,
+          });
+          throw error;
+        }),
+      {
+        loading: loadingMessage,
+        success: successMessage,
+        error: errorMessage,
+      },
+    );
   };
 
   return (
@@ -734,28 +761,50 @@ function ProductModal({
   // Fetch product details with parts for edit mode
   const { data: productWithParts } = trpc.products.getProduct.useQuery(
     { id: product?.id || "" },
-    { enabled: mode === "edit" && !!product?.id }
+    { enabled: mode === "edit" && !!product?.id },
   );
 
   const createProductMutation = trpc.products.createProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Tạo sản phẩm thành công");
+    onSuccess: (data) => {
+      const successMessage = "Tạo sản phẩm thành công";
+      console.log("[Products] Create product success:", successMessage, {
+        productData: formData,
+        response: data,
+      });
+      toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Tạo sản phẩm thất bại");
+      const errorMessage = error.message || "Tạo sản phẩm thất bại";
+      console.error("[Products] Create product error:", errorMessage, {
+        productData: formData,
+        error,
+      });
+      toast.error(errorMessage);
     },
   });
 
   const updateProductMutation = trpc.products.updateProduct.useMutation({
-    onSuccess: () => {
-      toast.success("Cập nhật sản phẩm thành công");
+    onSuccess: (data) => {
+      const successMessage = "Cập nhật sản phẩm thành công";
+      console.log("[Products] Update product success:", successMessage, {
+        productId: product?.id,
+        productData: formData,
+        response: data,
+      });
+      toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Cập nhật sản phẩm thất bại");
+      const errorMessage = error.message || "Cập nhật sản phẩm thất bại";
+      console.error("[Products] Update product error:", errorMessage, {
+        productId: product?.id,
+        productData: formData,
+        error,
+      });
+      toast.error(errorMessage);
     },
   });
 
@@ -766,9 +815,10 @@ function ProductModal({
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
     if (open) {
-      const existingPartIds = mode === "edit" && productWithParts?.parts
-        ? productWithParts.parts.map((part: any) => part.id)
-        : [];
+      const existingPartIds =
+        mode === "edit" && productWithParts?.parts
+          ? productWithParts.parts.map((part: { id: string }) => part.id)
+          : [];
 
       setFormData({
         name: product?.name || "",
@@ -794,14 +844,16 @@ function ProductModal({
         price: part.price,
         disabled: part.stock_quantity === 0,
       })) || [],
-    [parts]
+    [parts],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name) {
-      toast.error("Vui lòng nhập tên sản phẩm");
+      const errorMessage = "Vui lòng nhập tên sản phẩm";
+      console.error("[Products] Validation error:", errorMessage, { formData });
+      toast.error(errorMessage);
       return;
     }
 
@@ -992,15 +1044,17 @@ function ProductModal({
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge
-                        variant={option.stock_quantity > 0 ? "default" : "secondary"}
+                        variant={
+                          option.stock_quantity > 0 ? "default" : "secondary"
+                        }
                         className="text-xs"
                       >
                         {option.stock_quantity > 0 ? "Có sẵn" : "Hết hàng"}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {new Intl.NumberFormat('vi-VN', {
-                          style: 'currency',
-                          currency: 'VND'
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
                         }).format(option.price)}
                       </span>
                     </div>
@@ -1018,7 +1072,9 @@ function ProductModal({
                         if (e.key === "Enter") {
                           setFormData({
                             ...formData,
-                            selected_parts: formData.selected_parts.filter(id => id !== option.value)
+                            selected_parts: formData.selected_parts.filter(
+                              (id) => id !== option.value,
+                            ),
                           });
                         }
                       }}
@@ -1029,7 +1085,9 @@ function ProductModal({
                       onClick={() =>
                         setFormData({
                           ...formData,
-                          selected_parts: formData.selected_parts.filter(id => id !== option.value)
+                          selected_parts: formData.selected_parts.filter(
+                            (id) => id !== option.value,
+                          ),
                         })
                       }
                     >
@@ -1099,11 +1157,16 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const createProductMutation = trpc.products.createProduct.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Success is handled in the batch operation
+      console.log("[Products] Sample product created:", { response: data });
     },
     onError: (error) => {
-      toast.error(error.message || "Lỗi khi tạo sản phẩm mẫu");
+      const errorMessage = error.message || "Lỗi khi tạo sản phẩm mẫu";
+      console.error("[Products] Sample product creation error:", errorMessage, {
+        error,
+      });
+      toast.error(errorMessage);
     },
   });
 
@@ -1112,115 +1175,142 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
     {
       name: "GAMING GeForce RTX 3050 ECO Edition 8GB",
       sku: "14-500-567",
-      short_description: "ZOTAC GAMING GeForce RTX 3050 ECO Edition 8GB GDDR6 128-bit 14 Gbps PCIE 4.0 Gaming Graphics Card, Active Fan Control, FREEZE Fan Stop, ZT-A30500K-10M",
+      short_description:
+        "ZOTAC GAMING GeForce RTX 3050 ECO Edition 8GB GDDR6 128-bit 14 Gbps PCIE 4.0 Gaming Graphics Card, Active Fan Control, FREEZE Fan Stop, ZT-A30500K-10M",
       brand: "ZOTAC" as const,
       model: "ZT-A30500K-10M",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-567-02.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-567-02.jpg",
     },
     {
       name: "ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB",
       sku: "14-500-630",
-      short_description: "ZOTAC ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5090 ARCTICSTORM AIO ZT-B50900K-30P",
+      short_description:
+        "ZOTAC ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5090 ARCTICSTORM AIO ZT-B50900K-30P",
       brand: "ZOTAC" as const,
       model: "ZT-B50900K-30P",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-630-01.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-630-01.jpg",
     },
     {
       name: "SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB",
       sku: "14-500-631",
-      short_description: "ZOTAC SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5070 Ti SOLID CORE White Edition ZT-B50710Q2-10P",
+      short_description:
+        "ZOTAC SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5070 Ti SOLID CORE White Edition ZT-B50710Q2-10P",
       brand: "ZOTAC" as const,
       model: "ZT-B50710Q2-10P",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-631-01.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-631-01.jpg",
     },
     {
       name: "AMP Extreme Infinity GeForce RTX 5080 16GB",
       sku: "14-500-595",
-      short_description: "ZOTAC AMP Extreme Infinity GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card ZT-B50800B-10P",
+      short_description:
+        "ZOTAC AMP Extreme Infinity GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card ZT-B50800B-10P",
       brand: "ZOTAC" as const,
       model: "ZT-B50800B-10P",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-595-02.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-595-02.jpg",
     },
     {
       name: "GAMING GeForce RTX 3060 Twin Edge 12GB",
       sku: "14-500-509",
-      short_description: "ZOTAC GAMING GeForce RTX 3060 Twin Edge 12GB GDDR6 192-bit 15 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Cooling, Active Fan Control, FREEZE Fan Stop, ZT-A30600E-10M",
+      short_description:
+        "ZOTAC GAMING GeForce RTX 3060 Twin Edge 12GB GDDR6 192-bit 15 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Cooling, Active Fan Control, FREEZE Fan Stop, ZT-A30600E-10M",
       brand: "ZOTAC" as const,
       model: "ZT-A30600E-10M",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-509-V08.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-509-V08.jpg",
     },
     {
       name: "Twin Edge OC GeForce RTX 5060 Ti 16GB",
       sku: "14-500-612",
-      short_description: "ZOTAC Twin Edge OC GeForce RTX 5060 Ti PCI Express 5.0 x8 16GB 128-Bit GDDR7 Graphics Card ZT-B50620H-10M",
+      short_description:
+        "ZOTAC Twin Edge OC GeForce RTX 5060 Ti PCI Express 5.0 x8 16GB 128-Bit GDDR7 Graphics Card ZT-B50620H-10M",
       brand: "ZOTAC" as const,
       model: "ZT-B50620H-10M",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-612-10.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-612-10.jpg",
     },
     {
       name: "AMP GeForce RTX 5070 12GB White Edition",
       sku: "14-500-617",
-      short_description: "ZOTAC AMP GeForce RTX 5070 12GB 192-Bit GDDR7 PCI Express 5.0 x16 Graphics Card RTX 5070 AMP White Edition ZT-B50700FQ-10P",
+      short_description:
+        "ZOTAC AMP GeForce RTX 5070 12GB 192-Bit GDDR7 PCI Express 5.0 x16 Graphics Card RTX 5070 AMP White Edition ZT-B50700FQ-10P",
       brand: "ZOTAC" as const,
       model: "ZT-B50700FQ-10P",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-617-10.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-617-10.jpg",
     },
     {
       name: "SOLO GeForce RTX 5050 8GB",
       sku: "14-500-625",
-      short_description: "ZOTAC SOLO GeForce RTX 5050 8GB GDDR6 PCI Express 5.0 x8 ATX Graphics Card GeForce RTX 5050 SOLO ZT-B50500G-10L",
+      short_description:
+        "ZOTAC SOLO GeForce RTX 5050 8GB GDDR6 PCI Express 5.0 x8 ATX Graphics Card GeForce RTX 5050 SOLO ZT-B50500G-10L",
       brand: "ZOTAC" as const,
       model: "ZT-B50500G-10L",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-625-02.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-625-02.jpg",
     },
     {
       name: "GAMING GeForce RTX 5060 Twin Edge OC 8GB",
       sku: "14-500-623",
-      short_description: "ZOTAC GAMING GeForce RTX 5060 Twin Edge OC DLSS 4 8GB GDDR7 128-bit 28 Gbps PCIE 5.0 Gaming Graphics Card, SFF-ready compact card, ZT-B50600H-10M",
+      short_description:
+        "ZOTAC GAMING GeForce RTX 5060 Twin Edge OC DLSS 4 8GB GDDR7 128-bit 28 Gbps PCIE 5.0 Gaming Graphics Card, SFF-ready compact card, ZT-B50600H-10M",
       brand: "ZOTAC" as const,
       model: "ZT-B50600H-10M",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-623-02.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-623-02.jpg",
     },
     {
       name: "GAMING GeForce GTX 1660 SUPER Twin Fan 6GB",
       sku: "9SIADT2KAU1283",
-      short_description: "ZOTAC GAMING GeForce GTX 1660 SUPER Twin Fan Black 6GB GDDR6 192-bit Gaming Graphics Card, ZT-T16620J-10M",
+      short_description:
+        "ZOTAC GAMING GeForce GTX 1660 SUPER Twin Fan Black 6GB GDDR6 192-bit Gaming Graphics Card, ZT-T16620J-10M",
       brand: "ZOTAC" as const,
       model: "ZT-T16620J-10M",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/1FT-000M-003U0-S08.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/1FT-000M-003U0-S08.jpg",
     },
     {
       name: "GAMING GeForce RTX 3090 Trinity OC 24GB",
       sku: "9SIABKXKBC4109",
-      short_description: "ZOTAC GAMING GeForce RTX 3090 Trinity OC 24GB GDDR6X 384-bit 19.5 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Advanced Cooling, SPECTRA 2.0 RGB Lighting, ZT-A30900J-10P",
+      short_description:
+        "ZOTAC GAMING GeForce RTX 3090 Trinity OC 24GB GDDR6X 384-bit 19.5 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Advanced Cooling, SPECTRA 2.0 RGB Lighting, ZT-A30900J-10P",
       brand: "ZOTAC" as const,
       model: "ZT-A30900J-10P",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-510-V01.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-510-V01.jpg",
     },
     {
       name: "GAMING GeForce RTX 4060 8GB Solo",
       sku: "9SIBTK0KCK4538",
-      short_description: "ZOTAC GAMING GeForce RTX 4060 8GB Solo DLSS 3 8GB GDDR6 128-bit 17 Gbps PCIE 4.0 Super Compact Gaming Graphics Card, ZT-D40600G-10L",
+      short_description:
+        "ZOTAC GAMING GeForce RTX 4060 8GB Solo DLSS 3 8GB GDDR6 128-bit 17 Gbps PCIE 4.0 Super Compact Gaming Graphics Card, ZT-D40600G-10L",
       brand: "ZOTAC" as const,
       model: "ZT-D40600G-10L",
       type: "VGA" as const,
-      primary_image: "https://c1.neweggimages.com/productimage/nb300/14-500-558-S09.jpg",
+      primary_image:
+        "https://c1.neweggimages.com/productimage/nb300/14-500-558-S09.jpg",
     },
   ];
 
   const handleAddSampleProducts = async () => {
     setIsLoading(true);
+    console.log("[Products] Adding sample products started:", {
+      totalProducts: sampleProducts.length,
+    });
 
     try {
       let successCount = 0;
@@ -1231,23 +1321,49 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
           await createProductMutation.mutateAsync(product);
           successCount++;
         } catch (error) {
-          console.error(`Failed to create product: ${product.name}`, error);
+          console.error(
+            `[Products] Failed to create sample product: ${product.name}`,
+            error,
+          );
         }
       }
 
       if (successCount === totalProducts) {
-        toast.success(`Đã thêm thành công ${successCount} sản phẩm mẫu`);
+        const successMessage = `Đã thêm thành công ${successCount} sản phẩm mẫu`;
+        console.log(
+          "[Products] All sample products added successfully:",
+          successMessage,
+          { successCount, totalProducts },
+        );
+        toast.success(successMessage);
       } else if (successCount > 0) {
-        toast.success(`Đã thêm thành công ${successCount}/${totalProducts} sản phẩm mẫu`);
+        const successMessage = `Đã thêm thành công ${successCount}/${totalProducts} sản phẩm mẫu`;
+        console.log(
+          "[Products] Partial sample products added:",
+          successMessage,
+          { successCount, totalProducts },
+        );
+        toast.success(successMessage);
       } else {
-        toast.error("Không thể thêm sản phẩm mẫu nào");
+        const errorMessage = "Không thể thêm sản phẩm mẫu nào";
+        console.error("[Products] No sample products added:", errorMessage, {
+          successCount,
+          totalProducts,
+        });
+        toast.error(errorMessage);
       }
 
       if (successCount > 0 && onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      toast.error("Lỗi khi thêm sản phẩm mẫu");
+      const errorMessage = "Lỗi khi thêm sản phẩm mẫu";
+      console.error(
+        "[Products] Sample products addition error:",
+        errorMessage,
+        { error },
+      );
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

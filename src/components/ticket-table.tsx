@@ -383,6 +383,10 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           <p className="mb-4 mt-2 text-sm text-muted-foreground">
             Tạo phiếu dịch vụ đầu tiên để bắt đầu quản lý công việc.
           </p>
+          <Button onClick={() => router.push('/tickets/add')}>
+            <IconPlus className="h-4 w-4" />
+            Tạo phiếu dịch vụ
+          </Button>
         </div>
       </div>
     );

@@ -62,33 +62,21 @@ create policy "product_images_select_all"
   using (bucket_id = 'product_images');
 
 -- ============================================================================
--- SERVICE_MEDIA BUCKET POLICIES (Private)
+-- SERVICE_MEDIA BUCKET POLICIES (Public)
 -- ============================================================================
-create policy "service_media_insert_own"
+-- Simple public policies - anyone can access service ticket images
+create policy "service_media_insert_public"
   on storage.objects for insert
-  with check (
-    bucket_id = 'service_media'
-    and (select auth.uid())::text = (storage.foldername(name))[1]
-  );
+  with check (bucket_id = 'service_media');
 
-create policy "service_media_update_own"
+create policy "service_media_update_public"
   on storage.objects for update
-  using (
-    bucket_id = 'service_media'
-    and (select auth.uid())::text = (storage.foldername(name))[1]
-  );
+  using (bucket_id = 'service_media');
 
-create policy "service_media_delete_own"
+create policy "service_media_delete_public"
   on storage.objects for delete
-  using (
-    bucket_id = 'service_media'
-    and (select auth.uid())::text = (storage.foldername(name))[1]
-  );
+  using (bucket_id = 'service_media');
 
--- Users can only view their own service media (private bucket)
-create policy "service_media_select_own"
+create policy "service_media_select_public"
   on storage.objects for select
-  using (
-    bucket_id = 'service_media'
-    and (select auth.uid())::text = (storage.foldername(name))[1]
-  );
+  using (bucket_id = 'service_media');

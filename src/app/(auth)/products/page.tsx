@@ -8,7 +8,10 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
 
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select(`
+      *,
+      product_parts(count)
+    `)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -16,7 +19,13 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
     return [];
   }
 
-  return data || [];
+  // Transform the data to include parts_count
+  const transformedData = (data || []).map((product: any) => ({
+    ...product,
+    parts_count: product.product_parts?.[0]?.count || 0,
+  }));
+
+  return transformedData;
 }
 
 export default async function Page() {

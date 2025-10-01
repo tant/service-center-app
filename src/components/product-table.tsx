@@ -112,6 +112,7 @@ export const productSchema = z.object({
   model: z.string().nullable(),
   type: z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]),
   primary_image: z.string().nullable(),
+  parts_count: z.number().default(0),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.string().nullable(),
@@ -228,6 +229,19 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
       >
         {row.original.type}
       </Badge>
+    ),
+  },
+  {
+    accessorKey: "parts_count",
+    header: "Linh kiện",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-1.5">
+        <IconPackage className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium">
+          {row.original.parts_count}
+        </span>
+        <span className="text-xs text-muted-foreground">parts</span>
+      </div>
     ),
   },
   {

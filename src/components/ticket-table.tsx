@@ -34,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
+import { STATUS_FLOW } from "@/server/routers/tickets";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -342,6 +343,29 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     }
   };
 
+  // Helper to map UI status to database status
+  const mapUIStatusToDatabase = (uiStatus: string): "pending" | "in_progress" | "completed" | "cancelled" => {
+    switch (uiStatus) {
+      case "open":
+        return "pending";
+      case "in_progress":
+        return "in_progress";
+      case "resolved":
+        return "completed";
+      case "closed":
+        return "cancelled";
+      default:
+        return "pending";
+    }
+  };
+
+  // Get valid next statuses for a ticket
+  const getValidNextStatuses = (currentStatus: string): Array<"pending" | "in_progress" | "completed" | "cancelled"> => {
+    const dbStatus = mapUIStatusToDatabase(currentStatus);
+    const statusFlow = STATUS_FLOW[dbStatus as keyof typeof STATUS_FLOW];
+    return [...(statusFlow?.next || [])] as Array<"pending" | "in_progress" | "completed" | "cancelled">;
+  };
+
   // Show empty state
   if (!data || data.length === 0) {
     return (
@@ -569,22 +593,37 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                     Đổi trạng thái
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "pending")}>
-                      {getStatusIcon("pending")}
-                      Chờ xử lý
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "in_progress")}>
-                      {getStatusIcon("in_progress")}
-                      Đang xử lý
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "completed")}>
-                      {getStatusIcon("completed")}
-                      Hoàn thành
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(ticket.id, "cancelled")}>
-                      {getStatusIcon("cancelled")}
-                      Đã hủy
-                    </DropdownMenuItem>
+                    {(() => {
+                      const validNextStatuses = getValidNextStatuses(ticket.status);
+                      const statusOptions: Array<{ value: "pending" | "in_progress" | "completed" | "cancelled", icon: string, label: string }> = [
+                        { value: "pending", icon: "pending", label: "Chờ xử lý" },
+                        { value: "in_progress", icon: "in_progress", label: "Đang xử lý" },
+                        { value: "completed", icon: "completed", label: "Hoàn thành" },
+                        { value: "cancelled", icon: "cancelled", label: "Đã hủy" },
+                      ];
+
+                      const filteredOptions = statusOptions.filter(option =>
+                        validNextStatuses.includes(option.value)
+                      );
+
+                      if (filteredOptions.length === 0) {
+                        return (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                            Không thể thay đổi trạng thái
+                          </div>
+                        );
+                      }
+
+                      return filteredOptions.map(option => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          onClick={() => handleStatusChange(ticket.id, option.value)}
+                        >
+                          {getStatusIcon(option.icon)}
+                          {option.label}
+                        </DropdownMenuItem>
+                      ));
+                    })()}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />

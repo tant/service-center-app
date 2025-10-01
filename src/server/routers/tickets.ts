@@ -1,6 +1,67 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
 
+// Status flow validation
+const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
+  pending: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: [], // Terminal state - cannot transition
+  cancelled: [], // Terminal state - cannot transition
+};
+
+export const STATUS_FLOW = {
+  pending: {
+    label: 'Chờ xử lý',
+    next: ['in_progress', 'cancelled'],
+    terminal: false,
+  },
+  in_progress: {
+    label: 'Đang sửa chữa',
+    next: ['completed', 'cancelled'],
+    terminal: false,
+  },
+  completed: {
+    label: 'Hoàn thành',
+    next: [],
+    terminal: true,
+  },
+  cancelled: {
+    label: 'Hủy bỏ',
+    next: [],
+    terminal: true,
+  },
+} as const;
+
+function validateStatusTransition(currentStatus: string, newStatus: string): void {
+  // If status hasn't changed, allow it
+  if (currentStatus === newStatus) {
+    return;
+  }
+
+  const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
+
+  if (!allowedTransitions.includes(newStatus)) {
+    const statusInfo = STATUS_FLOW[currentStatus as keyof typeof STATUS_FLOW];
+    const isTerminal = statusInfo?.terminal;
+
+    if (isTerminal) {
+      throw new Error(
+        `Không thể thay đổi trạng thái từ "${statusInfo.label}" (trạng thái cuối). ` +
+        `Vui lòng tạo phiếu dịch vụ mới nếu cần.`
+      );
+    }
+
+    const allowedLabels = allowedTransitions
+      .map(s => STATUS_FLOW[s as keyof typeof STATUS_FLOW]?.label)
+      .join(', ');
+
+    throw new Error(
+      `Trạng thái không hợp lệ: Không thể chuyển từ "${statusInfo?.label}" sang "${STATUS_FLOW[newStatus as keyof typeof STATUS_FLOW]?.label}". ` +
+      `Chỉ có thể chuyển sang: ${allowedLabels}`
+    );
+  }
+}
+
 // Ticket schemas for validation
 const createTicketSchema = z.object({
   customer_data: z.object({
@@ -281,6 +342,20 @@ export const ticketsRouter = router({
   updateTicketStatus: publicProcedure
     .input(updateTicketStatusSchema)
     .mutation(async ({ input, ctx }) => {
+      // Fetch current ticket to validate status transition
+      const { data: currentTicket, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("status")
+        .eq("id", input.id)
+        .single();
+
+      if (fetchError || !currentTicket) {
+        throw new Error("Ticket not found");
+      }
+
+      // Validate status transition
+      validateStatusTransition(currentTicket.status, input.status);
+
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
         .update({
@@ -310,6 +385,21 @@ export const ticketsRouter = router({
     .input(updateTicketSchema)
     .mutation(async ({ input, ctx }) => {
       const { id, ...updateData } = input;
+
+      // If status is being updated, validate the transition
+      if (updateData.status !== undefined) {
+        const { data: currentTicket, error: fetchError } = await ctx.supabaseAdmin
+          .from("service_tickets")
+          .select("status")
+          .eq("id", id)
+          .single();
+
+        if (fetchError || !currentTicket) {
+          throw new Error("Ticket not found");
+        }
+
+        validateStatusTransition(currentTicket.status, updateData.status);
+      }
 
       // Build update object with only provided fields
       const updateObject: any = {};

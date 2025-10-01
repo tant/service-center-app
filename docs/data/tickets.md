@@ -84,8 +84,29 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
 ### Status
 - `pending` - Chờ xử lý
 - `in_progress` - Đang sửa chữa
-- `completed` - Hoàn thành
-- `cancelled` - Hủy bỏ
+- `completed` - Hoàn thành (trạng thái cuối)
+- `cancelled` - Hủy bỏ (trạng thái cuối)
+
+**Status Flow (Quy trình thay đổi trạng thái):**
+
+Hệ thống áp dụng quy tắc một chiều (one-way flow) cho việc thay đổi trạng thái:
+
+```
+pending → in_progress → completed
+    ↓           ↓
+  cancelled  cancelled
+```
+
+Chi tiết:
+- `pending` có thể chuyển sang: `in_progress`, `cancelled`
+- `in_progress` có thể chuyển sang: `completed`, `cancelled`
+- `completed` và `cancelled` là **trạng thái cuối** - không thể thay đổi
+
+**Quy tắc nghiệp vụ:**
+1. **Không có override cho admin**: Không có ngoại lệ cho bất kỳ vai trò nào, kể cả Admin
+2. **Không thể mở lại phiếu đã hoàn thành/hủy**: Nếu cần xử lý lại, phải tạo phiếu dịch vụ mới
+3. **Theo dõi lịch sử**: Mọi thay đổi trạng thái được ghi nhận trong `service_ticket_comments`
+4. **Validation backend**: Server sẽ từ chối mọi thay đổi trạng thái không hợp lệ với thông báo lỗi rõ ràng
 
 ### Priority Level
 - `low` - Thấp
@@ -120,7 +141,11 @@ Tài liệu này mô tả cấu trúc dữ liệu của phiếu dịch vụ tron
    - `priority_level`: "normal"
    - `diagnosis_fee`: 0
    - `discount_amount`: 0
-6. **Status Management**: 
+6. **Status Management**:
    - Quản lý trạng thái theo quy trình nghiệp vụ từ tiếp nhận đến hoàn thành
+   - **One-way Flow**: Hệ thống áp dụng quy tắc một chiều, không cho phép quay lại trạng thái trước đó
+   - **Terminal States**: `completed` và `cancelled` là trạng thái cuối - không thể thay đổi
+   - **Backend Validation**: tRPC mutations `updateTicketStatus` và `updateTicket` sẽ validate trước khi cho phép thay đổi
+   - **UI Restrictions**: Giao diện chỉ hiển thị các trạng thái hợp lệ có thể chuyển đến
    - **Auto-logging**: Mỗi lần thay đổi status sẽ tự động tạo comment trong `service_ticket_comments` để audit trail hoàn chỉnh
    - Format comment tự động: "Trạng thái đã thay đổi từ '{old_status}' sang '{new_status}'"

@@ -1,54 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Service Center Management System
 
-## Getting Started
+A full-stack service center management application built with Next.js, Supabase, and tRPC for managing service tickets, parts inventory, customers, and products.
 
-First, run the development server:
+## Overview
+
+This application helps service centers manage their daily operations including customer tracking, product inventory, service ticket workflows, and parts management. Built with modern web technologies for reliability and scalability.
+
+## Key Features
+
+- 🎫 **Service Ticket Management** - Complete workflow from receipt to completion with status tracking
+- 📦 **Parts Inventory** - Real-time stock tracking with automatic quantity updates
+- 👥 **Customer Management** - Comprehensive customer database with service history
+- 🛠️ **Product Catalog** - Product management with compatible parts relationships
+- 👤 **Role-Based Access Control** - Four role types: Admin, Manager, Technician, and Reception
+- 💾 **File Storage** - Secure upload for avatars, product images, and service documentation
+- 📊 **Real-time Updates** - Live data synchronization powered by Supabase
+- 🔒 **Row-Level Security** - Database-level access control for data protection
+
+## Tech Stack
+
+### Frontend
+- **Framework**: Next.js 15.5 with App Router and Turbopack
+- **UI Library**: React 19 with TypeScript
+- **Styling**: Tailwind CSS 4 + shadcn/ui components
+- **State Management**: TanStack Query (React Query)
+- **Type Safety**: End-to-end type safety with tRPC
+
+### Backend
+- **API**: tRPC for type-safe API routes
+- **Database**: PostgreSQL via Supabase
+- **Authentication**: Supabase Auth with JWT
+- **Storage**: Supabase Storage for file uploads
+- **Real-time**: Supabase Realtime subscriptions
+
+### Development Tools
+- **Build Tool**: Turbopack (Next.js 15)
+- **Package Manager**: pnpm
+- **Linting/Formatting**: Biome
+- **Database Migrations**: Supabase CLI with declarative schemas
+- **Local Development**: Docker-based Supabase local stack
+
+## Quick Start
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Clone and install
+git clone https://github.com/tant/service-center-app
+cd service-center-app
+pnpm install
+
+# Set up environment
+cp .env.example .env
+
+# Start Supabase and set up database
+pnpx supabase start
+./docs/data/schemas/setup_schema.sh
+
+# Start development server
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3025` and complete setup at `/setup` endpoint.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+service-center/
+├── src/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── (auth)/            # Protected routes
+│   │   ├── (public)/          # Public routes
+│   │   └── api/               # tRPC API routes
+│   ├── components/            # React components
+│   ├── lib/                   # Utilities and configurations
+│   └── hooks/                 # Custom React hooks
+├── docs/
+│   └── data/
+│       ├── schemas/           # Database schema definitions
+│       └── seeds/             # Seed data scripts
+├── supabase/                  # Supabase configuration
+│   ├── config.toml
+│   └── migrations/           # Generated migrations
+└── .env                      # Environment variables (git-ignored)
+```
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+Core entities and their relationships:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Users & Auth**: `profiles` table extends Supabase Auth
+- **Business Data**: `customers`, `products`, `parts`
+- **Service Workflow**: `service_tickets`, `service_ticket_parts`, `service_ticket_comments`
+- **Relationships**: `product_parts` (many-to-many)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All tables include:
+- Automatic timestamps (`created_at`, `updated_at`)
+- Audit trails (`created_by`, `updated_by`)
+- Row-Level Security (RLS) policies
+- Optimized indexes for performance
 
-## Deploy on Vercel
+## Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development environment setup and contribution guide
+- **[docs/data/schemas/README.md](./docs/data/schemas/README.md)** - Database schema documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Claude Code AI assistant instructions
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
 
-## To run the local development
-service-center$ pnpx supabase start
-supabase start is already running.
-Stopped services: [supabase_imgproxy_service-center supabase_edge_runtime_service-center supabase_pooler_service-center]
-supabase local development setup is running.
+### Prerequisites
+- Supabase account ([sign up](https://supabase.com))
+- Hosting platform (Vercel, Railway, etc.)
 
-         API URL: http://127.0.0.1:54321
-     GraphQL URL: http://127.0.0.1:54321/graphql/v1
-  S3 Storage URL: http://127.0.0.1:54321/storage/v1/s3
-    Database URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      Studio URL: http://127.0.0.1:54323
-     Mailpit URL: http://127.0.0.1:54324
- Publishable key: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-      Secret key: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
-   S3 Access Key: 625729a08b95bf1b7ff351a663f3a23c
-   S3 Secret Key: 850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907
-       S3 Region: local
+### Steps
+1. Create Supabase project and note credentials
+2. Link local project: `pnpx supabase link --project-ref <ref>`
+3. Push schema: `pnpx supabase db push`
+4. Deploy frontend to hosting platform
+5. Configure environment variables
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md#production-deployment) for detailed deployment instructions.
+
+## Support & Contributing
+
+- **Issues**: Report bugs or request features via GitHub Issues
+- **Contributing**: See [DEVELOPMENT.md](./DEVELOPMENT.md) for contribution guidelines
+- **Questions**: Contact the development team
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+---
+
+**Made with ❤️ for efficient service center management**

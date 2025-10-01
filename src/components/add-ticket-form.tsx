@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { z } from "zod";
 import {
   IconPhone,
   IconUser,
@@ -16,7 +15,6 @@ import {
   IconCalculator,
 } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -270,6 +268,7 @@ export function AddTicketForm() {
           part_id: part.id,
           quantity: part.quantity,
           unit_price: part.price,
+          // Note: total_price is automatically calculated by the database as (quantity * unit_price)
         })),
       });
     } finally {

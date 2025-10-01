@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 import { IconTrash, IconPlus, IconEdit } from "@tabler/icons-react";
-import { STATUS_FLOW } from "@/server/routers/tickets";
+import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 
 interface EditTicketFormProps {
   ticket: any;

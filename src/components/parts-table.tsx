@@ -261,11 +261,15 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
 
   const deletePartMutation = trpc.parts.deletePart.useMutation({
     onSuccess: () => {
-      toast.success(`Đã xóa linh kiện "${part.name}"`);
+      const successMessage = `Đã xóa linh kiện "${part.name}"`;
+      console.log("[Parts] Delete part success:", successMessage, { partId: part.id, partName: part.name });
+      toast.success(successMessage);
       window.location.reload();
     },
     onError: (error) => {
-      toast.error(error.message || "Xóa linh kiện thất bại");
+      const errorMessage = error.message || "Xóa linh kiện thất bại";
+      console.error("[Parts] Delete part error:", errorMessage, { partId: part.id, partName: part.name, error });
+      toast.error(errorMessage);
     },
     onSettled: () => {
       setIsDeleting(false);
@@ -282,11 +286,28 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
   };
 
   const handleClone = () => {
-    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-      loading: `Đang sao chép ${part.name}...`,
-      success: "Sao chép linh kiện thành công",
-      error: "Sao chép linh kiện thất bại",
-    });
+    const loadingMessage = `Đang sao chép ${part.name}...`;
+    const successMessage = "Sao chép linh kiện thành công";
+    const errorMessage = "Sao chép linh kiện thất bại";
+
+    console.log("[Parts] Clone part initiated:", loadingMessage, { partId: part.id, partName: part.name });
+
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 1000))
+        .then(() => {
+          console.log("[Parts] Clone part success:", successMessage, { partId: part.id, partName: part.name });
+          return successMessage;
+        })
+        .catch((error) => {
+          console.error("[Parts] Clone part error:", errorMessage, { partId: part.id, partName: part.name, error });
+          throw error;
+        }),
+      {
+        loading: loadingMessage,
+        success: successMessage,
+        error: errorMessage,
+      }
+    );
   };
 
   return (
@@ -735,24 +756,32 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
   });
 
   const createPartMutation = trpc.parts.createPart.useMutation({
-    onSuccess: () => {
-      toast.success("Tạo linh kiện thành công");
+    onSuccess: (data) => {
+      const successMessage = "Tạo linh kiện thành công";
+      console.log("[Parts] Create part success:", successMessage, { partData: formData, response: data });
+      toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Tạo linh kiện thất bại");
+      const errorMessage = error.message || "Tạo linh kiện thất bại";
+      console.error("[Parts] Create part error:", errorMessage, { partData: formData, error });
+      toast.error(errorMessage);
     },
   });
 
   const updatePartMutation = trpc.parts.updatePart.useMutation({
-    onSuccess: () => {
-      toast.success("Cập nhật linh kiện thành công");
+    onSuccess: (data) => {
+      const successMessage = "Cập nhật linh kiện thành công";
+      console.log("[Parts] Update part success:", successMessage, { partId: part?.id, partData: formData, response: data });
+      toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
-      toast.error(error.message || "Cập nhật linh kiện thất bại");
+      const errorMessage = error.message || "Cập nhật linh kiện thất bại";
+      console.error("[Parts] Update part error:", errorMessage, { partId: part?.id, partData: formData, error });
+      toast.error(errorMessage);
     },
   });
 
@@ -780,22 +809,30 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
     e.preventDefault();
 
     if (!formData.name) {
-      toast.error("Vui lòng nhập tên linh kiện");
+      const errorMessage = "Vui lòng nhập tên linh kiện";
+      console.error("[Parts] Validation error:", errorMessage, { formData });
+      toast.error(errorMessage);
       return;
     }
 
     if (formData.price <= 0) {
-      toast.error("Vui lòng nhập giá hợp lệ");
+      const errorMessage = "Vui lòng nhập giá hợp lệ";
+      console.error("[Parts] Validation error:", errorMessage, { price: formData.price, formData });
+      toast.error(errorMessage);
       return;
     }
 
     if (formData.cost_price < 0) {
-      toast.error("Giá vốn không thể âm");
+      const errorMessage = "Giá vốn không thể âm";
+      console.error("[Parts] Validation error:", errorMessage, { cost_price: formData.cost_price, formData });
+      toast.error(errorMessage);
       return;
     }
 
     if (formData.stock_quantity < 0) {
-      toast.error("Số lượng tồn kho không thể âm");
+      const errorMessage = "Số lượng tồn kho không thể âm";
+      console.error("[Parts] Validation error:", errorMessage, { stock_quantity: formData.stock_quantity, formData });
+      toast.error(errorMessage);
       return;
     }
 
@@ -1091,11 +1128,14 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const createPartMutation = trpc.parts.createPart.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Success is handled in the batch operation
+      console.log("[Parts] Sample part created:", { response: data });
     },
     onError: (error) => {
-      toast.error(error.message || "Lỗi khi tạo linh kiện mẫu");
+      const errorMessage = error.message || "Lỗi khi tạo linh kiện mẫu";
+      console.error("[Parts] Sample part creation error:", errorMessage, { error });
+      toast.error(errorMessage);
     },
   });
 
@@ -1194,6 +1234,7 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
 
   const handleAddSampleParts = async () => {
     setIsLoading(true);
+    console.log("[Parts] Adding sample parts started:", { totalParts: sampleParts.length });
 
     try {
       let successCount = 0;
@@ -1204,23 +1245,31 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
           await createPartMutation.mutateAsync(part);
           successCount++;
         } catch (error) {
-          console.error(`Failed to create part: ${part.name}`, error);
+          console.error(`[Parts] Failed to create sample part: ${part.name}`, error);
         }
       }
 
       if (successCount === totalParts) {
-        toast.success(`Đã thêm thành công ${successCount} linh kiện mẫu`);
+        const successMessage = `Đã thêm thành công ${successCount} linh kiện mẫu`;
+        console.log("[Parts] All sample parts added successfully:", successMessage, { successCount, totalParts });
+        toast.success(successMessage);
       } else if (successCount > 0) {
-        toast.success(`Đã thêm thành công ${successCount}/${totalParts} linh kiện mẫu`);
+        const successMessage = `Đã thêm thành công ${successCount}/${totalParts} linh kiện mẫu`;
+        console.log("[Parts] Partial sample parts added:", successMessage, { successCount, totalParts });
+        toast.success(successMessage);
       } else {
-        toast.error("Không thể thêm linh kiện mẫu nào");
+        const errorMessage = "Không thể thêm linh kiện mẫu nào";
+        console.error("[Parts] No sample parts added:", errorMessage, { successCount, totalParts });
+        toast.error(errorMessage);
       }
 
       if (successCount > 0 && onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      toast.error("Lỗi khi thêm linh kiện mẫu");
+      const errorMessage = "Lỗi khi thêm linh kiện mẫu";
+      console.error("[Parts] Sample parts addition error:", errorMessage, { error });
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

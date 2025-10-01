@@ -20,6 +20,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsLeft,
+  IconChevronsRight,
+  IconDatabase,
   IconEdit,
   IconGripVertical,
   IconLayoutColumns,
@@ -112,7 +117,7 @@ function DragHandle({ id }: { id: string }) {
       className="text-muted-foreground size-7 hover:bg-transparent"
     >
       <IconGripVertical className="text-muted-foreground size-3" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">Kéo để sắp xếp lại</span>
     </Button>
   );
 }
@@ -171,6 +176,10 @@ function DataTable<TData extends { id: string }, TValue>({
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   const [tableData, setTableData] = React.useState<TData[]>(data);
 
   React.useEffect(() => {
@@ -188,11 +197,13 @@ function DataTable<TData extends { id: string }, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination,
     },
   });
 
@@ -253,13 +264,90 @@ function DataTable<TData extends { id: string }, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No customers found.
+                  Không tìm thấy khách hàng.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </DndContext>
+      <div className="flex items-center justify-between border-t px-4 py-4">
+        <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+          Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
+          {table.getFilteredRowModel().rows.length} khách hàng.
+        </div>
+        <div className="flex w-full items-center gap-8 lg:w-fit">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Label htmlFor="rows-per-page" className="text-sm font-medium">
+              Hàng trên trang
+            </Label>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Trang {table.getState().pagination.pageIndex + 1} của{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Đến trang đầu</span>
+              <IconChevronsLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Trang trước</span>
+              <IconChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Trang tiếp</span>
+              <IconChevronRight />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden size-8 lg:flex"
+              size="icon"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Đến trang cuối</span>
+              <IconChevronsRight />
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -319,7 +407,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
-            aria-label="Select all"
+            aria-label="Chọn tất cả"
           />
         </div>
       ),
@@ -328,7 +416,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
+            aria-label="Chọn hàng"
           />
         </div>
       ),
@@ -484,7 +572,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
             size="sm"
             id="view-selector"
           >
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder="Chọn chế độ xem" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="customers-list">Danh sách khách hàng</SelectItem>
@@ -509,7 +597,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               <Button variant="outline" size="sm">
                 <IconLayoutColumns />
                 <span className="hidden lg:inline">Tùy chỉnh cột</span>
-                <span className="lg:hidden">Columns</span>
+                <span className="lg:hidden">Cột</span>
                 <IconChevronDown />
               </Button>
             </DropdownMenuTrigger>
@@ -547,6 +635,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
             }
             onSuccess={() => window.location.reload()}
           />
+          <AddSampleCustomersButton onSuccess={() => window.location.reload()} />
         </div>
       </div>
       <TabsContent
@@ -715,37 +804,37 @@ function CustomerModal({
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle className="flex items-center gap-3">
-            {mode === "add" ? "Add New Customer" : customer?.name}
+            {mode === "add" ? "Thêm khách hàng mới" : customer?.name}
           </DrawerTitle>
           <DrawerDescription>
             {mode === "add"
-              ? "Create a new customer with the required information."
-              : "Customer details and management options"}
+              ? "Tạo khách hàng mới với thông tin bắt buộc."
+              : "Chi tiết khách hàng và các tùy chọn quản lý"}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="name">Customer Name *</Label>
+              <Label htmlFor="name">Tên khách hàng *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Enter customer name"
+                placeholder="Nhập tên khách hàng"
                 required
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">Số điện thoại *</Label>
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                placeholder="Enter phone number"
+                placeholder="Nhập số điện thoại"
                 required
               />
             </div>
@@ -758,18 +847,18 @@ function CustomerModal({
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                placeholder="Enter email address (optional)"
+                placeholder="Nhập địa chỉ email (tùy chọn)"
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Địa chỉ</Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) =>
                   setFormData({ ...formData, address: e.target.value })
                 }
-                placeholder="Enter address (optional)"
+                placeholder="Nhập địa chỉ (tùy chọn)"
                 rows={3}
               />
             </div>
@@ -779,18 +868,18 @@ function CustomerModal({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <Label className="text-muted-foreground">
-                        Customer ID
+                        ID Khách hàng
                       </Label>
                       <div className="font-mono text-xs">{customer.id}</div>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Created</Label>
+                      <Label className="text-muted-foreground">Ngày tạo</Label>
                       <div>
                         {new Date(customer.created_at).toLocaleDateString()}
                       </div>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Updated</Label>
+                      <Label className="text-muted-foreground">Cập nhật</Label>
                       <div>
                         {new Date(customer.updated_at).toLocaleDateString()}
                       </div>
@@ -811,19 +900,124 @@ function CustomerModal({
           >
             {isLoading
               ? mode === "add"
-                ? "Creating..."
-                : "Updating..."
+                ? "Đang tạo..."
+                : "Đang cập nhật..."
               : mode === "add"
-                ? "Create Customer"
-                : "Save Changes"}
+                ? "Tạo khách hàng"
+                : "Lưu thay đổi"}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Cancel
+              Hủy
             </Button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const createCustomerMutation = trpc.customers.createCustomer.useMutation({
+    onSuccess: () => {
+      // Success handled in batch operation
+    },
+    onError: (error) => {
+      toast.error(error.message || "Lỗi khi tạo khách hàng mẫu");
+    },
+  });
+
+  // Vietnamese names data
+  const lastNames = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý"];
+  const middleNames = ["Văn", "Thị", "Minh", "Hoàng", "Đức", "Anh", "Thu", "Hồng", "Quốc", "Thanh", "Tuấn", "Hải", "Mai", "Lan"];
+  const firstNames = ["An", "Bình", "Cường", "Dũng", "Hà", "Hùng", "Linh", "Long", "Mai", "Nam", "Phong", "Quân", "Tâm", "Thảo", "Tú", "Uyên", "Vân", "Xuân", "Yến"];
+
+  const streets = ["Nguyễn Huệ", "Lê Lợi", "Trần Hưng Đạo", "Hai Bà Trưng", "Lý Thường Kiệt", "Phan Bội Châu", "Điện Biên Phủ", "Võ Văn Tần", "Pasteur", "Cách Mạng Tháng 8"];
+  const districts = ["Quận 1", "Quận 2", "Quận 3", "Quận 5", "Quận 7", "Quận 10", "Bình Thạnh", "Tân Bình", "Phú Nhuận", "Gò Vấp"];
+  const cities = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng"];
+
+  const emailDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"];
+
+  const normalizeVietnamese = (str: string) => {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
+  };
+
+  const generateSampleCustomers = () => {
+    const customers = [];
+    for (let i = 0; i < 500; i++) {
+      const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const middleName = middleNames[Math.floor(Math.random() * middleNames.length)];
+      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const fullName = `${lastName} ${middleName} ${firstName}`;
+
+      const phone = `0${Math.floor(Math.random() * 900000000) + 100000000}`;
+      const hasEmail = Math.random() > 0.3; // 70% have email
+      const email = hasEmail ? `${normalizeVietnamese(lastName)}${normalizeVietnamese(firstName)}${Math.floor(Math.random() * 1000)}@${emailDomains[Math.floor(Math.random() * emailDomains.length)]}` : undefined;
+
+      const hasAddress = Math.random() > 0.2; // 80% have address
+      const address = hasAddress ? `${Math.floor(Math.random() * 500) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${districts[Math.floor(Math.random() * districts.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}` : undefined;
+
+      customers.push({
+        name: fullName,
+        phone,
+        email,
+        address,
+      });
+    }
+    return customers;
+  };
+
+  const handleAddSampleCustomers = async () => {
+    setIsLoading(true);
+
+    try {
+      const sampleCustomers = generateSampleCustomers();
+      let successCount = 0;
+      const totalCustomers = sampleCustomers.length;
+
+      for (const customer of sampleCustomers) {
+        try {
+          await createCustomerMutation.mutateAsync(customer);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create sample customer: ${customer.name}`, error);
+        }
+      }
+
+      if (successCount === totalCustomers) {
+        toast.success(`Đã thêm thành công ${successCount} khách hàng mẫu`);
+      } else if (successCount > 0) {
+        toast.success(`Đã thêm thành công ${successCount}/${totalCustomers} khách hàng mẫu`);
+      } else {
+        toast.error("Không thể thêm khách hàng mẫu nào");
+      }
+
+      if (successCount > 0 && onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      toast.error("Lỗi khi thêm khách hàng mẫu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleAddSampleCustomers}
+      disabled={isLoading}
+      variant="outline"
+      size="sm"
+    >
+      <IconDatabase className="h-4 w-4" />
+      {isLoading ? "Đang thêm..." : "Thêm 500 mẫu"}
+    </Button>
   );
 }

@@ -1,4 +1,5 @@
 -- Function to decrease part stock quantity safely
+-- Security: SET search_path = '' prevents schema hijacking vulnerabilities
 CREATE OR REPLACE FUNCTION decrease_part_stock(
   part_id UUID,
   quantity_to_decrease INTEGER
@@ -6,6 +7,7 @@ CREATE OR REPLACE FUNCTION decrease_part_stock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   -- Update stock quantity with atomic check
@@ -30,6 +32,7 @@ END;
 $$;
 
 -- Function to increase part stock quantity (for returns/restocks)
+-- Security: SET search_path = '' prevents schema hijacking vulnerabilities
 CREATE OR REPLACE FUNCTION increase_part_stock(
   part_id UUID,
   quantity_to_increase INTEGER
@@ -37,6 +40,7 @@ CREATE OR REPLACE FUNCTION increase_part_stock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   -- Update stock quantity

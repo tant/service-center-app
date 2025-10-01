@@ -34,23 +34,23 @@ create policy "service_ticket_comments_select_policy" on "service_ticket_comment
 
 create policy "service_ticket_comments_insert_policy" on "service_ticket_comments"
   for insert with check (
-    auth.uid() = created_by
+    (select auth.uid()) = created_by
   );
 
 create policy "service_ticket_comments_update_policy" on "service_ticket_comments"
   for update using (
-    auth.uid() = created_by or
+    (select auth.uid()) = created_by or
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and ('admin' = any(roles) or 'manager' = any(roles))
+      where user_id = (select auth.uid()) and ('admin' = any(roles) or 'manager' = any(roles))
     )
   );
 
 create policy "service_ticket_comments_delete_policy" on "service_ticket_comments"
   for delete using (
-    auth.uid() = created_by or
+    (select auth.uid()) = created_by or
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and ('admin' = any(roles) or 'manager' = any(roles))
+      where user_id = (select auth.uid()) and ('admin' = any(roles) or 'manager' = any(roles))
     )
   );

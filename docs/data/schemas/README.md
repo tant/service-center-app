@@ -16,15 +16,26 @@ This hybrid approach gives us the best of both worlds: well-documented schemas i
 
 ## Schema Files Overview
 
-The schema files are numbered to ensure proper creation order due to foreign key dependencies:
+The schema files are organized by type and numbered to ensure proper creation order due to foreign key dependencies:
 
-1. **01_profiles.sql** - User profiles and role management
-2. **02_customers.sql** - Customer information management
-3. **03_products.sql** - Product catalog
-4. **04_parts.sql** - Replacement parts inventory
-5. **05_service_tickets.sql** - Main service ticket workflow
-6. **06_service_ticket_parts.sql** - Parts used in service tickets
-7. **07_service_ticket_comments.sql** - Comments and communication history
+### Base Functions
+- **00_base_functions.sql** - Common functions used across all tables (must run first)
+
+### Core Tables
+1. **core_01_profiles.sql** - User profiles and role management
+2. **core_02_customers.sql** - Customer information management
+3. **core_03_products.sql** - Product catalog
+4. **core_04_parts.sql** - Replacement parts inventory
+5. **core_05_product_parts.sql** - Product-to-parts mapping (junction table)
+6. **core_06_service_tickets.sql** - Main service ticket workflow
+7. **core_07_service_ticket_parts.sql** - Parts used in service tickets
+8. **core_08_service_ticket_comments.sql** - Comments and communication history
+
+### Functions
+- **functions_inventory.sql** - Inventory management functions (stock increase/decrease)
+
+### Storage
+- **storage_policies.sql** - Storage bucket RLS policies for file uploads (avatars, product images, service media)
 
 ## Entity Relationship Diagram
 
@@ -182,25 +193,33 @@ supabase db push
 ### 🔄 Development Best Practices
 
 #### Schema File Organization
-Our schemas are numbered to ensure proper dependency order:
-- `01_profiles.sql` - User management (depends on auth.users)
-- `02_customers.sql` - Customer data
-- `03_products.sql` - Product catalog
-- `04_parts.sql` - Parts inventory (depends on products)
-- `05_service_tickets.sql` - Service tickets (depends on customers, products, profiles)
-- `06_service_ticket_parts.sql` - Junction table (depends on service_tickets, parts)
-- `07_service_ticket_comments.sql` - Comments (depends on service_tickets, profiles)
+Our schemas are organized by prefix and numbered to ensure proper dependency order:
 
-#### Custom Schema Execution Order (if needed)
-If you need explicit control over schema execution order, add to `supabase/config.toml`:
-```toml
-[db.migrations]
-schema_paths = [
-  "./schemas/01_profiles.sql",
-  "./schemas/02_customers.sql",
-  "./schemas/*.sql",
-]
-```
+**Base Functions** (prefix: `00_`)
+- `00_base_functions.sql` - Common functions (update_updated_at_column)
+
+**Core Tables** (prefix: `core_`)
+- `core_01_profiles.sql` - User management (depends on auth.users)
+- `core_02_customers.sql` - Customer data
+- `core_03_products.sql` - Product catalog
+- `core_04_parts.sql` - Parts inventory
+- `core_05_product_parts.sql` - Product-to-parts mapping (depends on products, parts)
+- `core_06_service_tickets.sql` - Service tickets (depends on customers, products, profiles)
+- `core_07_service_ticket_parts.sql` - Junction table (depends on service_tickets, parts)
+- `core_08_service_ticket_comments.sql` - Comments (depends on service_tickets, profiles)
+
+**Functions** (prefix: `functions_`)
+- `functions_inventory.sql` - Inventory management (depends on parts table)
+
+**Storage** (prefix: `storage_`)
+- `storage_policies.sql` - Storage bucket RLS policies for file uploads
+
+#### Schema Execution Order
+The `setup_schema.sh` script automatically copies files in the correct order:
+1. Base functions first (00_base_functions.sql)
+2. Core tables in dependency order (core_01 through core_08)
+3. Additional functions (functions_inventory.sql)
+4. Storage policies (storage_policies.sql)
 
 #### Column Addition Best Practices
 When adding new columns, always append to the end of tables to avoid messy diffs:
@@ -242,8 +261,8 @@ supabase db dump > supabase/schemas/production.sql
 
 #### Clean Development Cycle
 ```bash
-# Remove all schemas and migrations to start fresh
-./docs/data/schemas/cleanup_schema.sh
+# Reset database and reapply all schemas
+pnpx supabase db reset
 
 # Setup from scratch
 ./docs/data/schemas/setup_schema.sh
@@ -340,13 +359,13 @@ supabase migration up
 ####### Migration conflicts or errors
 ```bash
 # Check current migration status
-supabase migration list
+pnpx supabase migration list
 
 # Reset to specific version
-supabase db reset --version <timestamp>
+pnpx supabase db reset --version <timestamp>
 
 # Or clean start
-./docs/data/schemas/cleanup_schema.sh
+pnpx supabase db reset
 ./docs/data/schemas/setup_schema.sh
 ```
 
@@ -362,17 +381,6 @@ All tables have RLS enabled with role-based policies.
 - **Technicians**: Access to tickets assigned to them
 - **Reception**: Create/view tickets and customer information
 - **Service tickets**: Accessible only to assigned technicians or management
-```bash
-# Check current migration status
-supabase migration list
-
-# Reset to specific version
-supabase db reset --version <timestamp>
-
-# Or clean start
-./docs/data/schemas/cleanup_schema.sh
-./docs/data/schemas/setup_schema.sh
-```
 
 #### RLS policies not working
 ```bash

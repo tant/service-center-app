@@ -27,15 +27,6 @@ create index "profiles_is_active_idx" on "profiles" using btree ("is_active") wh
 alter table "profiles" add constraint "profiles_roles_check"
   check ("roles" <@ array['admin', 'manager', 'technician', 'reception']);
 
--- Function to automatically update updated_at timestamp
-create or replace function update_updated_at_column()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
 -- Trigger to automatically update updated_at on profile changes
 create trigger "profiles_updated_at_trigger"
   before update on "profiles"
@@ -45,25 +36,25 @@ create trigger "profiles_updated_at_trigger"
 -- Enable RLS (Row Level Security)
 alter table "profiles" enable row level security;
 
--- RLS policies (working implementation)
+-- RLS policies (optimized for performance with subselect pattern)
 create policy "profiles_select_policy" on "profiles"
   for select using (true); -- Allow all authenticated users to read profiles
 
 create policy "profiles_insert_policy" on "profiles"
   for insert with check (
-    auth.uid() = user_id or
+    (select auth.uid()) = user_id or
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and 'admin' = any(roles)
+      where user_id = (select auth.uid()) and 'admin' = any(roles)
     )
   );
 
 create policy "profiles_update_policy" on "profiles"
   for update using (
-    auth.uid() = user_id or
+    (select auth.uid()) = user_id or
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and 'admin' = any(roles)
+      where user_id = (select auth.uid()) and 'admin' = any(roles)
     )
   );
 
@@ -71,6 +62,6 @@ create policy "profiles_delete_policy" on "profiles"
   for delete using (
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and 'admin' = any(roles)
+      where user_id = (select auth.uid()) and 'admin' = any(roles)
     )
   );

@@ -59,6 +59,6 @@ create policy "service_tickets_delete_policy" on "service_tickets"
   for delete using (
     exists (
       select 1 from profiles
-      where user_id = auth.uid() and ('admin' = any(roles) or 'manager' = any(roles))
+      where user_id = (select auth.uid()) and ('admin' = any(roles) or 'manager' = any(roles))
     )
   );

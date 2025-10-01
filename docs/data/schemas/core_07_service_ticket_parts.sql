@@ -29,6 +29,7 @@ create trigger "service_ticket_parts_updated_at_trigger"
   execute function update_updated_at_column();
 
 -- Function to update service ticket parts total
+-- Security: SET search_path = '' prevents schema hijacking vulnerabilities
 create or replace function update_service_ticket_parts_total()
 returns trigger as $$
 begin
@@ -42,7 +43,8 @@ begin
 
   return coalesce(new, old);
 end;
-$$ language plpgsql;
+$$ language plpgsql
+set search_path = '';
 
 -- Triggers to update parts total when ticket parts change
 create trigger "service_ticket_parts_total_trigger"

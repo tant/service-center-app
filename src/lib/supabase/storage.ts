@@ -77,10 +77,10 @@ export async function uploadAvatar(
     );
   }
 
-  // Generate file path: userId/timestamp.extension
+  // Generate file path: userId/avatar.extension
+  // Using fixed filename to allow upsert (replace previous avatar)
   const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const timestamp = Date.now();
-  const filePath = `${user.id}/${timestamp}.${fileExtension}`;
+  const filePath = `${user.id}/avatar.${fileExtension}`;
 
   return uploadFile(file, "avatars", filePath);
 }

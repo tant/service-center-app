@@ -63,14 +63,31 @@ done
 
 echo -e "${GREEN}✅ Schema files copied${NC}"
 
+# Get database connection URL
+echo -e "${BLUE}🔌 Getting database connection...${NC}"
+DB_URL=$(pnpx supabase status | grep "Database URL" | sed 's/.*Database URL: //' | xargs)
+if [ -z "$DB_URL" ]; then
+    echo -e "${RED}❌ Error: Could not get database URL. Is Supabase running?${NC}"
+    echo -e "${YELLOW}   Run: pnpx supabase start${NC}"
+    exit 1
+fi
+echo -e "${GREEN}   ✓ Connected to: $DB_URL${NC}"
+
 # Create storage buckets from seed data
 echo -e "${BLUE}🪣 Creating storage buckets...${NC}"
 if [ -f "docs/data/seeds/storage_buckets.sql" ]; then
-    if pnpx supabase db execute -f docs/data/seeds/storage_buckets.sql 2>/dev/null; then
+    BUCKET_OUTPUT=$(psql "$DB_URL" -f docs/data/seeds/storage_buckets.sql 2>&1)
+    BUCKET_EXIT_CODE=$?
+
+    if [ $BUCKET_EXIT_CODE -eq 0 ]; then
         echo -e "${GREEN}✅ Storage buckets created${NC}"
     else
-        # If buckets already exist, that's fine
-        echo -e "${YELLOW}⚠️  Buckets may already exist, continuing...${NC}"
+        if echo "$BUCKET_OUTPUT" | grep -q "already exists\|duplicate key"; then
+            echo -e "${YELLOW}⚠️  Buckets already exist, continuing...${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Bucket creation warning:${NC}"
+            echo -e "${YELLOW}   $BUCKET_OUTPUT${NC}"
+        fi
     fi
 else
     echo -e "${YELLOW}⚠️  Storage buckets seed file not found, skipping...${NC}"
@@ -90,6 +107,60 @@ if pnpx supabase migration up; then
     echo -e "${GREEN}✅ Migration applied${NC}"
 else
     echo -e "${RED}❌ Migration application failed${NC}"
+    exit 1
+fi
+
+# Apply storage policies (db diff doesn't capture policies on system tables)
+echo -e "${BLUE}🔐 Applying storage policies...${NC}"
+if [ -f "docs/data/schemas/storage_policies.sql" ]; then
+    echo -e "${BLUE}   📄 File found: docs/data/schemas/storage_policies.sql${NC}"
+    echo -e "${BLUE}   🔧 Executing storage policies via psql...${NC}"
+
+    # Capture both stdout and stderr for debugging
+    POLICY_OUTPUT=$(psql "$DB_URL" -f docs/data/schemas/storage_policies.sql 2>&1)
+    POLICY_EXIT_CODE=$?
+
+    if [ $POLICY_EXIT_CODE -eq 0 ]; then
+        echo -e "${GREEN}✅ Storage policies applied successfully${NC}"
+        if [ -n "$POLICY_OUTPUT" ]; then
+            echo -e "${BLUE}   Output:${NC}"
+            echo "$POLICY_OUTPUT" | sed 's/^/      /'
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Storage policy application encountered issues${NC}"
+        echo -e "${YELLOW}   Exit code: $POLICY_EXIT_CODE${NC}"
+        echo -e "${YELLOW}   Output:${NC}"
+        echo "$POLICY_OUTPUT" | sed 's/^/      /'
+
+        # Check if it's just a "already exists" error
+        if echo "$POLICY_OUTPUT" | grep -q "already exists"; then
+            echo -e "${YELLOW}   → Policies already exist, continuing...${NC}"
+        else
+            echo -e "${RED}   → Unexpected error during policy creation${NC}"
+            echo -e "${RED}   → This will cause permission errors when uploading files!${NC}"
+            exit 1
+        fi
+    fi
+
+    # Verify policies were created
+    echo -e "${BLUE}   🔍 Verifying storage policies...${NC}"
+    POLICY_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage'" 2>&1)
+
+    if [[ "$POLICY_COUNT" =~ ^[0-9]+$ ]]; then
+        echo -e "${BLUE}   Found $POLICY_COUNT storage policies${NC}"
+
+        if [ "$POLICY_COUNT" -eq 0 ]; then
+            echo -e "${RED}   ⚠️  WARNING: No storage policies found in database!${NC}"
+            echo -e "${RED}   This will cause permission errors when uploading files.${NC}"
+            exit 1
+        else
+            echo -e "${GREEN}   ✓ Storage policies verified ($POLICY_COUNT policies active)${NC}"
+        fi
+    else
+        echo -e "${YELLOW}   ⚠️  Could not verify policy count: $POLICY_COUNT${NC}"
+    fi
+else
+    echo -e "${RED}❌ Error: Storage policies file not found at docs/data/schemas/storage_policies.sql${NC}"
     exit 1
 fi
 

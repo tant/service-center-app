@@ -21,7 +21,16 @@ export default function SetupPage() {
       console.log("✅ CLIENT: Setup mutation successful");
       console.log("📦 CLIENT: Response data:", data);
       console.log("📝 CLIENT: Original variables:", variables);
-      alert("Setup completed successfully!");
+
+      // Show different messages based on action
+      if (data.action === "password_reset") {
+        alert("Admin password has been reset successfully!");
+      } else if (data.action === "profile_created") {
+        alert("Setup repaired! Missing admin profile has been created.");
+      } else {
+        alert("Setup completed successfully! Admin account created.");
+      }
+
       router.push("/"); // Redirect to home after successful setup
     },
     onError: (error, variables) => {

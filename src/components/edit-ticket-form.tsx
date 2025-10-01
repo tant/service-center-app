@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 import { IconTrash, IconPlus, IconEdit } from "@tabler/icons-react";
+import { STATUS_FLOW } from "@/server/routers/tickets";
 
 interface EditTicketFormProps {
   ticket: any;
@@ -208,10 +209,16 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Chờ xử lý</SelectItem>
-                  <SelectItem value="in_progress">Đang xử lý</SelectItem>
-                  <SelectItem value="completed">Hoàn thành</SelectItem>
-                  <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  {/* Current status - always shown */}
+                  <SelectItem value={ticket.status}>
+                    {STATUS_FLOW[ticket.status as keyof typeof STATUS_FLOW]?.label || ticket.status}
+                  </SelectItem>
+                  {/* Valid next statuses */}
+                  {STATUS_FLOW[ticket.status as keyof typeof STATUS_FLOW]?.next.map((nextStatus) => (
+                    <SelectItem key={nextStatus} value={nextStatus}>
+                      {STATUS_FLOW[nextStatus as keyof typeof STATUS_FLOW]?.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

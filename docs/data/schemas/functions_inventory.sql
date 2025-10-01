@@ -1,5 +1,5 @@
 -- Function to decrease part stock quantity safely
--- Security: SET search_path = '' prevents schema hijacking vulnerabilities
+-- Security: SET search_path = 'public' and explicit schema qualification
 CREATE OR REPLACE FUNCTION decrease_part_stock(
   part_id UUID,
   quantity_to_decrease INTEGER
@@ -7,11 +7,11 @@ CREATE OR REPLACE FUNCTION decrease_part_stock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = ''
+SET search_path TO 'public'
 AS $$
 BEGIN
   -- Update stock quantity with atomic check
-  UPDATE parts
+  UPDATE public.parts
   SET
     stock_quantity = stock_quantity - quantity_to_decrease,
     updated_at = NOW()
@@ -23,7 +23,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Insufficient stock for part ID: %. Available: %, Requested: %',
       part_id,
-      COALESCE((SELECT stock_quantity FROM parts WHERE id = part_id), 0),
+      COALESCE((SELECT stock_quantity FROM public.parts WHERE id = part_id), 0),
       quantity_to_decrease;
   END IF;
 
@@ -32,7 +32,7 @@ END;
 $$;
 
 -- Function to increase part stock quantity (for returns/restocks)
--- Security: SET search_path = '' prevents schema hijacking vulnerabilities
+-- Security: SET search_path = 'public' and explicit schema qualification
 CREATE OR REPLACE FUNCTION increase_part_stock(
   part_id UUID,
   quantity_to_increase INTEGER
@@ -40,11 +40,11 @@ CREATE OR REPLACE FUNCTION increase_part_stock(
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = ''
+SET search_path TO 'public'
 AS $$
 BEGIN
   -- Update stock quantity
-  UPDATE parts
+  UPDATE public.parts
   SET
     stock_quantity = stock_quantity + quantity_to_increase,
     updated_at = NOW()

@@ -111,7 +111,7 @@ export const ticketsRouter = router({
           part_id: part.part_id,
           quantity: part.quantity,
           unit_price: part.unit_price,
-          total_price: part.unit_price * part.quantity,
+          // Note: total_price is automatically calculated by the database as (quantity * unit_price)
         }));
 
         const { error: partsError } = await ctx.supabaseAdmin

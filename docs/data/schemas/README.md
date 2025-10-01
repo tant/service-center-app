@@ -298,9 +298,11 @@ The declarative schema approach works great for most changes, but has some limit
 #### Not Captured by Schema Diff
 - **Data changes** (INSERT, UPDATE, DELETE statements)
 - **View ownership** and complex grants
-- **RLS policy alterations** (may need manual migrations)
+- **RLS policies on system tables** (e.g., `storage.objects` - requires explicit execution)
 - **Comments** on tables/columns
 - **Partitioned tables**
+
+**Note**: Storage policies in `storage_policies.sql` are applied via explicit `psql` command in the setup script because `supabase db diff` doesn't capture new policies on pre-existing system tables like `storage.objects`.
 
 #### For Complex Changes
 Use traditional migrations for:

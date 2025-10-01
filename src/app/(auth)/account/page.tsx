@@ -57,14 +57,16 @@ export default function Page() {
         avatar_url: profile.avatar_url,
       });
 
-      toast.success("Cập nhật tên thành công!");
+      const successMessage = "Cập nhật tên thành công!";
+      console.log("[Account] Name update success:", successMessage);
+      toast.success(successMessage);
       setIsEditingName(false);
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Cập nhật tên thất bại",
-      );
+      const errorMessage = error instanceof Error ? error.message : "Cập nhật tên thất bại";
+      console.error("[Account] Name update error:", errorMessage, error);
+      toast.error(errorMessage);
       setFullName(profile.full_name || "");
       setIsEditingName(false);
     }
@@ -111,15 +113,17 @@ export default function Page() {
         avatar_url: result.url,
       });
 
-      toast.success("Cập nhật ảnh đại diện thành công!");
+      const successMessage = "Cập nhật ảnh đại diện thành công!";
+      console.log("[Account] Avatar update success:", successMessage, { url: result.url, path: result.path });
+      toast.success(successMessage);
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
       setSelectedFile(null);
       setAvatarPreview("");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Tải lên ảnh đại diện thất bại",
-      );
+      const errorMessage = error instanceof Error ? error.message : "Tải lên ảnh đại diện thất bại";
+      console.error("[Account] Avatar update error:", errorMessage, error);
+      toast.error(errorMessage);
       setAvatarPreview("");
       setSelectedFile(null);
     } finally {

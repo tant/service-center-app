@@ -331,7 +331,7 @@ export const ticketsRouter = router({
         .from("service_ticket_comments")
         .select(`
           *,
-          profiles (
+          profiles!service_ticket_comments_created_by_fkey (
             id,
             name,
             role
@@ -695,6 +695,35 @@ export const ticketsRouter = router({
         .eq("id", input.ticket_id)
         .single();
 
+      // Update stock quantity (decrease)
+      try {
+        const { error: stockError } = await ctx.supabaseAdmin
+          .rpc('decrease_part_stock', {
+            part_id: input.part_id,
+            quantity_to_decrease: input.quantity
+          });
+
+        if (stockError) {
+          // Fallback to manual stock update if RPC function doesn't exist
+          const { data: currentPart, error: fetchError } = await ctx.supabaseAdmin
+            .from('parts')
+            .select('stock_quantity')
+            .eq('id', input.part_id)
+            .single();
+
+          if (!fetchError && currentPart) {
+            const newStock = Math.max(0, currentPart.stock_quantity - input.quantity);
+            await ctx.supabaseAdmin
+              .from('parts')
+              .update({ stock_quantity: newStock })
+              .eq('id', input.part_id);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to update stock for part ${input.part_id}:`, error);
+        // Don't fail the entire operation for stock update errors
+      }
+
       // Create auto-comment for adding part
       const totalPrice = input.quantity * input.unit_price;
       const partName = partInfo?.name || "Linh kiện";
@@ -750,6 +779,66 @@ export const ticketsRouter = router({
 
       if (partError) {
         throw new Error(`Failed to update part: ${partError.message}`);
+      }
+
+      // Update stock quantity if quantity changed
+      if (updateData.quantity !== undefined && updateData.quantity !== currentPart.quantity) {
+        const quantityDiff = updateData.quantity - currentPart.quantity;
+
+        try {
+          if (quantityDiff > 0) {
+            // Quantity increased - need MORE parts from stock (decrease stock)
+            const { error: stockError } = await ctx.supabaseAdmin
+              .rpc('decrease_part_stock', {
+                part_id: currentPart.part_id,
+                quantity_to_decrease: quantityDiff
+              });
+
+            if (stockError) {
+              // Fallback to manual update
+              const { data: part, error: fetchError } = await ctx.supabaseAdmin
+                .from('parts')
+                .select('stock_quantity')
+                .eq('id', currentPart.part_id)
+                .single();
+
+              if (!fetchError && part) {
+                const newStock = Math.max(0, part.stock_quantity - quantityDiff);
+                await ctx.supabaseAdmin
+                  .from('parts')
+                  .update({ stock_quantity: newStock })
+                  .eq('id', currentPart.part_id);
+              }
+            }
+          } else if (quantityDiff < 0) {
+            // Quantity decreased - return parts to stock (increase stock)
+            const { error: stockError } = await ctx.supabaseAdmin
+              .rpc('increase_part_stock', {
+                part_id: currentPart.part_id,
+                quantity_to_increase: Math.abs(quantityDiff)
+              });
+
+            if (stockError) {
+              // Fallback to manual update
+              const { data: part, error: fetchError } = await ctx.supabaseAdmin
+                .from('parts')
+                .select('stock_quantity')
+                .eq('id', currentPart.part_id)
+                .single();
+
+              if (!fetchError && part) {
+                const newStock = part.stock_quantity + Math.abs(quantityDiff);
+                await ctx.supabaseAdmin
+                  .from('parts')
+                  .update({ stock_quantity: newStock })
+                  .eq('id', currentPart.part_id);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to update stock for part ${currentPart.part_id}:`, error);
+          // Don't fail the entire operation for stock update errors
+        }
       }
 
       // Get updated ticket totals
@@ -809,7 +898,7 @@ ${changes.join('\n')}
       // Get part data before deletion for the auto-comment
       const { data: partData, error: fetchError } = await ctx.supabaseAdmin
         .from("service_ticket_parts")
-        .select("ticket_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
+        .select("ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
         .eq("id", input.id)
         .single();
 
@@ -824,6 +913,35 @@ ${changes.join('\n')}
 
       if (partError) {
         throw new Error(`Failed to delete part: ${partError.message}`);
+      }
+
+      // Return parts to stock (increase)
+      try {
+        const { error: stockError } = await ctx.supabaseAdmin
+          .rpc('increase_part_stock', {
+            part_id: partData.part_id,
+            quantity_to_increase: partData.quantity
+          });
+
+        if (stockError) {
+          // Fallback to manual stock update
+          const { data: currentPart, error: fetchError } = await ctx.supabaseAdmin
+            .from('parts')
+            .select('stock_quantity')
+            .eq('id', partData.part_id)
+            .single();
+
+          if (!fetchError && currentPart) {
+            const newStock = currentPart.stock_quantity + partData.quantity;
+            await ctx.supabaseAdmin
+              .from('parts')
+              .update({ stock_quantity: newStock })
+              .eq('id', partData.part_id);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to update stock for part ${partData.part_id}:`, error);
+        // Don't fail the entire operation for stock update errors
       }
 
       // Get updated ticket totals
@@ -875,7 +993,7 @@ ${changes.join('\n')}
         })
         .select(`
           *,
-          profiles (
+          profiles!service_ticket_comments_created_by_fkey (
             id,
             name,
             role
@@ -890,6 +1008,85 @@ ${changes.join('\n')}
       return {
         success: true,
         comment: commentData,
+      };
+    }),
+
+  addAttachment: publicProcedure
+    .input(z.object({
+      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+      file_name: z.string().min(1, "File name is required"),
+      file_path: z.string().min(1, "File path is required"),
+      file_type: z.string().min(1, "File type is required"),
+      file_size: z.number().min(0, "File size must be non-negative"),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to add attachments");
+      }
+
+      const { data: attachmentData, error: attachmentError } = await ctx.supabaseAdmin
+        .from("service_ticket_attachments")
+        .insert({
+          ticket_id: input.ticket_id,
+          file_name: input.file_name,
+          file_path: input.file_path,
+          file_type: input.file_type,
+          file_size: input.file_size,
+          description: input.description,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (attachmentError) {
+        throw new Error(`Failed to add attachment: ${attachmentError.message}`);
+      }
+
+      return {
+        success: true,
+        attachment: attachmentData,
+      };
+    }),
+
+  getAttachments: publicProcedure
+    .input(z.object({ ticket_id: z.string().uuid("Ticket ID must be a valid UUID") }))
+    .query(async ({ input, ctx }) => {
+      const { data: attachments, error } = await ctx.supabaseAdmin
+        .from("service_ticket_attachments")
+        .select("*")
+        .eq("ticket_id", input.ticket_id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch attachments: ${error.message}`);
+      }
+
+      return attachments || [];
+    }),
+
+  deleteAttachment: publicProcedure
+    .input(z.object({ id: z.string().uuid("Attachment ID must be a valid UUID") }))
+    .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Unauthorized: You must be logged in to delete attachments");
+      }
+
+      const { error: deleteError } = await ctx.supabaseAdmin
+        .from("service_ticket_attachments")
+        .delete()
+        .eq("id", input.id);
+
+      if (deleteError) {
+        throw new Error(`Failed to delete attachment: ${deleteError.message}`);
+      }
+
+      return {
+        success: true,
       };
     }),
 });

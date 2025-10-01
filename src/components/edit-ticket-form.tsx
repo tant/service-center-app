@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit } from "@tabler/icons-react";
+import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload } from "@tabler/icons-react";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
+import { createClient } from "@/utils/supabase/client";
 
 interface EditTicketFormProps {
   ticket: any;
@@ -19,6 +20,8 @@ interface EditTicketFormProps {
 
 export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const router = useRouter();
+  const supabase = createClient();
+
   const [formData, setFormData] = useState({
     issue_description: ticket.issue_description || "",
     priority_level: ticket.priority_level || "normal",
@@ -47,6 +50,11 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const { data: availableParts } = trpc.parts.getParts.useQuery();
   const [selectedNewPart, setSelectedNewPart] = useState<string>("");
   const [newPartQuantity, setNewPartQuantity] = useState(1);
+
+  // Image upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const { data: attachments, refetch: refetchAttachments } = trpc.tickets.getAttachments.useQuery({ ticket_id: ticket.id });
 
   const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
@@ -87,6 +95,25 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     onSuccess: () => {
       toast.success("Xóa linh kiện thành công");
       router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const addAttachmentMutation = trpc.tickets.addAttachment.useMutation({
+    onSuccess: () => {
+      refetchAttachments();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi khi lưu thông tin ảnh: ${error.message}`);
+    },
+  });
+
+  const deleteAttachmentMutation = trpc.tickets.deleteAttachment.useMutation({
+    onSuccess: () => {
+      toast.success("Xóa ảnh thành công");
+      refetchAttachments();
     },
     onError: (error) => {
       toast.error(`Lỗi: ${error.message}`);
@@ -157,6 +184,101 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     if (confirm("Bạn có chắc chắn muốn xóa linh kiện này?")) {
       deletePartMutation.mutate({ id: partId });
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+
+    if (imageFiles.length !== files.length) {
+      toast.warning("Chỉ chấp nhận file ảnh");
+    }
+
+    setSelectedFiles((prev) => [...prev, ...imageFiles]);
+  };
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadImages = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      const uploadPromises = selectedFiles.map(async (file) => {
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(7);
+        const filePath = `${ticket.id}/${timestamp}_${randomString}_${file.name}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("service_media")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
+        }
+
+        await addAttachmentMutation.mutateAsync({
+          ticket_id: ticket.id,
+          file_name: file.name,
+          file_path: uploadData.path,
+          file_type: file.type,
+          file_size: file.size,
+        });
+
+        return uploadData;
+      });
+
+      await Promise.all(uploadPromises);
+
+      toast.success(`Đã tải lên ${selectedFiles.length} ảnh thành công`);
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Lỗi khi tải ảnh lên");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, filePath: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa ảnh này?")) return;
+
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from("service_media")
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error("Storage delete error:", storageError);
+      }
+
+      // Delete from database
+      await deleteAttachmentMutation.mutateAsync({ id: attachmentId });
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+  };
+
+  const getPublicUrl = (filePath: string) => {
+    const { data } = supabase.storage
+      .from("service_media")
+      .getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
   };
 
   const partsTotal = parts.reduce((sum: number, part: any) => sum + (part.total_price || 0), 0);
@@ -514,6 +636,125 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
               Chưa có linh kiện nào được sử dụng
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Attachments/Images */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <IconPhoto className="h-5 w-5" />
+            Hình ảnh đính kèm
+          </CardTitle>
+          <CardDescription>
+            Tải lên hình ảnh liên quan đến phiếu dịch vụ (trước/sau sửa chữa, vấn đề phát hiện, v.v.)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Existing images */}
+          {attachments && attachments.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {attachments.map((attachment: any) => (
+                <div key={attachment.id} className="relative group">
+                  <img
+                    src={getPublicUrl(attachment.file_path)}
+                    alt={attachment.file_name}
+                    className="w-full h-32 object-cover rounded-lg border"
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      onClick={() => window.open(getPublicUrl(attachment.file_path), "_blank")}
+                    >
+                      <IconDownload className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      onClick={() => handleDeleteAttachment(attachment.id, attachment.file_path)}
+                      disabled={deleteAttachmentMutation.isPending}
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 truncate" title={attachment.file_name}>
+                    {attachment.file_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(attachment.file_size)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Upload new images */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                disabled={isUploading}
+                className="cursor-pointer"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={isUploading}
+                onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
+              >
+                <IconPhoto className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Selected files preview */}
+            {selectedFiles.length > 0 && (
+              <div className="space-y-2">
+                <Label>Ảnh đã chọn ({selectedFiles.length})</Label>
+                <div className="max-h-[150px] overflow-y-auto space-y-2 border rounded-md p-2">
+                  {selectedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted rounded-md"
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <IconPhoto className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          ({formatFileSize(file.size)})
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => removeSelectedFile(index)}
+                        disabled={isUploading}
+                      >
+                        <IconX className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleUploadImages}
+                  disabled={isUploading}
+                  className="w-full"
+                >
+                  <IconPhoto className="h-4 w-4" />
+                  {isUploading ? "Đang tải lên..." : `Tải lên (${selectedFiles.length})`}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

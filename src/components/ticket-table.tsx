@@ -31,6 +31,8 @@ import {
   IconCheck,
   IconClock,
   IconX,
+  IconMessageCircle,
+  IconPhoto,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
@@ -85,6 +87,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuickCommentModal } from "@/components/quick-comment-modal";
+import { QuickUploadImagesModal } from "@/components/quick-upload-images-modal";
 
 const ticketStatusEnum = z.enum(["open", "in_progress", "resolved", "closed"]);
 const ticketPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
@@ -291,6 +295,10 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     [],
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [commentModalOpen, setCommentModalOpen] = React.useState(false);
+  const [selectedTicketForComment, setSelectedTicketForComment] = React.useState<{ id: string; ticket_number: string } | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [selectedTicketForUpload, setSelectedTicketForUpload] = React.useState<{ id: string; ticket_number: string } | null>(null);
   const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -391,6 +399,22 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const handleAssign = (ticket: Ticket) => {
     toast.success(`Phân công phiếu dịch vụ: ${ticket.ticket_number}`);
     // TODO: Implement reassign dialog
+  };
+
+  const handleComment = (ticket: Ticket) => {
+    setSelectedTicketForComment({
+      id: ticket.id,
+      ticket_number: ticket.ticket_number,
+    });
+    setCommentModalOpen(true);
+  };
+
+  const handleUploadImages = (ticket: Ticket) => {
+    setSelectedTicketForUpload({
+      id: ticket.id,
+      ticket_number: ticket.ticket_number,
+    });
+    setUploadModalOpen(true);
   };
 
   const handleStatusChange = (ticketId: string, newStatus: "pending" | "in_progress" | "completed" | "cancelled") => {
@@ -627,6 +651,14 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleComment(ticket)}>
+                  <IconMessageCircle className="h-4 w-4 mr-2" />
+                  Thêm bình luận
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUploadImages(ticket)}>
+                  <IconPhoto className="h-4 w-4 mr-2" />
+                  Tải ảnh lên
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleAssign(ticket)}>
                   <IconUserCheck className="h-4 w-4 mr-2" />
                   Phân công lại
@@ -828,6 +860,26 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           </div>
         </div>
       </TabsContent>
+
+      {/* Quick Comment Modal */}
+      {selectedTicketForComment && (
+        <QuickCommentModal
+          open={commentModalOpen}
+          onOpenChange={setCommentModalOpen}
+          ticketId={selectedTicketForComment.id}
+          ticketNumber={selectedTicketForComment.ticket_number}
+        />
+      )}
+
+      {/* Quick Upload Images Modal */}
+      {selectedTicketForUpload && (
+        <QuickUploadImagesModal
+          open={uploadModalOpen}
+          onOpenChange={setUploadModalOpen}
+          ticketId={selectedTicketForUpload.id}
+          ticketNumber={selectedTicketForUpload.ticket_number}
+        />
+      )}
     </Tabs>
   );
 }

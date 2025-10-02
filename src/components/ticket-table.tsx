@@ -306,10 +306,39 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     useSensor(KeyboardSensor, {}),
   );
 
+  // Get current user and all users for assignment
+  const { data: currentUser } = trpc.profile.getCurrentUser.useQuery();
+  const { data: allUsers } = trpc.profile.getAllUsers.useQuery();
+
   // Update data when initialData changes
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
+
+  const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
+    onSuccess: (result, variables) => {
+      toast.success("Cập nhật phiếu dịch vụ thành công");
+
+      // Optimistically update the UI
+      setData((prevData) =>
+        prevData.map((ticket) =>
+          ticket.id === variables.id
+            ? {
+                ...ticket,
+                ...variables,
+              }
+            : ticket
+        )
+      );
+
+      // Also refresh from server
+      router.refresh();
+    },
+    onError: (error) => {
+      console.error("[TicketTable] Update ticket error:", error);
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
 
   const updateStatusMutation = trpc.tickets.updateTicketStatus.useMutation({
     onSuccess: (result, variables) => {
@@ -412,15 +441,30 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     router.push(`/tickets/${ticket.id}/edit`);
   };
 
-  const handleAssign = (ticket: Ticket) => {
-    console.log("[TicketTable] Assign ticket:", {
-      ticketId: ticket.id,
-      ticketNumber: ticket.ticket_number,
-      currentStatus: ticket.status,
-      timestamp: new Date().toISOString(),
+  const handleAssignToMe = (ticket: Ticket) => {
+    if (!currentUser) {
+      toast.error("Không thể xác định người dùng hiện tại");
+      return;
+    }
+
+    updateTicketMutation.mutate({
+      id: ticket.id,
+      assigned_to: currentUser.user_id,
     });
-    toast.success(`Phân công phiếu dịch vụ: ${ticket.ticket_number}`);
-    // TODO: Implement reassign dialog
+  };
+
+  const handleAssignTo = (ticket: Ticket, userId: string) => {
+    updateTicketMutation.mutate({
+      id: ticket.id,
+      assigned_to: userId,
+    });
+  };
+
+  const handleUnassign = (ticket: Ticket) => {
+    updateTicketMutation.mutate({
+      id: ticket.id,
+      assigned_to: null,
+    });
   };
 
   const handleComment = (ticket: Ticket) => {
@@ -681,10 +725,47 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                   <IconPhoto className="h-4 w-4 mr-2" />
                   Tải ảnh lên
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleAssign(ticket)}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleAssignToMe(ticket)}
+                  disabled={!currentUser || ticket.assigned_to === currentUser?.user_id}
+                >
                   <IconUserCheck className="h-4 w-4 mr-2" />
-                  Phân công lại
+                  Phân công cho tôi
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <IconUserCheck className="h-4 w-4 mr-2" />
+                    Phân công cho
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {allUsers && allUsers.length > 0 ? (
+                      <>
+                        {allUsers.map((user) => (
+                          <DropdownMenuItem
+                            key={user.user_id}
+                            onClick={() => handleAssignTo(ticket, user.user_id)}
+                            disabled={ticket.assigned_to === user.user_id}
+                          >
+                            {user.full_name}
+                            {ticket.assigned_to === user.user_id && " ✓"}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleUnassign(ticket)}
+                          disabled={!ticket.assigned_to}
+                        >
+                          Hủy phân công
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        Không có người dùng
+                      </div>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleView(ticket)}>
                   <IconEye className="h-4 w-4 mr-2" />

@@ -331,10 +331,10 @@ export const ticketsRouter = router({
         .from("service_ticket_comments")
         .select(`
           *,
-          profiles!service_ticket_comments_created_by_fkey (
+          profiles:created_by (
             id,
-            name,
-            role
+            full_name,
+            roles
           )
         `)
         .eq("ticket_id", input.id)
@@ -993,10 +993,10 @@ ${changes.join('\n')}
         })
         .select(`
           *,
-          profiles!service_ticket_comments_created_by_fkey (
+          profiles:created_by (
             id,
-            name,
-            role
+            full_name,
+            roles
           )
         `)
         .single();

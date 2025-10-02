@@ -57,13 +57,13 @@ async function getTicketData(ticketId: string) {
           sku
         )
       ),
-      service_ticket_comments!service_ticket_comments_ticket_id_fkey (
+      service_ticket_comments (
         id,
         comment,
         is_internal,
         created_at,
         created_by,
-        profiles!service_ticket_comments_created_by_fkey (
+        profiles:created_by (
           id,
           full_name,
           roles

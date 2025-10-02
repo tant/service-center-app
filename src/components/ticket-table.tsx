@@ -313,6 +313,13 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   const updateStatusMutation = trpc.tickets.updateTicketStatus.useMutation({
     onSuccess: (result, variables) => {
+      console.log("[TicketTable] Update status success:", {
+        ticketId: variables.id,
+        oldStatus: data.find(t => t.id === variables.id)?.status,
+        newStatus: variables.status,
+        mappedStatus: mapDatabaseStatusToUI(variables.status),
+        timestamp: new Date().toISOString(),
+      });
       toast.success("Cập nhật trạng thái thành công");
 
       // Optimistically update the UI
@@ -331,6 +338,11 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       router.refresh();
     },
     onError: (error) => {
+      console.error("[TicketTable] Update status error:", {
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
@@ -401,6 +413,12 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   };
 
   const handleAssign = (ticket: Ticket) => {
+    console.log("[TicketTable] Assign ticket:", {
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      currentStatus: ticket.status,
+      timestamp: new Date().toISOString(),
+    });
     toast.success(`Phân công phiếu dịch vụ: ${ticket.ticket_number}`);
     // TODO: Implement reassign dialog
   };

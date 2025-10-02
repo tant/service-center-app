@@ -109,10 +109,23 @@ export function AddTicketForm() {
 
   const createTicketMutation = trpc.tickets.createTicket.useMutation({
     onSuccess: (data) => {
+      console.log("[AddTicketForm] Create ticket success:", {
+        ticketId: data.ticket.id,
+        ticketNumber: data.ticket.ticket_number,
+        customerId: data.ticket.customer_id,
+        productId: data.ticket.product_id,
+        timestamp: new Date().toISOString(),
+      });
       toast.success("Phiếu dịch vụ đã được tạo thành công!");
       router.push(`/tickets/${data.ticket.id}`);
     },
     onError: (error) => {
+      console.error("[AddTicketForm] Create ticket error:", {
+        error: error.message,
+        errorData: error.data,
+        errorShape: error.shape,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(error.message || "Có lỗi xảy ra khi tạo phiếu dịch vụ");
     },
   });
@@ -246,9 +259,34 @@ export function AddTicketForm() {
 
   const handleSubmit = async () => {
     if (!canSubmit) {
+      console.warn("[AddTicketForm] Validation failed:", {
+        canSubmit,
+        canProceedToStep2,
+        canProceedToStep3,
+        canProceedToStep4,
+        hasCustomerName: !!customerData.name,
+        hasCustomerPhone: !!customerData.phone,
+        isValidPhone: isValidPhone(customerData.phone),
+        hasDescription: !!ticketData.description.trim(),
+        hasProduct: !!ticketData.product_id,
+        serviceFee: ticketData.service_fee,
+        timestamp: new Date().toISOString(),
+      });
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
+
+    console.log("[AddTicketForm] Submitting ticket:", {
+      customerData,
+      productId: ticketData.product_id,
+      description: ticketData.description.substring(0, 50) + "...",
+      serviceFee: ticketData.service_fee,
+      diagnosisFee: ticketData.diagnosis_fee,
+      partsCount: selectedParts.length,
+      partsTotal,
+      total,
+      timestamp: new Date().toISOString(),
+    });
 
     setIsLoading(true);
     try {

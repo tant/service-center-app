@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload } from "@tabler/icons-react";
+import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye } from "@tabler/icons-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
 
@@ -56,66 +57,176 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const { data: attachments, refetch: refetchAttachments } = trpc.tickets.getAttachments.useQuery({ ticket_id: ticket.id });
 
+  // Image view modal state
+  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
+
   const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
+      console.log("[EditTicketForm] Update ticket success:", {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        timestamp: new Date().toISOString(),
+      });
       toast.success("Cập nhật phiếu dịch vụ thành công");
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
     },
     onError: (error) => {
+      console.error("[EditTicketForm] Update ticket error:", {
+        ticketId: ticket.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
 
   const addPartMutation = trpc.tickets.addTicketPart.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("[EditTicketForm] Add part success:", {
+        ticketId: ticket.id,
+        partId: selectedNewPart,
+        quantity: newPartQuantity,
+        addedPartData: data,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update local parts state immediately
+      const part = availableParts?.find(p => p.id === selectedNewPart);
+      if (part && data.part) {
+        setParts((prev: any[]) => [...prev, {
+          id: data.part.id,
+          part_id: selectedNewPart,
+          part_name: part.name,
+          quantity: newPartQuantity,
+          unit_price: part.price,
+          total_price: part.price * newPartQuantity,
+        }]);
+      }
+
       toast.success("Thêm linh kiện thành công");
-      router.refresh();
       setSelectedNewPart("");
       setNewPartQuantity(1);
+      router.refresh();
     },
     onError: (error) => {
+      console.error("[EditTicketForm] Add part error:", {
+        ticketId: ticket.id,
+        partId: selectedNewPart,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
 
   const updatePartMutation = trpc.tickets.updateTicketPart.useMutation({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log("[EditTicketForm] Update part success:", {
+        ticketId: ticket.id,
+        ticketPartId: editingPartId,
+        updatedData: variables,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update local parts state immediately
+      if (editingPartId && editingPartData) {
+        setParts((prev: any[]) => prev.map(part =>
+          part.id === editingPartId
+            ? {
+                ...part,
+                quantity: editingPartData.quantity,
+                unit_price: editingPartData.unit_price,
+                total_price: editingPartData.quantity * editingPartData.unit_price,
+              }
+            : part
+        ));
+      }
+
       toast.success("Cập nhật linh kiện thành công");
       setEditingPartId(null);
       setEditingPartData(null);
       router.refresh();
     },
     onError: (error) => {
+      console.error("[EditTicketForm] Update part error:", {
+        ticketId: ticket.id,
+        ticketPartId: editingPartId,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
 
   const deletePartMutation = trpc.tickets.deleteTicketPart.useMutation({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log("[EditTicketForm] Delete part success:", {
+        ticketId: ticket.id,
+        ticketPartId: variables.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update local parts state immediately
+      setParts((prev: any[]) => prev.filter(part => part.id !== variables.id));
+
       toast.success("Xóa linh kiện thành công");
       router.refresh();
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      console.error("[EditTicketForm] Delete part error:", {
+        ticketId: ticket.id,
+        ticketPartId: variables.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
 
   const addAttachmentMutation = trpc.tickets.addAttachment.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("[EditTicketForm] Add attachment success:", {
+        ticketId: ticket.id,
+        attachmentId: data.attachment?.id,
+        attachmentData: data,
+        timestamp: new Date().toISOString(),
+      });
       refetchAttachments();
     },
     onError: (error) => {
+      console.error("[EditTicketForm] Add attachment error:", {
+        ticketId: ticket.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi khi lưu thông tin ảnh: ${error.message}`);
     },
   });
 
   const deleteAttachmentMutation = trpc.tickets.deleteAttachment.useMutation({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log("[EditTicketForm] Delete attachment success:", {
+        ticketId: ticket.id,
+        attachmentId: variables.id,
+        timestamp: new Date().toISOString(),
+      });
       toast.success("Xóa ảnh thành công");
       refetchAttachments();
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      console.error("[EditTicketForm] Delete attachment error:", {
+        ticketId: ticket.id,
+        attachmentId: variables.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
@@ -142,6 +253,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
   const handleAddPart = () => {
     if (!selectedNewPart) {
+      console.warn("[EditTicketForm] Add part validation failed: No part selected", {
+        ticketId: ticket.id,
+        timestamp: new Date().toISOString(),
+      });
       toast.error("Vui lòng chọn linh kiện");
       return;
     }
@@ -191,6 +306,13 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
     if (imageFiles.length !== files.length) {
+      console.warn("[EditTicketForm] File type validation:", {
+        ticketId: ticket.id,
+        totalFiles: files.length,
+        imageFiles: imageFiles.length,
+        rejectedCount: files.length - imageFiles.length,
+        timestamp: new Date().toISOString(),
+      });
       toast.warning("Chỉ chấp nhận file ảnh");
     }
 
@@ -204,6 +326,13 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const handleUploadImages = async () => {
     if (selectedFiles.length === 0) return;
 
+    console.log("[EditTicketForm] Starting image upload:", {
+      ticketId: ticket.id,
+      fileCount: selectedFiles.length,
+      files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+      timestamp: new Date().toISOString(),
+    });
+
     setIsUploading(true);
 
     try {
@@ -211,6 +340,14 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(7);
         const filePath = `${ticket.id}/${timestamp}_${randomString}_${file.name}`;
+
+        console.log("[EditTicketForm] Uploading file to storage:", {
+          ticketId: ticket.id,
+          fileName: file.name,
+          filePath,
+          fileSize: file.size,
+          bucket: "service_media",
+        });
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("service_media")
@@ -220,8 +357,20 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           });
 
         if (uploadError) {
+          console.error("[EditTicketForm] Storage upload failed:", {
+            ticketId: ticket.id,
+            fileName: file.name,
+            error: uploadError.message,
+            errorDetails: uploadError,
+          });
           throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
         }
+
+        console.log("[EditTicketForm] Storage upload success, saving attachment:", {
+          ticketId: ticket.id,
+          fileName: file.name,
+          storagePath: uploadData.path,
+        });
 
         await addAttachmentMutation.mutateAsync({
           ticket_id: ticket.id,
@@ -236,10 +385,21 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
       await Promise.all(uploadPromises);
 
+      console.log("[EditTicketForm] All images uploaded successfully:", {
+        ticketId: ticket.id,
+        uploadedCount: selectedFiles.length,
+        timestamp: new Date().toISOString(),
+      });
+
       toast.success(`Đã tải lên ${selectedFiles.length} ảnh thành công`);
       setSelectedFiles([]);
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("[EditTicketForm] Upload error:", {
+        ticketId: ticket.id,
+        error: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(error instanceof Error ? error.message : "Lỗi khi tải ảnh lên");
     } finally {
       setIsUploading(false);
@@ -292,7 +452,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           <CardTitle>Thông tin cơ bản</CardTitle>
           <CardDescription>Thông tin khách hàng và sản phẩm (không thể chỉnh sửa)</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+        <CardContent className="grid gap-4">
           <div className="space-y-2">
             <Label>Khách hàng</Label>
             <Input value={ticket.customers?.name || ""} disabled />
@@ -304,10 +464,6 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           <div className="space-y-2">
             <Label>Sản phẩm</Label>
             <Input value={ticket.products?.name || ""} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Loại sản phẩm</Label>
-            <Input value={ticket.products?.type || ""} disabled />
           </div>
         </CardContent>
       </Card>
@@ -659,9 +815,18 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   <img
                     src={getPublicUrl(attachment.file_path)}
                     alt={attachment.file_name}
-                    className="w-full h-32 object-cover rounded-lg border"
+                    className="w-full h-32 object-cover rounded-lg border cursor-pointer"
+                    onClick={() => setViewingImage({ url: getPublicUrl(attachment.file_path), name: attachment.file_name })}
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      onClick={() => setViewingImage({ url: getPublicUrl(attachment.file_path), name: attachment.file_name })}
+                    >
+                      <IconEye className="h-4 w-4" />
+                    </Button>
                     <Button
                       type="button"
                       size="icon"
@@ -772,6 +937,22 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
         </Button>
       </div>
+
+      {/* Image View Modal */}
+      <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{viewingImage?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-4">
+            <img
+              src={viewingImage?.url}
+              alt={viewingImage?.name}
+              className="max-h-[70vh] max-w-full object-contain rounded-lg"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

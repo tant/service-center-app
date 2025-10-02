@@ -21,8 +21,8 @@ interface Comment {
   created_by: string;
   profiles?: {
     id: string;
-    name: string;
-    role: string;
+    full_name: string;
+    roles: string;
   } | null;
 }
 
@@ -39,6 +39,12 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
 
   const addCommentMutation = trpc.tickets.addComment.useMutation({
     onSuccess: (result) => {
+      console.log("[TicketComments] Add comment success:", {
+        ticketId,
+        commentId: result.comment?.id,
+        isInternal: result.comment?.is_internal,
+        timestamp: new Date().toISOString(),
+      });
       toast.success("Đã thêm bình luận");
       setNewComment("");
       setIsInternal(false);
@@ -50,6 +56,12 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
       }
     },
     onError: (error) => {
+      console.error("[TicketComments] Add comment error:", {
+        ticketId,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
       toast.error(`Lỗi: ${error.message}`);
     },
   });
@@ -58,9 +70,20 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
     e.preventDefault();
 
     if (!newComment.trim()) {
+      console.warn("[TicketComments] Validation failed: Empty comment", {
+        ticketId,
+        timestamp: new Date().toISOString(),
+      });
       toast.error("Vui lòng nhập nội dung bình luận");
       return;
     }
+
+    console.log("[TicketComments] Submitting comment:", {
+      ticketId,
+      commentLength: newComment.length,
+      isInternal,
+      timestamp: new Date().toISOString(),
+    });
 
     addCommentMutation.mutate({
       ticket_id: ticketId,
@@ -140,13 +163,13 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                         <p className="font-medium text-sm">
                           {isAuto ? (
                             <span className="flex items-center gap-1">
-                              {comment.profiles?.name || "Hệ thống"}
+                              {comment.profiles?.full_name || "Hệ thống"}
                               <Badge variant="outline" className="text-xs">
                                 Tự động
                               </Badge>
                             </span>
                           ) : (
-                            comment.profiles?.name || "Unknown User"
+                            comment.profiles?.full_name || "Unknown User"
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">

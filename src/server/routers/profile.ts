@@ -188,4 +188,21 @@ export const profileRouter = router({
         });
       }
     }),
+
+  getAllUsers: publicProcedure.query(async ({ ctx }) => {
+    const { data: profiles, error } = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("user_id, full_name, roles, is_active")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to fetch users: ${error.message}`,
+      });
+    }
+
+    return profiles || [];
+  }),
 });

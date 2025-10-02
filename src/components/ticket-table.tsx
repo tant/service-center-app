@@ -319,19 +319,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     onSuccess: (result, variables) => {
       toast.success("Cập nhật phiếu dịch vụ thành công");
 
-      // Optimistically update the UI
-      setData((prevData) =>
-        prevData.map((ticket) =>
-          ticket.id === variables.id
-            ? {
-                ...ticket,
-                ...variables,
-              }
-            : ticket
-        )
-      );
-
-      // Also refresh from server
+      // Refresh from server since the mutation and table use different schemas
       router.refresh();
     },
     onError: (error) => {

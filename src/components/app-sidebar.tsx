@@ -83,13 +83,13 @@ const baseData = {
       name: "Sản phẩm dịch vụ",
       url: "/products",
       icon: IconDevices,
-      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
+      allowedRoles: ["admin", "manager"] as UserRole[],
     },
     {
       name: "Kho linh kiện",
       url: "/parts",
       icon: IconComponents,
-      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
+      allowedRoles: ["admin", "manager"] as UserRole[],
     },
     {
       name: "Quản lý nhãn hàng (TODOS)",

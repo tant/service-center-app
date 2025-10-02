@@ -128,7 +128,7 @@ function DragHandle({ id }: { id: string }) {
       className="text-muted-foreground size-7 hover:bg-transparent"
     >
       <IconGripVertical className="text-muted-foreground size-3" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">Kéo để sắp xếp lại</span>
     </Button>
   );
 }
@@ -269,7 +269,7 @@ function DataTable<TData extends { id: string }, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No tickets found.
+                  Không tìm thấy phiếu dịch vụ.
                 </TableCell>
               </TableRow>
             )}
@@ -494,7 +494,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
-            aria-label="Select all"
+            aria-label="Chọn tất cả"
           />
         </div>
       ),
@@ -503,7 +503,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
+            aria-label="Chọn hàng"
           />
         </div>
       ),
@@ -744,7 +744,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             size="sm"
             id="view-selector"
           >
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder="Chọn chế độ xem" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="tickets-list">Danh sách ticket</SelectItem>

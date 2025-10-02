@@ -14,8 +14,19 @@ interface PageProps {
 }
 
 async function getTicketData(ticketId: string) {
-  const supabase = await createClient();
+  console.log("[TicketDetailPage] === START getTicketData ===");
+  console.log("[TicketDetailPage] Input ticketId:", ticketId);
+  console.log("[TicketDetailPage] ticketId type:", typeof ticketId);
+  console.log("[TicketDetailPage] ticketId length:", ticketId?.length);
+  console.log("[TicketDetailPage] ticketId is valid UUID:", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId));
 
+  console.log("[TicketDetailPage] Creating Supabase client...");
+  const supabase = await createClient();
+  console.log("[TicketDetailPage] Supabase client created");
+
+  console.log("[TicketDetailPage] Executing query with ID:", ticketId);
+
+  const queryStart = Date.now();
   const { data: ticket, error } = await supabase
     .from("service_tickets")
     .select(`
@@ -54,17 +65,61 @@ async function getTicketData(ticketId: string) {
         created_by,
         profiles!service_ticket_comments_created_by_fkey (
           id,
-          name,
-          role
+          full_name,
+          roles
         )
       )
     `)
     .eq("id", ticketId)
     .single();
 
-  if (error || !ticket) {
+  const queryDuration = Date.now() - queryStart;
+  console.log("[TicketDetailPage] Query completed in:", queryDuration, "ms");
+
+  if (error) {
+    console.error("[TicketDetailPage] === DATABASE ERROR ===");
+    console.error("[TicketDetailPage] Error object:", error);
+    console.error("[TicketDetailPage] Error message:", error.message);
+    console.error("[TicketDetailPage] Error code:", error.code);
+    console.error("[TicketDetailPage] Error details:", error.details);
+    console.error("[TicketDetailPage] Error hint:", error.hint);
+    console.error("[TicketDetailPage] Full error:", JSON.stringify(error, null, 2));
+    console.error("[TicketDetailPage] === END DATABASE ERROR ===");
     return null;
   }
+
+  console.log("[TicketDetailPage] Query returned data:", !!ticket);
+  console.log("[TicketDetailPage] Data is null:", ticket === null);
+  console.log("[TicketDetailPage] Data is undefined:", ticket === undefined);
+
+  if (!ticket) {
+    console.warn("[TicketDetailPage] === TICKET NOT FOUND ===");
+    console.warn("[TicketDetailPage] No ticket data returned for ID:", ticketId);
+    console.warn("[TicketDetailPage] This will trigger 404");
+    console.warn("[TicketDetailPage] === END TICKET NOT FOUND ===");
+    return null;
+  }
+
+  console.log("[TicketDetailPage] === TICKET DATA LOADED ===");
+  console.log("[TicketDetailPage] Ticket ID:", ticket.id);
+  console.log("[TicketDetailPage] Ticket Number:", ticket.ticket_number);
+  console.log("[TicketDetailPage] Status:", ticket.status);
+  console.log("[TicketDetailPage] Customer ID:", ticket.customer_id);
+  console.log("[TicketDetailPage] Customer object:", !!ticket.customers);
+  console.log("[TicketDetailPage] Customer name:", ticket.customers?.name);
+  console.log("[TicketDetailPage] Product ID:", ticket.product_id);
+  console.log("[TicketDetailPage] Product object:", !!ticket.products);
+  console.log("[TicketDetailPage] Product name:", ticket.products?.name);
+  console.log("[TicketDetailPage] Parts array:", Array.isArray(ticket.service_ticket_parts));
+  console.log("[TicketDetailPage] Parts count:", ticket.service_ticket_parts?.length || 0);
+  console.log("[TicketDetailPage] Comments array:", Array.isArray(ticket.service_ticket_comments));
+  console.log("[TicketDetailPage] Comments count:", ticket.service_ticket_comments?.length || 0);
+  console.log("[TicketDetailPage] Service Fee:", ticket.service_fee);
+  console.log("[TicketDetailPage] Diagnosis Fee:", ticket.diagnosis_fee);
+  console.log("[TicketDetailPage] Parts Total:", ticket.parts_total);
+  console.log("[TicketDetailPage] Total Cost:", ticket.total_cost);
+  console.log("[TicketDetailPage] Full ticket object keys:", Object.keys(ticket));
+  console.log("[TicketDetailPage] === END TICKET DATA ===");
 
   return ticket;
 }
@@ -95,13 +150,45 @@ function getPriorityBadge(priority: string) {
   );
 }
 
+function getWarrantyType(warrantyType: string) {
+  const warrantyMap = {
+    warranty: "Bảo hành",
+    paid: "Trả phí",
+  };
+  return warrantyMap[warrantyType as keyof typeof warrantyMap] || warrantyType;
+}
+
 export default async function Page({ params }: PageProps) {
-  const { "ticket-id": ticketId } = await params;
+  console.log("[TicketDetailPage] ========== PAGE COMPONENT START ==========");
+  console.log("[TicketDetailPage] Awaiting params...");
+  const resolvedParams = await params;
+  console.log("[TicketDetailPage] Params resolved:", resolvedParams);
+
+  const ticketId = resolvedParams["ticket-id"];
+  console.log("[TicketDetailPage] Extracted ticketId:", ticketId);
+  console.log("[TicketDetailPage] ticketId type:", typeof ticketId);
+  console.log("[TicketDetailPage] ticketId value:", JSON.stringify(ticketId));
+
+  console.log("[TicketDetailPage] Calling getTicketData with ID:", ticketId);
   const ticket = await getTicketData(ticketId);
+  console.log("[TicketDetailPage] getTicketData returned:", ticket ? "DATA" : "NULL");
 
   if (!ticket) {
+    console.error("[TicketDetailPage] ========== 404 TRIGGERED ==========");
+    console.error("[TicketDetailPage] No ticket data available");
+    console.error("[TicketDetailPage] ticketId was:", ticketId);
+    console.error("[TicketDetailPage] Calling notFound() to show 404 page");
+    console.error("[TicketDetailPage] ========== END 404 ==========");
     notFound();
   }
+
+  console.log("[TicketDetailPage] ========== SUCCESS - RENDERING PAGE ==========");
+  console.log("[TicketDetailPage] Ticket Number:", ticket.ticket_number);
+  console.log("[TicketDetailPage] Has Customer:", !!ticket.customers);
+  console.log("[TicketDetailPage] Has Product:", !!ticket.products);
+  console.log("[TicketDetailPage] Has Parts:", (ticket.service_ticket_parts?.length || 0) > 0);
+  console.log("[TicketDetailPage] Has Comments:", (ticket.service_ticket_comments?.length || 0) > 0);
+  console.log("[TicketDetailPage] ========== PROCEEDING TO RENDER ==========");
 
   return (
     <>
@@ -132,7 +219,7 @@ export default async function Page({ params }: PageProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Loại bảo hành:</span>
-                <span className="capitalize">{ticket.warranty_type}</span>
+                <span>{getWarrantyType(ticket.warranty_type)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ngày tạo:</span>

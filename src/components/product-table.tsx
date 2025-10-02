@@ -133,7 +133,7 @@ function DragHandle({ id }: { id: string }) {
       className="text-muted-foreground size-7 hover:bg-transparent"
     >
       <IconGripVertical className="text-muted-foreground size-3" />
-      <span className="sr-only">Drag to reorder</span>
+      <span className="sr-only">Kéo để sắp xếp lại</span>
     </Button>
   );
 }
@@ -154,7 +154,7 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
+          aria-label="Chọn tất cả"
         />
       </div>
     ),
@@ -163,7 +163,7 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
+          aria-label="Chọn hàng"
         />
       </div>
     ),
@@ -461,7 +461,7 @@ export function ProductTable({
             size="sm"
             id="view-selector"
           >
-            <SelectValue placeholder="Select a view" />
+            <SelectValue placeholder="Chọn chế độ xem" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="product-list">DS Sản phẩm</SelectItem>
@@ -582,7 +582,7 @@ export function ProductTable({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No products found.
+                      Không tìm thấy sản phẩm.
                     </TableCell>
                   </TableRow>
                 )}
@@ -932,7 +932,7 @@ function ProductModal({
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="Enter product name"
+                placeholder="Nhập tên sản phẩm"
                 required
               />
             </div>
@@ -945,7 +945,7 @@ function ProductModal({
                   onChange={(e) =>
                     setFormData({ ...formData, sku: e.target.value })
                   }
-                  placeholder="Enter SKU (optional)"
+                  placeholder="Nhập SKU (tùy chọn)"
                 />
               </div>
               <div className="flex flex-col gap-3">
@@ -963,7 +963,7 @@ function ProductModal({
                   ) => setFormData({ ...formData, type: value })}
                 >
                   <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder="Chọn loại" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="VGA">VGA</SelectItem>
@@ -986,7 +986,7 @@ function ProductModal({
                   }
                 >
                   <SelectTrigger id="brand" className="w-full">
-                    <SelectValue placeholder="Select brand (optional)" />
+                    <SelectValue placeholder="Chọn thương hiệu (tùy chọn)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ZOTAC">ZOTAC</SelectItem>
@@ -1003,7 +1003,7 @@ function ProductModal({
                   onChange={(e) =>
                     setFormData({ ...formData, model: e.target.value })
                   }
-                  placeholder="Enter model (optional)"
+                  placeholder="Nhập model (tùy chọn)"
                 />
               </div>
             </div>
@@ -1018,7 +1018,7 @@ function ProductModal({
                     short_description: e.target.value,
                   })
                 }
-                placeholder="Enter product description (optional)"
+                placeholder="Nhập mô tả sản phẩm (tùy chọn)"
                 rows={3}
               />
             </div>
@@ -1030,7 +1030,7 @@ function ProductModal({
                 onChange={(e) =>
                   setFormData({ ...formData, primary_image: e.target.value })
                 }
-                placeholder="Enter image URL (optional)"
+                placeholder="Nhập URL hình ảnh (tùy chọn)"
               />
             </div>
             <div className="flex flex-col gap-3">

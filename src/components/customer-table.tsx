@@ -1017,7 +1017,8 @@ function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
       size="sm"
     >
       <IconDatabase className="h-4 w-4" />
-      {isLoading ? "Đang thêm..." : "Thêm 500 mẫu"}
+      <span className="hidden lg:inline">{isLoading ? "Đang thêm..." : "Thêm 500 mẫu"}</span>
+      
     </Button>
   );
 }

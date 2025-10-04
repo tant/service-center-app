@@ -649,7 +649,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           <div className="border rounded-lg p-4 space-y-3">
             <h4 className="font-medium">Thêm linh kiện mới</h4>
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="new-part">Linh kiện</Label>
                 <Select value={selectedNewPart} onValueChange={setSelectedNewPart}>
                   <SelectTrigger id="new-part">
@@ -664,7 +664,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="new-quantity">Số lượng</Label>
                 <Input
                   id="new-quantity"
@@ -681,7 +681,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   disabled={addPartMutation.isPending}
                   className="w-full"
                 >
-                  <IconPlus className="h-4 w-4 mr-2" />
+                  <IconPlus className="h-4 w-4" />
                   Thêm
                 </Button>
               </div>

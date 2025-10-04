@@ -1115,21 +1115,21 @@ function ProductModal({
               <>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Product ID</Label>
                     <div className="font-mono text-xs">{product.id}</div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Type</Label>
                     <div>{product.type}</div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Created</Label>
                     <div>
                       {new Date(product.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Updated</Label>
                     <div>
                       {new Date(product.updated_at).toLocaleDateString()}

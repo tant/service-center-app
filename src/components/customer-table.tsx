@@ -866,19 +866,19 @@ function CustomerModal({
               <>
                 <div className="border-t pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
+                    <div className="space-y-1">
                       <Label className="text-muted-foreground">
                         ID Khách hàng
                       </Label>
                       <div className="font-mono text-xs">{customer.id}</div>
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <Label className="text-muted-foreground">Ngày tạo</Label>
                       <div>
                         {new Date(customer.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <Label className="text-muted-foreground">Cập nhật</Label>
                       <div>
                         {new Date(customer.updated_at).toLocaleDateString()}

@@ -1015,21 +1015,21 @@ function TeamMemberModal({
               <>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">User ID</Label>
                     <div className="font-mono text-xs">{member.user_id}</div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Profile ID</Label>
                     <div className="font-mono text-xs">{member.id}</div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Created</Label>
                     <div>
                       {new Date(member.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <Label className="text-muted-foreground">Updated</Label>
                     <div>
                       {new Date(member.updated_at).toLocaleDateString()}

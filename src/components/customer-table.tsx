@@ -652,7 +652,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
         </div>
         <DataTable
           columns={columns}
-          data={data}
+          data={filteredData}
           searchValue={searchValue}
           sensors={sensors}
           sortableId={sortableId}

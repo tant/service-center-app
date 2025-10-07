@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool } from "@tabler/icons-react";
+import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool, IconMinus } from "@tabler/icons-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
@@ -728,7 +728,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             <div className="space-y-2">
               <h4 className="font-medium">Linh kiện đã sử dụng</h4>
               {parts.map((part: any) => (
-                <div key={part.id} className="flex items-center gap-2 border-b pb-2">
+                <div key={part.id} className="flex items-start gap-2 border-b pb-2">
                   {editingPartId === part.id ? (
                     // Edit mode
                     <>
@@ -737,32 +737,44 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                           <p className="text-sm font-medium">{part.part_name}</p>
                         </div>
                         <div>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={editingPartData?.quantity}
-                            onChange={(e) =>
-                              setEditingPartData({
-                                ...editingPartData!,
-                                quantity: Number(e.target.value),
-                              })
-                            }
-                            className="h-8"
-                          />
+                          <div className="flex items-center border rounded-md w-fit">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-r-none border-r"
+                              onClick={() =>
+                                setEditingPartData({
+                                  ...editingPartData!,
+                                  quantity: Math.max(1, (editingPartData?.quantity || 1) - 1),
+                                })
+                              }
+                            >
+                              <IconMinus className="h-3 w-3" />
+                            </Button>
+                            <div className="h-8 px-2 flex items-center justify-center min-w-[60px] bg-background border-x-0 text-sm font-medium">
+                              {editingPartData?.quantity}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-l-none border-l"
+                              onClick={() =>
+                                setEditingPartData({
+                                  ...editingPartData!,
+                                  quantity: (editingPartData?.quantity || 1) + 1,
+                                })
+                              }
+                            >
+                              <IconPlus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editingPartData?.unit_price}
-                            onChange={(e) =>
-                              setEditingPartData({
-                                ...editingPartData!,
-                                unit_price: Number(e.target.value),
-                              })
-                            }
-                            className="h-8"
-                          />
+                        <div className="text-right min-w-[100px]">
+                          <p className="font-medium">
+                            {part.total_price.toLocaleString("vi-VN")} ₫
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-1">

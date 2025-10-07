@@ -455,23 +455,23 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             {/* <CardDescription>Thông tin khách hàng và sản phẩm</CardDescription> */}
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-sm font-medium text-muted-foreground">Khách hàng</div>
-              <div className="text-sm font-medium">{ticket.customers?.name || ""}</div>
+              <div className="text-sm font-medium col-span-2">{ticket.customers?.name || ""}</div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-sm font-medium text-muted-foreground">Số điện thoại</div>
-              <div className="text-sm font-medium">{ticket.customers?.phone || ""}</div>
+              <div className="text-sm font-medium col-span-2">{ticket.customers?.phone || ""}</div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-sm font-medium text-muted-foreground">Sản phẩm</div>
-              <div className="text-sm font-medium">{ticket.products?.name || ""}</div>
+              <div className="text-sm font-medium col-span-2">{ticket.products?.name || ""}</div>
             </div>
           </CardContent>
         </Card>
 
         {/* Fees - chiếm 3 dòng */}
-        <Card className="lg:row-span-3">
+        <Card className="order-3 lg:order-2 lg:row-span-3">
           <CardHeader>
             <CardTitle>Chi phí dịch vụ</CardTitle>
           </CardHeader>
@@ -554,7 +554,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </Card>
 
         {/* Ticket Details - dòng 2 và 3 */}
-        <Card className="lg:row-span-2">
+        <Card className="order-2 lg:order-3 lg:row-span-2">
           <CardHeader>
             <CardTitle>Chi tiết phiếu dịch vụ</CardTitle>
             {/* <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription> */}
@@ -672,8 +672,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           <div className="border rounded-lg p-4 space-y-3">
             <h4 className="font-medium">Thêm linh kiện mới</h4>
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="new-part">Linh kiện</Label>
+              <div className="md:col-span-2">
+                <Label htmlFor="new-part" className="mb-2">Linh kiện</Label>
                 <Select value={selectedNewPart} onValueChange={setSelectedNewPart}>
                   <SelectTrigger id="new-part">
                     <SelectValue placeholder="Chọn linh kiện" />

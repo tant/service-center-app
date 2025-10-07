@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye } from "@tabler/icons-react";
+import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool } from "@tabler/icons-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
@@ -451,7 +451,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         {/* Customer and Product Info (Read-only) - dòng 1 */}
         <Card>
           <CardHeader>
-            <CardTitle>Thông tin cơ bản</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <IconUser className="h-5 w-5" />
+              Thông tin cơ bản
+            </CardTitle>
             {/* <CardDescription>Thông tin khách hàng và sản phẩm</CardDescription> */}
           </CardHeader>
           <CardContent className="space-y-3">
@@ -473,7 +476,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         {/* Fees - chiếm 3 dòng */}
         <Card className="order-3 lg:order-2 lg:row-span-3">
           <CardHeader>
-            <CardTitle>Chi phí dịch vụ</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <IconCurrencyDollar className="h-5 w-5" />
+              Chi phí dịch vụ
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -556,7 +562,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         {/* Ticket Details - dòng 2 và 3 */}
         <Card className="order-2 lg:order-3 lg:row-span-2">
           <CardHeader>
-            <CardTitle>Chi tiết phiếu dịch vụ</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <IconClipboardText className="h-5 w-5" />
+              Chi tiết phiếu dịch vụ
+            </CardTitle>
             {/* <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription> */}
           </CardHeader>
         <CardContent className="space-y-6">
@@ -662,7 +671,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
       {/* Parts Management */}
       <Card>
         <CardHeader>
-          <CardTitle>Quản lý linh kiện</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <IconTool className="h-5 w-5" />
+            Quản lý linh kiện
+          </CardTitle>
           {/* <CardDescription>
             Thêm, sửa hoặc xóa linh kiện sử dụng trong phiếu dịch vụ
           </CardDescription> */}

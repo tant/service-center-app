@@ -446,34 +446,119 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6">
-      {/* Customer and Product Info (Read-only) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin cơ bản</CardTitle>
-          <CardDescription>Thông tin khách hàng và sản phẩm (không thể chỉnh sửa)</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="space-y-2">
-            <Label>Khách hàng</Label>
-            <Input value={ticket.customers?.name || ""} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Số điện thoại</Label>
-            <Input value={ticket.customers?.phone || ""} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Sản phẩm</Label>
-            <Input value={ticket.products?.name || ""} disabled />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Customer Info + Ticket Details cùng cột, Fees cùng hàng và chiếm 3 dòng */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:grid-rows-3">
+        {/* Customer and Product Info (Read-only) - dòng 1 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Thông tin cơ bản</CardTitle>
+            {/* <CardDescription>Thông tin khách hàng và sản phẩm</CardDescription> */}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Khách hàng</div>
+              <div className="text-sm font-medium">{ticket.customers?.name || ""}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Số điện thoại</div>
+              <div className="text-sm font-medium">{ticket.customers?.phone || ""}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Sản phẩm</div>
+              <div className="text-sm font-medium">{ticket.products?.name || ""}</div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Ticket Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Chi tiết phiếu dịch vụ</CardTitle>
-          <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription>
-        </CardHeader>
+        {/* Fees - chiếm 3 dòng */}
+        <Card className="lg:row-span-3">
+          <CardHeader>
+            <CardTitle>Chi phí dịch vụ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="service_fee">Giá dịch vụ (₫)</Label>
+                <Input
+                  id="service_fee"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.service_fee}
+                  onChange={(e) => setFormData({ ...formData, service_fee: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis_fee">Phí kiểm tra (₫)</Label>
+                <Input
+                  id="diagnosis_fee"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.diagnosis_fee}
+                  onChange={(e) => setFormData({ ...formData, diagnosis_fee: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="discount_amount">Giảm giá (₫)</Label>
+                <Input
+                  id="discount_amount"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.discount_amount}
+                  onChange={(e) => setFormData({ ...formData, discount_amount: Number(e.target.value) })}
+                />
+              </div>
+
+              {/* Cost Summary */}
+              <div className="mt-6 space-y-2 border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Giá dịch vụ:</span>
+                  <span>{Number(formData.service_fee).toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Phí kiểm tra:</span>
+                  <span>{Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Linh kiện:</span>
+                  <span>{partsTotal.toLocaleString("vi-VN")} ₫</span>
+                </div>
+                {formData.discount_amount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Giảm giá:</span>
+                    <span className="text-red-600">-{Number(formData.discount_amount).toLocaleString("vi-VN")} ₫</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Tổng cộng:</span>
+                  <span className="text-primary">{totalCost.toLocaleString("vi-VN")} ₫</span>
+                </div>
+              </div>
+              </div>
+            </CardContent>
+            {/* Actions for Fees */}
+            <div className="flex justify-end gap-2 p-6 pt-0">
+              <Button 
+                type="button" 
+                disabled={updateTicketMutation.isPending}
+                onClick={() => toast.success("Đã lưu thông tin chi phí dịch vụ")}
+              >
+                {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </div>
+          </Card>
+
+        {/* Ticket Details - dòng 2 và 3 */}
+        <Card className="lg:row-span-2">
+          <CardHeader>
+            <CardTitle>Chi tiết phiếu dịch vụ</CardTitle>
+            {/* <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription> */}
+          </CardHeader>
         <CardContent className="space-y-6">
           {/* Status and Priority */}
           <div className="grid gap-4 md:grid-cols-3">
@@ -561,88 +646,26 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             />
           </div>
         </CardContent>
+        {/* Actions for Ticket Details */}
+        <div className="flex justify-end gap-2 p-6 pt-0">
+          <Button 
+            type="button" 
+            disabled={updateTicketMutation.isPending}
+            onClick={() => toast.success("Đã lưu chi tiết phiếu dịch vụ")}
+          >
+            {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+          </Button>
+        </div>
       </Card>
-
-      {/* Fees */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Chi phí dịch vụ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="service_fee">Giá dịch vụ (₫)</Label>
-              <Input
-                id="service_fee"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.service_fee}
-                onChange={(e) => setFormData({ ...formData, service_fee: Number(e.target.value) })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="diagnosis_fee">Phí kiểm tra (₫)</Label>
-              <Input
-                id="diagnosis_fee"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.diagnosis_fee}
-                onChange={(e) => setFormData({ ...formData, diagnosis_fee: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="discount_amount">Giảm giá (₫)</Label>
-              <Input
-                id="discount_amount"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.discount_amount}
-                onChange={(e) => setFormData({ ...formData, discount_amount: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          {/* Cost Summary */}
-          <div className="mt-6 space-y-2 border-t pt-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Giá dịch vụ:</span>
-              <span>{Number(formData.service_fee).toLocaleString("vi-VN")} ₫</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Phí kiểm tra:</span>
-              <span>{Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Linh kiện:</span>
-              <span>{partsTotal.toLocaleString("vi-VN")} ₫</span>
-            </div>
-            {formData.discount_amount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Giảm giá:</span>
-                <span className="text-red-600">-{Number(formData.discount_amount).toLocaleString("vi-VN")} ₫</span>
-              </div>
-            )}
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
-              <span>Tổng cộng:</span>
-              <span className="text-primary">{totalCost.toLocaleString("vi-VN")} ₫</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Parts Management */}
       <Card>
         <CardHeader>
           <CardTitle>Quản lý linh kiện</CardTitle>
-          <CardDescription>
+          {/* <CardDescription>
             Thêm, sửa hoặc xóa linh kiện sử dụng trong phiếu dịch vụ
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add New Part */}
@@ -922,21 +945,6 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          type="button"
-          onClick={handleCancel}
-          disabled={updateTicketMutation.isPending}
-        >
-          Hủy
-        </Button>
-        <Button type="submit" disabled={updateTicketMutation.isPending}>
-          {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-        </Button>
-      </div>
 
       {/* Image View Modal */}
       <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>

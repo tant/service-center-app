@@ -749,12 +749,12 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             <div className="space-y-2">
               <h4 className="font-medium">Linh kiện đã sử dụng</h4>
               {parts.map((part: any) => (
-                <div key={part.id} className="flex items-start gap-2 border-b pb-2">
+                <div key={part.id} className="flex items-center gap-2 border-b pb-2">
                   {editingPartId === part.id ? (
                     // Edit mode
                     <>
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <div>
+                      <div className="flex-1 grid grid-cols-5 gap-2 items-center">
+                        <div className="col-span-3">
                           <p className="text-sm font-medium">{part.part_name}</p>
                         </div>
                         <div>
@@ -769,7 +769,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                             min={1}
                           />
                         </div>
-                        <div className="text-right min-w-[100px]">
+                        <div className="text-right min-w-[100px] mr-2">
                           <p className="font-medium">
                             {part.total_price.toLocaleString("vi-VN")} ₫
                           </p>

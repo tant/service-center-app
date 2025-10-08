@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
-import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar } from "@tabler/icons-react";
+import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar, IconClipboardText, IconTool, IconCurrencyDollar } from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
 
@@ -206,9 +206,12 @@ export default async function Page({ params }: PageProps) {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Thông tin phiếu</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <IconClipboardText className="h-5 w-5" />
+                Thông tin phiếu
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Trạng thái:</span>
                 {getStatusBadge(ticket.status)}
@@ -247,8 +250,8 @@ export default async function Page({ params }: PageProps) {
                 <p className="text-sm text-muted-foreground">Tên khách hàng</p>
                 <p className="font-medium">{ticket.customers?.name}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <IconPhone className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Số điện thoại</p>
                 <span>{ticket.customers?.phone}</span>
               </div>
               {ticket.customers?.email && (
@@ -306,7 +309,10 @@ export default async function Page({ params }: PageProps) {
         {ticket.service_ticket_parts && ticket.service_ticket_parts.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Linh kiện đã sử dụng</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <IconTool className="h-5 w-5" />
+                Linh kiện đã sử dụng
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -336,7 +342,10 @@ export default async function Page({ params }: PageProps) {
         {/* Cost Summary */}
         <Card>
           <CardHeader>
-            <CardTitle>Chi phí</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <IconCurrencyDollar className="h-5 w-5" />
+              Chi phí
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

@@ -60,25 +60,43 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   // Image view modal state
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
-  const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
+  const updateTicketDetailsMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
-      console.log("[EditTicketForm] Update ticket success:", {
+      console.log("[EditTicketForm] Update ticket details success:", {
         ticketId: ticket.id,
         ticketNumber: ticket.ticket_number,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Cập nhật phiếu dịch vụ thành công");
-      router.push(`/tickets/${ticket.id}`);
-      router.refresh();
+      toast.success("Đã lưu chi tiết phiếu dịch vụ thành công");
     },
     onError: (error) => {
-      console.error("[EditTicketForm] Update ticket error:", {
+      console.error("[EditTicketForm] Update ticket details error:", {
         ticketId: ticket.id,
         error: error.message,
         errorData: error.data,
         timestamp: new Date().toISOString(),
       });
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi khi lưu chi tiết phiếu dịch vụ: ${error.message}`);
+    },
+  });
+
+  const updateServiceFeesMutation = trpc.tickets.updateTicket.useMutation({
+    onSuccess: () => {
+      console.log("[EditTicketForm] Update service fees success:", {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("Đã lưu thông tin chi phí dịch vụ thành công");
+    },
+    onError: (error) => {
+      console.error("[EditTicketForm] Update service fees error:", {
+        ticketId: ticket.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
+      toast.error(`Lỗi khi lưu chi phí dịch vụ: ${error.message}`);
     },
   });
 
@@ -231,19 +249,23 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    updateTicketMutation.mutate({
+  const handleSaveTicketDetails = () => {
+    updateTicketDetailsMutation.mutate({
       id: ticket.id,
       issue_description: formData.issue_description,
       priority_level: formData.priority_level as "low" | "normal" | "high" | "urgent",
       warranty_type: formData.warranty_type as "warranty" | "paid" | "goodwill",
       status: formData.status as "pending" | "in_progress" | "completed" | "cancelled",
+      notes: formData.notes || null,
+    });
+  };
+
+  const handleSaveServiceFees = () => {
+    updateServiceFeesMutation.mutate({
+      id: ticket.id,
       service_fee: Number(formData.service_fee),
       diagnosis_fee: Number(formData.diagnosis_fee),
       discount_amount: Number(formData.discount_amount),
-      notes: formData.notes || null,
     });
   };
 
@@ -445,7 +467,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const totalCost = Number(formData.service_fee) + Number(formData.diagnosis_fee) + partsTotal - Number(formData.discount_amount);
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
+    <form className="grid gap-6">
       {/* Customer Info + Ticket Details cùng cột, Fees cùng hàng và chiếm 3 dòng */}
       <div className="grid gap-6 lg:grid-cols-2 lg:grid-rows-3">
         {/* Customer and Product Info (Read-only) - dòng 1 */}
@@ -551,10 +573,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             <div className="flex justify-end gap-2 p-6 pt-0">
               <Button 
                 type="button" 
-                disabled={updateTicketMutation.isPending}
-                onClick={() => toast.success("Đã lưu thông tin chi phí dịch vụ")}
+                disabled={updateServiceFeesMutation.isPending}
+                onClick={handleSaveServiceFees}
               >
-                {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                {updateServiceFeesMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
             </div>
           </Card>
@@ -659,10 +681,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         <div className="flex justify-end gap-2 p-6 pt-0">
           <Button 
             type="button" 
-            disabled={updateTicketMutation.isPending}
-            onClick={() => toast.success("Đã lưu chi tiết phiếu dịch vụ")}
+            disabled={updateTicketDetailsMutation.isPending}
+            onClick={handleSaveTicketDetails}
           >
-            {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+            {updateTicketDetailsMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
         </div>
       </Card>

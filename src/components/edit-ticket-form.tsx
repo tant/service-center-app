@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool, IconMinus } from "@tabler/icons-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NumberCounter } from "@/components/number-counter";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
 
@@ -723,12 +724,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-quantity">Số lượng</Label>
-                <Input
-                  id="new-quantity"
-                  type="number"
-                  min="1"
+                <NumberCounter
                   value={newPartQuantity}
-                  onChange={(e) => setNewPartQuantity(Number(e.target.value))}
+                  onChange={setNewPartQuantity}
+                  min={1}
                 />
               </div>
               <div className="flex items-end">
@@ -759,39 +758,16 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                           <p className="text-sm font-medium">{part.part_name}</p>
                         </div>
                         <div>
-                          <div className="flex items-center border rounded-md w-fit">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-r-none border-r"
-                              onClick={() =>
-                                setEditingPartData({
-                                  ...editingPartData!,
-                                  quantity: Math.max(1, (editingPartData?.quantity || 1) - 1),
-                                })
-                              }
-                            >
-                              <IconMinus className="h-3 w-3" />
-                            </Button>
-                            <div className="h-8 px-2 flex items-center justify-center min-w-[60px] bg-background border-x-0 text-sm font-medium">
-                              {editingPartData?.quantity}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-l-none border-l"
-                              onClick={() =>
-                                setEditingPartData({
-                                  ...editingPartData!,
-                                  quantity: (editingPartData?.quantity || 1) + 1,
-                                })
-                              }
-                            >
-                              <IconPlus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <NumberCounter
+                            value={editingPartData?.quantity || 1}
+                            onChange={(newQuantity) =>
+                              setEditingPartData({
+                                ...editingPartData!,
+                                quantity: newQuantity,
+                              })
+                            }
+                            min={1}
+                          />
                         </div>
                         <div className="text-right min-w-[100px]">
                           <p className="font-medium">

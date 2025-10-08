@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { IconSend, IconMessageCircle, IconLock, IconUser, IconRobot } from "@tabler/icons-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Comment {
   id: string;
@@ -36,6 +37,7 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
   const [comments, setComments] = useState<Comment[]>(initialComments || []);
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
+  const [commentFilter, setCommentFilter] = useState<"all" | "bot" | "staff">("all");
 
   const addCommentMutation = trpc.tickets.addComment.useMutation({
     onSuccess: (result) => {
@@ -120,22 +122,49 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
     return autoCommentPrefixes.some(prefix => commentText.startsWith(prefix));
   };
 
+  // Filter comments based on selected filter
+  const filteredComments = comments.filter((comment) => {
+    if (commentFilter === "all") return true;
+    if (commentFilter === "bot") return isAutoComment(comment.comment);
+    if (commentFilter === "staff") return !isAutoComment(comment.comment);
+    return true;
+  });
+
+  // Handle filter change
+  const handleFilterChange = (value: string) => {
+    setCommentFilter(value as "all" | "bot" | "staff");
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <IconMessageCircle className="h-5 w-5" />
-          Bình luận
-        </CardTitle>
-        <CardDescription>
-          Trao đổi và cập nhật thông tin về phiếu dịch vụ
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="flex items-center gap-2">
+              <IconMessageCircle className="h-5 w-5" />
+              Bình luận
+            </CardTitle>
+            <CardDescription>
+              Trao đổi và cập nhật thông tin về phiếu dịch vụ
+            </CardDescription>
+          </div>
+          <Select value={commentFilter} onValueChange={handleFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="bot">Bot</SelectItem>
+              <SelectItem value="staff">Nhân viên</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Comments List */}
-        {comments.length > 0 ? (
+        {filteredComments.length > 0 ? (
           <div className="space-y-4">
-            {comments.map((comment) => {
+            {filteredComments.map((comment) => {
               const isAuto = isAutoComment(comment.comment);
               return (
                 <div
@@ -192,7 +221,14 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <IconMessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Chưa có bình luận nào</p>
+            <p>
+              {commentFilter === "all" 
+                ? "Chưa có bình luận nào" 
+                : commentFilter === "bot" 
+                ? "Không có bình luận từ bot" 
+                : "Không có bình luận từ nhân viên"
+              }
+            </p>
           </div>
         )}
 

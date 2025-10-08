@@ -992,23 +992,6 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-4">
-        <Button
-          type="button"
-          onClick={() => router.push(`/tickets/${ticket.id}`)}
-        >
-          Xem chi tiết phiếu
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          onClick={() => router.push('/tickets')}
-        >
-          Xem danh sách phiếu
-        </Button>
-      </div>
-
       {/* Image View Modal */}
       <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
         <DialogContent className="max-w-4xl">

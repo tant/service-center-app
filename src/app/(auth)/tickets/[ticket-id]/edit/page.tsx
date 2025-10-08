@@ -2,6 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/utils/supabase/server";
 import { EditTicketForm } from "@/components/edit-ticket-form";
+import { Button } from "@/components/ui/button";
+import { IconEye } from "@tabler/icons-react";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ "ticket-id": string }>;
@@ -61,7 +64,14 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <>
-      <PageHeader title={`Chỉnh sửa phiếu ${ticket.ticket_number}`} />
+      <PageHeader title={`Chỉnh sửa phiếu ${ticket.ticket_number}`}>
+        <Link href={`/tickets/${ticketId}`}>
+          <Button variant="outline" size="sm">
+            <IconEye className="h-4 w-4" />
+            Xem chi tiết phiếu
+          </Button>
+        </Link>
+      </PageHeader>
       <div className="flex flex-1 flex-col p-4 lg:p-6">
         <EditTicketForm ticket={ticket} />
       </div>

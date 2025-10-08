@@ -161,6 +161,50 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Add Comment Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            {/* <Label htmlFor="new-comment">Thêm bình luận mới</Label> */}
+            <div className="border rounded-md focus-within:ring-2 focus-within:ring-ring/50 focus-within:ring-offset-0 focus-within:border-ring transition-all duration-200">
+              <Textarea
+                id="new-comment"
+                placeholder="Nhập nội dung bình luận..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                rows={4}
+                className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-t-md"
+              />
+              <div className="flex items-center justify-between p-3 border-t bg-muted/20">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is-internal"
+                    checked={isInternal}
+                    onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="is-internal"
+                    className="text-sm font-normal cursor-pointer flex items-center gap-1"
+                  >
+                    <IconLock className="h-3 w-3" />
+                    Bình luận nội bộ (không hiển thị cho khách hàng)
+                  </Label>
+                </div>
+
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={addCommentMutation.isPending || !newComment.trim()}
+                >
+                  <IconSend className="h-4 w-4" />
+                  {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <Separator />
+
         {/* Comments List */}
         {filteredComments.length > 0 ? (
           <div className="space-y-4">
@@ -231,50 +275,6 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
             </p>
           </div>
         )}
-
-        <Separator />
-
-        {/* Add Comment Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-comment">Thêm bình luận mới</Label>
-            <div className="border rounded-md focus-within:ring-2 focus-within:ring-ring/50 focus-within:ring-offset-0 focus-within:border-ring transition-all duration-200">
-              <Textarea
-                id="new-comment"
-                placeholder="Nhập nội dung bình luận..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                rows={4}
-                className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-t-md"
-              />
-              <div className="flex items-center justify-between p-3 border-t bg-muted/20">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="is-internal"
-                    checked={isInternal}
-                    onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-                  />
-                  <Label
-                    htmlFor="is-internal"
-                    className="text-sm font-normal cursor-pointer flex items-center gap-1"
-                  >
-                    <IconLock className="h-3 w-3" />
-                    Bình luận nội bộ (không hiển thị cho khách hàng)
-                  </Label>
-                </div>
-
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={addCommentMutation.isPending || !newComment.trim()}
-                >
-                  <IconSend className="h-4 w-4" />
-                  {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </form>
       </CardContent>
     </Card>
   );

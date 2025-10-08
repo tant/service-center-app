@@ -245,27 +245,28 @@ export default async function Page({ params }: PageProps) {
                 Thông tin khách hàng
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Tên khách hàng</p>
-                <p className="font-medium">{ticket.customers?.name}</p>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-y-3 gap-x-4">
+                <p className="text-sm text-muted-foreground font-medium">Tên khách hàng</p>
+                <p className="font-medium col-span-2">{ticket.customers?.name}</p>
+                
+                <p className="text-sm text-muted-foreground font-medium">Số điện thoại</p>
+                <span className="col-span-2">{ticket.customers?.phone}</span>
+                
+                {ticket.customers?.email && (
+                  <>
+                    <p className="text-sm text-muted-foreground font-medium">Email</p>
+                    <span className="col-span-2">{ticket.customers.email}</span>
+                  </>
+                )}
+                
+                {ticket.customers?.address && (
+                  <>
+                    <p className="text-sm text-muted-foreground font-medium">Địa chỉ</p>
+                    <p className="text-sm col-span-2">{ticket.customers.address}</p>
+                  </>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Số điện thoại</p>
-                <span>{ticket.customers?.phone}</span>
-              </div>
-              {ticket.customers?.email && (
-                <div className="flex items-center gap-2">
-                  <IconMail className="h-4 w-4 text-muted-foreground" />
-                  <span>{ticket.customers.email}</span>
-                </div>
-              )}
-              {ticket.customers?.address && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                  <p className="text-sm">{ticket.customers.address}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -280,26 +281,26 @@ export default async function Page({ params }: PageProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-sm text-muted-foreground">Tên sản phẩm</p>
+              <p className="text-sm text-muted-foreground font-medium">Tên sản phẩm</p>
               <p className="font-medium">{ticket.products?.name}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <p className="text-sm text-muted-foreground">Loại</p>
+                <p className="text-sm text-muted-foreground font-medium">Loại</p>
                 <p>{ticket.products?.type}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Thương hiệu</p>
+                <p className="text-sm text-muted-foreground font-medium">Thương hiệu</p>
                 <p>{ticket.products?.brand || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Model</p>
+                <p className="text-sm text-muted-foreground font-medium">Model</p>
                 <p>{ticket.products?.model || "—"}</p>
               </div>
             </div>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground">Mô tả vấn đề</p>
+              <p className="text-sm text-muted-foreground font-medium">Mô tả vấn đề</p>
               <p className="mt-1">{ticket.issue_description}</p>
             </div>
           </CardContent>

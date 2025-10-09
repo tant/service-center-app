@@ -96,6 +96,20 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
     });
   };
 
+  // Xử lý tổ hợp phím Ctrl + Enter để gửi bình luận
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Kiểm tra điều kiện: textarea được focus và có nội dung
+      if (document.activeElement === e.target && newComment.trim()) {
+        // Kích hoạt gửi bình luận sử dụng logic hiện có
+        const formEvent = new Event('submit', { bubbles: true, cancelable: true }) as any;
+        handleSubmit(formEvent);
+      }
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -173,6 +187,7 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                 placeholder="Nhập nội dung bình luận..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={handleKeyDown}
                 rows={4}
                 className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-t-md"
               />
@@ -192,14 +207,19 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                   </Label>
                 </div>
 
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={addCommentMutation.isPending || !newComment.trim()}
-                >
-                  <IconSend className="h-4 w-4" />
-                  {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
-                </Button>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    Ctrl + Enter
+                  </span>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={addCommentMutation.isPending || !newComment.trim()}
+                  >
+                    <IconSend className="h-4 w-4" />
+                    {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

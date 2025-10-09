@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     notes: ticket.notes || "",
   });
 
+  // Track form changes for unsaved changes warning
+  const [originalData, setOriginalData] = useState(formData);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
   const [parts, setParts] = useState(
     ticket.service_ticket_parts?.map((item: any) => ({
       id: item.id,
@@ -61,6 +65,45 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   // Image view modal state
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
+  // Track form changes to detect unsaved changes
+  useEffect(() => {
+    const isChanged = JSON.stringify(formData) !== JSON.stringify(originalData);
+    setHasUnsavedChanges(isChanged);
+  }, [formData, originalData]);
+
+  // Unsaved changes warning for browser events only
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+      }
+    };
+
+    if (hasUnsavedChanges) {
+      // Only listen for browser back/forward and refresh
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  // Helper function to check unsaved changes before navigation
+  const checkUnsavedChanges = (): boolean => {
+    if (hasUnsavedChanges) {
+      return confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang?');
+    }
+    return true;
+  };
+
+  // Safe navigation wrapper for Next.js router - handles internal navigation
+  const navigateWithCheck = (path: string) => {
+    if (checkUnsavedChanges()) {
+      router.push(path);
+    }
+  };
+
   const updateTicketDetailsMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
       console.log("[EditTicketForm] Update ticket details success:", {
@@ -69,6 +112,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         timestamp: new Date().toISOString(),
       });
       toast.success("Đã lưu chi tiết phiếu dịch vụ thành công");
+      // Reset original data after successful save
+      setOriginalData(formData);
     },
     onError: (error) => {
       console.error("[EditTicketForm] Update ticket details error:", {
@@ -89,6 +134,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         timestamp: new Date().toISOString(),
       });
       toast.success("Đã lưu thông tin chi phí dịch vụ thành công");
+      // Reset original data after successful save
+      setOriginalData(formData);
     },
     onError: (error) => {
       console.error("[EditTicketForm] Update service fees error:", {
@@ -271,7 +318,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   };
 
   const handleCancel = () => {
-    router.push(`/tickets/${ticket.id}`);
+    // Use safe navigation with unsaved changes check
+    navigateWithCheck(`/tickets/${ticket.id}`);
   };
 
   const handleAddPart = () => {

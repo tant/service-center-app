@@ -4,10 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  IconPhone,
   IconUser,
-  IconMail,
-  IconMapPin,
   IconSettings,
   IconPackage,
   IconPlus,
@@ -355,7 +352,6 @@ export function AddTicketForm() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone" className="flex items-center gap-2">
-                <IconPhone className="h-4 w-4" />
                 Số điện thoại *
               </Label>
               <Input
@@ -376,7 +372,6 @@ export function AddTicketForm() {
 
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
-                <IconUser className="h-4 w-4" />
                 Tên khách hàng *
               </Label>
               <Input
@@ -401,7 +396,6 @@ export function AddTicketForm() {
 
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
-                <IconMail className="h-4 w-4" />
                 Email (tùy chọn)
               </Label>
               <Input
@@ -415,7 +409,6 @@ export function AddTicketForm() {
 
             <div className="space-y-2">
               <Label htmlFor="address" className="flex items-center gap-2">
-                <IconMapPin className="h-4 w-4" />
                 Địa chỉ (tùy chọn)
               </Label>
               <Textarea

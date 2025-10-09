@@ -619,7 +619,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
               </div>
             </CardContent>
             {/* Actions for Fees */}
-            <div className="flex justify-end gap-2 p-6 pt-0">
+            <div className="flex justify-end gap-2 px-6">
               <Button 
                 type="button" 
                 disabled={updateServiceFeesMutation.isPending}
@@ -727,7 +727,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </div>
         </CardContent>
         {/* Actions for Ticket Details */}
-        <div className="flex justify-end gap-2 p-6 pt-0">
+        <div className="flex justify-end gap-2 px-6">
           <Button 
             type="button" 
             disabled={updateTicketDetailsMutation.isPending}

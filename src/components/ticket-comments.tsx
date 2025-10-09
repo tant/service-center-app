@@ -34,7 +34,9 @@ interface TicketCommentsProps {
 
 export function TicketComments({ ticketId, initialComments }: TicketCommentsProps) {
   const router = useRouter();
-  const [comments, setComments] = useState<Comment[]>(initialComments || []);
+  const [comments, setComments] = useState<Comment[]>(
+    (initialComments || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  );
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [commentFilter, setCommentFilter] = useState<"all" | "bot" | "staff">("all");
@@ -54,7 +56,7 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
 
       // Optimistically update UI
       if (result.comment) {
-        setComments((prev) => [...prev, result.comment as Comment]);
+        setComments((prev) => [result.comment as Comment, ...prev]);
       }
     },
     onError: (error) => {

@@ -89,6 +89,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuickCommentModal } from "@/components/quick-comment-modal";
 import { QuickUploadImagesModal } from "@/components/quick-upload-images-modal";
+import Link from "next/link";
 
 const ticketStatusEnum = z.enum(["open", "in_progress", "resolved", "closed"]);
 const ticketPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
@@ -772,7 +773,24 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   ];
 
   const filteredData = React.useMemo(() => {
-    return data.filter((item) => {
+    // Lọc và cập nhật assigned_to_name từ assigned_to ID
+    const dataWithAssignedNames = data.map((item) => {
+      let assignedUserName = item.assigned_to_name;
+      
+      // Nếu có assigned_to nhưng chưa có assigned_to_name, tìm tên từ allUsers
+      if (item.assigned_to && !assignedUserName && allUsers) {
+        const assignedUser = allUsers.find(user => user.user_id === item.assigned_to);
+        assignedUserName = assignedUser?.full_name || null;
+      }
+      
+      return {
+        ...item,
+        assigned_to_name: assignedUserName
+      };
+    });
+
+    // Áp dụng bộ lọc tìm kiếm
+    return dataWithAssignedNames.filter((item) => {
       const ticketNumber = item.ticket_number?.toLowerCase() || "";
       const customerName = item.customer_name?.toLowerCase() || "";
       const title = item.title?.toLowerCase() || "";
@@ -786,7 +804,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
         description.includes(search)
       );
     });
-  }, [data, searchValue]);
+  }, [data, searchValue, allUsers]);
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => filteredData?.map(({ id }) => id) || [],
@@ -884,10 +902,13 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Tạo ticket</span>
-          </Button>
+          <Link href="/tickets/add">
+            <Button variant="outline" size="sm">
+              <IconPlus />
+              <span className="hidden lg:inline">Tạo ticket</span>
+            </Button>
+          </Link>
+          
         </div>
       </div>
       <TabsContent

@@ -496,10 +496,10 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      open: { label: "Mới", variant: "destructive" as const },
-      in_progress: { label: "Đang xử lý", variant: "default" as const },
-      resolved: { label: "Đã giải quyết", variant: "secondary" as const },
-      closed: { label: "Đã đóng", variant: "outline" as const },
+      open: { label: "Mới", variant: "pending" as const },
+      in_progress: { label: "Đang xử lý", variant: "processing" as const },
+      resolved: { label: "Đã giải quyết", variant: "resolved" as const },
+      closed: { label: "Đã đóng", variant: "closed" as const },
     };
     const statusConfig =
       statusMap[status as keyof typeof statusMap] || statusMap.open;
@@ -520,7 +520,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       priorityMap[priority as keyof typeof priorityMap] || priorityMap.medium;
     return (
       <span
-        className={`px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.className}`}
+        className={`px-2 py-1 text-xs font-medium rounded-md ${priorityConfig.className}`}
       >
         {priorityConfig.label}
       </span>

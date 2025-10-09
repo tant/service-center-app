@@ -126,10 +126,10 @@ async function getTicketData(ticketId: string) {
 
 function getStatusBadge(status: string) {
   const statusMap = {
-    pending: { label: "Chờ xử lý", variant: "destructive" as const },
-    in_progress: { label: "Đang xử lý", variant: "default" as const },
-    completed: { label: "Hoàn thành", variant: "secondary" as const },
-    cancelled: { label: "Đã hủy", variant: "outline" as const },
+    pending: { label: "Chờ xử lý", variant: "pending" as const },
+    in_progress: { label: "Đang xử lý", variant: "processing" as const },
+    completed: { label: "Hoàn thành", variant: "resolved" as const },
+    cancelled: { label: "Đã hủy", variant: "closed" as const },
   };
   const statusConfig = statusMap[status as keyof typeof statusMap] || statusMap.pending;
   return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;

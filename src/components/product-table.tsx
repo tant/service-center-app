@@ -314,7 +314,7 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Edit Product</p>
+              <p>Chỉnh sửa sản phẩm</p>
             </TooltipContent>
           </Tooltip>
         }
@@ -334,7 +334,7 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Clone Product</p>
+          <p>Sao chép sản phẩm</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -592,13 +592,13 @@ export function ProductTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} product(s) selected.
+            Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
+            {table.getFilteredRowModel().rows.length} sản phẩm
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                Số dòng mỗi trang
               </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
@@ -621,7 +621,7 @@ export function ProductTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
@@ -631,7 +631,7 @@ export function ProductTable({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">Về trang đầu</span>
                 <IconChevronsLeft />
               </Button>
               <Button
@@ -641,7 +641,7 @@ export function ProductTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">Về trang trước</span>
                 <IconChevronLeft />
               </Button>
               <Button
@@ -651,7 +651,7 @@ export function ProductTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">Đến trang sau</span>
                 <IconChevronRight />
               </Button>
               <Button
@@ -661,7 +661,7 @@ export function ProductTable({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">Đến trang cuối</span>
                 <IconChevronsRight />
               </Button>
             </div>
@@ -914,18 +914,18 @@ function ProductModal({
                 className="w-10 h-10"
               />
             )}
-            {mode === "add" ? "Add New Product" : product?.name}
+            {mode === "add" ? "Thêm Sản Phẩm Mới" : product?.name}
           </DrawerTitle>
           <DrawerDescription>
             {mode === "add"
-              ? "Create a new product with the required information."
-              : "Product details and management options"}
+              ? "Tạo sản phẩm mới với các thông tin bắt buộc."
+              : "Chi tiết và tùy chọn quản lý sản phẩm"}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="name">Product Name *</Label>
+              <Label htmlFor="name">Tên sản phẩm *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -949,7 +949,7 @@ function ProductModal({
                 />
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type *</Label>
+                <Label htmlFor="type">Loại sản phẩm *</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(
@@ -971,14 +971,14 @@ function ProductModal({
                     <SelectItem value="SSD">SSD</SelectItem>
                     <SelectItem value="RAM">RAM</SelectItem>
                     <SelectItem value="Mainboard">Mainboard</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Other">Khác</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="brand">Brand</Label>
+                <Label htmlFor="brand">Thương hiệu</Label>
                 <Select
                   value={formData.brand || ""}
                   onValueChange={(value: "ZOTAC" | "SSTC" | "Other") =>
@@ -991,7 +991,7 @@ function ProductModal({
                   <SelectContent>
                     <SelectItem value="ZOTAC">ZOTAC</SelectItem>
                     <SelectItem value="SSTC">SSTC</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Other">Khác</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1008,7 +1008,7 @@ function ProductModal({
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="short_description">Description</Label>
+              <Label htmlFor="short_description">Mô tả</Label>
               <Textarea
                 id="short_description"
                 value={formData.short_description}
@@ -1023,14 +1023,14 @@ function ProductModal({
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="primary_image">Image URL</Label>
+              <Label htmlFor="primary_image">Đường dẫn hình ảnh</Label>
               <Input
                 id="primary_image"
                 value={formData.primary_image}
                 onChange={(e) =>
                   setFormData({ ...formData, primary_image: e.target.value })
                 }
-                placeholder="Nhập URL hình ảnh (tùy chọn)"
+                placeholder="Nhập đường dẫn hình ảnh (tùy chọn)"
               />
             </div>
             <div className="flex flex-col gap-3">
@@ -1116,21 +1116,21 @@ function ProductModal({
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Product ID</Label>
+                    <Label className="text-muted-foreground">ID Sản phẩm</Label>
                     <div className="font-mono text-xs">{product.id}</div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Type</Label>
+                    <Label className="text-muted-foreground">Loại</Label>
                     <div>{product.type}</div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Created</Label>
+                    <Label className="text-muted-foreground">Ngày tạo</Label>
                     <div>
                       {new Date(product.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Updated</Label>
+                    <Label className="text-muted-foreground">Cập nhật lúc</Label>
                     <div>
                       {new Date(product.updated_at).toLocaleDateString()}
                     </div>
@@ -1150,15 +1150,15 @@ function ProductModal({
           >
             {isLoading
               ? mode === "add"
-                ? "Creating..."
-                : "Updating..."
+                ? "Đang tạo..."
+                : "Đang cập nhật..."
               : mode === "add"
-                ? "Create Product"
-                : "Save Changes"}
+                ? "Tạo sản phẩm"
+                : "Lưu thay đổi"}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Cancel
+              Hủy bỏ
             </Button>
           </DrawerClose>
         </DrawerFooter>

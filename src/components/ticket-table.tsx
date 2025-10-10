@@ -843,14 +843,14 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             <SelectValue placeholder="Chọn chế độ xem" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="tickets-list">Danh sách ticket</SelectItem>
+            <SelectItem value="tickets-list">Danh sách phiếu</SelectItem>
             <SelectItem value="workflow">Quy trình xử lý</SelectItem>
             <SelectItem value="analytics">Phân tích</SelectItem>
             <SelectItem value="reports">Báo cáo</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="tickets-list">Danh sách ticket</TabsTrigger>
+          <TabsTrigger value="tickets-list">Danh sách phiếu</TabsTrigger>
           <TabsTrigger value="workflow">
             Quy trình xử lý <Badge variant="secondary">6</Badge>
           </TabsTrigger>
@@ -896,7 +896,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           <Link href="/tickets/add">
             <Button variant="outline" size="sm">
               <IconPlus />
-              <span className="hidden lg:inline">Tạo ticket</span>
+              <span className="hidden lg:inline">Tạo phiếu</span>
             </Button>
           </Link>
           

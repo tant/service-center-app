@@ -705,13 +705,13 @@ export function TeamTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} user(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} đã chọn{" "}
+            {table.getFilteredRowModel().rows.length} người dùng.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                Số dòng trên trang
               </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
@@ -734,7 +734,7 @@ export function TeamTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
@@ -744,7 +744,7 @@ export function TeamTable({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">Đến trang đầu</span>
                 <IconChevronsLeft />
               </Button>
               <Button
@@ -754,7 +754,7 @@ export function TeamTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">Trang trước</span>
                 <IconChevronLeft />
               </Button>
               <Button
@@ -764,7 +764,7 @@ export function TeamTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">Trang tiếp</span>
                 <IconChevronRight />
               </Button>
               <Button
@@ -774,7 +774,7 @@ export function TeamTable({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">Đến trang cuối</span>
                 <IconChevronsRight />
               </Button>
             </div>
@@ -786,17 +786,17 @@ export function TeamTable({
         className="flex flex-col px-4 lg:px-6"
       >
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Role management functionality coming soon
+          Chức năng quản lý vai trò sắp ra mắt
         </div>
       </TabsContent>
       <TabsContent value="staff" className="flex flex-col px-4 lg:px-6">
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Staff filtering functionality coming soon
+          Chức năng lọc nhân viên sắp ra mắt
         </div>
       </TabsContent>
       <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Inactive users view coming soon
+          Chức năng xem người dùng đã vô hiệu sắp ra mắt
         </div>
       </TabsContent>
     </Tabs>

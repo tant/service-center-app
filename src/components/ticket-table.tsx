@@ -727,7 +727,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                     <IconUserCheck className="h-4 w-4 mr-2" />
                     Phân công cho
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
+                  <DropdownMenuSubContent className="max-h-[200px] overflow-y-auto">
                     {allUsers && allUsers.length > 0 ? (
                       <>
                         {allUsers.map((user) => (
@@ -755,15 +755,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                     )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleView(ticket)}>
-                  <IconEye className="h-4 w-4 mr-2" />
-                  Xem chi tiết
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleEdit(ticket)}>
-                  <IconEdit className="h-4 w-4 mr-2" />
-                  Chỉnh sửa
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

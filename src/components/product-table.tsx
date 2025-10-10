@@ -255,7 +255,7 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <QuickActions product={row.original} />,
   },
 ];

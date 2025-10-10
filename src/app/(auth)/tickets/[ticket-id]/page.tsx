@@ -303,6 +303,11 @@ export default async function Page({ params }: PageProps) {
               <p className="text-sm text-muted-foreground font-medium">Mô tả vấn đề</p>
               <p className="mt-1">{ticket.issue_description}</p>
             </div>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Ghi chú</p>
+              <p className="mt-1">{ticket?.notes || "—"}</p>
+            </div>
           </CardContent>
         </Card>
 

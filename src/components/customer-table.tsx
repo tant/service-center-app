@@ -474,7 +474,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
         const customer = row.original;
 
         return (
-          <div className="flex items-center justify-end space-x-2">
+          <div className="flex items-center justify-start space-x-2">
             <CustomerModal
               customer={customer}
               mode="edit"
@@ -640,7 +640,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       </div>
       <TabsContent
         value="customers-list"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
       >
         <div className="flex items-center gap-2">
           <Input

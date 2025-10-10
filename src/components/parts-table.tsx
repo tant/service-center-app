@@ -556,7 +556,7 @@ export function PartsTable({
       </div>
       <TabsContent
         value="parts-list"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
       >
         <div className="flex items-center gap-2">
           <Input

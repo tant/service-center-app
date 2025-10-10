@@ -20,6 +20,7 @@ import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
 import {
   Sidebar,
@@ -123,7 +124,7 @@ function getFilteredData(userRole: UserRole = "reception") {
 
 export function AppSidebar({ ...props }: AppSidebarProps) {
   // Fetch current user profile to get roles
-  const { data: profile } = trpc.profile.getCurrentUser.useQuery();
+  const { data: profile, isLoading } = trpc.profile.getCurrentUser.useQuery();
   
   // Determine user role from profile
   const userRole = profile?.roles ? getUserPrimaryRole(profile.roles) : "reception";
@@ -149,9 +150,15 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {isLoading ? (
+          <SidebarSkeleton />
+        ) : (
+          <>
+            <NavMain items={data.navMain} />
+            <NavDocuments items={data.documents} />
+            <NavSecondary items={data.navSecondary} className="mt-auto" />
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

@@ -625,7 +625,7 @@ export function PartsTable({
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Hàng trên trang
+                Số hàng trên trang
               </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
@@ -648,7 +648,7 @@ export function PartsTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Trang {table.getState().pagination.pageIndex + 1} của{" "}
+              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
@@ -1115,7 +1115,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Hủy
+              Hủy bỏ
             </Button>
           </DrawerClose>
         </DrawerFooter>

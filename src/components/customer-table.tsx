@@ -908,7 +908,7 @@ function CustomerModal({
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Hủy
+              Hủy bỏ
             </Button>
           </DrawerClose>
         </DrawerFooter>

@@ -25,6 +25,7 @@ import {
   IconGripVertical,
   IconLayoutColumns,
   IconPlus,
+  IconDatabase,
   IconUserCheck,
   IconDotsVertical,
   IconRefresh,
@@ -33,6 +34,10 @@ import {
   IconX,
   IconMessageCircle,
   IconPhoto,
+  IconChevronRight,
+  IconChevronsRight,
+  IconChevronLeft,
+  IconChevronsLeft,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
@@ -227,7 +232,7 @@ function DataTable<TData extends { id: string }, TValue>({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <><div className="overflow-hidden rounded-lg border">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -278,6 +283,85 @@ function DataTable<TData extends { id: string }, TValue>({
         </Table>
       </DndContext>
     </div>
+    <div className="flex items-center justify-between px-4">
+        <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+          {table.getFilteredSelectedRowModel().rows.length} đã chọn{" "}
+          {table.getFilteredRowModel().rows.length} phiếu.
+        </div>
+        <div className="flex w-full items-center gap-8 lg:w-fit">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Label htmlFor="rows-per-page" className="text-sm font-medium">
+              Số dòng trên trang
+            </Label>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Trang {table.getState().pagination.pageIndex + 1} trên{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Đến trang đầu</span>
+              <IconChevronsLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Trang trước</span>
+              <IconChevronLeft />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Trang tiếp</span>
+              <IconChevronRight />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden size-8 lg:flex"
+              size="icon"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Đến trang cuối</span>
+              <IconChevronsRight />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+    
   );
 }
 
@@ -300,6 +384,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const [selectedTicketForComment, setSelectedTicketForComment] = React.useState<{ id: string; ticket_number: string } | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
   const [selectedTicketForUpload, setSelectedTicketForUpload] = React.useState<{ id: string; ticket_number: string } | null>(null);
+  const [isGeneratingSampleTickets, setIsGeneratingSampleTickets] = React.useState(false);
   const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -311,10 +396,32 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const { data: currentUser } = trpc.profile.getCurrentUser.useQuery();
   const { data: allUsers } = trpc.profile.getAllUsers.useQuery();
 
+  // Get data for sample ticket generation
+  const { data: customers } = trpc.customers.getCustomers.useQuery();
+  const { data: products } = trpc.products.getProducts.useQuery();
+  const { data: parts } = trpc.parts.getParts.useQuery();
+
   // Update data when initialData changes
   React.useEffect(() => {
     setData(initialData);
   }, [initialData]);
+
+  const createTicketMutation = trpc.tickets.createTicket.useMutation({
+    onSuccess: (data) => {
+      console.log("[TicketTable] Create sample ticket success:", {
+        ticketId: data.ticket.id,
+        ticketNumber: data.ticket.ticket_number,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    onError: (error) => {
+      console.error("[TicketTable] Create sample ticket error:", {
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+      toast.error(`Lỗi tạo mẫu ticket: ${error.message}`);
+    },
+  });
 
   const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: (result, variables) => {
@@ -470,6 +577,134 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       ticket_number: ticket.ticket_number,
     });
     setUploadModalOpen(true);
+  };
+
+  const handleAddSampleTicket = async () => {
+    if (isGeneratingSampleTickets) {
+      return; // Prevent multiple executions
+    }
+
+    if (!customers || !products || !parts) {
+      toast.error("Dữ liệu chưa tải xong, vui lòng thử lại");
+      return;
+    }
+
+    if (customers.length === 0 || products.length === 0) {
+      toast.error("Cần có ít nhất 1 khách hàng và 1 sản phẩm để tạo mẫu ticket");
+      return;
+    }
+
+    setIsGeneratingSampleTickets(true);
+
+    const priorityLevels = ["low", "normal", "high", "urgent"] as const;
+    const warrantyTypes = ["warranty", "paid", "goodwill"] as const;
+    
+    const sampleDescriptions = [
+      "Máy tính không khởi động được, đèn nguồn không sáng",
+      "Card đồ họa bị lỗi hiển thị, xuất hiện artifacts trên màn hình", 
+      "SSD bị lỗi không nhận dạng được, cần kiểm tra và thay thế",
+      "RAM gặp vấn đề gây BSOD, cần test và khắc phục",
+      "Mainboard có vấn đề về nguồn, cần kiểm tra kỹ thuật",
+      "Quạt tản nhiệt CPU hoạt động ồn ào bất thường",
+      "Nguồn máy tính bị hỏng, cần thay thế linh kiện mới",
+      "Ổ cứng HDD phát ra tiếng kêu lạ, nghi ngờ bad sector",
+      "USB port không hoạt động, cần kiểm tra kết nối",
+      "Audio jack bị lỗi, không có tiếng ra loa hoặc tai nghe"
+    ];
+
+    console.log("[TicketTable] Starting sample ticket generation:", {
+      customersCount: customers.length,
+      productsCount: products.length,
+      partsCount: parts.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    const startMessage = "Đang tạo 100 mẫu ticket...";
+    toast.loading(startMessage, { id: "sample-tickets" });
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < 100; i++) {
+        try {
+          // Random customer
+          const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
+          
+          // Random product
+          const randomProduct = products[Math.floor(Math.random() * products.length)];
+          
+          // Random priority and warranty type
+          const priorityLevel = priorityLevels[Math.floor(Math.random() * priorityLevels.length)];
+          const warrantyType = warrantyTypes[Math.floor(Math.random() * warrantyTypes.length)];
+          
+          // Random description
+          const description = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
+          
+          // Random fees (0-1000000)
+          const serviceFee = Math.floor(Math.random() * 1000000);
+          const diagnosisFee = Math.floor(Math.random() * 500000);
+          const discountAmount = Math.floor(Math.random() * 200000);
+          
+          // Random parts (0-3 parts)
+          const numParts = Math.floor(Math.random() * 4);
+          const selectedParts: any[] = [];
+          
+          if (numParts > 0 && parts.length > 0) {
+            const shuffledParts = [...parts].sort(() => Math.random() - 0.5);
+            for (let j = 0; j < Math.min(numParts, shuffledParts.length); j++) {
+              const part = shuffledParts[j];
+              selectedParts.push({
+                part_id: part.id,
+                quantity: Math.floor(Math.random() * 5) + 1, // 1-5 quantity
+                unit_price: part.price || Math.floor(Math.random() * 500000),
+              });
+            }
+          }
+
+          await createTicketMutation.mutateAsync({
+            customer_data: {
+              id: randomCustomer.id,
+              name: randomCustomer.name,
+              phone: randomCustomer.phone,
+              email: randomCustomer.email || null,
+              address: randomCustomer.address || null,
+            },
+            product_id: randomProduct.id,
+            description: description,
+            priority_level: priorityLevel,
+            warranty_type: warrantyType,
+            service_fee: serviceFee,
+            diagnosis_fee: diagnosisFee,
+            discount_amount: discountAmount,
+            parts: selectedParts,
+          });
+          
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error(`[TicketTable] Error creating sample ticket ${i + 1}:`, error);
+        }
+      }
+
+      toast.success(`Tạo thành công ${successCount} mẫu ticket${errorCount > 0 ? `, ${errorCount} lỗi` : ""}`, 
+        { id: "sample-tickets" });
+      
+      console.log("[TicketTable] Sample ticket generation completed:", {
+        successCount,
+        errorCount,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Refresh the page to show new tickets
+      router.refresh();
+      
+    } catch (error) {
+      console.error("[TicketTable] Sample ticket generation failed:", error);
+      toast.error("Lỗi khi tạo mẫu ticket", { id: "sample-tickets" });
+    } finally {
+      setIsGeneratingSampleTickets(false);
+    }
   };
 
   const handleStatusChange = (ticketId: string, newStatus: "pending" | "in_progress" | "completed" | "cancelled") => {
@@ -899,7 +1134,17 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               <span className="hidden lg:inline">Tạo phiếu</span>
             </Button>
           </Link>
-          
+            <Button 
+              onClick={handleAddSampleTicket} 
+              variant="outline" 
+              size="sm"
+              disabled={isGeneratingSampleTickets}
+            >
+              <IconDatabase />
+              <span className="hidden lg:inline">
+                {isGeneratingSampleTickets ? "Đang tạo..." : "Thêm mẫu"}
+              </span>
+            </Button>
         </div>
       </div>
       <TabsContent

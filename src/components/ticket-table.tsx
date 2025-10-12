@@ -511,6 +511,52 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     return [...(statusFlow?.next || [])] as Array<"pending" | "in_progress" | "completed" | "cancelled">;
   };
 
+  
+  /**
+   * Renders the status options dropdown menu items based on the current ticket status
+   * @param currentStatus - Current status of the ticket
+   * @param ticketId - ID of the ticket
+   * @param onStatusChange - Callback function when status is changed
+   * @param getIcon - Function to get the icon component for a status
+   * @returns JSX element containing the dropdown menu items or "no change possible" message
+   */
+  const renderStatusOptions = (
+    currentStatus: string,
+    ticketId: string,
+    onStatusChange: (id: string, status: "pending" | "in_progress" | "completed" | "cancelled") => void,
+    getIcon: (status: string) => React.ReactNode
+  ) => {
+    const validNextStatuses = getValidNextStatuses(currentStatus);
+    const statusOptions: Array<{ value: "pending" | "in_progress" | "completed" | "cancelled", icon: string, label: string }> = [
+      { value: "pending", icon: "pending", label: "Chờ xử lý" },
+      { value: "in_progress", icon: "in_progress", label: "Đang xử lý" },
+      { value: "completed", icon: "completed", label: "Hoàn thành" },
+      { value: "cancelled", icon: "cancelled", label: "Đã hủy" },
+    ];
+
+    const filteredOptions = statusOptions.filter(option =>
+      validNextStatuses.includes(option.value)
+    );
+
+    if (filteredOptions.length === 0) {
+      return (
+        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+          Không thể thay đổi trạng thái
+        </div>
+      );
+    }
+
+    return filteredOptions.map(option => (
+      <DropdownMenuItem
+        key={option.value}
+        onClick={() => onStatusChange(ticketId, option.value)}
+      >
+        {getIcon(option.icon)}
+        {option.label}
+      </DropdownMenuItem>
+    ));
+  };
+
   // Show empty state
   if (!data || data.length === 0) {
     return (
@@ -907,37 +953,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                     Đổi trạng thái
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    {(() => {
-                      const validNextStatuses = getValidNextStatuses(ticket.status);
-                      const statusOptions: Array<{ value: "pending" | "in_progress" | "completed" | "cancelled", icon: string, label: string }> = [
-                        { value: "pending", icon: "pending", label: "Chờ xử lý" },
-                        { value: "in_progress", icon: "in_progress", label: "Đang xử lý" },
-                        { value: "completed", icon: "completed", label: "Hoàn thành" },
-                        { value: "cancelled", icon: "cancelled", label: "Đã hủy" },
-                      ];
-
-                      const filteredOptions = statusOptions.filter(option =>
-                        validNextStatuses.includes(option.value)
-                      );
-
-                      if (filteredOptions.length === 0) {
-                        return (
-                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                            Không thể thay đổi trạng thái
-                          </div>
-                        );
-                      }
-
-                      return filteredOptions.map(option => (
-                        <DropdownMenuItem
-                          key={option.value}
-                          onClick={() => handleStatusChange(ticket.id, option.value)}
-                        >
-                          {getStatusIcon(option.icon)}
-                          {option.label}
-                        </DropdownMenuItem>
-                      ));
-                    })()}
+                    {renderStatusOptions(ticket.status, ticket.id, handleStatusChange, getStatusIcon)}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />

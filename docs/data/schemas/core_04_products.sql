@@ -5,7 +5,7 @@ create table "products" (
   "id" uuid not null default gen_random_uuid(),
   "name" text not null,
   "type" text not null,
-  "brand" text,
+  "brand_id" uuid references "brands"("id"),
   "model" text,
   "sku" text,
   "short_description" text,
@@ -23,7 +23,7 @@ create table "products" (
 -- Create indexes for better performance
 create index "products_name_idx" on "products" using btree ("name");
 create index "products_type_idx" on "products" using btree ("type");
-create index "products_brand_idx" on "products" using btree ("brand");
+create index "products_brand_id_idx" on "products" using btree ("brand_id");
 create index "products_model_idx" on "products" using btree ("model");
 create index "products_sku_idx" on "products" using btree ("sku");
 create index "products_is_active_idx" on "products" using btree ("is_active") where is_active = true;

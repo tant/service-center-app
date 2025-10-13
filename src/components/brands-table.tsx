@@ -7,10 +7,11 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconDatabase,
   IconEdit,
-  IconExternalLink,
   IconLayoutColumns,
   IconPlus,
+  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -28,10 +29,18 @@ import {
 } from "@tanstack/react-table";
 import * as React from "react";
 import { z } from "zod";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -56,145 +65,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { trpc } from "@/components/providers/trpc-provider";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export const brandSchema = z.object({
   id: z.string(),
   name: z.string(),
-  logo_url: z.string().nullable(),
   description: z.string().nullable(),
-  website: z.string().nullable(),
-  country: z.string().nullable(),
-  founded_year: z.number().nullable(),
-  products_count: z.number(),
-  parts_count: z.number(),
   is_active: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
+  created_by: z.string().nullable(),
+  updated_by: z.string().nullable(),
 });
 
-const columns: ColumnDef<z.infer<typeof brandSchema>>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Chọn tất cả"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Chọn hàng"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "name",
-    header: "Thương hiệu",
-    cell: ({ row }) => {
-      return <BrandViewer brand={row.original} />;
-    },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "country",
-    header: "Quốc gia",
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {row.original.country || (
-          <span className="text-muted-foreground italic">Không có thông tin</span>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "founded_year",
-    header: "Năm thành lập",
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {row.original.founded_year || (
-          <span className="text-muted-foreground italic">Không có thông tin</span>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "products_count",
-    header: "Sản phẩm",
-    cell: ({ row }) => (
-      <div className="text-center">
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          {row.original.products_count}
-        </span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "parts_count",
-    header: "Linh kiện",
-    cell: ({ row }) => (
-      <div className="text-center">
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          {row.original.parts_count}
-        </span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "is_active",
-    header: "Trạng thái",
-    cell: ({ row }) => (
-      <div className="text-center">
-        <Badge variant={row.original.is_active ? "default" : "secondary"}>
-          {row.original.is_active ? "Hoạt động" : "Ngừng hoạt động"}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "updated_at",
-    header: "Cập nhật",
-    cell: ({ row }) => (
-      <div className="text-muted-foreground text-sm">
-        {new Date(row.original.updated_at).toLocaleDateString()}
-      </div>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Thao tác",
-    cell: ({ row }) => <QuickActions brand={row.original} />,
-  },
-];
+type Brand = z.infer<typeof brandSchema>;
 
-function QuickActions({ brand }: { brand: z.infer<typeof brandSchema> }) {
-  const handleEdit = () => {
-    // Placeholder for edit functionality
-    console.log("Edit brand:", brand.name);
-  };
-
-  const handleViewWebsite = () => {
-    if (brand.website) {
-      window.open(brand.website, "_blank");
-    }
-  };
-
+function QuickActions({
+  brand,
+  onEdit,
+  onDelete,
+}: {
+  brand: Brand;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="flex items-center gap-1">
       {/* Edit Brand */}
@@ -204,7 +106,7 @@ function QuickActions({ brand }: { brand: z.infer<typeof brandSchema> }) {
             variant="ghost"
             size="sm"
             className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handleEdit}
+            onClick={onEdit}
           >
             <IconEdit className="size-5" />
           </Button>
@@ -214,32 +116,389 @@ function QuickActions({ brand }: { brand: z.infer<typeof brandSchema> }) {
         </TooltipContent>
       </Tooltip>
 
-      {/* View Website */}
-      {brand.website && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-9 p-0 text-muted-foreground hover:text-foreground"
-              onClick={handleViewWebsite}
-            >
-              <IconExternalLink className="size-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Xem website</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
+      {/* Delete Brand */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-9 p-0 text-muted-foreground hover:text-destructive"
+            onClick={onDelete}
+          >
+            <IconTrash className="size-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Xóa thương hiệu</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
+  );
+}
+
+function BrandViewer({ brand }: { brand: Brand }) {
+  return (
+    <div className="flex items-center gap-3 p-2">
+      <Avatar className="size-8">
+        <AvatarFallback>
+          <IconBuilding className="size-4" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col items-start">
+        <div className="font-medium">{brand.name}</div>
+        {brand.description && (
+          <div className="text-sm text-muted-foreground line-clamp-1">
+            {brand.description}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BrandFormDialog({
+  open,
+  onOpenChange,
+  brand,
+  mode,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  brand?: Brand;
+  mode: "create" | "edit";
+}) {
+  const router = useRouter();
+  const [name, setName] = React.useState(brand?.name || "");
+  const [description, setDescription] = React.useState(
+    brand?.description || "",
+  );
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const createMutation = trpc.brands.createBrand.useMutation({
+    onSuccess: () => {
+      toast.success("Thương hiệu đã được tạo thành công");
+      onOpenChange(false);
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const updateMutation = trpc.brands.updateBrand.useMutation({
+    onSuccess: () => {
+      toast.success("Thương hiệu đã được cập nhật thành công");
+      onOpenChange(false);
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      if (mode === "create") {
+        await createMutation.mutateAsync({
+          name,
+          description: description || null,
+        });
+      } else if (brand) {
+        await updateMutation.mutateAsync({
+          id: brand.id,
+          name,
+          description: description || null,
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (open) {
+      setName(brand?.name || "");
+      setDescription(brand?.description || "");
+    }
+  }, [open, brand]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[525px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>
+              {mode === "create" ? "Thêm thương hiệu mới" : "Chỉnh sửa thương hiệu"}
+            </DialogTitle>
+            <DialogDescription>
+              {mode === "create"
+                ? "Nhập thông tin thương hiệu mới"
+                : "Cập nhật thông tin thương hiệu"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">
+                Tên thương hiệu <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="VD: ASUS, MSI, Gigabyte..."
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Mô tả</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Mô tả về thương hiệu..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? mode === "create"
+                  ? "Đang tạo..."
+                  : "Đang cập nhật..."
+                : mode === "create"
+                  ? "Tạo thương hiệu"
+                  : "Cập nhật"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteBrandDialog({
+  open,
+  onOpenChange,
+  brand,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  brand: Brand | null;
+}) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const deleteMutation = trpc.brands.deleteBrand.useMutation({
+    onSuccess: () => {
+      toast.success("Thương hiệu đã được xóa thành công");
+      onOpenChange(false);
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const handleDelete = async () => {
+    if (!brand) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteMutation.mutateAsync({ id: brand.id });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Xóa thương hiệu</DialogTitle>
+          <DialogDescription>
+            Bạn có chắc chắn muốn xóa thương hiệu{" "}
+            <span className="font-semibold">{brand?.name}</span>? Hành động này
+            không thể hoàn tác.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isDeleting}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? "Đang xóa..." : "Xóa"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const createBrandMutation = trpc.brands.createBrand.useMutation({
+    onSuccess: (data) => {
+      console.log("[Brands] Sample brand created:", { response: data });
+    },
+    onError: (error) => {
+      const errorMessage = error.message || "Lỗi khi tạo thương hiệu mẫu";
+      console.error("[Brands] Sample brand creation error:", errorMessage, {
+        error,
+      });
+      toast.error(errorMessage);
+    },
+  });
+
+  // Sample computer hardware brands
+  const sampleBrands = [
+    {
+      name: "ASUS",
+      description: "Motherboards, graphics cards, laptops, and gaming peripherals manufacturer",
+    },
+    {
+      name: "MSI",
+      description: "Micro-Star International - Gaming hardware and computer components",
+    },
+    {
+      name: "Gigabyte",
+      description: "Motherboards, graphics cards, and PC hardware components",
+    },
+    {
+      name: "EVGA",
+      description: "High-performance graphics cards and power supplies",
+    },
+    {
+      name: "ASRock",
+      description: "Motherboards and mini PC systems manufacturer",
+    },
+    {
+      name: "Corsair",
+      description: "Gaming peripherals, memory, cooling systems, and PC components",
+    },
+    {
+      name: "Kingston",
+      description: "Memory modules, SSDs, and storage solutions",
+    },
+    {
+      name: "Samsung",
+      description: "SSDs, memory, and display technology",
+    },
+    {
+      name: "Intel",
+      description: "Processors, chipsets, and computing technology",
+    },
+    {
+      name: "AMD",
+      description: "Processors, graphics cards, and computing solutions",
+    },
+  ];
+
+  const handleAddSampleBrands = async () => {
+    setIsLoading(true);
+    console.log("[Brands] Adding sample brands started:", {
+      totalBrands: sampleBrands.length,
+    });
+
+    try {
+      let successCount = 0;
+      const totalBrands = sampleBrands.length;
+
+      for (const brand of sampleBrands) {
+        try {
+          await createBrandMutation.mutateAsync(brand);
+          successCount++;
+        } catch (error) {
+          console.error(
+            `[Brands] Failed to create sample brand: ${brand.name}`,
+            error,
+          );
+        }
+      }
+
+      if (successCount === totalBrands) {
+        const successMessage = `Đã thêm thành công ${successCount} thương hiệu mẫu`;
+        console.log(
+          "[Brands] All sample brands added successfully:",
+          successMessage,
+          { successCount, totalBrands },
+        );
+        toast.success(successMessage);
+      } else if (successCount > 0) {
+        const successMessage = `Đã thêm thành công ${successCount}/${totalBrands} thương hiệu mẫu`;
+        console.log("[Brands] Partial sample brands added:", successMessage, {
+          successCount,
+          totalBrands,
+        });
+        toast.success(successMessage);
+      } else {
+        const errorMessage = "Không thể thêm thương hiệu mẫu nào";
+        console.error("[Brands] No sample brands added:", errorMessage, {
+          successCount,
+          totalBrands,
+        });
+        toast.error(errorMessage);
+      }
+
+      if (successCount > 0) {
+        router.refresh();
+        if (onSuccess) {
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      const errorMessage = "Lỗi khi thêm thương hiệu mẫu";
+      console.error("[Brands] Sample brands addition error:", errorMessage, {
+        error,
+      });
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleAddSampleBrands}
+      disabled={isLoading}
+    >
+      <IconDatabase />
+      <span className="hidden lg:inline">
+        {isLoading ? "Đang thêm..." : "Thêm sample"}
+      </span>
+    </Button>
   );
 }
 
 export function BrandsTable({
   data: initialData,
 }: {
-  data: z.infer<typeof brandSchema>[];
+  data: Brand[];
 }) {
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -254,6 +513,88 @@ export function BrandsTable({
     pageSize: 10,
   });
   const [searchValue, setSearchValue] = React.useState("");
+  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [selectedBrand, setSelectedBrand] = React.useState<Brand | null>(null);
+
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  const columns: ColumnDef<Brand>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Chọn tất cả"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Chọn hàng"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "name",
+      header: "Thương hiệu",
+      cell: ({ row }) => {
+        return <BrandViewer brand={row.original} />;
+      },
+      enableHiding: false,
+    },
+    {
+      accessorKey: "is_active",
+      header: "Trạng thái",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <Badge variant={row.original.is_active ? "default" : "secondary"}>
+            {row.original.is_active ? "Hoạt động" : "Ngừng hoạt động"}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "updated_at",
+      header: "Cập nhật",
+      cell: ({ row }) => (
+        <div className="text-muted-foreground text-sm">
+          {new Date(row.original.updated_at).toLocaleDateString("vi-VN")}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Thao tác",
+      cell: ({ row }) => (
+        <QuickActions
+          brand={row.original}
+          onEdit={() => {
+            setSelectedBrand(row.original);
+            setEditDialogOpen(true);
+          }}
+          onDelete={() => {
+            setSelectedBrand(row.original);
+            setDeleteDialogOpen(true);
+          }}
+        />
+      ),
+    },
+  ];
 
   const filteredData = React.useMemo(() => {
     if (!searchValue) return data;
@@ -262,7 +603,6 @@ export function BrandsTable({
       const searchLower = searchValue.toLowerCase();
       return (
         item.name.toLowerCase().includes(searchLower) ||
-        item.country?.toLowerCase().includes(searchLower) ||
         item.description?.toLowerCase().includes(searchLower)
       );
     });
@@ -294,240 +634,250 @@ export function BrandsTable({
   });
 
   return (
-    <Tabs
-      defaultValue="brands-list"
-      className="w-full flex-col justify-start gap-6"
-    >
-      <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="brands-list">
-          <SelectTrigger
-            className="flex w-fit @4xl/main:hidden"
-            size="sm"
-            id="view-selector"
-          >
-            <SelectValue placeholder="Chọn chế độ xem" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="brands-list">DS Thương hiệu</SelectItem>
-            <SelectItem value="active">Đang hoạt động</SelectItem>
-            <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
-          </SelectContent>
-        </Select>
-        <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="brands-list">DS Thương hiệu</TabsTrigger>
-          <TabsTrigger value="active">
-            Đang hoạt động <Badge variant="secondary">{data.filter(b => b.is_active).length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="inactive">Ngừng hoạt động</TabsTrigger>
-        </TabsList>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <IconLayoutColumns />
-                <span className="hidden lg:inline">Tùy chỉnh cột</span>
-                <span className="lg:hidden">Cột</span>
-                <IconChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide(),
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Thêm thương hiệu</span>
-          </Button>
-        </div>
-      </div>
-      <TabsContent
-        value="brands-list"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+    <>
+      <Tabs
+        defaultValue="brands-list"
+        className="w-full flex-col justify-start gap-6"
       >
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Tìm theo tên, quốc gia hoặc mô tả..."
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader className="bg-muted sticky top-0 z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
+        <div className="flex items-center justify-between px-4 lg:px-6">
+          <Label htmlFor="view-selector" className="sr-only">
+            View
+          </Label>
+          <Select defaultValue="brands-list">
+            <SelectTrigger
+              className="flex w-fit @4xl/main:hidden"
+              size="sm"
+              id="view-selector"
+            >
+              <SelectValue placeholder="Chọn chế độ xem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="brands-list">DS Thương hiệu</SelectItem>
+              <SelectItem value="active">Đang hoạt động</SelectItem>
+              <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
+            </SelectContent>
+          </Select>
+          <TabsList className="hidden @4xl/main:flex">
+            <TabsTrigger value="brands-list">DS Thương hiệu</TabsTrigger>
+            <TabsTrigger value="active">
+              Đang hoạt động{" "}
+              <Badge variant="secondary">
+                {data.filter((b) => b.is_active).length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="inactive">Ngừng hoạt động</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <IconLayoutColumns />
+                  <span className="hidden lg:inline">Tùy chỉnh cột</span>
+                  <span className="lg:hidden">Cột</span>
+                  <IconChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {table
+                  .getAllColumns()
+                  .filter(
+                    (column) =>
+                      typeof column.accessorFn !== "undefined" &&
+                      column.getCanHide(),
+                  )
+                  .map((column) => {
                     return (
-                      <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </TableHead>
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(!!value)
+                        }
+                      >
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
                     );
                   })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <IconPlus />
+              <span className="hidden lg:inline">Thêm thương hiệu</span>
+            </Button>
+            <AddSampleBrandsButton />
+          </div>
+        </div>
+        <TabsContent
+          value="brands-list"
+          className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Tìm theo tên hoặc mô tả..."
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader className="bg-muted sticky top-0 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    Không tìm thấy thương hiệu nào.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-between px-4">
-          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
-            {table.getFilteredRowModel().rows.length} thương hiệu.
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      Không tìm thấy thương hiệu nào.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Hàng trên trang
-              </Label>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-between px-4">
+            <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+              Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
+              {table.getFilteredRowModel().rows.length} thương hiệu.
             </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Trang {table.getState().pagination.pageIndex + 1} của{" "}
-              {table.getPageCount()}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Đến trang đầu</span>
-                <IconChevronsLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Trang trước</span>
-                <IconChevronLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Trang tiếp</span>
-                <IconChevronRight />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Đến trang cuối</span>
-                <IconChevronsRight />
-              </Button>
+            <div className="flex w-full items-center gap-8 lg:w-fit">
+              <div className="hidden items-center gap-2 lg:flex">
+                <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                  Hàng trên trang
+                </Label>
+                <Select
+                  value={`${table.getState().pagination.pageSize}`}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value));
+                  }}
+                >
+                  <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                    <SelectValue
+                      placeholder={table.getState().pagination.pageSize}
+                    />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-fit items-center justify-center text-sm font-medium">
+                Trang {table.getState().pagination.pageIndex + 1} của{" "}
+                {table.getPageCount()}
+              </div>
+              <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Đến trang đầu</span>
+                  <IconChevronsLeft />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="size-8"
+                  size="icon"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Trang trước</span>
+                  <IconChevronLeft />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="size-8"
+                  size="icon"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Trang tiếp</span>
+                  <IconChevronRight />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden size-8 lg:flex"
+                  size="icon"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Đến trang cuối</span>
+                  <IconChevronsRight />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </TabsContent>
-      <TabsContent value="active" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-    </Tabs>
-  );
-}
+        </TabsContent>
+        <TabsContent value="active" className="flex flex-col px-4 lg:px-6">
+          <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+        </TabsContent>
+        <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
+          <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
+        </TabsContent>
+      </Tabs>
 
-function BrandViewer({ brand }: { brand: z.infer<typeof brandSchema> }) {
-  return (
-    <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
-      <Avatar className="size-8">
-        <AvatarImage src={brand.logo_url || ""} />
-        <AvatarFallback>
-          <IconBuilding className="size-4" />
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex flex-col items-start">
-        <div className="font-medium">{brand.name}</div>
-        <div className="text-sm text-muted-foreground">
-          {brand.description || "Không có mô tả"}
-        </div>
-      </div>
-    </Button>
+      <BrandFormDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        mode="create"
+      />
+
+      <BrandFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        brand={selectedBrand || undefined}
+        mode="edit"
+      />
+
+      <DeleteBrandDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        brand={selectedBrand}
+      />
+    </>
   );
 }

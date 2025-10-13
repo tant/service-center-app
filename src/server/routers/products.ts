@@ -10,13 +10,12 @@ const productTypeEnum = z.enum([
   "Mainboard",
   "Other",
 ]);
-const productBrandEnum = z.enum(["ZOTAC", "SSTC", "Other"]);
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   sku: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
-  brand: productBrandEnum.nullable().optional(),
+  brand_id: z.string().uuid("Brand ID must be a valid UUID").nullable().optional(),
   model: z.string().nullable().optional(),
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
@@ -28,7 +27,7 @@ const updateProductSchema = z.object({
   name: z.string().min(1, "Product name is required").optional(),
   sku: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
-  brand: productBrandEnum.nullable().optional(),
+  brand_id: z.string().uuid("Brand ID must be a valid UUID").nullable().optional(),
   model: z.string().nullable().optional(),
   type: productTypeEnum.optional(),
   primary_image: z.string().nullable().optional(),
@@ -82,7 +81,7 @@ export const productsRouter = router({
           name: input.name,
           sku: input.sku || null,
           short_description: input.short_description || null,
-          brand: input.brand || null,
+          brand_id: input.brand_id || null,
           model: input.model || null,
           type: input.type,
           primary_image: input.primary_image || null,
@@ -129,7 +128,7 @@ export const productsRouter = router({
       if (input.sku !== undefined) updateData.sku = input.sku;
       if (input.short_description !== undefined)
         updateData.short_description = input.short_description;
-      if (input.brand !== undefined) updateData.brand = input.brand;
+      if (input.brand_id !== undefined) updateData.brand_id = input.brand_id;
       if (input.model !== undefined) updateData.model = input.model;
       if (input.type !== undefined) updateData.type = input.type;
       if (input.primary_image !== undefined)
@@ -195,7 +194,13 @@ export const productsRouter = router({
       // Get product details
       const { data: product, error: productError } = await ctx.supabaseAdmin
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          brands:brand_id (
+            id,
+            name
+          )
+        `)
         .eq("id", input.id)
         .single();
 
@@ -240,7 +245,13 @@ export const productsRouter = router({
   getProducts: publicProcedure.query(async ({ ctx }) => {
     const { data: products, error } = await ctx.supabaseAdmin
       .from("products")
-      .select("*")
+      .select(`
+        *,
+        brands:brand_id (
+          id,
+          name
+        )
+      `)
       .order("name", { ascending: true });
 
     if (error) {

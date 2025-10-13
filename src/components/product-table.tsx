@@ -108,7 +108,8 @@ export const productSchema = z.object({
   name: z.string(),
   sku: z.string().nullable(),
   short_description: z.string().nullable(),
-  brand: z.enum(["ZOTAC", "SSTC", "Other"]).nullable(),
+  brand_id: z.string().nullable(),
+  brand_name: z.string().nullable(),
   model: z.string().nullable(),
   type: z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]),
   primary_image: z.string().nullable(),
@@ -203,11 +204,11 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     ),
   },
   {
-    accessorKey: "brand",
+    accessorKey: "brand_name",
     header: "Thương hiệu",
     cell: ({ row }) => (
       <div className="font-medium">
-        {row.original.brand || (
+        {row.original.brand_name || (
           <span className="text-muted-foreground italic">No brand</span>
         )}
       </div>
@@ -398,7 +399,7 @@ export function ProductTable({
       const searchLower = searchValue.toLowerCase();
       return (
         item.name.toLowerCase().includes(searchLower) ||
-        item.brand?.toLowerCase().includes(searchLower) ||
+        item.brand_name?.toLowerCase().includes(searchLower) ||
         item.model?.toLowerCase().includes(searchLower) ||
         item.sku?.toLowerCase().includes(searchLower)
       );
@@ -731,9 +732,9 @@ function ProductViewer({
           <div className="flex flex-col items-start">
             <div className="font-medium">{product.name}</div>
             <div className="text-sm text-muted-foreground">
-              {product.brand && product.model
-                ? `${product.brand} - ${product.model}`
-                : product.brand || product.model || product.type}
+              {product.brand_name && product.model
+                ? `${product.brand_name} - ${product.model}`
+                : product.brand_name || product.model || product.type}
             </div>
           </div>
         </Button>
@@ -762,7 +763,7 @@ function ProductModal({
     name: "",
     sku: "",
     short_description: "",
-    brand: null as "ZOTAC" | "SSTC" | "Other" | null,
+    brand_id: null as string | null,
     model: "",
     type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
@@ -771,6 +772,9 @@ function ProductModal({
 
   // Fetch parts data for selection
   const { data: parts } = trpc.parts.getParts.useQuery();
+
+  // Fetch brands data for selection
+  const { data: brands } = trpc.brands.getBrands.useQuery();
 
   // Fetch product details with parts for edit mode
   const { data: productWithParts } = trpc.products.getProduct.useQuery(
@@ -838,7 +842,7 @@ function ProductModal({
         name: product?.name || "",
         sku: product?.sku || "",
         short_description: product?.short_description || "",
-        brand: product?.brand || null,
+        brand_id: product?.brand_id || null,
         model: product?.model || "",
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
@@ -876,7 +880,7 @@ function ProductModal({
         name: formData.name,
         sku: formData.sku || null,
         short_description: formData.short_description || null,
-        brand: formData.brand || null,
+        brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
@@ -888,7 +892,7 @@ function ProductModal({
         name: formData.name,
         sku: formData.sku || null,
         short_description: formData.short_description || null,
-        brand: formData.brand || null,
+        brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
@@ -980,18 +984,20 @@ function ProductModal({
               <div className="flex flex-col gap-3">
                 <Label htmlFor="brand">Thương hiệu</Label>
                 <Select
-                  value={formData.brand || ""}
-                  onValueChange={(value: "ZOTAC" | "SSTC" | "Other") =>
-                    setFormData({ ...formData, brand: value || null })
+                  value={formData.brand_id || ""}
+                  onValueChange={(value: string) =>
+                    setFormData({ ...formData, brand_id: value || null })
                   }
                 >
                   <SelectTrigger id="brand" className="w-full">
                     <SelectValue placeholder="Chọn thương hiệu (tùy chọn)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ZOTAC">ZOTAC</SelectItem>
-                    <SelectItem value="SSTC">SSTC</SelectItem>
-                    <SelectItem value="Other">Khác</SelectItem>
+                    {brands?.map((brand) => (
+                      <SelectItem key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1170,6 +1176,9 @@ function ProductModal({
 function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // Fetch brands to get the ZOTAC brand ID
+  const { data: brands } = trpc.brands.getBrands.useQuery();
+
   const createProductMutation = trpc.products.createProduct.useMutation({
     onSuccess: (data) => {
       // Success is handled in the batch operation
@@ -1184,14 +1193,19 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
     },
   });
 
+  // Get ZOTAC brand ID from brands list
+  const zotacBrandId = React.useMemo(() => {
+    return brands?.find((b) => b.name === "ZOTAC")?.id || null;
+  }, [brands]);
+
   // Sample products from VGA data file (selected variety)
-  const sampleProducts = [
+  const sampleProducts = React.useMemo(() => [
     {
       name: "GAMING GeForce RTX 3050 ECO Edition 8GB",
       sku: "14-500-567",
       short_description:
         "ZOTAC GAMING GeForce RTX 3050 ECO Edition 8GB GDDR6 128-bit 14 Gbps PCIE 4.0 Gaming Graphics Card, Active Fan Control, FREEZE Fan Stop, ZT-A30500K-10M",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-A30500K-10M",
       type: "VGA" as const,
       primary_image:
@@ -1202,7 +1216,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-630",
       short_description:
         "ZOTAC ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5090 ARCTICSTORM AIO ZT-B50900K-30P",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50900K-30P",
       type: "VGA" as const,
       primary_image:
@@ -1213,7 +1227,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-631",
       short_description:
         "ZOTAC SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5070 Ti SOLID CORE White Edition ZT-B50710Q2-10P",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50710Q2-10P",
       type: "VGA" as const,
       primary_image:
@@ -1224,7 +1238,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-595",
       short_description:
         "ZOTAC AMP Extreme Infinity GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card ZT-B50800B-10P",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50800B-10P",
       type: "VGA" as const,
       primary_image:
@@ -1235,7 +1249,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-509",
       short_description:
         "ZOTAC GAMING GeForce RTX 3060 Twin Edge 12GB GDDR6 192-bit 15 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Cooling, Active Fan Control, FREEZE Fan Stop, ZT-A30600E-10M",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-A30600E-10M",
       type: "VGA" as const,
       primary_image:
@@ -1246,7 +1260,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-612",
       short_description:
         "ZOTAC Twin Edge OC GeForce RTX 5060 Ti PCI Express 5.0 x8 16GB 128-Bit GDDR7 Graphics Card ZT-B50620H-10M",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50620H-10M",
       type: "VGA" as const,
       primary_image:
@@ -1257,7 +1271,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-617",
       short_description:
         "ZOTAC AMP GeForce RTX 5070 12GB 192-Bit GDDR7 PCI Express 5.0 x16 Graphics Card RTX 5070 AMP White Edition ZT-B50700FQ-10P",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50700FQ-10P",
       type: "VGA" as const,
       primary_image:
@@ -1268,7 +1282,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-625",
       short_description:
         "ZOTAC SOLO GeForce RTX 5050 8GB GDDR6 PCI Express 5.0 x8 ATX Graphics Card GeForce RTX 5050 SOLO ZT-B50500G-10L",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50500G-10L",
       type: "VGA" as const,
       primary_image:
@@ -1279,7 +1293,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "14-500-623",
       short_description:
         "ZOTAC GAMING GeForce RTX 5060 Twin Edge OC DLSS 4 8GB GDDR7 128-bit 28 Gbps PCIE 5.0 Gaming Graphics Card, SFF-ready compact card, ZT-B50600H-10M",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-B50600H-10M",
       type: "VGA" as const,
       primary_image:
@@ -1290,7 +1304,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "9SIADT2KAU1283",
       short_description:
         "ZOTAC GAMING GeForce GTX 1660 SUPER Twin Fan Black 6GB GDDR6 192-bit Gaming Graphics Card, ZT-T16620J-10M",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-T16620J-10M",
       type: "VGA" as const,
       primary_image:
@@ -1301,7 +1315,7 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "9SIABKXKBC4109",
       short_description:
         "ZOTAC GAMING GeForce RTX 3090 Trinity OC 24GB GDDR6X 384-bit 19.5 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Advanced Cooling, SPECTRA 2.0 RGB Lighting, ZT-A30900J-10P",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-A30900J-10P",
       type: "VGA" as const,
       primary_image:
@@ -1312,13 +1326,13 @@ function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
       sku: "9SIBTK0KCK4538",
       short_description:
         "ZOTAC GAMING GeForce RTX 4060 8GB Solo DLSS 3 8GB GDDR6 128-bit 17 Gbps PCIE 4.0 Super Compact Gaming Graphics Card, ZT-D40600G-10L",
-      brand: "ZOTAC" as const,
+      brand_id: zotacBrandId,
       model: "ZT-D40600G-10L",
       type: "VGA" as const,
       primary_image:
         "https://c1.neweggimages.com/productimage/nb300/14-500-558-S09.jpg",
     },
-  ];
+  ], [zotacBrandId]);
 
   const handleAddSampleProducts = async () => {
     setIsLoading(true);

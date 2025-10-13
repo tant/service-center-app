@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
-import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar } from "@tabler/icons-react";
+import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar, IconClipboardText, IconTool, IconCurrencyDollar } from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
 
@@ -126,10 +126,10 @@ async function getTicketData(ticketId: string) {
 
 function getStatusBadge(status: string) {
   const statusMap = {
-    pending: { label: "Chờ xử lý", variant: "destructive" as const },
-    in_progress: { label: "Đang xử lý", variant: "default" as const },
-    completed: { label: "Hoàn thành", variant: "secondary" as const },
-    cancelled: { label: "Đã hủy", variant: "outline" as const },
+    pending: { label: "Chờ xử lý", variant: "pending" as const },
+    in_progress: { label: "Đang xử lý", variant: "processing" as const },
+    completed: { label: "Hoàn thành", variant: "resolved" as const },
+    cancelled: { label: "Đã hủy", variant: "closed" as const },
   };
   const statusConfig = statusMap[status as keyof typeof statusMap] || statusMap.pending;
   return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
@@ -206,9 +206,12 @@ export default async function Page({ params }: PageProps) {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Thông tin phiếu</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <IconClipboardText className="h-5 w-5" />
+                Thông tin phiếu
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Trạng thái:</span>
                 {getStatusBadge(ticket.status)}
@@ -242,27 +245,28 @@ export default async function Page({ params }: PageProps) {
                 Thông tin khách hàng
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Tên khách hàng</p>
-                <p className="font-medium">{ticket.customers?.name}</p>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-y-3 gap-x-4">
+                <p className="text-sm text-muted-foreground font-medium">Tên khách hàng</p>
+                <p className="font-medium col-span-2">{ticket.customers?.name}</p>
+                
+                <p className="text-sm text-muted-foreground font-medium">Số điện thoại</p>
+                <span className="col-span-2">{ticket.customers?.phone}</span>
+                
+                {ticket.customers?.email && (
+                  <>
+                    <p className="text-sm text-muted-foreground font-medium">Email</p>
+                    <span className="col-span-2">{ticket.customers.email}</span>
+                  </>
+                )}
+                
+                {ticket.customers?.address && (
+                  <>
+                    <p className="text-sm text-muted-foreground font-medium">Địa chỉ</p>
+                    <p className="text-sm col-span-2">{ticket.customers.address}</p>
+                  </>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <IconPhone className="h-4 w-4 text-muted-foreground" />
-                <span>{ticket.customers?.phone}</span>
-              </div>
-              {ticket.customers?.email && (
-                <div className="flex items-center gap-2">
-                  <IconMail className="h-4 w-4 text-muted-foreground" />
-                  <span>{ticket.customers.email}</span>
-                </div>
-              )}
-              {ticket.customers?.address && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                  <p className="text-sm">{ticket.customers.address}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -277,27 +281,32 @@ export default async function Page({ params }: PageProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-sm text-muted-foreground">Tên sản phẩm</p>
+              <p className="text-sm text-muted-foreground font-medium">Tên sản phẩm</p>
               <p className="font-medium">{ticket.products?.name}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <p className="text-sm text-muted-foreground">Loại</p>
+                <p className="text-sm text-muted-foreground font-medium">Loại</p>
                 <p>{ticket.products?.type}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Thương hiệu</p>
+                <p className="text-sm text-muted-foreground font-medium">Thương hiệu</p>
                 <p>{ticket.products?.brand || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Model</p>
+                <p className="text-sm text-muted-foreground font-medium">Model</p>
                 <p>{ticket.products?.model || "—"}</p>
               </div>
             </div>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground">Mô tả vấn đề</p>
+              <p className="text-sm text-muted-foreground font-medium">Mô tả vấn đề</p>
               <p className="mt-1">{ticket.issue_description}</p>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-sm text-muted-foreground font-medium">Ghi chú</p>
+              <p className="mt-1">{ticket?.notes || "—"}</p>
             </div>
           </CardContent>
         </Card>
@@ -306,7 +315,10 @@ export default async function Page({ params }: PageProps) {
         {ticket.service_ticket_parts && ticket.service_ticket_parts.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Linh kiện đã sử dụng</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <IconTool className="h-5 w-5" />
+                Linh kiện đã sử dụng
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -336,7 +348,10 @@ export default async function Page({ params }: PageProps) {
         {/* Cost Summary */}
         <Card>
           <CardHeader>
-            <CardTitle>Chi phí</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <IconCurrencyDollar className="h-5 w-5" />
+              Chi phí
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

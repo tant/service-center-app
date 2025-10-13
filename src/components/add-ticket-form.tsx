@@ -4,10 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  IconPhone,
   IconUser,
-  IconMail,
-  IconMapPin,
   IconSettings,
   IconPackage,
   IconPlus,
@@ -62,6 +59,9 @@ export function AddTicketForm() {
     address: "",
   });
   const [phoneSearch, setPhoneSearch] = React.useState("");
+  // State cho popup chọn khách hàng
+  const [showCustomerPopup, setShowCustomerPopup] = React.useState(false);
+  const [filteredCustomers, setFilteredCustomers] = React.useState<any[]>([]);
 
   // Ticket data
   const [ticketData, setTicketData] = React.useState({
@@ -130,25 +130,60 @@ export function AddTicketForm() {
     },
   });
 
-  // Search customer by phone
+  // Search customer by phone - cập nhật để hiển thị popup
   React.useEffect(() => {
     if (phoneSearch.length >= 3) {
-      const foundCustomer = customers?.find(c =>
-        c.phone?.includes(phoneSearch) ||
-        c.phone?.replace(/\D/g, '').includes(phoneSearch.replace(/\D/g, ''))
-      );
+      // Tìm khách hàng phù hợp với số điện thoại
+      const matchedCustomers = customers?.filter(c => {
+        const customerPhone = c.phone?.replace(/\D/g, '') || '';
+        const searchPhone = phoneSearch.replace(/\D/g, '');
+        return customerPhone.includes(searchPhone) || c.phone?.includes(phoneSearch);
+      }) || [];
 
-      if (foundCustomer) {
-        setCustomerData({
-          id: foundCustomer.id,
-          name: foundCustomer.name || "",
-          phone: foundCustomer.phone || "",
-          email: foundCustomer.email || "",
-          address: foundCustomer.address || "",
-        });
+      setFilteredCustomers(matchedCustomers);
+      
+      // Hiển thị popup nếu có khách hàng phù hợp và chưa chọn khách hàng cụ thể
+      if (matchedCustomers.length > 0 && !customerData.id) {
+        setShowCustomerPopup(true);
+      } else {
+        setShowCustomerPopup(false);
+      }
+
+      // Tự động điền nếu chỉ có 1 khách hàng khớp hoàn toàn
+      const exactMatch = matchedCustomers.find(c => 
+        c.phone === phoneSearch || c.phone?.replace(/\D/g, '') === phoneSearch.replace(/\D/g, '')
+      );
+      
+      if (exactMatch && !customerData.id) {
+        selectCustomer(exactMatch);
+      }
+    } else {
+      setShowCustomerPopup(false);
+      setFilteredCustomers([]);
+      // Reset customer data nếu phone search quá ngắn và chưa có ID
+      if (!customerData.id) {
+        setCustomerData(prev => ({
+          ...prev,
+          name: "",
+          email: "",
+          address: "",
+        }));
       }
     }
-  }, [phoneSearch, customers]);
+  }, [phoneSearch, customers, customerData.id]);
+
+  // Hàm chọn khách hàng từ popup
+  const selectCustomer = (customer: any) => {
+    setCustomerData({
+      id: customer.id,
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      address: customer.address || "",
+    });
+    setPhoneSearch(customer.phone || "");
+    setShowCustomerPopup(false);
+  };
 
   // Update available parts when product changes
   React.useEffect(() => {
@@ -171,7 +206,7 @@ export function AddTicketForm() {
   const handlePhoneChange = (value: string) => {
     setPhoneSearch(value);
     // Store the original format as database expects it
-    setCustomerData(prev => ({ ...prev, phone: value }));
+    setCustomerData(prev => ({ ...prev, phone: value, id: undefined })); // Reset ID khi thay đổi phone
     // Clear error when user starts typing
     if (errors.phone) {
       setErrors(prev => ({ ...prev, phone: "" }));
@@ -353,9 +388,9 @@ export function AddTicketForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+            {/* Phone input với popup chọn khách hàng */}
+            <div className="space-y-2 relative">
               <Label htmlFor="phone" className="flex items-center gap-2">
-                <IconPhone className="h-4 w-4" />
                 Số điện thoại *
               </Label>
               <Input
@@ -372,25 +407,54 @@ export function AddTicketForm() {
                   {errors.phone}
                 </p>
               )}
+              
+              {/* Popup chọn khách hàng */}
+              {showCustomerPopup && filteredCustomers.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="p-2 text-xs text-gray-500 border-b">
+                    Tìm thấy {filteredCustomers.length} khách hàng:
+                  </div>
+                  {filteredCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => selectCustomer(customer)}
+                      className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="font-medium text-sm">{customer.name}</div>
+                      <div className="text-xs text-gray-500">{customer.phone}</div>
+                      {customer.email && (
+                        <div className="text-xs text-gray-400">{customer.email}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
-                <IconUser className="h-4 w-4" />
                 Tên khách hàng *
+                {customerData.id && (
+                  <span className="text-xs text-green-600">(Đã chọn từ danh sách)</span>
+                )}
               </Label>
               <Input
                 id="name"
                 value={customerData.name}
                 onChange={(e) => {
-                  setCustomerData(prev => ({ ...prev, name: e.target.value }));
-                  if (errors.name) {
-                    setErrors(prev => ({ ...prev, name: "" }));
+                  // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
+                  if (!customerData.id) {
+                    setCustomerData(prev => ({ ...prev, name: e.target.value }));
+                    if (errors.name) {
+                      setErrors(prev => ({ ...prev, name: "" }));
+                    }
                   }
                 }}
                 onBlur={validateName}
                 placeholder="Nhập tên khách hàng"
-                className={errors.name ? "border-red-500" : ""}
+                readOnly={!!customerData.id} // Chế độ chỉ đọc khi là khách hàng đã tồn tại
+                className={`${errors.name ? "border-red-500" : ""} ${customerData.id ? "bg-muted" : ""}`}
               />
               {errors.name && (
                 <p className="text-sm text-red-500">
@@ -401,28 +465,46 @@ export function AddTicketForm() {
 
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
-                <IconMail className="h-4 w-4" />
                 Email (tùy chọn)
+                {customerData.id && customerData.email && (
+                  <span className="text-xs text-green-600">(Từ thông tin có sẵn)</span>
+                )}
               </Label>
               <Input
                 id="email"
                 type="email"
                 value={customerData.email || ""}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
+                  if (!customerData.id) {
+                    setCustomerData(prev => ({ ...prev, email: e.target.value }));
+                  }
+                }}
                 placeholder="Nhập email"
+                readOnly={!!customerData.id} // Chế độ chỉ đọc khi là khách hàng đã tồn tại
+                className={customerData.id ? "bg-muted" : ""}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address" className="flex items-center gap-2">
-                <IconMapPin className="h-4 w-4" />
                 Địa chỉ (tùy chọn)
+                {customerData.id && customerData.address && (
+                  <span className="text-xs text-green-600">(Từ thông tin có sẵn)</span>
+                )}
               </Label>
               <Textarea
                 id="address"
                 value={customerData.address || ""}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, address: e.target.value }))}
+                onChange={(e) => {
+                  // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
+                  if (!customerData.id) {
+                    setCustomerData(prev => ({ ...prev, address: e.target.value }));
+                  }
+                }}
                 placeholder="Nhập địa chỉ"
+                readOnly={!!customerData.id} // Chế độ chỉ đọc khi là khách hàng đã tồn tại
+                className={customerData.id ? "bg-muted" : ""}
                 rows={2}
               />
             </div>

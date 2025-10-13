@@ -376,6 +376,14 @@ function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
   // Sample computer hardware brands
   const sampleBrands = [
     {
+      name: "ZOTAC",
+      description: "Graphics cards and mini PCs manufacturer",
+    },
+    {
+      name: "SSTC",
+      description: "Computer hardware and components",
+    },
+    {
       name: "ASUS",
       description: "Motherboards, graphics cards, laptops, and gaming peripherals manufacturer",
     },
@@ -386,14 +394,6 @@ function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
     {
       name: "Gigabyte",
       description: "Motherboards, graphics cards, and PC hardware components",
-    },
-    {
-      name: "EVGA",
-      description: "High-performance graphics cards and power supplies",
-    },
-    {
-      name: "ASRock",
-      description: "Motherboards and mini PC systems manufacturer",
     },
     {
       name: "Corsair",

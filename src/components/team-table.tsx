@@ -194,7 +194,9 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
             variant={role === "admin" ? "default" : "secondary"}
             className="text-xs"
           >
-            {role}
+            {role === "admin" ? "Quản trị viên" :
+             role === "manager" ? "Quản lý" :
+             role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
           </Badge>
         ))}
       </div>
@@ -213,7 +215,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
         ) : (
           <IconUserX className="size-3" />
         )}
-        {row.original.is_active ? "Active" : "Inactive"}
+        {row.original.is_active ? "Hoạt động" : "Vô hiệu hóa"}
       </Badge>
     ),
   },
@@ -228,7 +230,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row, table }) => (
       <QuickActions
         member={row.original}
@@ -331,12 +333,12 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Change Role</p>
+              <p>Thay đổi vai trò</p>
             </TooltipContent>
           </Tooltip>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          <div className="px-2 py-1.5 text-sm font-medium">Change Role</div>
+          <div className="px-2 py-1.5 text-sm font-medium">Thay đổi vai trò</div>
           <DropdownMenuSeparator />
           {["admin", "manager", "technician", "reception"].map((role) => {
             const isCurrentRole = member.roles.includes(role as any);
@@ -352,9 +354,11 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
                 className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={isDisabled}
               >
-                {role}
+                {role === "admin" ? "Quản trị viên" : 
+                 role === "manager" ? "Quản lý" : 
+                 role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
                 {isDisabled && (
-                  <span className="ml-auto text-xs">(Protected)</span>
+                  <span className="ml-auto text-xs">(Được bảo vệ)</span>
                 )}
               </DropdownMenuItem>
             );
@@ -375,7 +379,7 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Change Password</p>
+          <p>Đổi mật khẩu</p>
         </TooltipContent>
       </Tooltip>
 
@@ -400,13 +404,13 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
             )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
+                  <TooltipContent>
           <p>
             {isLastActiveAdmin && member.is_active
-              ? "Cannot deactivate last admin"
+              ? "Không thể vô hiệu hóa quản trị viên cuối cùng"
               : member.is_active
-                ? "Click to deactivate account"
-                : "Click to activate account"}
+                ? "Nhấn để vô hiệu hóa tài khoản"
+                : "Nhấn để kích hoạt tài khoản"}
           </p>
         </TooltipContent>
       </Tooltip>
@@ -638,7 +642,7 @@ export function TeamTable({
       </div>
       <TabsContent
         value="team-list"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
       >
         <div className="flex items-center gap-2">
           <Input
@@ -701,13 +705,13 @@ export function TeamTable({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} user(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} đã chọn{" "}
+            {table.getFilteredRowModel().rows.length} người dùng.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
               <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
+                Số dòng trên trang
               </Label>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
@@ -730,7 +734,7 @@ export function TeamTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
@@ -740,7 +744,7 @@ export function TeamTable({
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to first page</span>
+                <span className="sr-only">Đến trang đầu</span>
                 <IconChevronsLeft />
               </Button>
               <Button
@@ -750,7 +754,7 @@ export function TeamTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="sr-only">Go to previous page</span>
+                <span className="sr-only">Trang trước</span>
                 <IconChevronLeft />
               </Button>
               <Button
@@ -760,7 +764,7 @@ export function TeamTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to next page</span>
+                <span className="sr-only">Trang tiếp</span>
                 <IconChevronRight />
               </Button>
               <Button
@@ -770,7 +774,7 @@ export function TeamTable({
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
-                <span className="sr-only">Go to last page</span>
+                <span className="sr-only">Đến trang cuối</span>
                 <IconChevronsRight />
               </Button>
             </div>
@@ -782,17 +786,17 @@ export function TeamTable({
         className="flex flex-col px-4 lg:px-6"
       >
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Role management functionality coming soon
+          Chức năng quản lý vai trò sắp ra mắt
         </div>
       </TabsContent>
       <TabsContent value="staff" className="flex flex-col px-4 lg:px-6">
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Staff filtering functionality coming soon
+          Chức năng lọc nhân viên sắp ra mắt
         </div>
       </TabsContent>
       <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
         <div className="flex items-center justify-center h-48 text-muted-foreground">
-          Inactive users view coming soon
+          Chức năng xem người dùng đã vô hiệu sắp ra mắt
         </div>
       </TabsContent>
     </Tabs>
@@ -913,18 +917,18 @@ function TeamMemberModal({
                 </AvatarFallback>
               </Avatar>
             )}
-            {mode === "add" ? "Add New Staff Member" : member?.full_name}
+            {mode === "add" ? "Thêm Nhân Viên Mới" : member?.full_name}
           </DrawerTitle>
           <DrawerDescription>
             {mode === "add"
-              ? "Create a new staff account with the required information."
-              : "Team member details and management options"}
+              ? "Tạo tài khoản nhân viên mới với các thông tin bắt buộc."
+              : "Chi tiết và tùy chọn quản lý thành viên"}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="full_name">Full Name</Label>
+              <Label htmlFor="full_name">Họ và tên</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
@@ -950,7 +954,7 @@ function TeamMemberModal({
             </div>
             {mode === "add" && (
               <div className="flex flex-col gap-3">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Mật khẩu</Label>
                 <Input
                   id="password"
                   type="password"
@@ -965,18 +969,18 @@ function TeamMemberModal({
               </div>
             )}
             <div className="flex flex-col gap-3">
-              <Label htmlFor="avatar_url">Avatar URL</Label>
+              <Label htmlFor="avatar_url">Đường dẫn Avatar</Label>
               <Input
                 id="avatar_url"
                 value={formData.avatar_url}
                 onChange={(e) =>
                   setFormData({ ...formData, avatar_url: e.target.value })
                 }
-                placeholder="Nhập URL avatar (tùy chọn)"
+                placeholder="Nhập đường dẫn avatar (tùy chọn)"
               />
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="roles">Role</Label>
+              <Label htmlFor="roles">Vai trò</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) =>
@@ -987,15 +991,15 @@ function TeamMemberModal({
                   <SelectValue placeholder="Chọn vai trò" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="technician">Technician</SelectItem>
-                  <SelectItem value="reception">Reception</SelectItem>
+                  <SelectItem value="admin">Quản trị viên</SelectItem>
+                  <SelectItem value="manager">Quản lý</SelectItem>
+                  <SelectItem value="technician">Kỹ thuật viên</SelectItem>
+                  <SelectItem value="reception">Lễ tân</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="is_active">Status</Label>
+              <Label htmlFor="is_active">Trạng thái</Label>
               <Select
                 value={formData.is_active ? "active" : "inactive"}
                 onValueChange={(value) =>
@@ -1006,8 +1010,8 @@ function TeamMemberModal({
                   <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Vô hiệu hóa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1016,21 +1020,21 @@ function TeamMemberModal({
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">User ID</Label>
+                    <Label className="text-muted-foreground">ID Người dùng</Label>
                     <div className="font-mono text-xs">{member.user_id}</div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Profile ID</Label>
+                    <Label className="text-muted-foreground">ID Hồ sơ</Label>
                     <div className="font-mono text-xs">{member.id}</div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Created</Label>
+                    <Label className="text-muted-foreground">Ngày tạo</Label>
                     <div>
                       {new Date(member.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Updated</Label>
+                    <Label className="text-muted-foreground">Cập nhật lúc</Label>
                     <div>
                       {new Date(member.updated_at).toLocaleDateString()}
                     </div>
@@ -1050,15 +1054,15 @@ function TeamMemberModal({
           >
             {isLoading
               ? mode === "add"
-                ? "Creating..."
-                : "Updating..."
+                ? "Đang tạo..."
+                : "Đang cập nhật..."
               : mode === "add"
-                ? "Create Staff"
-                : "Save Changes"}
+                ? "Tạo nhân viên"
+                : "Lưu thay đổi"}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" disabled={isLoading}>
-              Cancel
+              Hủy bỏ
             </Button>
           </DrawerClose>
         </DrawerFooter>
@@ -1240,7 +1244,7 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
     >
       <IconDatabase className="size-4" />
       <span className="hidden lg:inline">
-        {isLoading ? "Creating..." : "Add Sample"}
+        {isLoading ? "Đang thêm..." : "Thêm mẫu"}
       </span>
     </Button>
   );

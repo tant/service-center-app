@@ -25,6 +25,47 @@ const updateCustomerSchema = z.object({
 });
 
 export const customersRouter = router({
+  // Get new customers count and growth rate for the current month
+  getNewCustomers: publicProcedure.query(async ({ ctx }) => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    // Get current month's new customers
+    const { data: currentMonthData, error: currentError } = await ctx.supabaseAdmin
+      .from("customers")
+      .select("count", { count: 'exact' })
+      .gte('created_at', startOfMonth.toISOString())
+      .lt('created_at', now.toISOString());
+
+    // Get previous month's new customers
+    const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
+      .from("customers")
+      .select("count", { count: 'exact' })
+      .gte('created_at', startOfPrevMonth.toISOString())
+      .lt('created_at', startOfMonth.toISOString());
+
+    if (currentError || prevError) {
+      throw new Error(currentError?.message || prevError?.message);
+    }
+
+    const currentCount = currentMonthData?.[0]?.count || 0;
+    const prevCount = prevMonthData?.[0]?.count || 0;
+
+    // Calculate growth rate
+    const growthRate = prevCount > 0 
+      ? ((currentCount - prevCount) / prevCount) * 100 
+      : 0;
+
+    return {
+      currentMonthCount: currentCount,
+      previousMonthCount: prevCount,
+      growthRate,
+      hasPreviousData: prevCount > 0,
+      latestUpdate: now.toISOString(),
+    };
+  }),
+
   getCustomers: publicProcedure.query(async ({ ctx }) => {
     const { data: customers, error } = await ctx.supabaseAdmin
       .from("customers")

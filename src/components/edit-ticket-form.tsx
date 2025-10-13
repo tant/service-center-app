@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye } from "@tabler/icons-react";
+import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool, IconMinus } from "@tabler/icons-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NumberCounter } from "@/components/number-counter";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
 
@@ -33,6 +34,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     discount_amount: ticket.discount_amount || 0,
     notes: ticket.notes || "",
   });
+
+  // Track form changes for unsaved changes warning
+  const [originalData, setOriginalData] = useState(formData);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [parts, setParts] = useState(
     ticket.service_ticket_parts?.map((item: any) => ({
@@ -60,25 +65,86 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   // Image view modal state
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
-  const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
+  // Track form changes to detect unsaved changes
+  useEffect(() => {
+    const isChanged = JSON.stringify(formData) !== JSON.stringify(originalData);
+    setHasUnsavedChanges(isChanged);
+  }, [formData, originalData]);
+
+  // Unsaved changes warning for browser events only
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+      }
+    };
+
+    if (hasUnsavedChanges) {
+      // Only listen for browser back/forward and refresh
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  // Helper function to check unsaved changes before navigation
+  const checkUnsavedChanges = (): boolean => {
+    if (hasUnsavedChanges) {
+      return confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang?');
+    }
+    return true;
+  };
+
+  // Safe navigation wrapper for Next.js router - handles internal navigation
+  const navigateWithCheck = (path: string) => {
+    if (checkUnsavedChanges()) {
+      router.push(path);
+    }
+  };
+
+  const updateTicketDetailsMutation = trpc.tickets.updateTicket.useMutation({
     onSuccess: () => {
-      console.log("[EditTicketForm] Update ticket success:", {
+      console.log("[EditTicketForm] Update ticket details success:", {
         ticketId: ticket.id,
         ticketNumber: ticket.ticket_number,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Cập nhật phiếu dịch vụ thành công");
-      router.push(`/tickets/${ticket.id}`);
-      router.refresh();
+      toast.success("Đã lưu chi tiết phiếu dịch vụ thành công");
+      // Reset original data after successful save
+      setOriginalData(formData);
     },
     onError: (error) => {
-      console.error("[EditTicketForm] Update ticket error:", {
+      console.error("[EditTicketForm] Update ticket details error:", {
         ticketId: ticket.id,
         error: error.message,
         errorData: error.data,
         timestamp: new Date().toISOString(),
       });
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi khi lưu chi tiết phiếu dịch vụ: ${error.message}`);
+    },
+  });
+
+  const updateServiceFeesMutation = trpc.tickets.updateTicket.useMutation({
+    onSuccess: () => {
+      console.log("[EditTicketForm] Update service fees success:", {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        timestamp: new Date().toISOString(),
+      });
+      toast.success("Đã lưu thông tin chi phí dịch vụ thành công");
+      // Reset original data after successful save
+      setOriginalData(formData);
+    },
+    onError: (error) => {
+      console.error("[EditTicketForm] Update service fees error:", {
+        ticketId: ticket.id,
+        error: error.message,
+        errorData: error.data,
+        timestamp: new Date().toISOString(),
+      });
+      toast.error(`Lỗi khi lưu chi phí dịch vụ: ${error.message}`);
     },
   });
 
@@ -231,24 +297,29 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    updateTicketMutation.mutate({
+  const handleSaveTicketDetails = () => {
+    updateTicketDetailsMutation.mutate({
       id: ticket.id,
       issue_description: formData.issue_description,
       priority_level: formData.priority_level as "low" | "normal" | "high" | "urgent",
       warranty_type: formData.warranty_type as "warranty" | "paid" | "goodwill",
       status: formData.status as "pending" | "in_progress" | "completed" | "cancelled",
-      service_fee: Number(formData.service_fee),
-      diagnosis_fee: Number(formData.diagnosis_fee),
-      discount_amount: Number(formData.discount_amount),
       notes: formData.notes || null,
     });
   };
 
+  const handleSaveServiceFees = () => {
+    updateServiceFeesMutation.mutate({
+      id: ticket.id,
+      service_fee: Number(formData.service_fee),
+      diagnosis_fee: Number(formData.diagnosis_fee),
+      discount_amount: Number(formData.discount_amount),
+    });
+  };
+
   const handleCancel = () => {
-    router.push(`/tickets/${ticket.id}`);
+    // Use safe navigation with unsaved changes check
+    navigateWithCheck(`/tickets/${ticket.id}`);
   };
 
   const handleAddPart = () => {
@@ -445,35 +516,129 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   const totalCost = Number(formData.service_fee) + Number(formData.diagnosis_fee) + partsTotal - Number(formData.discount_amount);
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
-      {/* Customer and Product Info (Read-only) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin cơ bản</CardTitle>
-          <CardDescription>Thông tin khách hàng và sản phẩm (không thể chỉnh sửa)</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="space-y-2">
-            <Label>Khách hàng</Label>
-            <Input value={ticket.customers?.name || ""} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Số điện thoại</Label>
-            <Input value={ticket.customers?.phone || ""} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Sản phẩm</Label>
-            <Input value={ticket.products?.name || ""} disabled />
-          </div>
-        </CardContent>
-      </Card>
+    <form className="grid gap-6">
+      {/* Customer Info + Ticket Details cùng cột, Fees cùng hàng và chiếm 3 dòng */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:grid-rows-3">
+        {/* Customer and Product Info (Read-only) - dòng 1 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconUser className="h-5 w-5" />
+              Thông tin cơ bản
+            </CardTitle>
+            {/* <CardDescription>Thông tin khách hàng và sản phẩm</CardDescription> */}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Khách hàng</div>
+              <div className="text-sm font-medium col-span-2">{ticket.customers?.name || ""}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Số điện thoại</div>
+              <div className="text-sm font-medium col-span-2">{ticket.customers?.phone || ""}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-sm font-medium text-muted-foreground">Sản phẩm</div>
+              <div className="text-sm font-medium col-span-2">{ticket.products?.name || ""}</div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Ticket Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Chi tiết phiếu dịch vụ</CardTitle>
-          <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription>
-        </CardHeader>
+        {/* Fees - chiếm 3 dòng */}
+        <Card className="order-3 lg:order-2 lg:row-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconCurrencyDollar className="h-5 w-5" />
+              Chi phí dịch vụ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="service_fee">Giá dịch vụ (₫)</Label>
+                <Input
+                  id="service_fee"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.service_fee}
+                  onChange={(e) => setFormData({ ...formData, service_fee: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis_fee">Phí kiểm tra (₫)</Label>
+                <Input
+                  id="diagnosis_fee"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.diagnosis_fee}
+                  onChange={(e) => setFormData({ ...formData, diagnosis_fee: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="discount_amount">Giảm giá (₫)</Label>
+                <Input
+                  id="discount_amount"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.discount_amount}
+                  onChange={(e) => setFormData({ ...formData, discount_amount: Number(e.target.value) })}
+                />
+              </div>
+
+              {/* Cost Summary */}
+              <div className="mt-6 space-y-2 border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Giá dịch vụ:</span>
+                  <span>{Number(formData.service_fee).toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Phí kiểm tra:</span>
+                  <span>{Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Linh kiện:</span>
+                  <span>{partsTotal.toLocaleString("vi-VN")} ₫</span>
+                </div>
+                {formData.discount_amount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Giảm giá:</span>
+                    <span className="text-red-600">-{Number(formData.discount_amount).toLocaleString("vi-VN")} ₫</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Tổng cộng:</span>
+                  <span className="text-primary">{totalCost.toLocaleString("vi-VN")} ₫</span>
+                </div>
+              </div>
+              </div>
+            </CardContent>
+            {/* Actions for Fees */}
+            <div className="flex justify-end gap-2 px-6">
+              <Button 
+                type="button" 
+                disabled={updateServiceFeesMutation.isPending}
+                onClick={handleSaveServiceFees}
+              >
+                {updateServiceFeesMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
+            </div>
+          </Card>
+
+        {/* Ticket Details - dòng 2 và 3 */}
+        <Card className="order-2 lg:order-3 lg:row-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconClipboardText className="h-5 w-5" />
+              Chi tiết phiếu dịch vụ
+            </CardTitle>
+            {/* <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription> */}
+          </CardHeader>
         <CardContent className="space-y-6">
           {/* Status and Priority */}
           <div className="grid gap-4 md:grid-cols-3">
@@ -561,96 +726,37 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             />
           </div>
         </CardContent>
+        {/* Actions for Ticket Details */}
+        <div className="flex justify-end gap-2 px-6">
+          <Button 
+            type="button" 
+            disabled={updateTicketDetailsMutation.isPending}
+            onClick={handleSaveTicketDetails}
+          >
+            {updateTicketDetailsMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+          </Button>
+        </div>
       </Card>
-
-      {/* Fees */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Chi phí dịch vụ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="service_fee">Giá dịch vụ (₫)</Label>
-              <Input
-                id="service_fee"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.service_fee}
-                onChange={(e) => setFormData({ ...formData, service_fee: Number(e.target.value) })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="diagnosis_fee">Phí kiểm tra (₫)</Label>
-              <Input
-                id="diagnosis_fee"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.diagnosis_fee}
-                onChange={(e) => setFormData({ ...formData, diagnosis_fee: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="discount_amount">Giảm giá (₫)</Label>
-              <Input
-                id="discount_amount"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.discount_amount}
-                onChange={(e) => setFormData({ ...formData, discount_amount: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          {/* Cost Summary */}
-          <div className="mt-6 space-y-2 border-t pt-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Giá dịch vụ:</span>
-              <span>{Number(formData.service_fee).toLocaleString("vi-VN")} ₫</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Phí kiểm tra:</span>
-              <span>{Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Linh kiện:</span>
-              <span>{partsTotal.toLocaleString("vi-VN")} ₫</span>
-            </div>
-            {formData.discount_amount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Giảm giá:</span>
-                <span className="text-red-600">-{Number(formData.discount_amount).toLocaleString("vi-VN")} ₫</span>
-              </div>
-            )}
-            <div className="flex justify-between text-lg font-bold border-t pt-2">
-              <span>Tổng cộng:</span>
-              <span className="text-primary">{totalCost.toLocaleString("vi-VN")} ₫</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Parts Management */}
       <Card>
         <CardHeader>
-          <CardTitle>Quản lý linh kiện</CardTitle>
-          <CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <IconTool className="h-5 w-5" />
+            Quản lý linh kiện
+          </CardTitle>
+          {/* <CardDescription>
             Thêm, sửa hoặc xóa linh kiện sử dụng trong phiếu dịch vụ
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add New Part */}
           <div className="border rounded-lg p-4 space-y-3">
             <h4 className="font-medium">Thêm linh kiện mới</h4>
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="new-part">Linh kiện</Label>
+              <div className="md:col-span-2">
+                <Label htmlFor="new-part" className="mb-2">Linh kiện</Label>
                 <Select value={selectedNewPart} onValueChange={setSelectedNewPart}>
                   <SelectTrigger id="new-part">
                     <SelectValue placeholder="Chọn linh kiện" />
@@ -666,12 +772,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-quantity">Số lượng</Label>
-                <Input
-                  id="new-quantity"
-                  type="number"
-                  min="1"
+                <NumberCounter
                   value={newPartQuantity}
-                  onChange={(e) => setNewPartQuantity(Number(e.target.value))}
+                  onChange={setNewPartQuantity}
+                  min={1}
                 />
               </div>
               <div className="flex items-end">
@@ -697,37 +801,26 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   {editingPartId === part.id ? (
                     // Edit mode
                     <>
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <div>
+                      <div className="flex-1 grid grid-cols-5 gap-2 items-center">
+                        <div className="col-span-3">
                           <p className="text-sm font-medium">{part.part_name}</p>
                         </div>
                         <div>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={editingPartData?.quantity}
-                            onChange={(e) =>
+                          <NumberCounter
+                            value={editingPartData?.quantity || 1}
+                            onChange={(newQuantity) =>
                               setEditingPartData({
                                 ...editingPartData!,
-                                quantity: Number(e.target.value),
+                                quantity: newQuantity,
                               })
                             }
-                            className="h-8"
+                            min={1}
                           />
                         </div>
-                        <div>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editingPartData?.unit_price}
-                            onChange={(e) =>
-                              setEditingPartData({
-                                ...editingPartData!,
-                                unit_price: Number(e.target.value),
-                              })
-                            }
-                            className="h-8"
-                          />
+                        <div className="text-right min-w-[100px] mr-2">
+                          <p className="font-medium">
+                            {part.total_price.toLocaleString("vi-VN")} ₫
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -922,21 +1015,6 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          type="button"
-          onClick={handleCancel}
-          disabled={updateTicketMutation.isPending}
-        >
-          Hủy
-        </Button>
-        <Button type="submit" disabled={updateTicketMutation.isPending}>
-          {updateTicketMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-        </Button>
-      </div>
 
       {/* Image View Modal */}
       <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>

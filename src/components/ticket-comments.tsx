@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { IconSend, IconMessageCircle, IconLock, IconUser, IconRobot } from "@tabler/icons-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Comment {
   id: string;
@@ -33,9 +34,12 @@ interface TicketCommentsProps {
 
 export function TicketComments({ ticketId, initialComments }: TicketCommentsProps) {
   const router = useRouter();
-  const [comments, setComments] = useState<Comment[]>(initialComments || []);
+  const [comments, setComments] = useState<Comment[]>(
+    (initialComments || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  );
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
+  const [commentFilter, setCommentFilter] = useState<"all" | "bot" | "staff">("all");
 
   const addCommentMutation = trpc.tickets.addComment.useMutation({
     onSuccess: (result) => {
@@ -52,7 +56,7 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
 
       // Optimistically update UI
       if (result.comment) {
-        setComments((prev) => [...prev, result.comment as Comment]);
+        setComments((prev) => [result.comment as Comment, ...prev]);
       }
     },
     onError: (error) => {
@@ -92,6 +96,20 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
     });
   };
 
+  // Xử lý tổ hợp phím Ctrl + Enter để gửi bình luận
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Kiểm tra điều kiện: textarea được focus và có nội dung
+      if (document.activeElement === e.target && newComment.trim()) {
+        // Kích hoạt gửi bình luận sử dụng logic hiện có
+        const formEvent = new Event('submit', { bubbles: true, cancelable: true }) as any;
+        handleSubmit(formEvent);
+      }
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -120,22 +138,99 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
     return autoCommentPrefixes.some(prefix => commentText.startsWith(prefix));
   };
 
+  // Filter comments based on selected filter
+  const filteredComments = comments.filter((comment) => {
+    if (commentFilter === "all") return true;
+    if (commentFilter === "bot") return isAutoComment(comment.comment);
+    if (commentFilter === "staff") return !isAutoComment(comment.comment);
+    return true;
+  });
+
+  // Handle filter change
+  const handleFilterChange = (value: string) => {
+    setCommentFilter(value as "all" | "bot" | "staff");
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <IconMessageCircle className="h-5 w-5" />
-          Bình luận
-        </CardTitle>
-        <CardDescription>
-          Trao đổi và cập nhật thông tin về phiếu dịch vụ
-        </CardDescription>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="flex items-center gap-2">
+              <IconMessageCircle className="h-5 w-5" />
+              Bình luận
+            </CardTitle>
+            <CardDescription>
+              Trao đổi và cập nhật thông tin về phiếu dịch vụ
+            </CardDescription>
+          </div>
+          <Select value={commentFilter} onValueChange={handleFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="bot">Bot</SelectItem>
+              <SelectItem value="staff">Nhân viên</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Add Comment Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            {/* <Label htmlFor="new-comment">Thêm bình luận mới</Label> */}
+            <div className="border rounded-md focus-within:ring-2 focus-within:ring-ring/50 focus-within:ring-offset-0 focus-within:border-ring transition-all duration-200">
+              <Textarea
+                id="new-comment"
+                placeholder="Nhập nội dung bình luận..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={4}
+                className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-t-md"
+              />
+              <div className="flex items-center justify-between p-3 border-t bg-muted/20">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is-internal"
+                    checked={isInternal}
+                    onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="is-internal"
+                    className="text-sm font-normal cursor-pointer flex items-center gap-1"
+                  >
+                    <IconLock className="h-3 w-3" />
+                    Bình luận nội bộ (không hiển thị cho khách hàng)
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    Ctrl + Enter
+                  </span>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={addCommentMutation.isPending || !newComment.trim()}
+                  >
+                    <IconSend className="h-4 w-4" />
+                    {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <Separator />
+
         {/* Comments List */}
-        {comments.length > 0 ? (
+        {filteredComments.length > 0 ? (
           <div className="space-y-4">
-            {comments.map((comment) => {
+            {filteredComments.map((comment) => {
               const isAuto = isAutoComment(comment.comment);
               return (
                 <div
@@ -192,51 +287,16 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <IconMessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Chưa có bình luận nào</p>
+            <p>
+              {commentFilter === "all" 
+                ? "Chưa có bình luận nào" 
+                : commentFilter === "bot" 
+                ? "Không có bình luận từ bot" 
+                : "Không có bình luận từ nhân viên"
+              }
+            </p>
           </div>
         )}
-
-        <Separator />
-
-        {/* Add Comment Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-comment">Thêm bình luận mới</Label>
-            <Textarea
-              id="new-comment"
-              placeholder="Nhập nội dung bình luận..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is-internal"
-                checked={isInternal}
-                onCheckedChange={(checked) => setIsInternal(checked as boolean)}
-              />
-              <Label
-                htmlFor="is-internal"
-                className="text-sm font-normal cursor-pointer flex items-center gap-1"
-              >
-                <IconLock className="h-3 w-3" />
-                Bình luận nội bộ (không hiển thị cho khách hàng)
-              </Label>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={addCommentMutation.isPending || !newComment.trim()}
-            >
-              <IconSend className="h-4 w-4" />
-              {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
-            </Button>
-          </div>
-        </form>
       </CardContent>
     </Card>
   );

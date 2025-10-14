@@ -53,13 +53,13 @@ The schema files are organized by type and numbered to ensure proper creation or
                            │                  │
                            │                  │
                            ▼                  │
-                    ┌─────────────┐          │
-                    │  products   │          │
-                    │             │          │
-                    │ - id        │          │
-                    │ - name      │          │
-                    │ - sku       │          │
-                    │ - brand     │          │
+    ┌─────────────┐ ┌─────────────┐          │
+    │   brands    │─│  products   │          │
+    │             │ │             │          │
+    │ - id        │ │ - id        │          │
+    │ - name      │ │ - name      │          │
+    │ - desc      │ │ - sku       │          │
+    └─────────────┘ │ - brand_id→ │          │
                     │ - model     │          │
                     └─────────────┘          │
                            │                  │

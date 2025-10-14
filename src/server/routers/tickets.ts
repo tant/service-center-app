@@ -353,7 +353,7 @@ export const ticketsRouter = router({
           profiles:created_by (
             id,
             full_name,
-            roles
+            role
           )
         `)
         .eq("ticket_id", input.id)
@@ -994,7 +994,7 @@ ${changes.join('\n')}
           profiles:created_by (
             id,
             full_name,
-            roles
+            role
           )
         `)
         .single();

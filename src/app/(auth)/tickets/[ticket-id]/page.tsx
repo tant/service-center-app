@@ -66,7 +66,7 @@ async function getTicketData(ticketId: string) {
         profiles:created_by (
           id,
           full_name,
-          roles
+          role
         )
       )
     `)

@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
           user_id: userId,
           full_name: adminName,
           email: adminEmail,
-          roles: ["admin"], // Admin role
+          role: "admin", // Admin role
           is_active: true,
         },
       ]);

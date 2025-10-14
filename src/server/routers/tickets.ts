@@ -405,6 +405,7 @@ export const ticketsRouter = router({
         .from("service_tickets")
         .update({
           status: input.status,
+          updated_by: user.id, // Set updated_by for database trigger
           ...(input.status === "in_progress" && { started_at: new Date().toISOString() }),
           ...(input.status === "completed" && { completed_at: new Date().toISOString() }),
         })
@@ -481,7 +482,9 @@ export const ticketsRouter = router({
       }
 
       // Build update object with only provided fields
-      const updateObject: any = {};
+      const updateObject: any = {
+        updated_by: user.id, // Always set updated_by to current user
+      };
 
       if (updateData.issue_description !== undefined) updateObject.issue_description = updateData.issue_description;
       if (updateData.priority_level !== undefined) updateObject.priority_level = updateData.priority_level;

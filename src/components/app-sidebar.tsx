@@ -68,7 +68,7 @@ const baseData = {
     },
     {
       title: "Gọi hỗ trợ",
-      url: "#",
+      url: "https://widata.app",
       icon: IconPhone,
     },
   ],

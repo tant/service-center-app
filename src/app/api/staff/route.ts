@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         user_id: authData.user.id,
         full_name: validatedData.full_name,
         email: validatedData.email,
-        roles: [validatedData.role],
+        role: validatedData.role,
         is_active: true,
       })
       .select()
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           user_id: profileData.user_id,
           full_name: profileData.full_name,
           email: profileData.email,
-          roles: profileData.roles,
+          role: profileData.role,
           is_active: profileData.is_active,
         },
       },

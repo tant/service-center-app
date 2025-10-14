@@ -7,7 +7,7 @@ create table "profiles" (
   "full_name" text not null,
   "avatar_url" text,
   "email" text not null,
-  "roles" public.user_role[] not null default array[]::public.user_role[],
+  "role" public.user_role not null default 'technician',
   "is_active" boolean not null default true,
   "created_at" timestamptz not null default now(),
   "updated_at" timestamptz not null default now(),
@@ -20,7 +20,7 @@ create table "profiles" (
 -- Create indexes for better performance
 create index "profiles_user_id_idx" on "profiles" using btree ("user_id");
 create index "profiles_email_idx" on "profiles" using btree ("email");
-create index "profiles_roles_idx" on "profiles" using gin ("roles");
+create index "profiles_role_idx" on "profiles" using btree ("role");
 create index "profiles_is_active_idx" on "profiles" using btree ("is_active") where is_active = true;
 
 -- Trigger to automatically update updated_at on profile changes

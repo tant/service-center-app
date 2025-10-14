@@ -1,28 +1,9 @@
 "use client";
 
 import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  type UniqueIdentifier,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
   IconChevronDown,
   IconEdit,
   IconEye,
-  IconGripVertical,
   IconLayoutColumns,
   IconPlus,
   IconDatabase,
@@ -52,7 +33,6 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  type Row,
   type SortingState,
   useReactTable,
   type VisibilityState,
@@ -120,53 +100,6 @@ export const ticketSchema = z.object({
 
 export type Ticket = z.infer<typeof ticketSchema>;
 
-function DragHandle({ id }: { id: string }) {
-  const { attributes, listeners } = useSortable({
-    id,
-  });
-
-  return (
-    <Button
-      {...attributes}
-      {...listeners}
-      variant="ghost"
-      size="icon"
-      className="text-muted-foreground size-7 hover:bg-transparent"
-    >
-      <IconGripVertical className="text-muted-foreground size-3" />
-      <span className="sr-only">Kéo để sắp xếp lại</span>
-    </Button>
-  );
-}
-
-function DraggableRow<TData extends { id: string }>({
-  row,
-}: {
-  row: Row<TData>;
-}) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
-  });
-
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
-}
 
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -177,14 +110,8 @@ function DataTable<TData extends { id: string }, TValue>({
   columns,
   data,
   searchValue,
-  sensors,
-  sortableId,
-  dataIds,
 }: DataTableProps<TData, TValue> & {
   searchValue: string;
-  sensors: any;
-  sortableId: string;
-  dataIds: UniqueIdentifier[];
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -193,14 +120,9 @@ function DataTable<TData extends { id: string }, TValue>({
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
-  const [tableData, setTableData] = React.useState<TData[]>(data);
-
-  React.useEffect(() => {
-    setTableData(data);
-  }, [data]);
 
   const table = useReactTable({
-    data: tableData,
+    data: data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -218,28 +140,8 @@ function DataTable<TData extends { id: string }, TValue>({
     },
   });
 
-  function handleDragEnd(event: any) {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setTableData((data) => {
-        const oldIndex = data.findIndex((item: any) => item.id === active.id);
-        const newIndex = data.findIndex((item: any) => item.id === over.id);
-
-        return arrayMove(data, oldIndex, newIndex);
-      });
-    }
-  }
-
   return (
     <><div className="overflow-hidden rounded-lg border">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToVerticalAxis]}
-        id={sortableId}
-      >
         <Table>
           <TableHeader className="bg-muted sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -259,16 +161,20 @@ function DataTable<TData extends { id: string }, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
-              <SortableContext
-                items={dataIds}
-                strategy={verticalListSortingStrategy}
-              >
-                {table.getRowModel().rows.map((row) => (
-                  <DraggableRow<TData> key={row.id} row={row} />
-                ))}
-              </SortableContext>
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
             ) : (
               <TableRow>
                 <TableCell
@@ -281,7 +187,6 @@ function DataTable<TData extends { id: string }, TValue>({
             )}
           </TableBody>
         </Table>
-      </DndContext>
     </div>
     <div className="flex items-center justify-between px-4">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
@@ -385,12 +290,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
   const [selectedTicketForUpload, setSelectedTicketForUpload] = React.useState<{ id: string; ticket_number: string } | null>(null);
   const [isGeneratingSampleTickets, setIsGeneratingSampleTickets] = React.useState(false);
-  const sortableId = React.useId();
-  const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {}),
-  );
 
   // Get current user and all users for assignment
   const { data: currentUser } = trpc.profile.getCurrentUser.useQuery();
@@ -810,11 +709,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   const columns: ColumnDef<Ticket>[] = [
     {
-      id: "drag",
-      header: () => null,
-      cell: ({ row }) => <DragHandle id={row.original.id} />,
-    },
-    {
       id: "select",
       header: ({ table }) => (
         <div className="flex items-center justify-center">
@@ -1018,13 +912,13 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     // Lọc và cập nhật assigned_to_name từ assigned_to ID
     const dataWithAssignedNames = data.map((item) => {
       let assignedUserName = item.assigned_to_name;
-      
+
       // Nếu có assigned_to nhưng chưa có assigned_to_name, tìm tên từ allUsers
       if (item.assigned_to && !assignedUserName && allUsers) {
         const assignedUser = allUsers.find(user => user.user_id === item.assigned_to);
         assignedUserName = assignedUser?.full_name || null;
       }
-      
+
       return {
         ...item,
         assigned_to_name: assignedUserName
@@ -1035,23 +929,14 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     return dataWithAssignedNames.filter((item) => {
       const ticketNumber = item.ticket_number?.toLowerCase() || "";
       const customerName = item.customer_name?.toLowerCase() || "";
-      const title = item.title?.toLowerCase() || "";
-      const description = item.description?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
       return (
         ticketNumber.includes(search) ||
-        customerName.includes(search) ||
-        title.includes(search) ||
-        description.includes(search)
+        customerName.includes(search)
       );
     });
   }, [data, searchValue, allUsers]);
-
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => filteredData?.map(({ id }) => id) || [],
-    [filteredData],
-  );
 
   const table = useReactTable({
     data: filteredData,
@@ -1123,11 +1008,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             <DropdownMenuContent align="end" className="w-56">
               {table
                 .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide(),
-                )
+                .filter((column) => column.getCanHide())
                 .map((column) => {
                   return (
                     <DropdownMenuCheckboxItem
@@ -1169,7 +1050,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo số ticket, khách hàng, tiêu đề hoặc mô tả..."
+            placeholder="Tìm theo số ticket hoặc khách hàng..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
@@ -1179,9 +1060,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           columns={columns}
           data={filteredData}
           searchValue={searchValue}
-          sensors={sensors}
-          sortableId={sortableId}
-          dataIds={dataIds}
         />
       </TabsContent>
       <TabsContent

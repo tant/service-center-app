@@ -129,17 +129,6 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "part_number",
-    header: "Mã linh kiện",
-    cell: ({ row }) => (
-      <div className="font-mono text-sm">
-        {row.original.part_number || (
-          <span className="text-muted-foreground italic">Không có mã linh kiện</span>
-        )}
-      </div>
-    ),
-  },
-  {
     accessorKey: "sku",
     header: "SKU",
     cell: ({ row }) => (
@@ -254,7 +243,6 @@ export function PartsTable({
       const searchLower = searchValue.toLowerCase();
       return (
         item.name.toLowerCase().includes(searchLower) ||
-        item.part_number?.toLowerCase().includes(searchLower) ||
         item.sku?.toLowerCase().includes(searchLower)
       );
     });
@@ -336,7 +324,6 @@ export function PartsTable({
                 .map((column) => {
                   const columnDisplayNames: Record<string, string> = {
                     sku: "SKU",
-                    part_number: "Mã linh kiện",
                     name: "Linh kiện",
                     price: "Giá bán",
                     cost_price: "Giá vốn",
@@ -375,7 +362,7 @@ export function PartsTable({
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên, mã linh kiện hoặc SKU..."
+            placeholder="Tìm theo tên hoặc SKU..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"
@@ -534,11 +521,10 @@ function PartViewer({ part }: { part: z.infer<typeof partSchema> }) {
           </Avatar>
           <div className="flex flex-col items-start">
             <div className="font-medium">{part.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {new Intl.NumberFormat("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              }).format(part.price)}
+            <div className="text-sm text-muted-foreground font-mono">
+              {part.part_number || (
+                <span className="italic">Không có mã linh kiện</span>
+              )}
             </div>
           </div>
         </Button>

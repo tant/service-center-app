@@ -89,7 +89,7 @@ export function AddTicketForm() {
   const productsOptions: SearchableSelectOption[] = React.useMemo(
     () =>
       products?.map((product) => {
-        const brandText = product.brand || 'Không có thương hiệu';
+        const brandText = product.brands?.name || 'Không có thương hiệu';
         const modelText = product.model ? ` • ${product.model}` : '';
         const skuText = product.sku ? ` • SKU: ${product.sku}` : '';
 
@@ -98,7 +98,7 @@ export function AddTicketForm() {
           value: product.id,
           description: `${brandText} • ${product.type}${modelText}${skuText}`,
           // Add searchable fields
-          brand: product.brand,
+          brand: product.brands?.name,
           model: product.model,
           sku: product.sku,
           type: product.type,

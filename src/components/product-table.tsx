@@ -1086,10 +1086,13 @@ function ProductModal({
                     className="text-xs font-normal gap-1 pr-1 max-w-[200px]"
                   >
                     <span className="truncate">{option.label}</span>
-                    <button
-                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
                           setFormData({
                             ...formData,
                             selected_parts: formData.selected_parts.filter(
@@ -1110,9 +1113,10 @@ function ProductModal({
                           ),
                         })
                       }
+                      aria-label={`Remove ${option.label}`}
                     >
                       <IconX className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                    </button>
+                    </span>
                   </Badge>
                 )}
               />

@@ -13,104 +13,31 @@ export default async function AuthLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   console.log("🛡️ [AUTH LAYOUT] Starting authentication check");
 
-  try {
-    console.log("🛡️ [AUTH LAYOUT] Calling createClient()");
-    const supabase = await createClient();
-    console.log("🛡️ [AUTH LAYOUT] Supabase client created successfully");
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-    console.log("🛡️ [AUTH LAYOUT] Getting current user...");
-    const sessionResult = await supabase.auth.getUser();
-    console.log("🛡️ [AUTH LAYOUT] Raw user result:", {
-      hasData: !!sessionResult.data,
-      hasUser: !!sessionResult.data?.user,
-      userId: sessionResult.data?.user?.id || "none",
-      userEmail: sessionResult.data?.user?.email || "none",
-      hasError: !!sessionResult.error,
-      errorDetails: sessionResult.error
-        ? {
-            message: sessionResult.error.message,
-            status: sessionResult.error.status,
-            name: sessionResult.error.name,
-          }
-        : null,
+  // Log authentication result
+  if (user) {
+    console.log("🛡️ [AUTH LAYOUT] User authenticated:", {
+      userId: user.id,
+      email: user.email,
     });
-
-    const {
-      data: { user },
-      error,
-    } = sessionResult;
-
-    // Create session-like object for compatibility
-    const session = user ? { user } : null;
-
-    console.log("🛡️ [AUTH LAYOUT] User check result:", {
-      hasUser: !!user,
-      hasError: !!error,
-      userId: user?.id || "none",
-      userEmail: user?.email || "none",
-      error: error
-        ? {
-            message: error.message,
-            status: error.status,
-            name: error.name,
-          }
-        : null,
+  } else if (error) {
+    console.log("🛡️ [AUTH LAYOUT] Auth error - redirecting to login:", {
+      error: error.name,
+      message: error.message,
     });
-
-    if (error) {
-      console.error(
-        "🛡️ [AUTH LAYOUT] Supabase error occurred, redirecting to /login:",
-        error,
-      );
-      // If Supabase errors, treat as unauthenticated and send to login.
-      // Consider logging this in a real app.
-      try {
-        console.log(
-          "🛡️ [AUTH LAYOUT] Attempting redirect to /login due to error",
-        );
-        redirect("/login");
-      } catch (redirectError) {
-        console.error("🛡️ [AUTH LAYOUT] Error during redirect:", redirectError);
-        throw redirectError;
-      }
-    }
-
-    if (!user) {
-      console.log("🛡️ [AUTH LAYOUT] No user found, redirecting to /login");
-      try {
-        console.log(
-          "🛡️ [AUTH LAYOUT] Attempting redirect to /login due to no user",
-        );
-        redirect("/login");
-      } catch (redirectError) {
-        console.error("🛡️ [AUTH LAYOUT] Error during redirect:", redirectError);
-        throw redirectError;
-      }
-    }
-
-    console.log(
-      "🛡️ [AUTH LAYOUT] Authentication successful, rendering protected content",
-    );
-  } catch (authError) {
-    console.error(
-      "🛡️ [AUTH LAYOUT] Unexpected error in auth layout:",
-      authError,
-    );
-    console.error(
-      "🛡️ [AUTH LAYOUT] Auth error stack:",
-      authError instanceof Error ? authError.stack : "No stack trace available",
-    );
-    // Try to redirect to login on any error
-    try {
-      redirect("/login");
-    } catch (finalRedirectError) {
-      console.error(
-        "🛡️ [AUTH LAYOUT] Final redirect error:",
-        finalRedirectError,
-      );
-      throw finalRedirectError;
-    }
+  } else {
+    console.log("🛡️ [AUTH LAYOUT] No user session - redirecting to login");
   }
+
+  // Redirect to login if no valid user session (whether due to error or missing session)
+  // This handles invalid cookies, expired sessions, and missing auth gracefully
+  if (!user || error) {
+    redirect("/login");
+  }
+
+  console.log("🛡️ [AUTH LAYOUT] Authentication successful, rendering protected content");
   return (
     <SidebarProvider
       style={

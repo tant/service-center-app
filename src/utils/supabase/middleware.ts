@@ -214,6 +214,36 @@ export async function updateSession(request: NextRequest) {
         : null,
     });
 
+    // If there's an auth error and cookies exist, clear invalid auth cookies
+    // This provides better UX by cleaning up stale/invalid sessions automatically
+    if (error && request.cookies.getAll().length > 0) {
+      const authCookies = request.cookies.getAll().filter(cookie =>
+        cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')
+      );
+
+      if (authCookies.length > 0) {
+        console.log(
+          `🔄 [MIDDLEWARE-${requestId}] Detected invalid auth cookies, clearing ${authCookies.length} cookie(s)`,
+        );
+
+        // Create a new response with cleared cookies
+        const clearResponse = NextResponse.next({ request });
+
+        // Copy any cookies that Supabase set
+        supabaseResponse.cookies.getAll().forEach(cookie => {
+          clearResponse.cookies.set(cookie.name, cookie.value, cookie);
+        });
+
+        // Clear the invalid auth cookies
+        authCookies.forEach(cookie => {
+          clearResponse.cookies.delete(cookie.name);
+          console.log(`🔄 [MIDDLEWARE-${requestId}] Cleared cookie: ${cookie.name}`);
+        });
+
+        supabaseResponse = clearResponse;
+      }
+    }
+
     // NOTE: DO NOT perform redirects from middleware here. The app uses a
     // dedicated `(auth)` layout (`src/app/(auth)/layout.tsx`) to enforce
     // authentication for pages that require it. Keeping redirects in the

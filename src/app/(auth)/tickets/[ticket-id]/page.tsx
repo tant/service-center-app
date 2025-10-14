@@ -42,8 +42,11 @@ async function getTicketData(ticketId: string) {
         id,
         name,
         type,
-        brand,
-        model
+        model,
+        brands (
+          id,
+          name
+        )
       ),
       service_ticket_parts (
         id,
@@ -291,7 +294,7 @@ export default async function Page({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">Thương hiệu</p>
-                <p>{ticket.products?.brand || "—"}</p>
+                <p>{ticket.products?.brands?.name || "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">Model</p>

@@ -11,7 +11,6 @@ import {
   IconEdit,
   IconLayoutColumns,
   IconPlus,
-  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -91,11 +90,9 @@ type Brand = z.infer<typeof brandSchema>;
 function QuickActions({
   brand,
   onEdit,
-  onDelete,
 }: {
   brand: Brand;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -113,23 +110,6 @@ function QuickActions({
         </TooltipTrigger>
         <TooltipContent>
           <p>Chỉnh sửa thương hiệu</p>
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Delete Brand */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
-          >
-            <IconTrash className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Xóa thương hiệu</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -283,74 +263,6 @@ function BrandFormDialog({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function DeleteBrandDialog({
-  open,
-  onOpenChange,
-  brand,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  brand: Brand | null;
-}) {
-  const router = useRouter();
-  const [isDeleting, setIsDeleting] = React.useState(false);
-
-  const deleteMutation = trpc.brands.deleteBrand.useMutation({
-    onSuccess: () => {
-      toast.success("Thương hiệu đã được xóa thành công");
-      onOpenChange(false);
-      router.refresh();
-    },
-    onError: (error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-
-  const handleDelete = async () => {
-    if (!brand) return;
-
-    setIsDeleting(true);
-    try {
-      await deleteMutation.mutateAsync({ id: brand.id });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Xóa thương hiệu</DialogTitle>
-          <DialogDescription>
-            Bạn có chắc chắn muốn xóa thương hiệu{" "}
-            <span className="font-semibold">{brand?.name}</span>? Hành động này
-            không thể hoàn tác.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting ? "Đang xóa..." : "Xóa"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -515,7 +427,6 @@ export function BrandsTable({
   const [searchValue, setSearchValue] = React.useState("");
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [selectedBrand, setSelectedBrand] = React.useState<Brand | null>(null);
 
   React.useEffect(() => {
@@ -558,17 +469,6 @@ export function BrandsTable({
       enableHiding: false,
     },
     {
-      accessorKey: "is_active",
-      header: "Trạng thái",
-      cell: ({ row }) => (
-        <div className="text-center">
-          <Badge variant={row.original.is_active ? "default" : "secondary"}>
-            {row.original.is_active ? "Hoạt động" : "Ngừng hoạt động"}
-          </Badge>
-        </div>
-      ),
-    },
-    {
       accessorKey: "updated_at",
       header: "Cập nhật",
       cell: ({ row }) => (
@@ -586,10 +486,6 @@ export function BrandsTable({
           onEdit={() => {
             setSelectedBrand(row.original);
             setEditDialogOpen(true);
-          }}
-          onDelete={() => {
-            setSelectedBrand(row.original);
-            setDeleteDialogOpen(true);
           }}
         />
       ),
@@ -640,33 +536,7 @@ export function BrandsTable({
         className="w-full flex-col justify-start gap-6"
       >
         <div className="flex items-center justify-between px-4 lg:px-6">
-          <Label htmlFor="view-selector" className="sr-only">
-            View
-          </Label>
-          <Select defaultValue="brands-list">
-            <SelectTrigger
-              className="flex w-fit @4xl/main:hidden"
-              size="sm"
-              id="view-selector"
-            >
-              <SelectValue placeholder="Chọn chế độ xem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="brands-list">DS Thương hiệu</SelectItem>
-              <SelectItem value="active">Đang hoạt động</SelectItem>
-              <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
-            </SelectContent>
-          </Select>
-          <TabsList className="hidden @4xl/main:flex">
-            <TabsTrigger value="brands-list">DS Thương hiệu</TabsTrigger>
-            <TabsTrigger value="active">
-              Đang hoạt động{" "}
-              <Badge variant="secondary">
-                {data.filter((b) => b.is_active).length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="inactive">Ngừng hoạt động</TabsTrigger>
-          </TabsList>
+          <div className="text-lg font-semibold">DS Thương hiệu</div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -852,12 +722,6 @@ export function BrandsTable({
             </div>
           </div>
         </TabsContent>
-        <TabsContent value="active" className="flex flex-col px-4 lg:px-6">
-          <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-        </TabsContent>
-        <TabsContent value="inactive" className="flex flex-col px-4 lg:px-6">
-          <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-        </TabsContent>
       </Tabs>
 
       <BrandFormDialog
@@ -871,12 +735,6 @@ export function BrandsTable({
         onOpenChange={setEditDialogOpen}
         brand={selectedBrand || undefined}
         mode="edit"
-      />
-
-      <DeleteBrandDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        brand={selectedBrand}
       />
     </>
   );

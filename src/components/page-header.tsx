@@ -26,7 +26,7 @@ export function PageHeader({ title, children }: PageHeaderProps) {
                 target="_blank"
                 className="dark:text-foreground"
               >
-                CTA
+                SSTC
               </a>
             </Button>
           )}

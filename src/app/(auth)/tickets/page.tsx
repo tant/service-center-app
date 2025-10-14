@@ -52,7 +52,10 @@ async function getTicketsData(): Promise<z.infer<typeof ticketSchema>[]> {
         id,
         name,
         type,
-        brand
+        brands (
+          id,
+          name
+        )
       )
     `)
     .order("created_at", { ascending: false });

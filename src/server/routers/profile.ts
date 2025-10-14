@@ -71,7 +71,7 @@ export const profileRouter = router({
         full_name: profile.full_name,
         email: profile.email,
         avatar_url: profile.avatar_url,
-        roles: profile.roles,
+        role: profile.role,
         is_active: profile.is_active,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
@@ -170,7 +170,7 @@ export const profileRouter = router({
           full_name: updatedProfile.full_name,
           email: updatedProfile.email,
           avatar_url: updatedProfile.avatar_url,
-          roles: updatedProfile.roles,
+          role: updatedProfile.role,
           is_active: updatedProfile.is_active,
           created_at: updatedProfile.created_at,
           updated_at: updatedProfile.updated_at,
@@ -192,7 +192,7 @@ export const profileRouter = router({
   getAllUsers: publicProcedure.query(async ({ ctx }) => {
     const { data: profiles, error } = await ctx.supabaseAdmin
       .from("profiles")
-      .select("user_id, full_name, roles, is_active")
+      .select("user_id, full_name, role, is_active")
       .eq("is_active", true)
       .order("full_name", { ascending: true });
 

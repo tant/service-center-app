@@ -39,7 +39,7 @@ begin
     select 1
     from public.profiles
     where user_id = auth.uid()
-      and 'admin' = any(roles)
+      and role = 'admin'
   );
 end;
 $$ language plpgsql security definer set search_path = 'public';
@@ -55,7 +55,7 @@ begin
     select 1
     from public.profiles
     where user_id = auth.uid()
-      and ('admin' = any(roles) or 'manager' = any(roles))
+      and role in ('admin', 'manager')
   );
 end;
 $$ language plpgsql security definer set search_path = 'public';

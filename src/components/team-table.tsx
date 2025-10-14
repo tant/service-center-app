@@ -111,7 +111,7 @@ export const teamSchema = z.object({
   full_name: z.string(),
   email: z.string().email(),
   avatar_url: z.string().nullable(),
-  roles: z.array(z.enum(["admin", "manager", "technician", "reception"])),
+  role: z.enum(["admin", "manager", "technician", "reception"]),
   is_active: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -184,22 +184,17 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
     ),
   },
   {
-    accessorKey: "roles",
-    header: "Nhóm quyền",
+    accessorKey: "role",
+    header: "Vai trò",
     cell: ({ row }) => (
-      <div className="flex flex-wrap gap-1">
-        {row.original.roles.map((role) => (
-          <Badge
-            key={role}
-            variant={role === "admin" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {role === "admin" ? "Quản trị viên" :
-             role === "manager" ? "Quản lý" :
-             role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
-          </Badge>
-        ))}
-      </div>
+      <Badge
+        variant={row.original.role === "admin" ? "default" : "secondary"}
+        className="text-xs"
+      >
+        {row.original.role === "admin" ? "Quản trị viên" :
+         row.original.role === "manager" ? "Quản lý" :
+         row.original.role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
+      </Badge>
     ),
   },
   {
@@ -256,12 +251,12 @@ interface QuickActionsProps {
 function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
   // Check if this member is the last active admin
   const isLastActiveAdmin = React.useMemo(() => {
-    if (!member.roles.includes("admin") || !member.is_active) {
+    if (member.role !== "admin" || !member.is_active) {
       return false;
     }
 
     const activeAdmins = allMembers.filter(
-      (m) => m.is_active && m.roles.includes("admin"),
+      (m) => m.is_active && m.role === "admin",
     );
 
     return activeAdmins.length === 1;
@@ -270,7 +265,7 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
   const handleRoleChange = (newRole: string) => {
     // Prevent changing role of last active admin
     if (
-      member.roles.includes("admin") &&
+      member.role === "admin" &&
       isLastActiveAdmin &&
       newRole !== "admin"
     ) {
@@ -341,9 +336,9 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
           <div className="px-2 py-1.5 text-sm font-medium">Thay đổi vai trò</div>
           <DropdownMenuSeparator />
           {["admin", "manager", "technician", "reception"].map((role) => {
-            const isCurrentRole = member.roles.includes(role as any);
+            const isCurrentRole = member.role === role;
             const isDisabled =
-              member.roles.includes("admin") &&
+              member.role === "admin" &&
               isLastActiveAdmin &&
               role !== "admin";
 
@@ -567,7 +562,7 @@ export function TeamTable({
               {
                 data.filter(
                   (m) =>
-                    m.roles.includes("admin") || m.roles.includes("manager"),
+                    m.role === "admin" || m.role === "manager",
                 ).length
               }
             </Badge>
@@ -578,8 +573,8 @@ export function TeamTable({
               {
                 data.filter(
                   (m) =>
-                    m.roles.includes("technician") ||
-                    m.roles.includes("reception"),
+                    m.role === "technician" ||
+                    m.role === "reception",
                 ).length
               }
             </Badge>
@@ -836,7 +831,7 @@ function TeamMemberModal({
         email: member?.email || "",
         password: "",
         avatar_url: member?.avatar_url || "",
-        role: member?.roles[0] || "technician",
+        role: member?.role || "technician",
         is_active: member?.is_active ?? true,
       });
     }

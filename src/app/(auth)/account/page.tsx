@@ -323,13 +323,11 @@ export default function Page() {
                     {/* Email */}
                     <p className="text-muted-foreground">{profile.email}</p>
 
-                    {/* Roles */}
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {profile.roles.map((role: string) => (
-                        <Badge key={role} variant={getRoleColor(role)}>
-                          {role.charAt(0).toUpperCase() + role.slice(1)}
-                        </Badge>
-                      ))}
+                    {/* Role */}
+                    <div className="flex justify-center">
+                      <Badge variant={getRoleColor(profile.role)}>
+                        {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>

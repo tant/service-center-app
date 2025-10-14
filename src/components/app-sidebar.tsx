@@ -36,13 +36,6 @@ type UserRole = "admin" | "manager" | "technician" | "reception";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
-function getUserPrimaryRole(roles: string[]): UserRole {
-  // Hierarchy: admin > manager > technician > reception
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("manager")) return "manager";
-  if (roles.includes("technician")) return "technician";
-  return "reception";
-}
 
 const baseData = {
   navMain: [
@@ -123,12 +116,12 @@ function getFilteredData(userRole: UserRole = "reception") {
 }
 
 export function AppSidebar({ ...props }: AppSidebarProps) {
-  // Fetch current user profile to get roles
+  // Fetch current user profile to get role
   const { data: profile, isLoading } = trpc.profile.getCurrentUser.useQuery();
-  
+
   // Determine user role from profile
-  const userRole = profile?.roles ? getUserPrimaryRole(profile.roles) : "reception";
-  
+  const userRole = (profile?.role as UserRole) || "reception";
+
   const data = getFilteredData(userRole);
   return (
     <Sidebar collapsible="offcanvas" {...props}>

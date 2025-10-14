@@ -23,7 +23,7 @@ Bảng `profiles` liên kết với Supabase Auth thông qua `user_id` (foreign 
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |--------|-------------|----------|-------|
-| `roles` | Array[String] | ✅ | Danh sách roles (admin, manager, technician, reception) |
+| `role` | String | ✅ | Vai trò của user (admin, manager, technician, reception) |
 | `is_active` | Boolean | ✅ | Tài khoản có đang hoạt động không |
 
 ### 3. Metadata và audit (Metadata & Audit)
@@ -44,7 +44,7 @@ Bảng `profiles` liên kết với Supabase Auth thông qua `user_id` (foreign 
   "full_name": "Nguyễn Văn A",
   "avatar_url": "https://example.com/avatars/user1.jpg",
   "email": "nguyenvana@company.com",
-  "roles": ["technician", "reception"],
+  "role": "technician",
   "is_active": true,
   "created_at": "2024-01-15T10:30:00Z",
   "updated_at": "2024-01-15T10:30:00Z",
@@ -100,12 +100,12 @@ Bảng `profiles` liên kết với Supabase Auth thông qua `user_id` (foreign 
 | Quản lý products | ❌ | ❌ | ✅ | ✅ |
 | Quản lý parts | ❌ | ❌ | ✅ | ✅ |
 | Tạo user | ❌ | ❌ | ❌ | ✅ |
-| Đổi roles user | ❌ | ❌ | ❌ | ✅ |
+| Đổi role user | ❌ | ❌ | ❌ | ✅ |
 
-### Multi-Role Logic
-- User có thể có nhiều roles: `["technician", "reception"]`
-- Permission cuối cùng = union của tất cả permissions từ các roles
-- Ví dụ: User có roles `["technician", "reception"]` sẽ có tất cả permissions của cả 2 roles
+### Role Assignment
+- Mỗi user chỉ có một role duy nhất tại một thời điểm
+- Role xác định tất cả permissions của user
+- Ví dụ: User có role `technician` sẽ có tất cả permissions của kỹ thuật viên
 
 ## Relationships và Constraints
 
@@ -126,21 +126,21 @@ Bảng `profiles` liên kết với Supabase Auth thông qua `user_id` (foreign 
 CREATE OR REPLACE FUNCTION has_permission(user_uuid UUID, required_permission TEXT)
 RETURNS BOOLEAN AS $$
 DECLARE
-  user_roles TEXT[];
+  user_role TEXT;
 BEGIN
-  SELECT roles INTO user_roles 
-  FROM profiles 
+  SELECT role INTO user_role
+  FROM profiles
   WHERE user_id = user_uuid AND is_active = true;
-  
-  -- Logic kiểm tra permission dựa trên roles
+
+  -- Logic kiểm tra permission dựa trên role
   -- (Implementation chi tiết tùy theo business logic)
-  
+
   RETURN false; -- placeholder
 END;
 $$ LANGUAGE plpgsql;
 ```
 
-### Lấy thông tin user với roles:
+### Lấy thông tin user với role:
 ```sql
 SELECT p.*, u.email as auth_email, u.last_sign_in_at
 FROM profiles p
@@ -150,20 +150,20 @@ WHERE p.user_id = 'user-uuid-001';
 
 ## Ghi chú quan trọng
 
-1. **Indexing**: 
+1. **Indexing**:
    - Unique index trên `user_id`
-   - Index trên `roles` để query nhanh
+   - Index trên `role` để query nhanh
    - Index trên `is_active`
 
-2. **Validation**: 
-   - `roles` chỉ chứa các giá trị hợp lệ: admin, manager, technician, reception
+2. **Validation**:
+   - `role` chỉ chứa các giá trị hợp lệ: admin, manager, technician, reception
    - `user_id` phải tồn tại trong `auth.users`
    - `email` format hợp lệ
 
-3. **Security**: 
-   - Chỉ admin mới có quyền thay đổi `roles`
-   - RLS policies dựa trên roles để kiểm soát truy cập
-   - Không cho phép user tự thay đổi roles của mình
+3. **Security**:
+   - Chỉ admin mới có quyền thay đổi `role`
+   - RLS policies dựa trên role để kiểm soát truy cập
+   - Không cho phép user tự thay đổi role của mình
 
 4. **Sync với Auth**: 
    - Email có thể sync từ `auth.users` hoặc override
@@ -171,10 +171,10 @@ WHERE p.user_id = 'user-uuid-001';
    - Trigger tự động tạo profile khi có user mới
 
 5. **Default Values**:
-   - `roles`: `["reception"]` (role mặc định)
+   - `role`: `"reception"` (role mặc định)
    - `is_active`: `true`
 
 6. **Business Logic**:
-   - Permission được tính động từ tất cả roles
+   - Permission được xác định từ role của user
    - Inactive user không có permission nào
-   - Multi-role cho phép phân công linh hoạt
+   - Mỗi user có một role rõ ràng để dễ quản lý

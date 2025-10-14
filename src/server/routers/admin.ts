@@ -156,7 +156,7 @@ export const adminRouter = router({
           const { data: profileData, error: profileFetchError } =
             await supabaseAdmin
               .from("profiles")
-              .select("user_id, email, roles, full_name")
+              .select("user_id, email, role, full_name")
               .eq("email", adminEmail)
               .single();
 
@@ -242,7 +242,7 @@ export const adminRouter = router({
             user_id: existingAuthUserRecord.id,
             full_name: adminName,
             email: adminEmail,
-            roles: ["admin"],
+            role: "admin",
             is_active: true,
           };
 
@@ -362,7 +362,7 @@ export const adminRouter = router({
           user_id: userId,
           full_name: adminName,
           email: adminEmail,
-          roles: ["admin"], // Admin role
+          role: "admin", // Admin role
           is_active: true,
         };
 

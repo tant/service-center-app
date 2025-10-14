@@ -23,7 +23,7 @@ interface Comment {
   profiles?: {
     id: string;
     full_name: string;
-    roles: string;
+    role: string;
   } | null;
 }
 

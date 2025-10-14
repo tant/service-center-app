@@ -97,12 +97,6 @@ const baseData = {
       icon: IconUsers,
       allowedRoles: ["admin"] as UserRole[],
     },
-    {
-      name: "Báo cáo (TODOS)",
-      url: "/report",
-      icon: IconReport,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
-    },
   ],
 };
 

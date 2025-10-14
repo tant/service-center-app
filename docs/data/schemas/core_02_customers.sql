@@ -4,8 +4,8 @@
 create table "customers" (
   "id" uuid not null default gen_random_uuid(),
   "name" text not null,
-  "phone" public.phone_number not null,
-  "email" public.optional_email_address,
+  "phone" text not null,
+  "email" text,
   "address" text,
   "notes" text,
   "is_active" boolean not null default true,

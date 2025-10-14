@@ -515,17 +515,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
   const filteredData = React.useMemo(() => {
     return data.filter((item) => {
       const name = item.name?.toLowerCase() || "";
-      const email = item.email?.toLowerCase() || "";
-      const phone = item.phone?.toLowerCase() || "";
-      const address = item.address?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
-      return (
-        name.includes(search) ||
-        email.includes(search) ||
-        phone.includes(search) ||
-        address.includes(search)
-      );
+      return name.includes(search);
     });
   }, [data, searchValue]);
 
@@ -644,7 +636,7 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên, email, số điện thoại hoặc công ty..."
+            placeholder="Tìm theo tên..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"

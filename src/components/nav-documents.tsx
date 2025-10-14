@@ -1,6 +1,7 @@
 "use client";
 
 import type { Icon } from "@tabler/icons-react";
+import { usePathname } from "next/navigation";
 
 import {
   SidebarGroup,
@@ -22,6 +23,13 @@ export function NavDocuments({
 }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { isMobile } = useSidebar();
+  const pathname = usePathname();
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    if (pathname === url) {
+      e.preventDefault();
+    }
+  };
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -30,7 +38,10 @@ export function NavDocuments({
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url}>
+              <a
+                href={item.url}
+                onClick={(e) => handleClick(e, item.url)}
+              >
                 <item.icon />
                 <span>{item.name}</span>
               </a>

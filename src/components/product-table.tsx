@@ -169,17 +169,6 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     ),
   },
   {
-    accessorKey: "model",
-    header: "Model",
-    cell: ({ row }) => (
-      <div className="font-medium">
-        {row.original.model || (
-          <span className="text-muted-foreground italic">No model</span>
-        )}
-      </div>
-    ),
-  },
-  {
     accessorKey: "type",
     header: "Loại",
     cell: ({ row }) => (
@@ -270,7 +259,6 @@ export function ProductTable({
       return (
         item.name.toLowerCase().includes(searchLower) ||
         item.brand_name?.toLowerCase().includes(searchLower) ||
-        item.model?.toLowerCase().includes(searchLower) ||
         item.sku?.toLowerCase().includes(searchLower)
       );
     });
@@ -359,7 +347,6 @@ export function ProductTable({
                     name: "Sản phẩm",
                     parts_count: "Linh kiện",
                     brand_name: "Thương hiệu",
-                    model: "Model",
                     type: "Loại",
                     updated_at: "Cập nhật",
                   };
@@ -396,7 +383,7 @@ export function ProductTable({
       >
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Tìm theo tên, thương hiệu, model hoặc SKU..."
+            placeholder="Tìm theo tên, thương hiệu hoặc SKU..."
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm"

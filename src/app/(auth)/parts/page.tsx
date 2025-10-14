@@ -8,17 +8,7 @@ async function getPartsData(): Promise<z.infer<typeof partSchema>[]> {
 
   const { data, error } = await supabase
     .from("parts")
-    .select(`
-      *,
-      product_parts(
-        products(
-          id,
-          name,
-          type,
-          brand
-        )
-      )
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {

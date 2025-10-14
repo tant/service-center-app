@@ -100,6 +100,82 @@ export const ticketSchema = z.object({
 
 export type Ticket = z.infer<typeof ticketSchema>;
 
+// Constants
+const STATUS_MAP = {
+  open: { label: "Mới", variant: "pending" as const },
+  in_progress: { label: "Đang xử lý", variant: "processing" as const },
+  resolved: { label: "Đã giải quyết", variant: "resolved" as const },
+  closed: { label: "Đã đóng", variant: "closed" as const },
+};
+
+const PRIORITY_MAP = {
+  low: { label: "Thấp", className: "bg-gray-100 text-gray-800" },
+  medium: { label: "Trung bình", className: "bg-yellow-100 text-yellow-800" },
+  high: { label: "Cao", className: "bg-orange-100 text-orange-800" },
+  urgent: { label: "Khẩn cấp", className: "bg-red-100 text-red-800" },
+};
+
+const STATUS_ICONS = {
+  pending: IconClock,
+  in_progress: IconRefresh,
+  completed: IconCheck,
+  cancelled: IconX,
+};
+
+const STATUS_OPTIONS = [
+  { value: "pending" as const, icon: "pending", label: "Chờ xử lý" },
+  { value: "in_progress" as const, icon: "in_progress", label: "Đang xử lý" },
+  { value: "completed" as const, icon: "completed", label: "Hoàn thành" },
+  { value: "cancelled" as const, icon: "cancelled", label: "Đã hủy" },
+];
+
+const SAMPLE_DESCRIPTIONS = [
+  "Máy tính không khởi động được, đèn nguồn không sáng",
+  "Card đồ họa bị lỗi hiển thị, xuất hiện artifacts trên màn hình",
+  "SSD bị lỗi không nhận dạng được, cần kiểm tra và thay thế",
+  "RAM gặp vấn đề gây BSOD, cần test và khắc phục",
+  "Mainboard có vấn đề về nguồn, cần kiểm tra kỹ thuật",
+  "Quạt tản nhiệt CPU hoạt động ồn ào bất thường",
+  "Nguồn máy tính bị hỏng, cần thay thế linh kiện mới",
+  "Ổ cứng HDD phát ra tiếng kêu lạ, nghi ngờ bad sector",
+  "USB port không hoạt động, cần kiểm tra kết nối",
+  "Audio jack bị lỗi, không có tiếng ra loa hoặc tai nghe",
+];
+
+// Status mappings
+const STATUS_DB_TO_UI: Record<string, Ticket["status"]> = {
+  pending: "open",
+  in_progress: "in_progress",
+  completed: "resolved",
+  cancelled: "closed",
+};
+
+const STATUS_UI_TO_DB: Record<string, string> = {
+  open: "pending",
+  in_progress: "in_progress",
+  resolved: "completed",
+  closed: "cancelled",
+};
+
+// Helper functions
+function getStatusIcon(status: string) {
+  const Icon = STATUS_ICONS[status as keyof typeof STATUS_ICONS];
+  return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
+}
+
+function getStatusBadge(status: string) {
+  const statusConfig = STATUS_MAP[status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
+  return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
+}
+
+function getPriorityBadge(priority: string) {
+  const priorityConfig = PRIORITY_MAP[priority as keyof typeof PRIORITY_MAP] || PRIORITY_MAP.medium;
+  return (
+    <span className={`px-2 py-1 text-xs font-medium rounded-md ${priorityConfig.className}`}>
+      {priorityConfig.label}
+    </span>
+  );
+}
 
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -109,10 +185,7 @@ interface DataTableProps<TData extends { id: string }, TValue> {
 function DataTable<TData extends { id: string }, TValue>({
   columns,
   data,
-  searchValue,
-}: DataTableProps<TData, TValue> & {
-  searchValue: string;
-}) {
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -373,34 +446,12 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   // Helper to map database status back to UI status
   const mapDatabaseStatusToUI = (dbStatus: string): "open" | "in_progress" | "resolved" | "closed" => {
-    switch (dbStatus) {
-      case "pending":
-        return "open";
-      case "in_progress":
-        return "in_progress";
-      case "completed":
-        return "resolved";
-      case "cancelled":
-        return "closed";
-      default:
-        return "open";
-    }
+    return STATUS_DB_TO_UI[dbStatus] || "open";
   };
 
   // Helper to map UI status to database status
   const mapUIStatusToDatabase = (uiStatus: string): "pending" | "in_progress" | "completed" | "cancelled" => {
-    switch (uiStatus) {
-      case "open":
-        return "pending";
-      case "in_progress":
-        return "in_progress";
-      case "resolved":
-        return "completed";
-      case "closed":
-        return "cancelled";
-      default:
-        return "pending";
-    }
+    return (STATUS_UI_TO_DB[uiStatus] || "pending") as "pending" | "in_progress" | "completed" | "cancelled";
   };
 
   // Get valid next statuses for a ticket
@@ -426,14 +477,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     getIcon: (status: string) => React.ReactNode
   ) => {
     const validNextStatuses = getValidNextStatuses(currentStatus);
-    const statusOptions: Array<{ value: "pending" | "in_progress" | "completed" | "cancelled", icon: string, label: string }> = [
-      { value: "pending", icon: "pending", label: "Chờ xử lý" },
-      { value: "in_progress", icon: "in_progress", label: "Đang xử lý" },
-      { value: "completed", icon: "completed", label: "Hoàn thành" },
-      { value: "cancelled", icon: "cancelled", label: "Đã hủy" },
-    ];
-
-    const filteredOptions = statusOptions.filter(option =>
+    const filteredOptions = STATUS_OPTIONS.filter(option =>
       validNextStatuses.includes(option.value)
     );
 
@@ -473,14 +517,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       </div>
     );
   }
-
-  const handleView = (ticket: Ticket) => {
-    router.push(`/tickets/${ticket.id}`);
-  };
-
-  const handleEdit = (ticket: Ticket) => {
-    router.push(`/tickets/${ticket.id}/edit`);
-  };
 
   const handleAssignToMe = (ticket: Ticket) => {
     if (!currentUser) {
@@ -543,19 +579,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
     const priorityLevels = ["low", "normal", "high", "urgent"] as const;
     const warrantyTypes = ["warranty", "paid", "goodwill"] as const;
-    
-    const sampleDescriptions = [
-      "Máy tính không khởi động được, đèn nguồn không sáng",
-      "Card đồ họa bị lỗi hiển thị, xuất hiện artifacts trên màn hình", 
-      "SSD bị lỗi không nhận dạng được, cần kiểm tra và thay thế",
-      "RAM gặp vấn đề gây BSOD, cần test và khắc phục",
-      "Mainboard có vấn đề về nguồn, cần kiểm tra kỹ thuật",
-      "Quạt tản nhiệt CPU hoạt động ồn ào bất thường",
-      "Nguồn máy tính bị hỏng, cần thay thế linh kiện mới",
-      "Ổ cứng HDD phát ra tiếng kêu lạ, nghi ngờ bad sector",
-      "USB port không hoạt động, cần kiểm tra kết nối",
-      "Audio jack bị lỗi, không có tiếng ra loa hoặc tai nghe"
-    ];
 
     console.log("[TicketTable] Starting sample ticket generation:", {
       customersCount: customers.length,
@@ -582,9 +605,9 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
           // Random priority and warranty type
           const priorityLevel = priorityLevels[Math.floor(Math.random() * priorityLevels.length)];
           const warrantyType = warrantyTypes[Math.floor(Math.random() * warrantyTypes.length)];
-          
+
           // Random description
-          const description = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
+          const description = SAMPLE_DESCRIPTIONS[Math.floor(Math.random() * SAMPLE_DESCRIPTIONS.length)];
           
           // Random fees (0-1000000)
           const serviceFee = Math.floor(Math.random() * 1000000);
@@ -657,54 +680,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       id: ticketId,
       status: newStatus,
     });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <IconClock className="h-4 w-4 mr-2" />;
-      case "in_progress":
-        return <IconRefresh className="h-4 w-4 mr-2" />;
-      case "completed":
-        return <IconCheck className="h-4 w-4 mr-2" />;
-      case "cancelled":
-        return <IconX className="h-4 w-4 mr-2" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      open: { label: "Mới", variant: "pending" as const },
-      in_progress: { label: "Đang xử lý", variant: "processing" as const },
-      resolved: { label: "Đã giải quyết", variant: "resolved" as const },
-      closed: { label: "Đã đóng", variant: "closed" as const },
-    };
-    const statusConfig =
-      statusMap[status as keyof typeof statusMap] || statusMap.open;
-    return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityMap = {
-      low: { label: "Thấp", className: "bg-gray-100 text-gray-800" },
-      medium: {
-        label: "Trung bình",
-        className: "bg-yellow-100 text-yellow-800",
-      },
-      high: { label: "Cao", className: "bg-orange-100 text-orange-800" },
-      urgent: { label: "Khẩn cấp", className: "bg-red-100 text-red-800" },
-    };
-    const priorityConfig =
-      priorityMap[priority as keyof typeof priorityMap] || priorityMap.medium;
-    return (
-      <span
-        className={`px-2 py-1 text-xs font-medium rounded-md ${priorityConfig.className}`}
-      >
-        {priorityConfig.label}
-      </span>
-    );
   };
 
   const columns: ColumnDef<Ticket>[] = [
@@ -814,7 +789,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleView(ticket)}
+              onClick={() => router.push(`/tickets/${ticket.id}`)}
               className="h-8 w-8 p-0"
             >
               <IconEye className="h-5 w-5" />
@@ -823,7 +798,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleEdit(ticket)}
+              onClick={() => router.push(`/tickets/${ticket.id}/edit`)}
               className="h-8 w-8 p-0"
             >
               <IconEdit className="h-5 w-5" />
@@ -1059,7 +1034,6 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
         <DataTable
           columns={columns}
           data={filteredData}
-          searchValue={searchValue}
         />
       </TabsContent>
       <TabsContent

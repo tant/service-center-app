@@ -25,14 +25,12 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCopy,
   IconEdit,
   IconGripVertical,
   IconLayoutColumns,
   IconPackage,
   IconPlus,
   IconDatabase,
-  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -241,15 +239,6 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
     ),
   },
   {
-    accessorKey: "updated_at",
-    header: "Cập nhật",
-    cell: ({ row }) => (
-      <div className="text-muted-foreground text-sm">
-        {new Date(row.original.updated_at).toLocaleDateString()}
-      </div>
-    ),
-  },
-  {
     id: "actions",
     header: "Thao tác",
     cell: ({ row }) => <QuickActions part={row.original} />,
@@ -257,67 +246,14 @@ const columns: ColumnDef<z.infer<typeof partSchema>>[] = [
 ];
 
 function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
-  const [isDeleting, setIsDeleting] = React.useState(false);
-
-  const deletePartMutation = trpc.parts.deletePart.useMutation({
-    onSuccess: () => {
-      const successMessage = `Đã xóa linh kiện "${part.name}"`;
-      console.log("[Parts] Delete part success:", successMessage, { partId: part.id, partName: part.name });
-      toast.success(successMessage);
-      window.location.reload();
-    },
-    onError: (error) => {
-      const errorMessage = error.message || "Xóa linh kiện thất bại";
-      console.error("[Parts] Delete part error:", errorMessage, { partId: part.id, partName: part.name, error });
-      toast.error(errorMessage);
-    },
-    onSettled: () => {
-      setIsDeleting(false);
-    },
-  });
-
-  const handleDelete = async () => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa linh kiện "${part.name}"? Hành động này không thể hoàn tác.`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-    deletePartMutation.mutate({ id: part.id });
-  };
-
-  const handleClone = () => {
-    const loadingMessage = `Đang sao chép ${part.name}...`;
-    const successMessage = "Sao chép linh kiện thành công";
-    const errorMessage = "Sao chép linh kiện thất bại";
-
-    console.log("[Parts] Clone part initiated:", loadingMessage, { partId: part.id, partName: part.name });
-
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1000))
-        .then(() => {
-          console.log("[Parts] Clone part success:", successMessage, { partId: part.id, partName: part.name });
-          return successMessage;
-        })
-        .catch((error) => {
-          console.error("[Parts] Clone part error:", errorMessage, { partId: part.id, partName: part.name, error });
-          throw error;
-        }),
-      {
-        loading: loadingMessage,
-        success: successMessage,
-        error: errorMessage,
-      }
-    );
-  };
-
   return (
     <div className="flex items-center gap-1">
       {/* Edit Part */}
-      <PartsModal
-        part={part}
-        mode="edit"
-        trigger={
-          <Tooltip>
+      <Tooltip>
+        <PartsModal
+          part={part}
+          mode="edit"
+          trigger={
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
@@ -327,46 +263,11 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
                 <IconEdit className="size-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Chỉnh sửa linh kiện</p>
-            </TooltipContent>
-          </Tooltip>
-        }
-        onSuccess={() => window.location.reload()}
-      />
-
-      {/* Clone Part */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handleClone}
-          >
-            <IconCopy className="size-5" />
-          </Button>
-        </TooltipTrigger>
+          }
+          onSuccess={() => window.location.reload()}
+        />
         <TooltipContent>
-          <p>Sao chép linh kiện</p>
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Delete Part */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            <IconTrash className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Xóa linh kiện</p>
+          <p>Chỉnh sửa linh kiện</p>
         </TooltipContent>
       </Tooltip>
     </div>
@@ -526,16 +427,23 @@ export function PartsTable({
                     column.getCanHide(),
                 )
                 .map((column) => {
+                  const columnDisplayNames: Record<string, string> = {
+                    sku: "SKU",
+                    part_number: "Mã linh kiện",
+                    name: "Linh kiện",
+                    price: "Giá bán",
+                    cost_price: "Giá vốn",
+                    stock_quantity: "Tồn kho",
+                  };
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="capitalize"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
                         column.toggleVisibility(!!value)
                       }
                     >
-                      {column.id}
+                      {columnDisplayNames[column.id] || column.id}
                     </DropdownMenuCheckboxItem>
                   );
                 })}

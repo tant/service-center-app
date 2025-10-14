@@ -77,6 +77,19 @@ const updateTicketSchema = z.object({
 });
 
 export const ticketsRouter = router({
+  getPendingCount: publicProcedure.query(async ({ ctx }) => {
+    const { count, error } = await ctx.supabaseAdmin
+      .from("service_tickets")
+      .select("*", { count: 'exact', head: true })
+      .neq("status", "completed");
+
+    if (error) {
+      throw new Error(`Failed to fetch pending tickets count: ${error.message}`);
+    }
+
+    return count || 0;
+  }),
+
   getDailyRevenue: publicProcedure.query(async ({ ctx }) => {
     const { data: tickets, error } = await ctx.supabaseAdmin
       .from("service_tickets")

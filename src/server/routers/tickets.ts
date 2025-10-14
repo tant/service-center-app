@@ -236,7 +236,7 @@ export const ticketsRouter = router({
 
       const { data: productData } = await ctx.supabaseAdmin
         .from("products")
-        .select("name, brand, type")
+        .select("name, type, brands(name)")
         .eq("id", input.product_id)
         .single();
 
@@ -244,7 +244,7 @@ export const ticketsRouter = router({
       const priorityLabel = PRIORITY_LABELS[input.priority_level as keyof typeof PRIORITY_LABELS];
       const warrantyLabel = WARRANTY_LABELS[input.warranty_type as keyof typeof WARRANTY_LABELS];
       const productName = productData?.name || "Sản phẩm";
-      const productBrand = productData?.brand || "";
+      const productBrand = (productData?.brands as any)?.name || "";
       const productType = productData?.type || "";
       const customerName = customerData?.name || "Khách hàng";
       const customerPhone = customerData?.phone || "";
@@ -282,7 +282,10 @@ export const ticketsRouter = router({
           id,
           name,
           type,
-          brand
+          brands (
+            id,
+            name
+          )
         )
       `)
       .order("created_at", { ascending: false });
@@ -312,8 +315,11 @@ export const ticketsRouter = router({
             id,
             name,
             type,
-            brand,
-            model
+            model,
+            brands (
+              id,
+              name
+            )
           )
         `)
         .eq("id", input.id)

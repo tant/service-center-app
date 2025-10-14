@@ -28,7 +28,10 @@ async function getTicketData(ticketId: string) {
         id,
         name,
         type,
-        brand
+        brands (
+          id,
+          name
+        )
       ),
       service_ticket_parts (
         id,

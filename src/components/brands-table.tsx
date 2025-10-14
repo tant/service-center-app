@@ -497,10 +497,7 @@ export function BrandsTable({
 
     return data.filter((item) => {
       const searchLower = searchValue.toLowerCase();
-      return (
-        item.name.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower)
-      );
+      return item.name.toLowerCase().includes(searchLower);
     });
   }, [data, searchValue]);
 
@@ -588,7 +585,7 @@ export function BrandsTable({
         >
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Tìm theo tên hoặc mô tả..."
+              placeholder="Tìm theo tên thương hiệu..."
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               className="max-w-sm"

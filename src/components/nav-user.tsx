@@ -8,6 +8,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { logout } from "@/app/(public)/logout/action";
 import { trpc } from "@/components/providers/trpc-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -25,12 +26,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { createClient } from "@/utils/supabase/client";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const supabase = createClient();
 
   // Use the same tRPC query as the account page
   const {
@@ -41,14 +40,11 @@ export function NavUser() {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Logout error:", error);
-      } else {
-        router.push("/login");
-      }
+      await logout();
     } catch (error) {
       console.error("Exception during logout:", error);
+      // Fallback: redirect to login even if logout action fails
+      router.push("/login");
     }
   };
 

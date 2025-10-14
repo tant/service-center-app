@@ -9,10 +9,25 @@ import { createClient } from "@/utils/supabase/server";
 export async function login(formData: FormData) {
   console.log("🔐 [LOGIN ACTION] Starting login process");
 
-  // call cookies() before any Supabase calls to opt-out of Next.js fetch caching
-  // for authenticated requests (per Supabase Next.js server-side auth guide)
-  cookies();
-  console.log("🔐 [LOGIN ACTION] Cookies initialized");
+  // Get cookie store and clear any existing auth cookies to prevent stale sessions
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+
+  // Clear all Supabase auth cookies (handles both localhost and IP-based cookies)
+  const authCookies = allCookies.filter(cookie =>
+    cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')
+  );
+
+  if (authCookies.length > 0) {
+    console.log(`🔐 [LOGIN ACTION] Clearing ${authCookies.length} existing auth cookie(s):`,
+      authCookies.map(c => c.name)
+    );
+    authCookies.forEach(cookie => {
+      cookieStore.delete(cookie.name);
+    });
+  }
+
+  console.log("🔐 [LOGIN ACTION] Cookies initialized and cleared");
 
   const supabase = await createClient();
   console.log("🔐 [LOGIN ACTION] Supabase client created");

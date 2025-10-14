@@ -1,85 +1,85 @@
-# Service Center Management System
+# Hệ Thống Quản Lý Trung Tâm Bảo Hành
 
-A full-stack service center management application built with Next.js, Supabase, and tRPC for managing service tickets, parts inventory, customers, and products.
+Ứng dụng quản lý trung tâm bảo hành full-stack được xây dựng với Next.js, Supabase và tRPC để quản lý phiếu bảo hành, kho linh kiện, khách hàng và sản phẩm.
 
-## Overview
+## Tổng Quan
 
-This application helps service centers manage their daily operations including customer tracking, product inventory, service ticket workflows, and parts management. Built with modern web technologies for reliability and scalability.
+Ứng dụng này giúp các trung tâm bảo hành quản lý hoạt động hàng ngày bao gồm theo dõi khách hàng, quản lý kho sản phẩm, quy trình xử lý phiếu bảo hành và quản lý linh kiện. Được xây dựng với các công nghệ web hiện đại để đảm bảo độ tin cậy và khả năng mở rộng.
 
-## Key Features
+## Tính Năng Chính
 
-- 🎫 **Service Ticket Management** - Complete workflow from receipt to completion with status tracking
-- 📦 **Parts Inventory** - Real-time stock tracking with automatic quantity updates
-- 👥 **Customer Management** - Comprehensive customer database with service history
-- 🛠️ **Product Catalog** - Product management with compatible parts relationships
-- 👤 **Role-Based Access Control** - Four role types: Admin, Manager, Technician, and Reception
-- 💾 **File Storage** - Secure upload for avatars, product images, and service documentation
-- 📊 **Real-time Updates** - Live data synchronization powered by Supabase
-- 🔒 **Row-Level Security** - Database-level access control for data protection
+- 🎫 **Quản Lý Phiếu Bảo Hành** - Quy trình hoàn chỉnh từ tiếp nhận đến hoàn thành với theo dõi trạng thái
+- 📦 **Quản Lý Kho Linh Kiện** - Theo dõi tồn kho thời gian thực với cập nhật số lượng tự động
+- 👥 **Quản Lý Khách Hàng** - Cơ sở dữ liệu khách hàng đầy đủ với lịch sử bảo hành
+- 🛠️ **Danh Mục Sản Phẩm** - Quản lý sản phẩm với quan hệ linh kiện tương thích
+- 👤 **Phân Quyền Theo Vai Trò** - Bốn loại vai trò: Quản trị viên, Quản lý, Kỹ thuật viên và Lễ tân
+- 💾 **Lưu Trữ File** - Upload bảo mật cho ảnh đại diện, hình ảnh sản phẩm và tài liệu bảo hành
+- 📊 **Cập Nhật Thời Gian Thực** - Đồng bộ dữ liệu trực tiếp được hỗ trợ bởi Supabase
+- 🔒 **Row-Level Security** - Kiểm soát truy cập cấp độ cơ sở dữ liệu để bảo vệ dữ liệu
 
-## Tech Stack
+## Công Nghệ Sử Dụng
 
 ### Frontend
-- **Framework**: Next.js 15.5 with App Router and Turbopack
-- **UI Library**: React 19 with TypeScript
+- **Framework**: Next.js 15.5 với App Router và Turbopack
+- **UI Library**: React 19 với TypeScript
 - **Styling**: Tailwind CSS 4 + shadcn/ui components
 - **State Management**: TanStack Query (React Query)
-- **Type Safety**: End-to-end type safety with tRPC
+- **Type Safety**: Type-safe hoàn toàn với tRPC
 
 ### Backend
-- **API**: tRPC for type-safe API routes
-- **Database**: PostgreSQL via Supabase
-- **Authentication**: Supabase Auth with JWT
-- **Storage**: Supabase Storage for file uploads
+- **API**: tRPC cho các API route type-safe
+- **Database**: PostgreSQL thông qua Supabase
+- **Authentication**: Supabase Auth với JWT
+- **Storage**: Supabase Storage cho upload file
 - **Real-time**: Supabase Realtime subscriptions
 
-### Development Tools
+### Công Cụ Phát Triển
 - **Build Tool**: Turbopack (Next.js 15)
 - **Package Manager**: pnpm
 - **Linting/Formatting**: Biome
-- **Database Migrations**: Supabase CLI with declarative schemas
+- **Database Migrations**: Supabase CLI với declarative schemas
 - **Local Development**: Docker-based Supabase local stack
 
-## Quick Start
+## Bắt Đầu Nhanh
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
+Xem [DEVELOPMENT.md](./DEVELOPMENT.md) để biết hướng dẫn cài đặt chi tiết.
 
 ```bash
-# Clone and install
+# Clone và cài đặt
 git clone https://github.com/tant/service-center-app
 cd service-center-app
 pnpm install
 
-# Set up environment
+# Thiết lập môi trường
 cp .env.example .env
 
-# Start Supabase and set up database
+# Khởi động Supabase và thiết lập database
 pnpx supabase start
 ./docs/data/schemas/setup_schema.sh
 
-# Start development server
+# Khởi động development server
 pnpm dev
 ```
 
-Visit `http://localhost:3025` and complete setup at `/setup` endpoint.
+Truy cập `http://localhost:3025` và hoàn tất cài đặt tại endpoint `/setup`.
 
-## Project Structure
+## Cấu Trúc Dự Án
 
 ```
 service-center/
 ├── src/
 │   ├── app/                    # Next.js App Router pages
-│   │   ├── (auth)/            # Protected routes
-│   │   ├── (public)/          # Public routes
+│   │   ├── (auth)/            # Protected routes (yêu cầu đăng nhập)
+│   │   ├── (public)/          # Public routes (công khai)
 │   │   └── api/               # tRPC API routes
 │   ├── components/            # React components
-│   ├── lib/                   # Utilities and configurations
+│   ├── lib/                   # Utilities và configurations
 │   └── hooks/                 # Custom React hooks
 ├── docs/
 │   └── data/
-│       ├── schemas/           # Database schema definitions
-│       └── seeds/             # Seed data scripts
-├── supabase/                  # Supabase configuration
+│       ├── schemas/           # Định nghĩa database schema
+│       └── seeds/             # Scripts seed data
+├── supabase/                  # Cấu hình Supabase
 │   ├── config.toml
 │   └── migrations/           # Generated migrations
 └── .env                      # Environment variables (git-ignored)
@@ -87,50 +87,50 @@ service-center/
 
 ## Database Schema
 
-Core entities and their relationships:
+Các entity chính và quan hệ của chúng:
 
-- **Users & Auth**: `profiles` table extends Supabase Auth
-- **Business Data**: `customers`, `products`, `parts`
-- **Service Workflow**: `service_tickets`, `service_ticket_parts`, `service_ticket_comments`
-- **Relationships**: `product_parts` (many-to-many)
+- **Users & Auth**: Bảng `profiles` mở rộng từ Supabase Auth
+- **Dữ Liệu Kinh Doanh**: `customers`, `products`, `parts`
+- **Quy Trình Bảo Hành**: `service_tickets`, `service_ticket_parts`, `service_ticket_comments`
+- **Quan Hệ**: `product_parts` (many-to-many)
 
-All tables include:
-- Automatic timestamps (`created_at`, `updated_at`)
+Tất cả các bảng bao gồm:
+- Timestamps tự động (`created_at`, `updated_at`)
 - Audit trails (`created_by`, `updated_by`)
 - Row-Level Security (RLS) policies
-- Optimized indexes for performance
+- Indexes được tối ưu hóa cho hiệu suất
 
-## Documentation
+## Tài Liệu
 
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development environment setup and contribution guide
-- **[docs/data/schemas/README.md](./docs/data/schemas/README.md)** - Database schema documentation
-- **[CLAUDE.md](./CLAUDE.md)** - Claude Code AI assistant instructions
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Hướng dẫn thiết lập môi trường phát triển và đóng góp
+- **[docs/data/schemas/README.md](./docs/data/schemas/README.md)** - Tài liệu database schema
+- **[CLAUDE.md](./CLAUDE.md)** - Hướng dẫn cho Claude Code AI assistant
 
-## Deployment
+## Triển Khai
 
-### Prerequisites
-- Supabase account ([sign up](https://supabase.com))
-- Hosting platform (Vercel, Railway, etc.)
+### Yêu Cầu
+- Tài khoản Supabase ([đăng ký](https://supabase.com))
+- Nền tảng hosting (Vercel, Railway, v.v.)
 
-### Steps
-1. Create Supabase project and note credentials
-2. Link local project: `pnpx supabase link --project-ref <ref>`
+### Các Bước
+1. Tạo Supabase project và ghi nhận thông tin xác thực
+2. Liên kết local project: `pnpx supabase link --project-ref <ref>`
 3. Push schema: `pnpx supabase db push`
-4. Deploy frontend to hosting platform
-5. Configure environment variables
+4. Deploy frontend lên nền tảng hosting
+5. Cấu hình environment variables
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md#production-deployment) for detailed deployment instructions.
+Xem [DEVELOPMENT.md](./DEVELOPMENT.md#production-deployment) để biết hướng dẫn triển khai chi tiết.
 
-## Support & Contributing
+## Hỗ Trợ & Đóng Góp
 
-- **Issues**: Report bugs or request features via GitHub Issues
-- **Contributing**: See [DEVELOPMENT.md](./DEVELOPMENT.md) for contribution guidelines
-- **Questions**: Contact the development team
+- **Issues**: Báo cáo lỗi hoặc yêu cầu tính năng qua GitHub Issues
+- **Đóng góp**: Xem [DEVELOPMENT.md](./DEVELOPMENT.md) để biết hướng dẫn đóng góp
+- **Câu hỏi**: Liên hệ với đội ngũ phát triển
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+Dự án này được cấp phép theo MIT License - xem file [LICENSE](./LICENSE) để biết chi tiết.
 
 ---
 
-**Made with ❤️ for efficient service center management**
+**Được phát triển với ❤️ để quản lý trung tâm bảo hành hiệu quả**

@@ -1,9 +1,9 @@
 -- =====================================================
 -- 00_base_types.sql
 -- =====================================================
--- Base Types: ENUMs and DOMAINs
+-- Base Types: ENUMs
 --
--- This file defines reusable types that are used across
+-- This file defines reusable enum types that are used across
 -- the entire schema. It should be loaded before all other
 -- schema files to ensure types are available.
 -- =====================================================
@@ -72,38 +72,6 @@ create type public.comment_type as enum (
 comment on type public.comment_type is 'Types of comments on service tickets';
 
 -- =====================================================
--- DOMAIN TYPES
--- =====================================================
-
--- Email Address Domain
--- Validates email format using regex pattern
--- Used in: profiles, customers
-drop domain if exists public.email_address cascade;
-create domain public.email_address as text
-  check (value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-comment on domain public.email_address is 'Valid email address with format validation';
-
--- Optional Email Address Domain
--- Same as email_address but allows NULL and empty string values
--- Used in: customers (where email is optional)
-drop domain if exists public.optional_email_address cascade;
-create domain public.optional_email_address as text
-  check (value is null or value = '' or value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-
-comment on domain public.optional_email_address is 'Optional email address with format validation (allows NULL and empty string)';
-
--- Phone Number Domain
--- Validates Vietnamese phone format
--- Format: 10-11 digits, starting with 0
--- Used in: customers
-drop domain if exists public.phone_number cascade;
-create domain public.phone_number as text
-  check (value ~ '^\d{10,11}$' and value like '0%');
-
-comment on domain public.phone_number is 'Vietnamese phone number (10-11 digits starting with 0)';
-
--- =====================================================
 -- GRANTS
 -- =====================================================
 
@@ -113,7 +81,3 @@ grant usage on type public.ticket_status to authenticated;
 grant usage on type public.priority_level to authenticated;
 grant usage on type public.warranty_type to authenticated;
 grant usage on type public.comment_type to authenticated;
-
-grant usage on domain public.email_address to authenticated;
-grant usage on domain public.optional_email_address to authenticated;
-grant usage on domain public.phone_number to authenticated;

@@ -6,7 +6,7 @@ create table "profiles" (
   "user_id" uuid not null unique references auth.users(id) on delete cascade,
   "full_name" text not null,
   "avatar_url" text,
-  "email" public.email_address not null,
+  "email" text not null,
   "roles" public.user_role[] not null default array[]::public.user_role[],
   "is_active" boolean not null default true,
   "created_at" timestamptz not null default now(),

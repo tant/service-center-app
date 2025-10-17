@@ -26,8 +26,14 @@ Ensure you have the following installed before starting:
   ```bash
   npm install -g pnpm
   ```
-- ✅ **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop))
+- ✅ **Docker** ([Download](https://www.docker.com/products/docker-desktop))
 - ✅ **Git** ([Download](https://git-scm.com/))
+- ✅ **PostgreSQL Client** (for `psql` command-line utility)
+  - **macOS (Homebrew)**: `brew install libpq`
+  - **Ubuntu/Debian**: `sudo apt-get update && sudo apt-get install postgresql-client-common postgresql-client`
+  - **Windows**: Included with PostgreSQL installer.
+
+> **Important**: Ensure Docker is running with appropriate permissions. Verify by running `docker ps`. If you encounter permission issues, refer to the [Docker post-installation guide for Linux](https://docs.docker.com/engine/install/linux-postinstall/) for detailed instructions on managing Docker as a non-root user.
 
 ### Recommended
 - **VS Code** with extensions:
@@ -78,6 +84,16 @@ docker ps
 ```
 
 ### 5. Start Supabase Local Stack
+
+Before starting Supabase, ensure the necessary directories are created and `supabase/config.toml` is updated:
+
+```bash
+mkdir -p supabase/migrations supabase/schemas supabase/storage/product_images supabase/storage/service_media supabase/storage/avatars
+```
+
+Update `supabase/config.toml` to set the `objects_path` for the `avatars` bucket to the correct local storage location. This ensures that avatar images are stored in the designated directory.
+
+Then, run:
 
 ```bash
 pnpx supabase start

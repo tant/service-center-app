@@ -157,6 +157,7 @@ function getWarrantyType(warrantyType: string) {
   const warrantyMap = {
     warranty: "Bảo hành",
     paid: "Trả phí",
+    goodwill: "Thiện chí",
   };
   return warrantyMap[warrantyType as keyof typeof warrantyMap] || warrantyType;
 }

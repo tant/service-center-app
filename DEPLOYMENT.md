@@ -1,28 +1,25 @@
 # Hướng Dẫn Triển Khai Production
 
-Tài liệu này hướng dẫn triển khai Service Center Management lên production với Cloudflare Tunnel. Không cần Nginx reverse proxy, không cần SSL certificate trên server, không cần mở port 80/443.
+Tài liệu này hướng dẫn triển khai Service Center Management lên production server.
 
 ## 🌟 Ưu Điểm
 
-✅ **Không cần mở port**: Không cần expose port 80/443 ra internet
-✅ **SSL tự động**: Cloudflare xử lý SSL/TLS certificate
-✅ **DDoS protection**: Cloudflare tự động bảo vệ khỏi DDoS
-✅ **CDN tích hợp**: Static assets được cache tự động
-✅ **Zero Trust**: Có thể thêm authentication layer
-✅ **Không cần public IP**: Hoạt động ngay cả sau NAT/firewall
-✅ **Đơn giản**: Không cần quản lý Nginx, Let's Encrypt
+✅ **Docker-based**: Dễ dàng deploy và scale
+✅ **Isolated instances**: Mỗi khách hàng có database riêng
+✅ **Multi-tenant ready**: Chạy nhiều instances trên 1 server
+✅ **Self-contained**: Tất cả services trong Docker
+✅ **Easy backup**: Database và files dễ dàng backup
 
 ---
 
 ## Mục Lục
 
 - [Yêu Cầu](#yêu-cầu)
-- [Bước 1: Chuẩn Bị Server](#bước-1-chuẩn-bị-server)
-- [Bước 2: Clone và Cấu Hình](#bước-2-clone-và-cấu-hình)
-- [Bước 3: Deploy Docker Stack](#bước-3-deploy-docker-stack)
-- [Bước 4: Setup Cloudflare Tunnel](#bước-4-setup-cloudflare-tunnel)
-- [Bước 5: Deploy Database Schema](#bước-5-deploy-database-schema)
-- [Bước 6: Initial Setup](#bước-6-initial-setup)
+- [Bước 1: Clone và Cấu Hình](#bước-1-clone-và-cấu-hình)
+- [Bước 2: Deploy Docker Stack](#bước-2-deploy-docker-stack)
+- [Bước 3: Deploy Database Schema](#bước-3-deploy-database-schema)
+- [Bước 4: Initial Setup](#bước-4-initial-setup)
+- [Multi-Instance Deployment](#multi-instance-deployment)
 - [Quản Lý](#quản-lý)
 - [Backup & Monitoring](#backup--monitoring)
 - [Troubleshooting](#troubleshooting)
@@ -31,122 +28,86 @@ Tài liệu này hướng dẫn triển khai Service Center Management lên prod
 
 ## Yêu Cầu
 
-### Server
+### Server Specifications
 - **OS**: Ubuntu 22.04 LTS hoặc mới hơn
 - **CPU**: 2+ cores (khuyến nghị 4+)
 - **RAM**: 4GB minimum (khuyến nghị 8GB+)
 - **Disk**: 40GB+ SSD
-- **Network**: Internet connection (không cần public IP)
+- **Network**: Internet connection
+- **Access**: SSH access với sudo privileges
 
-### Phần Mềm
-- Docker Engine 20.10+
-- Docker Compose v2.0+
-- Git
-- Node.js 18+ (để chạy script generate API keys)
+### Phần Mềm Cần Cài Đặt Trước
 
-### Cloudflare
-- Tài khoản Cloudflare (miễn phí)
-- Domain đã add vào Cloudflare (nameservers đã trỏ về Cloudflare)
-- Cloudflared CLI sẽ cài trong quá trình setup
+**QUAN TRỌNG:** Các phần mềm sau phải được cài đặt trên server trước khi bắt đầu deployment:
 
-### Required Configuration Files
-
-**QUAN TRỌNG:** Supabase stack cần các file cấu hình không có trong repository chính.
-
-**Cách 1: Sử dụng reference volumes từ supabase-project**
+#### 1. Docker & Docker Compose
 ```bash
-# Nếu bạn có access đến reference project:
-cp -r /path/to/supabase-project/volumes/logs volumes/
+
+# Verify installation
+docker --version
+docker compose version
 ```
 
-**Cách 2: Download từ Supabase Docker chính thức**
+#### 2. Git
 ```bash
-# Clone Supabase Docker repository (chỉ cần 1 lần)
-cd ~/
-git clone --depth 1 https://github.com/supabase/supabase
-cd supabase/docker
-
-# Copy file cấu hình cần thiết
-mkdir -p ~/service-center-app/volumes/logs
-cp volumes/logs/vector.yml ~/service-center-app/volumes/logs/
+# Verify
+git --version
 ```
 
-**Files cần thiết:**
-- `volumes/logs/vector.yml` - Cấu hình Vector logging (CRITICAL)
-
-**Tại sao cần:** Không có vector.yml, deployment sẽ fail với lỗi:
-```
-ERROR vector::cli: Configuration error. error=Is a directory (os error 21)
-```
-
----
-
-## Bước 1: Chuẩn Bị Server
-
-### 1.1 Kết Nối Server
+#### 3. Node.js 18+ (để generate API keys)
 ```bash
-ssh root@your-server-ip
-```
-
-### 1.2 Update System
-```bash
-apt update && apt upgrade -y
-apt install -y git curl wget
-```
-
-### 1.3 Cài Đặt Node.js
-```bash
-# Install Node.js 22 (LTS)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-apt install -y nodejs
-
 # Verify
 node --version  # Should show v22.x.x
 npm --version
 ```
 
-### 1.4 Cài Đặt Docker
+#### 4. User Setup (Recommended)
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Verify
-docker --version
-docker compose version
-```
-
-### 1.5 Firewall (Optional - Tunnel không cần mở port 80/443)
-```bash
-# Chỉ cần allow SSH
-ufw allow 22/tcp
-ufw enable
-
-# Không cần allow 80/443 vì dùng Cloudflare Tunnel!
-```
-
-### 1.6 Tạo Deploy User
-```bash
-adduser deploy
-usermod -aG sudo deploy
-usermod -aG docker deploy
+# Tạo deploy user (optional nhưng recommended)
+sudo adduser deploy
+sudo usermod -aG sudo deploy
+sudo usermod -aG docker deploy
 
 # Switch to deploy user
 su - deploy
 ```
 
+### Domain & Reverse Proxy
+**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình reverse proxy (Nginx/Cloudflare Tunnel/etc.) để trỏ 2 domains đến localhost ports:
+
+1. **Main Application Domain**
+   - Ví dụ: `dichvu.sstc.cloud` → `localhost:3025`
+   - Port này sẽ được set trong biến `APP_PORT`
+
+2. **Supabase Studio Domain**
+   - Ví dụ: `supabase.dichvu.sstc.cloud` → `localhost:3000`
+   - Port Studio cố định là 3000
+
+**Lưu ý:** Hướng dẫn này giả định bạn đã setup reverse proxy. Nếu chưa có, hãy cấu hình trước khi tiếp tục.
+
+### Required Configuration Files
+
+**QUAN TRỌNG:** Supabase stack cần các file cấu hình được cung cấp sẵn trong repository.
+
+**Files cần thiết:**
+- `docs/references/volumes/logs/vector.yml` - Cấu hình Vector logging (CRITICAL)
+- `docs/references/volumes/api/kong.yml` - Cấu hình Kong API Gateway
+- `docs/references/volumes/db/*.sql` - Database initialization scripts
+
+**Lưu ý:** Các file này đã có sẵn trong repository và sẽ được copy trong bước Setup Volume Directories (Bước 1.4).
+
 ---
 
-## Bước 2: Clone và Cấu Hình
+## Bước 1: Clone và Cấu Hình
 
-### 2.1 Clone Repository
+### 1.1 Clone Repository
 ```bash
 cd ~
 git clone https://github.com/tant/service-center-app.git
 cd service-center-app
 ```
 
-### 2.2 Generate Secrets
+### 1.2 Generate Secrets
 ```bash
 # JWT Secret (32+ characters)
 openssl rand -base64 32
@@ -161,7 +122,33 @@ openssl rand -base64 32
 openssl rand -base64 16
 ```
 
-### 2.2a Setup Volume Directories và Configuration Files
+### 1.3 Configure Public URL
+
+**QUAN TRỌNG:** Cấu hình SITE_URL với public domain của bạn.
+
+```bash
+nano .env
+```
+
+**Tìm và update:**
+```env
+# Change from:
+SITE_URL=http://localhost:3025
+API_EXTERNAL_URL=http://localhost:8000
+
+# To your public domain:
+SITE_URL=https://dichvu.sstc.cloud
+API_EXTERNAL_URL=https://dichvu.sstc.cloud
+```
+
+**Tại sao cần thiết:**
+- ✅ Supabase Auth sử dụng SITE_URL cho email verification links
+- ✅ Password reset links sẽ redirect về URL này
+- ✅ Magic link authentication cần URL này
+
+**Lưu ý:** Nếu deploy local để test, có thể tạm giữ `http://localhost:3025`
+
+### 1.4 Setup Volume Directories và Configuration Files
 
 **QUAN TRỌNG:** Bước này phải hoàn thành trước khi deployment.
 
@@ -179,15 +166,6 @@ mkdir -p volumes/db/data
 mkdir -p volumes/storage
 ```
 
-**Alternative - Copy từ nguồn khác (nếu cần):**
-```bash
-# Từ reference project khác
-cp -r /home/tan/work/supabase-project/volumes/* volumes/
-
-# Hoặc từ Supabase docker đã download
-cp -r ~/supabase/docker/volumes/* volumes/
-```
-
 **Kiểm tra:**
 ```bash
 # Check các file quan trọng tồn tại
@@ -198,9 +176,9 @@ test -f volumes/api/kong.yml && echo "✅ kong.yml OK" || echo "❌ kong.yml MIS
 [ -s volumes/logs/vector.yml ] && echo "✅ vector.yml có nội dung" || echo "❌ vector.yml rỗng"
 ```
 
-⚠️ **KHÔNG tiếp tục Bước 3 nếu chưa hoàn thành bước này!**
+⚠️ **KHÔNG tiếp tục Bước 2 nếu chưa hoàn thành bước này!**
 
-### 2.3 Cấu Hình .env
+### 1.5 Cấu Hình .env
 ```bash
 cp .env.docker.example .env
 nano .env
@@ -212,11 +190,12 @@ nano .env
 ############################################
 # Application Settings
 ############################################
+APP_PORT=3025  # Main application port (thay đổi cho mỗi instance: 3025, 3026, 3027...)
 SETUP_PASSWORD=<your-generated-setup-password>
 
-# Public URLs (sẽ là Cloudflare URLs)
-SITE_URL=https://service-center.yourdomain.com
-SUPABASE_PUBLIC_URL=https://supabase-api.yourdomain.com
+# Public URLs - Domains đã config ở reverse proxy
+SITE_URL=https://dichvu.sstc.cloud
+API_EXTERNAL_URL=https://dichvu.sstc.cloud
 
 ############################################
 # Supabase Configuration
@@ -262,7 +241,7 @@ ENABLE_EMAIL_SIGNUP=true
 ENABLE_EMAIL_AUTOCONFIRM=false
 ```
 
-### 2.4 Install Dependencies & Generate API Keys
+### 1.6 Install Dependencies & Generate API Keys
 ```bash
 # Install jsonwebtoken for key generation
 npm install jsonwebtoken
@@ -281,9 +260,9 @@ nano .env
 
 ---
 
-## Bước 3: Deploy Docker Stack
+## Bước 2: Deploy Docker Stack
 
-### 3.1 Deploy với Script
+### 2.1 Deploy với Script
 ```bash
 chmod +x docker/scripts/deploy.sh
 ./docker/scripts/deploy.sh
@@ -291,7 +270,7 @@ chmod +x docker/scripts/deploy.sh
 # Chọn option 1: Fresh deployment
 ```
 
-### 3.2 Hoặc Deploy Manual
+### 2.2 Hoặc Deploy Manual
 ```bash
 # Build images
 docker compose build
@@ -303,14 +282,14 @@ docker compose up -d
 docker compose ps
 ```
 
-### 3.3 Verify Services
+### 2.3 Verify Services
 ```bash
 # All containers should be running and healthy
 docker compose ps
 
-# Test locally (chỉ những ports này được expose ra host)
-curl http://localhost:3025/api/health  # ✅ App health check
-curl http://localhost:8000/rest/v1/     # ✅ Supabase REST API
+# Test locally
+curl http://localhost:3025/api/health   # ✅ App health check
+curl http://localhost:3000              # ✅ Supabase Studio (nếu đã expose port)
 ```
 
 **Expected Ports:**
@@ -318,167 +297,30 @@ curl http://localhost:8000/rest/v1/     # ✅ Supabase REST API
 | Service | Internal Port | Host Port | Status |
 |---------|--------------|-----------|---------|
 | App | 3025 | ✅ 3025 | Exposed to host |
-| Kong (Supabase API) | 8000 | ✅ 8000, 8443 | Exposed to host |
-| PostgreSQL | 5432 | ✅ 5432 | Exposed to host |
-| Supabase Studio | 3000 | ❌ Not exposed | **Internal only** |
+| Supabase Studio | 3000 | ✅ 3000 | Exposed to host |
+| Kong (Supabase API) | 8000 | ❌ Internal | App connects internally |
+| PostgreSQL | 5432 | ❌ Internal | App connects internally |
 
-**⚠️ QUAN TRỌNG: Truy Cập Supabase Studio**
-
-Supabase Studio chạy trên port 3000 **bên trong Docker network** và KHÔNG được expose ra localhost.
-
-```bash
-# Lệnh này sẽ KHÔNG hoạt động:
-curl http://localhost:3000
-# Error: Connection refused
-
-# Studio chỉ truy cập được sau khi setup Cloudflare Tunnel (Bước 4):
-# https://studio.yourdomain.com
-```
-
-Nếu cần truy cập Studio locally trước khi setup tunnel, có thể temporarily expose:
-```bash
-# Thêm vào docker-compose.yml studio service (chỉ để test):
-ports:
-  - "3000:3000"
-
-# Sau đó restart:
-docker compose restart studio
-
-# Truy cập tại:
-curl http://localhost:3000
-```
+**Reverse Proxy Setup:**
+- `dichvu.sstc.cloud` → `localhost:3025` (Main App)
+- `supabase.dichvu.sstc.cloud` → `localhost:3000` (Supabase Studio)
 
 **Common Issues:**
 
-1. **supabase-pooler hiển thị "Restarting"**
-   - Đây là expected behavior do cấu hình encryption key
-   - KHÔNG ảnh hưởng đến application functionality
-   - Pooler là optional cho local development
-   - Check logs: `docker logs supabase-pooler --tail 20`
-
-2. **realtime-dev hiển thị "unhealthy"**
+1. **realtime-dev hiển thị "unhealthy"**
    - Có thể mất 1-2 phút để healthy
    - Check logs: `docker logs realtime-dev.supabase-realtime --tail 20`
    - Miễn là app responding, không critical
 
----
-
-## Bước 4: Setup Cloudflare Tunnel
-
-### 4.1 Cài Đặt Cloudflared
-```bash
-# Download và cài đặt
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
-
-# Verify
-cloudflared --version
-```
-
-### 4.2 Login Cloudflare
-```bash
-cloudflared tunnel login
-```
-
-Lệnh này sẽ mở browser và yêu cầu bạn login Cloudflare. Sau khi login, cert file sẽ được lưu tại `~/.cloudflared/cert.pem`
-
-### 4.3 Tạo Tunnel
-```bash
-# Tạo tunnel mới
-cloudflared tunnel create service-center
-
-# Lưu lại Tunnel ID được hiển thị (dạng: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-```
-
-### 4.4 Tạo Config File
-```bash
-mkdir -p ~/.cloudflared
-nano ~/.cloudflared/config.yml
-```
-
-**Nội dung config:**
-
-```yaml
-tunnel: service-center
-credentials-file: /home/deploy/.cloudflared/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.json
-
-ingress:
-  # Main application
-  - hostname: service-center.yourdomain.com
-    service: http://localhost:3025
-    originRequest:
-      noTLSVerify: true
-
-  # Supabase API
-  - hostname: supabase-api.yourdomain.com
-    service: http://localhost:8000
-    originRequest:
-      noTLSVerify: true
-      connectTimeout: 30s
-
-  # Supabase Studio (optional - có thể restrict access)
-  - hostname: studio.yourdomain.com
-    service: http://localhost:3000
-    originRequest:
-      noTLSVerify: true
-
-  # Catch-all rule (required)
-  - service: http_status:404
-```
-
-**Lưu ý:** Thay `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` bằng Tunnel ID của bạn, và thay `yourdomain.com` bằng domain của bạn.
-
-### 4.5 Cấu Hình DNS Routes
-```bash
-# Route cho app
-cloudflared tunnel route dns service-center service-center.yourdomain.com
-
-# Route cho Supabase API
-cloudflared tunnel route dns service-center supabase-api.yourdomain.com
-
-# Route cho Studio (optional)
-cloudflared tunnel route dns service-center studio.yourdomain.com
-```
-
-### 4.6 Test Tunnel
-```bash
-# Chạy tunnel trong foreground để test
-cloudflared tunnel run service-center
-
-# Mở browser và test:
-# - https://service-center.yourdomain.com
-# - https://supabase-api.yourdomain.com
-# - https://studio.yourdomain.com
-
-# Nếu OK, dừng bằng Ctrl+C
-```
-
-### 4.7 Cài Đặt Tunnel Service (Auto-start)
-```bash
-# Install as systemd service
-sudo cloudflared service install
-
-# Start service
-sudo systemctl start cloudflared
-
-# Enable auto-start on boot
-sudo systemctl enable cloudflared
-
-# Check status
-sudo systemctl status cloudflared
-```
-
-### 4.8 Verify
-Mở browser và truy cập:
-- `https://service-center.yourdomain.com` - **Lưu ý:** App sẽ báo lỗi vì chưa có schema (bước tiếp theo)
-- `https://supabase-api.yourdomain.com/rest/v1/` - Nên thấy response từ Supabase
-- `https://studio.yourdomain.com` - Nên thấy Supabase Studio
-
-**Nếu app báo lỗi "relation does not exist"** - Đây là bình thường! Tiếp tục Bước 5 để deploy schema.
+**Lưu ý về Supavisor Pooler:**
+- Supavisor pooler đã được **disabled** trong docker-compose.yml
+- Lý do: Encryption key compatibility issues với Supabase version hiện tại
+- App kết nối trực tiếp đến PostgreSQL qua `postgresql://db:5432`
+- Connection pooling không cần thiết cho deployment này
 
 ---
 
-## Bước 5: Deploy Database Schema
+## Bước 3: Deploy Database Schema
 
 **Đơn giản nhất** - Chạy 1 script tự động:
 
@@ -549,15 +391,15 @@ docker compose exec db psql -U postgres
 
 ---
 
-## Bước 6: Initial Setup
+## Bước 4: Initial Setup
 
-### 6.1 Access Setup Page
-Mở browser:
+### 4.1 Access Setup Page
+Mở browser và truy cập domain đã config:
 ```
-https://service-center.yourdomain.com/setup
+https://dichvu.sstc.cloud/setup
 ```
 
-### 6.2 Create Admin User
+### 4.2 Create Admin User
 1. Nhập `SETUP_PASSWORD` (từ .env)
 2. Điền thông tin admin:
    - Email
@@ -565,9 +407,9 @@ https://service-center.yourdomain.com/setup
    - Full name
 3. Submit
 
-### 6.3 Login
+### 4.3 Login
 ```
-https://service-center.yourdomain.com/login
+https://dichvu.sstc.cloud/login
 ```
 
 Test đầy đủ các chức năng:
@@ -614,42 +456,6 @@ docker compose stop
 docker compose up -d
 ```
 
-### Cloudflare Tunnel
-
-**Status:**
-```bash
-sudo systemctl status cloudflared
-```
-
-**Logs:**
-```bash
-sudo journalctl -u cloudflared -f
-```
-
-**Restart:**
-```bash
-sudo systemctl restart cloudflared
-```
-
-**Update Config:**
-```bash
-nano ~/.cloudflared/config.yml
-sudo systemctl restart cloudflared
-```
-
-**List Tunnels:**
-```bash
-cloudflared tunnel list
-```
-
-**Delete Tunnel:**
-```bash
-# Stop service first
-sudo systemctl stop cloudflared
-
-# Delete tunnel
-cloudflared tunnel delete service-center
-```
 
 ---
 
@@ -682,7 +488,6 @@ tar -czf uploads_backup_$(date +%Y%m%d).tar.gz ./uploads
 **Config:**
 ```bash
 cp .env .env.backup
-cp ~/.cloudflared/config.yml ~/.cloudflared/config.yml.backup
 ```
 
 ### Monitoring
@@ -704,48 +509,9 @@ docker compose logs -f app
 docker compose logs --tail=100 app
 ```
 
-**Cloudflare Tunnel Logs:**
-```bash
-sudo journalctl -u cloudflared -f
-```
-
 ---
 
 ## Troubleshooting
-
-### Tunnel Không Kết Nối
-
-**Check status:**
-```bash
-sudo systemctl status cloudflared
-sudo journalctl -u cloudflared -f
-```
-
-**Common issues:**
-
-1. **Credentials file not found**
-   ```bash
-   # Check if credentials file exists
-   ls -la ~/.cloudflared/*.json
-
-   # Update config.yml with correct path
-   nano ~/.cloudflared/config.yml
-   ```
-
-2. **DNS not configured**
-   ```bash
-   # Re-run DNS route commands
-   cloudflared tunnel route dns service-center service-center.yourdomain.com
-   ```
-
-3. **Service not accessible**
-   ```bash
-   # Test local service first
-   curl http://localhost:3025/api/health
-
-   # If OK, problem is with tunnel
-   # If not OK, problem is with Docker
-   ```
 
 ### Application Errors
 
@@ -785,28 +551,23 @@ docker compose ps studio
 docker compose logs studio
 ```
 
-**Test locally:**
+**Verify port exposure:**
 ```bash
-# Studio KHÔNG được expose ra host theo mặc định
-# Chỉ truy cập được qua Cloudflare Tunnel
-
-# Để test nếu Studio container đang chạy:
+# Check if port 3000 is exposed
 docker compose ps studio
-docker compose logs studio --tail 20
 
-# Để temporary access Studio locally:
-docker compose exec studio wget -O- http://localhost:3000 2>/dev/null | head -20
+# Test locally
+curl http://localhost:3000
+
+# If not accessible, verify docker-compose.yml has:
+# studio:
+#   ports:
+#     - "3000:3000"
 ```
 
-**If local works but tunnel doesn't:**
-```bash
-# Check tunnel config
-cat ~/.cloudflared/config.yml
-
-# Verify hostname is correct
-# Restart tunnel
-sudo systemctl restart cloudflared
-```
+**Verify reverse proxy configuration:**
+- Check your reverse proxy (Nginx/Cloudflare Tunnel) đã config đúng chưa
+- Domain: `supabase.dichvu.sstc.cloud` → `localhost:3000`
 
 ### Vector Container Không Start
 
@@ -836,12 +597,8 @@ ls -lh volumes/logs/vector.yml
 rm -rf volumes/logs/vector.yml  # Remove nếu là directory
 mkdir -p volumes/logs
 
-# Copy từ reference
-cp /home/tan/work/supabase-project/volumes/logs/vector.yml volumes/logs/
-
-# Hoặc download từ Supabase docker
-curl -o volumes/logs/vector.yml \
-  https://raw.githubusercontent.com/supabase/supabase/master/docker/volumes/logs/vector.yml
+# Copy từ docs/references trong repository
+cp docs/references/volumes/logs/vector.yml volumes/logs/
 
 # Verify là file
 test -f volumes/logs/vector.yml && echo "OK" || echo "FAILED"
@@ -854,49 +611,33 @@ docker compose ps vector
 docker logs supabase-vector --tail 10
 ```
 
-### Pooler Container Liên Tục Restart
+### Pooler Container Issues
 
-**Symptom:**
+**Lưu ý:** Supavisor pooler đã được **disabled** trong phiên bản hiện tại.
+
+**Root Cause:**
+- Supavisor 2.7.0 có encryption key compatibility issue
+- Error: `Unknown cipher or invalid key size` khi sử dụng VAULT_ENC_KEY
+- Pooler expects binary decoded key nhưng nhận base64 string
+
+**Impact:**
+- **KHÔNG ảnh hưởng** đến application functionality
+- App kết nối trực tiếp đến PostgreSQL: `postgresql://db:5432`
+- Connection pooling không cần thiết cho deployment scale hiện tại
+
+**Nếu muốn enable lại:**
 ```bash
-docker compose ps
-# Shows: supabase-pooler - Restarting (1) X seconds ago
-```
-
-**Check logs:**
-```bash
-docker logs supabase-pooler --tail 30
-```
-
-**Common error:** Encryption key mismatch hoặc configuration issue
-
-**Impact:** Pooler là optional cho local development. App sẽ hoạt động tốt không có pooler.
-
-**Giải pháp (nếu cần):**
-```bash
-# Option 1: Ignore nó (recommended cho local dev)
-# App hoạt động tốt không có pooler
-
-# Option 2: Disable pooler temporarily
-# Trong docker-compose.yml, comment out pooler service
-# Sau đó: docker compose up -d
-
-# Option 3: Check pooler configuration
-docker compose exec db psql -U postgres -c "SELECT * FROM _supavisor.tenants;"
+# Uncomment supavisor service trong docker-compose.yml
+# Sau đó restart:
+docker compose up -d
 ```
 
 ### SSL/Certificate Errors
 
-**Cloudflare Tunnel handles SSL automatically**, nhưng nếu gặp lỗi:
+**Nếu sử dụng reverse proxy**, kiểm tra SSL configuration:
 
-1. **Check SSL mode in Cloudflare Dashboard:**
-   - Go to SSL/TLS settings
-   - Set to "Full" (not "Full Strict")
-
-2. **Verify tunnel is running:**
-   ```bash
-   sudo systemctl status cloudflared
-   ```
-
+1. **Verify reverse proxy SSL config** (Nginx/Cloudflare/etc.)
+2. **Check certificate validity**
 3. **Check browser console for errors**
 
 ### Out of Memory/Disk
@@ -916,70 +657,7 @@ docker volume prune
 **Restart services:**
 ```bash
 docker compose restart
-sudo systemctl restart cloudflared
 ```
-
----
-
-## Cloudflare Dashboard Configuration
-
-### Khuyến Nghị Security Settings
-
-1. **SSL/TLS:**
-   - Mode: Full
-   - Min TLS Version: 1.2
-   - Always Use HTTPS: On
-   - Automatic HTTPS Rewrites: On
-
-2. **Firewall Rules (Optional):**
-   - Block countries bạn không serve
-   - Rate limiting: 100 requests/10 minutes/IP
-   - Challenge score under 30
-
-3. **Page Rules (Optional):**
-   - Cache static assets: `*/_next/static/*`
-   - Cache Level: Standard
-   - Browser TTL: 4 hours
-
-4. **Access (Optional - Restrict Studio):**
-   - Setup Access policy cho studio.yourdomain.com
-   - Require email OTP hoặc Google login
-   - Whitelist specific emails
-
----
-
-## Performance Tips
-
-### Cloudflare Optimization
-
-1. **Enable Argo Smart Routing** (paid)
-   - Giảm latency ~30%
-   - Worth it for production
-
-2. **Enable Caching:**
-   - Cache static assets
-   - Edge cache TTL
-
-3. **Enable Brotli Compression:**
-   - Dashboard → Speed → Optimization
-   - Enable Brotli
-
-### Application Optimization
-
-1. **Database Connection Pooling:**
-   - Already configured in Supabase
-
-2. **Scale App Containers:**
-   ```yaml
-   # In docker-compose.yml
-   app:
-     deploy:
-       replicas: 2
-   ```
-
-3. **Use CDN for uploads:**
-   - Store uploads in Supabase Storage
-   - Or use Cloudflare R2
 
 ---
 
@@ -1008,49 +686,29 @@ Nếu đang dùng Nginx trên VPS:
    tar xzf uploads.tar.gz
    ```
 
-5. **Setup Cloudflare Tunnel**
-
-6. **Delete old Nginx config và SSL certs** (không cần nữa!)
-
----
-
-## Cost Analysis
-
-### Cloudflare Tunnel
-- **Free Tier:** Unlimited tunnels, unlimited bandwidth ✅
-- **Argo Smart Routing:** $5/month + $0.10/GB (optional)
-- **Access:** $3/user/month (optional, for Studio restriction)
-
-### Server
-- **Basic VPS:** $5-10/month
-- **Production VPS:** $20-40/month
-
-**Total: $5-10/month** (với Free Cloudflare) 🎉
+5. **Configure reverse proxy** để trỏ domains đến localhost ports
 
 ---
 
 ## FAQ
 
-**Q: Có cần public IP không?**
-A: Không! Cloudflare Tunnel hoạt động qua outbound connection.
+**Q: Cần expose ports nào?**
+A: Chỉ cần APP_PORT (3025) và Studio port (3000). Các services khác đều internal.
 
-**Q: Có cần mở port 80/443 không?**
-A: Không! Chỉ cần port 22 (SSH) để quản lý.
+**Q: Có thể chạy nhiều instances không?**
+A: Có! Mỗi instance chỉ cần thay đổi APP_PORT (3025, 3026, 3027...).
 
-**Q: SSL certificate tự động renew không?**
-A: Có! Cloudflare quản lý SSL certificate tự động.
+**Q: Database có share giữa các instances không?**
+A: Không! Mỗi instance có database riêng, hoàn toàn isolated.
 
-**Q: Có thể dùng multiple tunnels không?**
-A: Có! Free tier cho phép unlimited tunnels.
-
-**Q: Performance so với Nginx?**
-A: Tương đương hoặc tốt hơn (nhờ Cloudflare CDN).
+**Q: Cần setup reverse proxy như thế nào?**
+A: Tùy vào solution (Nginx/Cloudflare Tunnel/etc.). Chỉ cần trỏ domain đến localhost ports.
 
 **Q: Downtime khi update?**
-A: Minimal. Cloudflare có reconnection tự động.
+A: Minimal. Build image mới, sau đó restart container.
 
 **Q: Có thể restrict access không?**
-A: Có! Dùng Cloudflare Access (3$/user/month) hoặc firewall rules.
+A: Có! Dùng reverse proxy firewall rules hoặc Cloudflare Access.
 
 ---
 
@@ -1067,15 +725,8 @@ docker compose restart app                 # Restart
 
 # Troubleshooting specific services
 docker logs supabase-vector --tail 50      # Vector logs
-docker logs supabase-pooler --tail 50      # Pooler logs
 docker logs service-center-app --tail 100  # App logs
-
-# Cloudflare Tunnel
-sudo systemctl status cloudflared          # Status
-sudo systemctl restart cloudflared         # Restart
-sudo journalctl -u cloudflared -f          # Logs
-cloudflared tunnel list                    # List tunnels
-cloudflared tunnel info service-center     # Tunnel info
+docker logs supabase-auth --tail 50        # Auth logs
 
 # Database
 docker compose exec db psql -U postgres    # Connect to DB
@@ -1093,14 +744,196 @@ docker compose ps  # Verify all healthy
 
 ---
 
+## Multi-Instance Deployment
+
+### Overview
+
+Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **1 port duy nhất**: `APP_PORT`.
+
+**Tất cả các services khác (database, API, auth, storage, etc.) đều internal và không xung đột!**
+
+### Ports Configuration
+
+**Chỉ cần configure 1 port:**
+- ✅ `APP_PORT` - Port của Next.js application (3025, 3026, 3027, ...)
+
+**Các services internal (KHÔNG cần configure):**
+- ✅ Kong API - App kết nối qua `http://kong:8000` (internal)
+- ✅ PostgreSQL - App kết nối qua `postgresql://db:5432` (internal)
+- ✅ Pooler, Analytics, Studio - Tất cả đều internal
+
+### Cách Deploy Multiple Instances
+
+#### Instance 1 - Customer A
+
+```bash
+# 1. Clone repository
+cd /home/deploy
+git clone https://github.com/your-org/service-center.git customer-a
+cd customer-a
+
+# 2. Create .env
+cp .env.docker.example .env
+
+# 3. Configure - CHỈ CẦN thay đổi APP_PORT!
+nano .env
+# Set: APP_PORT=3025
+# Generate secrets (theo Bước 2.3 và 2.4 ở trên)
+
+# 4. Start services với unique project name
+docker compose -p customer-a build
+docker compose -p customer-a up -d
+
+# 5. Apply schema
+./docker/scripts/apply-schema.sh
+
+# 6. Access
+# http://localhost:3025
+```
+
+#### Instance 2 - Customer B
+
+```bash
+# Tương tự, nhưng dùng APP_PORT khác
+cd /home/deploy
+git clone https://github.com/your-org/service-center.git customer-b
+cd customer-b
+cp .env.docker.example .env
+nano .env  # Set: APP_PORT=3026
+docker compose -p customer-b build
+docker compose -p customer-b up -d
+./docker/scripts/apply-schema.sh
+```
+
+#### Instance 3 - Customer C
+
+```bash
+cd /home/deploy
+git clone https://github.com/your-org/service-center.git customer-c
+cd customer-c
+cp .env.docker.example .env
+nano .env  # Set: APP_PORT=3027
+docker compose -p customer-c build
+docker compose -p customer-c up -d
+./docker/scripts/apply-schema.sh
+```
+
+### Reverse Proxy Configuration
+
+Mỗi instance cần **2 domains** (app + studio):
+
+**Ví dụ với Nginx:**
+```nginx
+# Customer A - App
+server {
+    listen 443 ssl;
+    server_name customer-a.yourdomain.com;
+    location / {
+        proxy_pass http://localhost:3025;
+    }
+}
+
+# Customer A - Studio
+server {
+    listen 443 ssl;
+    server_name supabase-a.yourdomain.com;
+    location / {
+        proxy_pass http://localhost:3000;
+    }
+}
+
+# Customer B - App
+server {
+    listen 443 ssl;
+    server_name customer-b.yourdomain.com;
+    location / {
+        proxy_pass http://localhost:3026;
+    }
+}
+
+# Customer B - Studio
+server {
+    listen 443 ssl;
+    server_name supabase-b.yourdomain.com;
+    location / {
+        proxy_pass http://localhost:3100;  # Studio cho instance B
+    }
+}
+```
+
+**Lưu ý:**
+- Mỗi instance Studio cũng cần unique port (3000, 3100, 3200...)
+- Phải expose Studio port trong docker-compose.yml của mỗi instance
+
+### Quản Lý Instances
+
+```bash
+# Start/Stop/Restart instance
+docker compose -p customer-a up -d
+docker compose -p customer-a down
+docker compose -p customer-a restart
+
+# View status
+docker compose -p customer-a ps
+docker compose -p customer-b ps
+
+# View logs
+docker compose -p customer-a logs -f app
+
+# Access database
+docker compose -p customer-a exec db psql -U postgres
+
+# Backup database
+docker compose -p customer-a exec db pg_dump -U postgres postgres > backup-customer-a.sql
+```
+
+### Network Isolation
+
+Mỗi instance có Docker network riêng:
+- `customer-a_default`
+- `customer-b_default`
+- `customer-c_default`
+
+**Hoàn toàn isolated!** Không có data/service nào share giữa các instances.
+
+### Resource Planning
+
+Mỗi instance sử dụng khoảng:
+- **RAM**: 2-3 GB
+- **Disk**: 500 MB + data growth
+- **CPU**: Moderate
+
+**Khuyến nghị:**
+- 8 GB RAM → 1-2 instances
+- 16 GB RAM → 4-6 instances
+- 32 GB RAM → 10-12 instances
+- 64 GB RAM → 20-25 instances
+
+### Port Allocation Pattern
+
+```
+Customer A:
+  - APP_PORT=3025     → https://customer-a.yourdomain.com
+  - STUDIO_PORT=3000  → https://supabase-a.yourdomain.com
+
+Customer B:
+  - APP_PORT=3026     → https://customer-b.yourdomain.com
+  - STUDIO_PORT=3100  → https://supabase-b.yourdomain.com
+
+Customer C:
+  - APP_PORT=3027     → https://customer-c.yourdomain.com
+  - STUDIO_PORT=3200  → https://supabase-c.yourdomain.com
+...
+```
+
+**Lưu ý:** Studio port cần được expose trong docker-compose.yml của mỗi instance.
+
+---
+
 ## Support
 
-**Cloudflare:**
-- Community: https://community.cloudflare.com/
-- Docs: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
-
 **Application:**
-- Issues: https://github.com/tant/service-center-app/issues
+- Issues: Report issues to your development team
 - Logs: `docker compose logs`
 
 ---
@@ -1109,13 +942,11 @@ docker compose ps  # Verify all healthy
 
 Bạn đã triển khai thành công Service Center Management lên production!
 
-**Benefits bạn đang có:**
-- ✅ Zero public ports exposed
-- ✅ Free SSL/TLS certificates
-- ✅ DDoS protection
-- ✅ Global CDN
-- ✅ No Nginx management
-- ✅ Auto-reconnect và high availability
-- ✅ Easy to manage và monitor
+**Benefits:**
+- ✅ Docker-based deployment
+- ✅ Multi-instance ready
+- ✅ Isolated databases per customer
+- ✅ Easy to scale và manage
+- ✅ Simple port configuration
 
 Enjoy! 🚀

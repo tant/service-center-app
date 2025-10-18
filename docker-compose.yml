@@ -13,6 +13,9 @@ services:
     container_name: supabase-studio
     image: supabase/studio:2025.10.01-sha-8460121
     restart: unless-stopped
+    # Expose Studio port for reverse proxy access
+    ports:
+      - "3000:3000"
     healthcheck:
       test:
         [
@@ -57,9 +60,7 @@ services:
     container_name: supabase-kong
     image: kong:2.8.1
     restart: unless-stopped
-    ports:
-      - ${KONG_HTTP_PORT}:8000/tcp
-      - ${KONG_HTTPS_PORT}:8443/tcp
+    # No ports exposed - App connects internally via http://kong:8000
     volumes:
       # https://github.com/supabase/supabase/issues/12661
       - ./volumes/api/kong.yml:/home/kong/temp.yml:ro,z
@@ -345,8 +346,7 @@ services:
     container_name: supabase-analytics
     image: supabase/logflare:1.22.6
     restart: unless-stopped
-    ports:
-      - 4000:4000
+    # No ports exposed - Only accessed by Studio via http://analytics:4000
     # Uncomment to use Big Query backend for analytics
     # volumes:
     #   - type: bind
@@ -478,58 +478,61 @@ services:
       - "label=disable"
 
   # Update the DATABASE_URL if you are using an external Postgres database
-  supavisor:
-    container_name: supabase-pooler
-    image: supabase/supavisor:2.7.0
-    restart: unless-stopped
-    ports:
-      - ${POSTGRES_PORT}:5432
-      - ${POOLER_PROXY_PORT_TRANSACTION}:6543
-    volumes:
-      - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-sSfL",
-          "--head",
-          "-o",
-          "/dev/null",
-          "http://127.0.0.1:4000/api/health"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      db:
-        condition: service_healthy
-      analytics:
-        condition: service_healthy
-    environment:
-      PORT: 4000
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
-      CLUSTER_POSTGRES: true
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
-      API_JWT_SECRET: ${JWT_SECRET}
-      METRICS_JWT_SECRET: ${JWT_SECRET}
-      REGION: local
-      ERL_AFLAGS: -proto_dist inet_tcp
-      POOLER_TENANT_ID: ${POOLER_TENANT_ID}
-      POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE}
-      POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
-      POOLER_POOL_MODE: transaction
-      DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
-      ]
+  # Supavisor pooler - DISABLED
+  # The pooler has encryption key issues with the current Supabase version.
+  # Since our app connects directly to PostgreSQL, pooler is not required.
+  # Uncomment if you need connection pooling in the future.
+
+  # supavisor:
+  #   container_name: supabase-pooler
+  #   image: supabase/supavisor:2.7.0
+  #   restart: unless-stopped
+  #   # No ports exposed - App connects to db directly via postgresql://db:5432
+  #   volumes:
+  #     - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "curl",
+  #         "-sSfL",
+  #         "--head",
+  #         "-o",
+  #         "/dev/null",
+  #         "http://127.0.0.1:4000/api/health"
+  #       ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     analytics:
+  #       condition: service_healthy
+  #   environment:
+  #     PORT: 4000
+  #     POSTGRES_PORT: ${POSTGRES_PORT}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
+  #     CLUSTER_POSTGRES: true
+  #     SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+  #     VAULT_ENC_KEY: ${VAULT_ENC_KEY}
+  #     API_JWT_SECRET: ${JWT_SECRET}
+  #     METRICS_JWT_SECRET: ${JWT_SECRET}
+  #     REGION: local
+  #     ERL_AFLAGS: -proto_dist inet_tcp
+  #     POOLER_TENANT_ID: ${POOLER_TENANT_ID}
+  #     POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE}
+  #     POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
+  #     POOLER_POOL_MODE: transaction
+  #     DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
+  #   command:
+  #     [
+  #       "/bin/sh",
+  #       "-c",
+  #       "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
+  #     ]
 
   # ============================================
   # Application Service - Next.js

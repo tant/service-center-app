@@ -14,8 +14,9 @@ services:
     image: supabase/studio:2025.10.01-sha-8460121
     restart: unless-stopped
     # Expose Studio port for reverse proxy access
+    # Configure STUDIO_PORT in .env (default: 3000)
     ports:
-      - "3000:3000"
+      - "${STUDIO_PORT:-3000}:3000"
     healthcheck:
       test:
         [

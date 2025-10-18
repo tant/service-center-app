@@ -72,29 +72,19 @@ sudo usermod -aG docker deploy
 su - deploy
 ```
 
-### Domain & Reverse Proxy
-**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình reverse proxy (Nginx/Cloudflare Tunnel/etc.) để trỏ 2 domains đến localhost ports:
+### Domain & Cloudflare Tunnel
+
+**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình Cloudflare Tunnel để trỏ 2 domains đến localhost ports:
 
 1. **Main Application Domain**
    - Ví dụ: `dichvu.sstc.cloud` → `localhost:3025`
-   - Port này sẽ được set trong biến `APP_PORT`
+   - Port này được set trong biến `APP_PORT` (có thể thay đổi: 3025, 3026, 3027...)
 
 2. **Supabase Studio Domain**
    - Ví dụ: `supabase.dichvu.sstc.cloud` → `localhost:3000`
-   - Port Studio cố định là 3000
+   - Port này được set trong biến `STUDIO_PORT` (có thể thay đổi: 3000, 3100, 3200...)
 
-**Lưu ý:** Hướng dẫn này giả định bạn đã setup reverse proxy. Nếu chưa có, hãy cấu hình trước khi tiếp tục.
-
-### Required Configuration Files
-
-**QUAN TRỌNG:** Supabase stack cần các file cấu hình được cung cấp sẵn trong repository.
-
-**Files cần thiết:**
-- `docs/references/volumes/logs/vector.yml` - Cấu hình Vector logging (CRITICAL)
-- `docs/references/volumes/api/kong.yml` - Cấu hình Kong API Gateway
-- `docs/references/volumes/db/*.sql` - Database initialization scripts
-
-**Lưu ý:** Các file này đã có sẵn trong repository và sẽ được copy trong bước Setup Volume Directories (Bước 1.4).
+**Lưu ý:** Hướng dẫn này giả định bạn đã setup Cloudflare Tunnel. Nếu chưa có, hãy cấu hình trước khi tiếp tục.
 
 ---
 
@@ -232,6 +222,9 @@ SMTP_SENDER_NAME=Service Center
 ############################################
 STUDIO_DEFAULT_ORGANIZATION=Service Center
 STUDIO_DEFAULT_PROJECT=Production
+
+# Studio port (thay đổi cho mỗi instance: 3000, 3100, 3200...)
+STUDIO_PORT=3000
 
 ############################################
 # Auth
@@ -748,19 +741,20 @@ docker compose ps  # Verify all healthy
 
 ### Overview
 
-Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **1 port duy nhất**: `APP_PORT`.
+Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **2 ports**: `APP_PORT` và `STUDIO_PORT`.
 
 **Tất cả các services khác (database, API, auth, storage, etc.) đều internal và không xung đột!**
 
 ### Ports Configuration
 
-**Chỉ cần configure 1 port:**
+**Cần configure 2 ports cho mỗi instance:**
 - ✅ `APP_PORT` - Port của Next.js application (3025, 3026, 3027, ...)
+- ✅ `STUDIO_PORT` - Port của Supabase Studio (3000, 3100, 3200, ...)
 
 **Các services internal (KHÔNG cần configure):**
 - ✅ Kong API - App kết nối qua `http://kong:8000` (internal)
 - ✅ PostgreSQL - App kết nối qua `postgresql://db:5432` (internal)
-- ✅ Pooler, Analytics, Studio - Tất cả đều internal
+- ✅ Analytics, Realtime - Tất cả đều internal
 
 ### Cách Deploy Multiple Instances
 
@@ -775,10 +769,11 @@ cd customer-a
 # 2. Create .env
 cp .env.docker.example .env
 
-# 3. Configure - CHỈ CẦN thay đổi APP_PORT!
+# 3. Configure - Thay đổi APP_PORT và STUDIO_PORT
 nano .env
 # Set: APP_PORT=3025
-# Generate secrets (theo Bước 2.3 và 2.4 ở trên)
+# Set: STUDIO_PORT=3000
+# Generate secrets (theo Bước 1.2 và 1.6 ở trên)
 
 # 4. Start services với unique project name
 docker compose -p customer-a build
@@ -794,12 +789,12 @@ docker compose -p customer-a up -d
 #### Instance 2 - Customer B
 
 ```bash
-# Tương tự, nhưng dùng APP_PORT khác
+# Tương tự, nhưng dùng APP_PORT và STUDIO_PORT khác
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-b
 cd customer-b
 cp .env.docker.example .env
-nano .env  # Set: APP_PORT=3026
+nano .env  # Set: APP_PORT=3026, STUDIO_PORT=3100
 docker compose -p customer-b build
 docker compose -p customer-b up -d
 ./docker/scripts/apply-schema.sh
@@ -812,7 +807,7 @@ cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-c
 cd customer-c
 cp .env.docker.example .env
-nano .env  # Set: APP_PORT=3027
+nano .env  # Set: APP_PORT=3027, STUDIO_PORT=3200
 docker compose -p customer-c build
 docker compose -p customer-c up -d
 ./docker/scripts/apply-schema.sh
@@ -862,8 +857,9 @@ server {
 ```
 
 **Lưu ý:**
-- Mỗi instance Studio cũng cần unique port (3000, 3100, 3200...)
-- Phải expose Studio port trong docker-compose.yml của mỗi instance
+- Mỗi instance cần unique **APP_PORT** và **STUDIO_PORT**
+- Cả 2 ports đã được configure sẵn trong docker-compose.yml với environment variables
+- Chỉ cần thay đổi giá trị trong file `.env` cho mỗi instance
 
 ### Quản Lý Instances
 

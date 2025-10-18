@@ -57,6 +57,17 @@ case $choice in
         echo "✅ Step 1/4: Instance setup complete!"
         echo ""
 
+        # Verify critical environment variables in .env
+        echo "🔍 Verifying .env file..."
+        for var in POSTGRES_PASSWORD JWT_SECRET SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+            if ! grep -q "^${var}=" .env; then
+                echo "❌ Error: ${var} not found in .env file"
+                exit 1
+            fi
+        done
+        echo "✅ Environment variables verified"
+        echo ""
+
         # Verify critical configuration files exist as files (not directories)
         echo "🔍 Verifying configuration files..."
         if [ ! -f "volumes/logs/vector.yml" ]; then
@@ -75,9 +86,22 @@ case $choice in
         # Step 2: Build Docker images
         echo "🏗️  Step 2/4: Building Docker images..."
         echo ""
+        # Note: --no-cache ensures fresh build, doesn't affect .env reading
+        # Docker Compose will automatically read .env file when running any command
         docker compose build --no-cache
         echo ""
         echo "✅ Step 2/4: Build complete!"
+        echo ""
+
+        # Verify configuration files still exist as files after build
+        echo "🔍 Re-verifying configuration files after build..."
+        if [ -d "volumes/logs/vector.yml" ] || [ -d "volumes/api/kong.yml" ]; then
+            echo "❌ Error: Configuration files were converted to directories during build!"
+            echo "   This shouldn't happen. Check Docker Compose volume mounts."
+            ls -ld volumes/logs/vector.yml volumes/api/kong.yml
+            exit 1
+        fi
+        echo "✅ Configuration files still valid after build"
         echo ""
 
         # Step 3: Start all services

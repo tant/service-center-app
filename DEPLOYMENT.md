@@ -72,24 +72,48 @@ sudo usermod -aG docker deploy
 su - deploy
 ```
 
-### Domain & Cloudflare Tunnel
+### URL Architecture & Access Modes
 
-**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình Cloudflare Tunnel để trỏ 3 domains đến localhost ports:
+Hệ thống hỗ trợ **2 deployment modes** với URL architecture khác nhau:
 
+#### 🏠 Local Development Mode
+**Dùng khi:** Test local trên máy development, không cần public domain
+
+**URLs:**
+- App: `http://localhost:3025`
+- Supabase API: `http://localhost:8000` (Kong Gateway)
+- Supabase Studio: `http://localhost:3000`
+
+**Không cần:** Cloudflare Tunnel
+
+**Server-side (internal Docker):** `http://kong:8000`
+
+---
+
+#### 🌐 Production Mode
+**Dùng khi:** Deploy lên server production với public domain
+
+**YÊU CẦU:** Phải setup Cloudflare Tunnel trước khi deploy
+
+**URLs:**
 1. **Main Application Domain**
-   - Ví dụ: `dichvu.sstc.cloud` → `localhost:3025`
-   - Port này được set trong biến `APP_PORT` (có thể thay đổi: 3025, 3026, 3027...)
+   - Ví dụ: `https://dichvu.sstc.cloud`
+   - Tunnel: `dichvu.sstc.cloud` → `localhost:3025`
 
-2. **Supabase API Domain** ⚠️ **BẮT BUỘC cho browser access**
-   - Ví dụ: `api.dichvu.sstc.cloud` → `localhost:8000`
-   - Port này được tự động tính từ `APP_PORT`: `KONG_PORT = 8000 + (APP_PORT - 3025)`
+2. **Supabase API Domain** ⚠️ **BẮT BUỘC**
+   - Ví dụ: `https://api.dichvu.sstc.cloud`
+   - Tunnel: `api.dichvu.sstc.cloud` → `localhost:8000`
    - Browser cần access Kong để sử dụng auth, storage, realtime, REST API
 
 3. **Supabase Studio Domain**
-   - Ví dụ: `supabase.dichvu.sstc.cloud` → `localhost:3000`
-   - Port này được tự động tính từ `APP_PORT`: `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
+   - Ví dụ: `https://supabase.dichvu.sstc.cloud`
+   - Tunnel: `supabase.dichvu.sstc.cloud` → `localhost:3000`
 
-**Lưu ý:** Hướng dẫn này giả định bạn đã setup Cloudflare Tunnel. Nếu chưa có, hãy cấu hình trước khi tiếp tục.
+**Server-side (internal Docker):** `http://kong:8000` (unchanged)
+
+**Port Auto-calculation:**
+- `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
+- `KONG_PORT = 8000 + (APP_PORT - 3025)`
 
 ---
 
@@ -110,15 +134,26 @@ nano docker/scripts/setup-instance.sh
 ```
 
 Chỉnh sửa các giá trị trong phần `CONFIGURATION`:
+
+**⚠️ QUAN TRỌNG: Chọn Deployment Mode**
+
 ```bash
+# Deployment Mode
+# Choose between 'local' for local development or 'production' for public domain
+# - local: Uses http://localhost with port numbers (no Cloudflare Tunnel needed)
+# - production: Uses https:// with your domain (requires Cloudflare Tunnel setup)
+DEPLOYMENT_MODE=production  # Change to 'local' for local testing
+
 # Instance Information
 CENTER_NAME="SSTC Service Center"
 APP_PORT=3025          # App runs on http://localhost:3025
 
-# Site URL (configure your Cloudflare Tunnel to point to http://localhost:${APP_PORT})
-# For production: dichvu.sstc.cloud (script auto-derives API and Studio URLs)
-# For local: localhost
-SITE_URL="dichvu.sstc.cloud"
+# Production Domain (only used when DEPLOYMENT_MODE=production)
+# IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
+# Examples:
+#   ✓ Correct: dichvu.sstc.cloud
+#   ✗ Wrong: https://dichvu.sstc.cloud
+PRODUCTION_DOMAIN="dichvu.sstc.cloud"
 
 # Setup Password (leave empty to auto-generate)
 SETUP_PASSWORD=""
@@ -132,14 +167,29 @@ SMTP_ADMIN_EMAIL="admin@sstc.cloud"
 SMTP_SENDER_NAME="SSTC Service Center"
 ```
 
-**Lưu ý:**
+**Lưu ý về Deployment Modes:**
+
+**🏠 Local Mode (`DEPLOYMENT_MODE=local`)**
+- ✅ Dùng để test local, không cần Cloudflare Tunnel
+- ✅ Access qua `http://localhost` với port numbers
+- URLs generated:
+  - App: `http://localhost:3025`
+  - API: `http://localhost:8000`
+  - Studio: `http://localhost:3000`
+
+**🌐 Production Mode (`DEPLOYMENT_MODE=production`)**
+- ✅ Dùng cho production với public domain
+- ⚠️ **YÊU CẦU** Cloudflare Tunnel đã được setup
+- URLs generated:
+  - App: `https://dichvu.sstc.cloud`
+  - API: `https://api.dichvu.sstc.cloud`
+  - Studio: `https://supabase.dichvu.sstc.cloud`
+
+**Auto-calculated Ports:**
 - Chỉ cần config `APP_PORT` duy nhất - tất cả ports khác tự động tính!
-- `SITE_URL` chỉ cần domain (ví dụ: `dichvu.sstc.cloud`), không cần `https://`
 - Script tự động tạo:
   - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100` (3025→3000, 3026→3100, 3027→3200...)
   - `KONG_PORT = 8000 + (APP_PORT - 3025)` (3025→8000, 3026→8001, 3027→8002...)
-  - `api.dichvu.sstc.cloud` cho Supabase API
-  - `supabase.dichvu.sstc.cloud` cho Supabase Studio
 
 **2. Chạy script:**
 ```bash
@@ -155,12 +205,15 @@ Script sẽ tự động:
 - ✅ Tạo INSTANCE_INFO.txt với tất cả thông tin (URLs, secrets, credentials)
 - ✅ Hiển thị setup password
 
-**Output mẫu:**
+**Output mẫu (Production Mode):**
 ```
 🚀 Service Center - Instance Setup
 =====================================
 
 📋 Configuration Summary:
+
+Deployment Mode:
+  Production (requires Cloudflare Tunnel)
 
 Instance:
   Center Name: SSTC Service Center
@@ -192,6 +245,32 @@ SMTP:
 📦 Step 1.4: Setting up volume directories...
   ✓ Copied configuration files
   ✓ vector.yml OK
+```
+
+**Output mẫu (Local Mode):**
+```
+🚀 Service Center - Instance Setup
+=====================================
+
+📋 Configuration Summary:
+
+Deployment Mode:
+  Local Development (no Cloudflare Tunnel needed)
+
+Instance:
+  Center Name: SSTC Service Center
+  App Port: 3025
+  Studio Port: 3000 (auto-calculated)
+  Kong Port: 8000 (auto-calculated)
+
+URLs:
+  Site: http://localhost:3025
+  API: http://localhost:8000
+  Studio: http://localhost:3000
+
+SMTP:
+  Host: supabase-mail:2500
+  Admin: admin@example.com
   ✓ kong.yml OK
 
 ⚙️  Step 1.5: Creating .env file...

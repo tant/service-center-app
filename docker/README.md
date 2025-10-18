@@ -52,6 +52,7 @@ To modify configuration:
 - Copies configuration files from `docs/references/volumes/`
 - Creates `.env` file with all settings
 - Generates Supabase API keys automatically
+- **Supports 2 deployment modes**: Local and Production
 - Usage:
   ```bash
   # 1. Edit configuration in the script
@@ -60,16 +61,22 @@ To modify configuration:
   # 2. Run the script
   ./docker/scripts/setup-instance.sh
   ```
+- **Deployment Modes:**
+  - `DEPLOYMENT_MODE=local` - Local development (http://localhost, no Cloudflare Tunnel)
+  - `DEPLOYMENT_MODE=production` - Production with public domain (https://, requires Cloudflare Tunnel)
 - Configuration variables (only these need to be set):
+  - `DEPLOYMENT_MODE` - Choose `local` or `production`
   - `CENTER_NAME` - Service center name
   - `APP_PORT` - Application port (3025, 3026, 3027...)
-  - `SITE_URL` - Domain (e.g., `sv.mydomain.com` or `localhost`)
+  - `PRODUCTION_DOMAIN` - Domain for production mode (e.g., `sv.mydomain.com`)
   - `SMTP_*` - Email configuration
   - `SETUP_PASSWORD` - Setup page password (auto-generated if empty)
-- Auto-calculated values (derived from APP_PORT):
+- Auto-calculated values (derived from APP_PORT and DEPLOYMENT_MODE):
   - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
   - `KONG_PORT = 8000 + (APP_PORT - 3025)`
-  - URLs (api.domain, supabase.domain) auto-derived from SITE_URL
+  - URLs based on mode:
+    - **Local**: `http://localhost:{PORT}`
+    - **Production**: `https://{domain}`, `https://api.{domain}`, `https://supabase.{domain}`
 
 **scripts/apply-schema.sh**
 - Applies database schema to running instance
@@ -108,9 +115,15 @@ To modify configuration:
 
    Configure these values:
    ```bash
+   # Choose deployment mode
+   DEPLOYMENT_MODE=local              # Use 'local' or 'production'
+
    CENTER_NAME="Your Service Center"
-   APP_PORT=3025              # Only port you need to configure!
-   SITE_URL="sv.yourdomain.com"
+   APP_PORT=3025                      # Only port you need to configure!
+
+   # For production mode only
+   PRODUCTION_DOMAIN="sv.yourdomain.com"
+
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT=587
    # ... etc
@@ -119,9 +132,9 @@ To modify configuration:
    **Note:** Script automatically calculates and derives:
    - `STUDIO_PORT = 3000` (from APP_PORT 3025)
    - `KONG_PORT = 8000` (from APP_PORT 3025)
-   - App URL: `https://sv.yourdomain.com`
-   - API URL: `https://api.sv.yourdomain.com`
-   - Studio URL: `https://supabase.sv.yourdomain.com`
+   - URLs based on DEPLOYMENT_MODE:
+     - **Local mode**: `http://localhost:3025`, `http://localhost:8000`, `http://localhost:3000`
+     - **Production mode**: `https://sv.yourdomain.com`, `https://api.sv.yourdomain.com`, `https://supabase.sv.yourdomain.com`
 
 2. **Run setup script:**
    ```bash
@@ -148,10 +161,11 @@ To modify configuration:
    ./docker/scripts/apply-schema.sh
    ```
 
-5. **Setup Cloudflare Tunnel** (see [DEPLOYMENT.md](../DEPLOYMENT.md) for details)
+5. **Setup Cloudflare Tunnel** (production mode only - see [DEPLOYMENT.md](../DEPLOYMENT.md) for details)
 
 6. **Access setup page:**
-   - Visit: `https://yourdomain.com/setup`
+   - **Local mode**: `http://localhost:3025/setup`
+   - **Production mode**: `https://yourdomain.com/setup`
    - Use the setup password from step 2
 
 ### Manual Setup (Advanced)
@@ -247,15 +261,32 @@ cat backup.sql | docker compose exec -T db psql -U postgres
 
 ## Network Architecture
 
-The stack uses **Cloudflare Tunnel** for external access:
+The stack supports **two access modes**:
 
+### 🏠 Local Development Mode
+```
+Browser (localhost)
+    │
+    ├─> http://localhost:3025 (Next.js App)       ← APP_PORT
+    │   └─> kong:8000 (internal Docker network)
+    │
+    ├─> http://localhost:8000 (Kong/Supabase API) ← KONG_PORT
+    │   ├─> db:5432 (PostgreSQL - internal)
+    │   ├─> auth (GoTrue - internal)
+    │   ├─> storage (Storage API - internal)
+    │   └─> realtime (Realtime - internal)
+    │
+    └─> http://localhost:3000 (Supabase Studio)   ← STUDIO_PORT
+```
+
+### 🌐 Production Mode (with Cloudflare Tunnel)
 ```
 Internet
     │
     ├─> Cloudflare Tunnel (handles SSL/TLS)
     │
     ├─> localhost:3025 (Next.js App)              ← APP_PORT (configurable)
-    │   └─> kong:8000 (internal network)
+    │   └─> kong:8000 (internal Docker network)
     │
     ├─> localhost:8000 (Kong/Supabase API)        ← KONG_PORT (configurable)
     │   ├─> db:5432 (PostgreSQL - internal)
@@ -265,6 +296,12 @@ Internet
     │
     └─> localhost:3000 (Supabase Studio)          ← STUDIO_PORT (configurable)
 ```
+
+**Important URLs:**
+- **Server-side (inside Docker)**: Always uses `http://kong:8000` (internal network)
+- **Client-side (browser)**:
+  - Local: `http://localhost:8000`
+  - Production: `https://api.yourdomain.com` (via Cloudflare Tunnel)
 
 **Port Configuration:**
 - `APP_PORT` - Application port (you configure this)
@@ -276,12 +313,15 @@ Internet
   - Instance 3: APP_PORT=3027 → STUDIO_PORT=3200, KONG_PORT=8002
 
 **Benefits:**
-- ✅ No exposed ports (80/443)
-- ✅ Automatic SSL/TLS
-- ✅ DDoS protection
-- ✅ Global CDN
-- ✅ Easy to setup
+- ✅ **Local mode**: Quick testing without Cloudflare setup
+- ✅ **Production mode**: Secure external access via Cloudflare Tunnel
+- ✅ No exposed ports (80/443) in production
+- ✅ Automatic SSL/TLS in production
+- ✅ DDoS protection (production)
+- ✅ Global CDN (production)
+- ✅ Easy to setup both modes
 - ✅ Multi-instance support
+- ✅ Seamless transition from local to production
 
 ## Documentation
 

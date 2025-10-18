@@ -173,6 +173,9 @@ echo ""
 # Step 1.4: Setup Volume Directories
 echo -e "${BLUE}📦 Step 1.4: Setting up volume directories...${NC}"
 
+# Create volumes directory first
+mkdir -p volumes
+
 # Copy configuration files from docs/references
 if [ -d "docs/references/volumes" ]; then
     cp -r docs/references/volumes/* volumes/

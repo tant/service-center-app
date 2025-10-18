@@ -39,6 +39,12 @@ PRODUCTION_DOMAIN=sv.tantran.dev
 # Setup Password (leave empty to auto-generate)
 SETUP_PASSWORD=tantran
 
+# Admin Account Configuration
+# These credentials will be used to create the first admin account
+ADMIN_EMAIL="admin@tantran.dev"
+ADMIN_PASSWORD="Admin123!@#"
+ADMIN_NAME="System Administrator"
+
 # SMTP Configuration
 SMTP_HOST="supabase-mail"
 SMTP_PORT=2500
@@ -284,6 +290,11 @@ PG_META_CRYPTO_KEY=${PG_META_CRYPTO_KEY}
 
 # Setup password for /setup endpoint
 SETUP_PASSWORD=${SETUP_PASSWORD}
+
+# Admin Account (first admin user created via /setup endpoint)
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_NAME=${ADMIN_NAME}
 
 # Application port (exposed to host)
 APP_PORT=${APP_PORT}
@@ -535,6 +546,11 @@ SECRETS & CREDENTIALS
 
 Setup Password:        ${SETUP_PASSWORD}
 
+Admin Account (created via /setup):
+  Email:               ${ADMIN_EMAIL}
+  Password:            ${ADMIN_PASSWORD}
+  Name:                ${ADMIN_NAME}
+
 Database:
   Host:                db (internal)
   Port:                5432 (internal)
@@ -569,8 +585,11 @@ ACCESS INFORMATION
 
 Setup Page:            ${SITE_URL}/setup
                        Password: ${SETUP_PASSWORD}
+                       (Creates admin account with credentials above)
 
 Login Page:            ${SITE_URL}/login
+                       Email: ${ADMIN_EMAIL}
+                       Password: ${ADMIN_PASSWORD}
 
 Supabase Studio:       ${SUPABASE_EXTERNAL_URL}
                        Username: ${DASHBOARD_USERNAME}

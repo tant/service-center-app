@@ -69,8 +69,11 @@ To modify configuration:
   - `CENTER_NAME` - Service center name
   - `APP_PORT` - Application port (3025, 3026, 3027...)
   - `PRODUCTION_DOMAIN` - Domain for production mode (e.g., `sv.mydomain.com`)
-  - `SMTP_*` - Email configuration
   - `SETUP_PASSWORD` - Setup page password (auto-generated if empty)
+  - `ADMIN_EMAIL` - Email for first admin account
+  - `ADMIN_PASSWORD` - Password for first admin account
+  - `ADMIN_NAME` - Full name for first admin account
+  - `SMTP_*` - Email configuration
 - Auto-calculated values (derived from APP_PORT and DEPLOYMENT_MODE):
   - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
   - `KONG_PORT = 8000 + (APP_PORT - 3025)`
@@ -124,6 +127,14 @@ To modify configuration:
    # For production mode only
    PRODUCTION_DOMAIN="sv.yourdomain.com"
 
+   # Setup password (for /setup endpoint)
+   SETUP_PASSWORD=your-setup-password
+
+   # Admin account (created via /setup endpoint)
+   ADMIN_EMAIL="admin@example.com"
+   ADMIN_PASSWORD="YourSecurePassword"
+   ADMIN_NAME="System Administrator"
+
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT=587
    # ... etc
@@ -145,10 +156,10 @@ To modify configuration:
    The script will automatically:
    - ✅ Generate all secrets (hex format, URL-safe)
    - ✅ Copy configuration files from `docs/references/volumes/`
-   - ✅ Create `.env` file with all settings
+   - ✅ Create `.env` file with all settings (including admin credentials)
    - ✅ Generate Supabase API keys
    - ✅ Create `INSTANCE_INFO.txt` with all configuration details
-   - ✅ Display setup password
+   - ✅ Display setup password and admin credentials
 
 3. **Build and deploy:**
    ```bash
@@ -163,10 +174,16 @@ To modify configuration:
 
 5. **Setup Cloudflare Tunnel** (production mode only - see [DEPLOYMENT.md](../DEPLOYMENT.md) for details)
 
-6. **Access setup page:**
+6. **Access setup page to create admin account:**
    - **Local mode**: `http://localhost:3025/setup`
    - **Production mode**: `https://yourdomain.com/setup`
-   - Use the setup password from step 2
+   - Enter the setup password from step 2
+   - This creates the admin account with the credentials you configured (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME)
+
+7. **Login with admin account:**
+   - **Local mode**: `http://localhost:3025/login`
+   - **Production mode**: `https://yourdomain.com/login`
+   - Use ADMIN_EMAIL and ADMIN_PASSWORD from your configuration
 
 ### Manual Setup (Advanced)
 

@@ -166,31 +166,33 @@ openssl rand -base64 16
 **QUAN TRỌNG:** Bước này phải hoàn thành trước khi deployment.
 
 ```bash
-# Tạo các thư mục volume cần thiết
-mkdir -p volumes/logs
-mkdir -p volumes/db/init
-mkdir -p volumes/storage
-mkdir -p volumes/functions
+# Copy tất cả configuration files từ reference directory
+cp -r docs/references/volumes/* volumes/
 
-# Copy vector configuration file
-# Cách 1: Từ reference project
-cp /home/tan/work/supabase-project/volumes/logs/vector.yml volumes/logs/
-
-# Cách 2: Từ Supabase docker đã download
-cp ~/supabase/docker/volumes/logs/vector.yml volumes/logs/
-
-# Cách 3: Download trực tiếp (nếu có trong repo của bạn)
-curl -o volumes/logs/vector.yml https://raw.githubusercontent.com/your-org/your-repo/main/volumes/logs/vector.yml
-
-# Verify file tồn tại và không phải là directory
+# Verify các file quan trọng đã được copy
 ls -lh volumes/logs/vector.yml
-# Phải hiển thị là file, không phải directory
+ls -lh volumes/api/kong.yml
+ls -lh volumes/db/*.sql
+
+# Tạo thêm các thư mục runtime (sẽ bị ignore bởi git)
+mkdir -p volumes/db/data
+mkdir -p volumes/storage
+```
+
+**Alternative - Copy từ nguồn khác (nếu cần):**
+```bash
+# Từ reference project khác
+cp -r /home/tan/work/supabase-project/volumes/* volumes/
+
+# Hoặc từ Supabase docker đã download
+cp -r ~/supabase/docker/volumes/* volumes/
 ```
 
 **Kiểm tra:**
 ```bash
-# Check file tồn tại
+# Check các file quan trọng tồn tại
 test -f volumes/logs/vector.yml && echo "✅ vector.yml OK" || echo "❌ vector.yml MISSING"
+test -f volumes/api/kong.yml && echo "✅ kong.yml OK" || echo "❌ kong.yml MISSING"
 
 # Check không rỗng
 [ -s volumes/logs/vector.yml ] && echo "✅ vector.yml có nội dung" || echo "❌ vector.yml rỗng"

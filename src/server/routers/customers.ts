@@ -7,7 +7,10 @@ const createCustomerSchema = z.object({
   phone: z
     .string()
     .min(10, "Phone number must be at least 10 characters")
-    .regex(/^[0-9+\-\s()]+$/, "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign"),
+    .regex(
+      /^[0-9+\-\s()]+$/,
+      "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign",
+    ),
   email: z.string().email("Invalid email format").nullable().optional(),
   address: z.string().nullable().optional(),
 });
@@ -18,7 +21,10 @@ const updateCustomerSchema = z.object({
   phone: z
     .string()
     .min(10, "Phone number must be at least 10 characters")
-    .regex(/^[0-9+\-\s()]+$/, "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign")
+    .regex(
+      /^[0-9+\-\s()]+$/,
+      "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign",
+    )
     .optional(),
   email: z.string().email("Invalid email format").nullable().optional(),
   address: z.string().nullable().optional(),
@@ -32,18 +38,19 @@ export const customersRouter = router({
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     // Get current month's new customers
-    const { data: currentMonthData, error: currentError } = await ctx.supabaseAdmin
-      .from("customers")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfMonth.toISOString())
-      .lt('created_at', now.toISOString());
+    const { data: currentMonthData, error: currentError } =
+      await ctx.supabaseAdmin
+        .from("customers")
+        .select("count", { count: "exact" })
+        .gte("created_at", startOfMonth.toISOString())
+        .lt("created_at", now.toISOString());
 
     // Get previous month's new customers
     const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
       .from("customers")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfPrevMonth.toISOString())
-      .lt('created_at', startOfMonth.toISOString());
+      .select("count", { count: "exact" })
+      .gte("created_at", startOfPrevMonth.toISOString())
+      .lt("created_at", startOfMonth.toISOString());
 
     if (currentError || prevError) {
       throw new Error(currentError?.message || prevError?.message);
@@ -53,9 +60,8 @@ export const customersRouter = router({
     const prevCount = prevMonthData?.[0]?.count || 0;
 
     // Calculate growth rate
-    const growthRate = prevCount > 0 
-      ? ((currentCount - prevCount) / prevCount) * 100 
-      : 0;
+    const growthRate =
+      prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
 
     return {
       currentMonthCount: currentCount,

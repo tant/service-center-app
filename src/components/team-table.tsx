@@ -191,9 +191,13 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
         variant={row.original.role === "admin" ? "default" : "secondary"}
         className="text-xs"
       >
-        {row.original.role === "admin" ? "Quản trị viên" :
-         row.original.role === "manager" ? "Quản lý" :
-         row.original.role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
+        {row.original.role === "admin"
+          ? "Quản trị viên"
+          : row.original.role === "manager"
+            ? "Quản lý"
+            : row.original.role === "technician"
+              ? "Kỹ thuật viên"
+              : "Lễ tân"}
       </Badge>
     ),
   },
@@ -264,20 +268,23 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
 
   const handleRoleChange = (newRole: string) => {
     // Prevent changing role of last active admin
-    if (
-      member.role === "admin" &&
-      isLastActiveAdmin &&
-      newRole !== "admin"
-    ) {
-      const errorMessage = "Không thể thay đổi vai trò của quản trị viên cuối cùng";
-      console.error("[Team] Role change error:", errorMessage, { member, newRole });
+    if (member.role === "admin" && isLastActiveAdmin && newRole !== "admin") {
+      const errorMessage =
+        "Không thể thay đổi vai trò của quản trị viên cuối cùng";
+      console.error("[Team] Role change error:", errorMessage, {
+        member,
+        newRole,
+      });
       toast.error(errorMessage);
       return;
     }
 
     // TODO: Implement actual role change API call
-    const successMessage = `Vai trò sẽ được cập nhật thành ${newRole === 'admin' ? 'Quản trị viên' : newRole === 'manager' ? 'Quản lý' : newRole === 'technician' ? 'Kỹ thuật viên' : 'Lễ tân'}`;
-    console.log("[Team] Role change success:", successMessage, { member, newRole });
+    const successMessage = `Vai trò sẽ được cập nhật thành ${newRole === "admin" ? "Quản trị viên" : newRole === "manager" ? "Quản lý" : newRole === "technician" ? "Kỹ thuật viên" : "Lễ tân"}`;
+    console.log("[Team] Role change success:", successMessage, {
+      member,
+      newRole,
+    });
     toast.success(successMessage);
   };
 
@@ -291,8 +298,12 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
   const handleToggleActive = () => {
     // Prevent deactivating the last active admin
     if (isLastActiveAdmin && member.is_active) {
-      const errorMessage = "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.";
-      console.error("[Team] Toggle active error:", errorMessage, { member, isLastActiveAdmin });
+      const errorMessage =
+        "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.";
+      console.error("[Team] Toggle active error:", errorMessage, {
+        member,
+        isLastActiveAdmin,
+      });
       toast.error(errorMessage, { duration: 5000 });
       return;
     }
@@ -300,7 +311,10 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
     // TODO: Implement active status toggle API call
     const newStatus = !member.is_active;
     const successMessage = `Tài khoản đã được ${newStatus ? "kích hoạt" : "vô hiệu hóa"}`;
-    console.log("[Team] Toggle active success:", successMessage, { member, newStatus });
+    console.log("[Team] Toggle active success:", successMessage, {
+      member,
+      newStatus,
+    });
 
     // Update local state immediately for instant UI feedback
     onUpdate({
@@ -333,14 +347,14 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
           </Tooltip>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          <div className="px-2 py-1.5 text-sm font-medium">Thay đổi vai trò</div>
+          <div className="px-2 py-1.5 text-sm font-medium">
+            Thay đổi vai trò
+          </div>
           <DropdownMenuSeparator />
           {["admin", "manager", "technician", "reception"].map((role) => {
             const isCurrentRole = member.role === role;
             const isDisabled =
-              member.role === "admin" &&
-              isLastActiveAdmin &&
-              role !== "admin";
+              member.role === "admin" && isLastActiveAdmin && role !== "admin";
 
             return (
               <DropdownMenuItem
@@ -349,9 +363,13 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
                 className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={isDisabled}
               >
-                {role === "admin" ? "Quản trị viên" : 
-                 role === "manager" ? "Quản lý" : 
-                 role === "technician" ? "Kỹ thuật viên" : "Lễ tân"}
+                {role === "admin"
+                  ? "Quản trị viên"
+                  : role === "manager"
+                    ? "Quản lý"
+                    : role === "technician"
+                      ? "Kỹ thuật viên"
+                      : "Lễ tân"}
                 {isDisabled && (
                   <span className="ml-auto text-xs">(Được bảo vệ)</span>
                 )}
@@ -399,7 +417,7 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
             )}
           </Button>
         </TooltipTrigger>
-                  <TooltipContent>
+        <TooltipContent>
           <p>
             {isLastActiveAdmin && member.is_active
               ? "Không thể vô hiệu hóa quản trị viên cuối cùng"
@@ -484,11 +502,11 @@ export function TeamTable({
     (updatedMember: z.infer<typeof teamSchema>) => {
       setData((currentData) =>
         currentData.map((member) =>
-          member.id === updatedMember.id ? updatedMember : member
-        )
+          member.id === updatedMember.id ? updatedMember : member,
+        ),
       );
     },
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -560,10 +578,8 @@ export function TeamTable({
             Quản lý{" "}
             <Badge variant="secondary">
               {
-                data.filter(
-                  (m) =>
-                    m.role === "admin" || m.role === "manager",
-                ).length
+                data.filter((m) => m.role === "admin" || m.role === "manager")
+                  .length
               }
             </Badge>
           </TabsTrigger>
@@ -572,9 +588,7 @@ export function TeamTable({
             <Badge variant="secondary">
               {
                 data.filter(
-                  (m) =>
-                    m.role === "technician" ||
-                    m.role === "reception",
+                  (m) => m.role === "technician" || m.role === "reception",
                 ).length
               }
             </Badge>
@@ -842,14 +856,18 @@ function TeamMemberModal({
 
     if (!formData.full_name || !formData.email || !formData.role) {
       const errorMessage = "Vui lòng điền đầy đủ các trường bắt buộc";
-      console.error("[Team] Form validation error:", errorMessage, { formData });
+      console.error("[Team] Form validation error:", errorMessage, {
+        formData,
+      });
       toast.error(errorMessage);
       return;
     }
 
     if (mode === "add" && formData.password.length < 6) {
       const errorMessage = "Mật khẩu phải có ít nhất 6 ký tự";
-      console.error("[Team] Password validation error:", errorMessage, { passwordLength: formData.password.length });
+      console.error("[Team] Password validation error:", errorMessage, {
+        passwordLength: formData.password.length,
+      });
       toast.error(errorMessage);
       return;
     }
@@ -873,7 +891,10 @@ function TeamMemberModal({
         if (!response.ok) throw new Error(result.error);
 
         const successMessage = "Tạo nhân viên thành công";
-        console.log("[Team] Staff created successfully:", successMessage, { email: formData.email, role: formData.role });
+        console.log("[Team] Staff created successfully:", successMessage, {
+          email: formData.email,
+          role: formData.role,
+        });
         toast.success(successMessage);
       } else {
         // TODO: Implement update functionality
@@ -886,7 +907,8 @@ function TeamMemberModal({
 
       if (onSuccess) onSuccess();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra";
+      const errorMessage =
+        error instanceof Error ? error.message : "Có lỗi xảy ra";
       console.error("[Team] Submit error:", errorMessage, error);
       toast.error(errorMessage);
     } finally {
@@ -1015,7 +1037,9 @@ function TeamMemberModal({
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">ID Người dùng</Label>
+                    <Label className="text-muted-foreground">
+                      ID Người dùng
+                    </Label>
                     <div className="font-mono text-xs">{member.user_id}</div>
                   </div>
                   <div className="space-y-1">
@@ -1029,7 +1053,9 @@ function TeamMemberModal({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Cập nhật lúc</Label>
+                    <Label className="text-muted-foreground">
+                      Cập nhật lúc
+                    </Label>
                     <div>
                       {new Date(member.updated_at).toLocaleDateString()}
                     </div>
@@ -1195,7 +1221,10 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
             })
             .catch((error) => {
               errorCount++;
-              console.error(`[Team] Error creating account ${accountNumber}:`, error);
+              console.error(
+                `[Team] Error creating account ${accountNumber}:`,
+                error,
+              );
             });
 
           batchPromises.push(promise);
@@ -1214,7 +1243,10 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
       }
 
       const successMessage = `Tạo dữ liệu mẫu hoàn thành! Đã tạo thành công ${successCount} tài khoản. ${errorCount > 0 ? `${errorCount} thất bại.` : ""}`;
-      console.log("[Team] Sample data generation completed:", successMessage, { successCount, errorCount });
+      console.log("[Team] Sample data generation completed:", successMessage, {
+        successCount,
+        errorCount,
+      });
       toast.success(successMessage);
 
       if (onSuccess) {
@@ -1222,7 +1254,11 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
       }
     } catch (error) {
       const errorMessage = "Tạo dữ liệu mẫu thất bại";
-      console.error("[Team] Sample data generation error:", errorMessage, error);
+      console.error(
+        "[Team] Sample data generation error:",
+        errorMessage,
+        error,
+      );
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

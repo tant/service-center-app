@@ -158,21 +158,31 @@ function getStatusIcon(status: string) {
 }
 
 function getStatusBadge(status: string) {
-  const statusConfig = STATUS_MAP[status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
+  const statusConfig =
+    STATUS_MAP[status as keyof typeof STATUS_MAP] || STATUS_MAP.open;
   return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
 }
 
 function getPriorityBadge(priority: string) {
-  const priorityConfig = PRIORITY_MAP[priority as keyof typeof PRIORITY_MAP] || PRIORITY_MAP.medium;
+  const priorityConfig =
+    PRIORITY_MAP[priority as keyof typeof PRIORITY_MAP] || PRIORITY_MAP.medium;
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-md ${priorityConfig.className}`}>
+    <span
+      className={`px-2 py-1 text-xs font-medium rounded-md ${priorityConfig.className}`}
+    >
       {priorityConfig.label}
     </span>
   );
 }
 
 // Empty tab content component
-function EmptyTabContent({ title, description }: { title: string; description: string }) {
+function EmptyTabContent({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="flex h-[200px] shrink-0 items-center justify-center rounded-md border border-dashed">
       <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
@@ -196,9 +206,13 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     React.useState<VisibilityState>({});
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [commentModalOpen, setCommentModalOpen] = React.useState(false);
-  const [selectedTicketForComment, setSelectedTicketForComment] = React.useState<{ id: string; ticket_number: string } | null>(null);
+  const [selectedTicketForComment, setSelectedTicketForComment] =
+    React.useState<{ id: string; ticket_number: string } | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
-  const [selectedTicketForUpload, setSelectedTicketForUpload] = React.useState<{ id: string; ticket_number: string } | null>(null);
+  const [selectedTicketForUpload, setSelectedTicketForUpload] = React.useState<{
+    id: string;
+    ticket_number: string;
+  } | null>(null);
 
   // Get current user and all users for assignment
   const { data: currentUser } = trpc.profile.getCurrentUser.useQuery();
@@ -240,23 +254,34 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   });
 
   // Helper to map database status back to UI status
-  const mapDatabaseStatusToUI = (dbStatus: string): "open" | "in_progress" | "resolved" | "closed" => {
+  const mapDatabaseStatusToUI = (
+    dbStatus: string,
+  ): "open" | "in_progress" | "resolved" | "closed" => {
     return STATUS_DB_TO_UI[dbStatus] || "open";
   };
 
   // Helper to map UI status to database status
-  const mapUIStatusToDatabase = (uiStatus: string): "pending" | "in_progress" | "completed" | "cancelled" => {
-    return (STATUS_UI_TO_DB[uiStatus] || "pending") as "pending" | "in_progress" | "completed" | "cancelled";
+  const mapUIStatusToDatabase = (
+    uiStatus: string,
+  ): "pending" | "in_progress" | "completed" | "cancelled" => {
+    return (STATUS_UI_TO_DB[uiStatus] || "pending") as
+      | "pending"
+      | "in_progress"
+      | "completed"
+      | "cancelled";
   };
 
   // Get valid next statuses for a ticket
-  const getValidNextStatuses = (currentStatus: string): Array<"pending" | "in_progress" | "completed" | "cancelled"> => {
+  const getValidNextStatuses = (
+    currentStatus: string,
+  ): Array<"pending" | "in_progress" | "completed" | "cancelled"> => {
     const dbStatus = mapUIStatusToDatabase(currentStatus);
     const statusFlow = STATUS_FLOW[dbStatus as keyof typeof STATUS_FLOW];
-    return [...(statusFlow?.next || [])] as Array<"pending" | "in_progress" | "completed" | "cancelled">;
+    return [...(statusFlow?.next || [])] as Array<
+      "pending" | "in_progress" | "completed" | "cancelled"
+    >;
   };
 
-  
   /**
    * Renders the status options dropdown menu items based on the current ticket status
    * @param currentStatus - Current status of the ticket
@@ -268,12 +293,15 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const renderStatusOptions = (
     currentStatus: string,
     ticketId: string,
-    onStatusChange: (id: string, status: "pending" | "in_progress" | "completed" | "cancelled") => void,
-    getIcon: (status: string) => React.ReactNode
+    onStatusChange: (
+      id: string,
+      status: "pending" | "in_progress" | "completed" | "cancelled",
+    ) => void,
+    getIcon: (status: string) => React.ReactNode,
   ) => {
     const validNextStatuses = getValidNextStatuses(currentStatus);
-    const filteredOptions = STATUS_OPTIONS.filter(option =>
-      validNextStatuses.includes(option.value)
+    const filteredOptions = STATUS_OPTIONS.filter((option) =>
+      validNextStatuses.includes(option.value),
     );
 
     if (filteredOptions.length === 0) {
@@ -284,7 +312,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       );
     }
 
-    return filteredOptions.map(option => (
+    return filteredOptions.map((option) => (
       <DropdownMenuItem
         key={option.value}
         onClick={() => onStatusChange(ticketId, option.value)}
@@ -300,11 +328,13 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     return (
       <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
         <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-          <h3 className="mt-4 text-lg font-semibold">Chưa có phiếu dịch vụ nào</h3>
+          <h3 className="mt-4 text-lg font-semibold">
+            Chưa có phiếu dịch vụ nào
+          </h3>
           <p className="mb-4 mt-2 text-sm text-muted-foreground">
             Tạo phiếu dịch vụ đầu tiên để bắt đầu quản lý công việc.
           </p>
-          <Button onClick={() => router.push('/tickets/add')}>
+          <Button onClick={() => router.push("/tickets/add")}>
             <IconPlus className="h-4 w-4" />
             Tạo phiếu dịch vụ
           </Button>
@@ -355,213 +385,236 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     setUploadModalOpen(true);
   };
 
-  const handleStatusChange = (ticketId: string, newStatus: "pending" | "in_progress" | "completed" | "cancelled") => {
+  const handleStatusChange = (
+    ticketId: string,
+    newStatus: "pending" | "in_progress" | "completed" | "cancelled",
+  ) => {
     updateStatusMutation.mutate({
       id: ticketId,
       status: newStatus,
     });
   };
 
-  const columns: ColumnDef<Ticket>[] = React.useMemo(() => [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Chọn tất cả"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Chọn hàng"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "ticket_number",
-      header: "Số ticket",
-      cell: ({ row }) => (
-        <div className="font-mono text-sm font-medium">
-          {row.getValue("ticket_number")}
-        </div>
-      ),
-      enableHiding: false,
-    },
-    {
-      accessorKey: "customer_name",
-      header: "Khách hàng",
-      cell: ({ row }) => (
-        <div className="text-sm">{row.getValue("customer_name")}</div>
-      ),
-    },
-    {
-      accessorKey: "title",
-      header: "Tiêu đề",
-      cell: ({ row }) => (
-        <div className="max-w-[200px] truncate font-medium">
-          {row.getValue("title")}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Trạng thái",
-      cell: ({ row }) => getStatusBadge(row.getValue("status")),
-    },
-    {
-      accessorKey: "priority",
-      header: "Độ ưu tiên",
-      cell: ({ row }) => getPriorityBadge(row.getValue("priority")),
-    },
-    {
-      accessorKey: "assigned_to_name",
-      header: "Được phân công",
-      cell: ({ row }) => (
-        <div className="text-sm">
-          {row.getValue("assigned_to_name") || "Chưa phân công"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "estimated_total",
-      header: "Ước tính",
-      cell: ({ row }) => {
-        const total = row.getValue("estimated_total") as number | null;
-        return (
+  const columns: ColumnDef<Ticket>[] = React.useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && "indeterminate")
+              }
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
+              aria-label="Chọn tất cả"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Chọn hàng"
+            />
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "ticket_number",
+        header: "Số ticket",
+        cell: ({ row }) => (
+          <div className="font-mono text-sm font-medium">
+            {row.getValue("ticket_number")}
+          </div>
+        ),
+        enableHiding: false,
+      },
+      {
+        accessorKey: "customer_name",
+        header: "Khách hàng",
+        cell: ({ row }) => (
+          <div className="text-sm">{row.getValue("customer_name")}</div>
+        ),
+      },
+      {
+        accessorKey: "title",
+        header: "Tiêu đề",
+        cell: ({ row }) => (
+          <div className="max-w-[200px] truncate font-medium">
+            {row.getValue("title")}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Trạng thái",
+        cell: ({ row }) => getStatusBadge(row.getValue("status")),
+      },
+      {
+        accessorKey: "priority",
+        header: "Độ ưu tiên",
+        cell: ({ row }) => getPriorityBadge(row.getValue("priority")),
+      },
+      {
+        accessorKey: "assigned_to_name",
+        header: "Được phân công",
+        cell: ({ row }) => (
           <div className="text-sm">
-            {total ? `${total.toLocaleString("vi-VN")} ₫` : "—"}
+            {row.getValue("assigned_to_name") || "Chưa phân công"}
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: "created_at",
-      header: "Ngày tạo",
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
-        return (
-          <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
-        );
+      {
+        accessorKey: "estimated_total",
+        header: "Ước tính",
+        cell: ({ row }) => {
+          const total = row.getValue("estimated_total") as number | null;
+          return (
+            <div className="text-sm">
+              {total ? `${total.toLocaleString("vi-VN")} ₫` : "—"}
+            </div>
+          );
+        },
       },
-    },
-    {
-      id: "actions",
-      header: "Thao tác",
-      cell: ({ row }) => {
-        const ticket = row.original;
+      {
+        accessorKey: "created_at",
+        header: "Ngày tạo",
+        cell: ({ row }) => {
+          const date = new Date(row.getValue("created_at"));
+          return (
+            <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "Thao tác",
+        cell: ({ row }) => {
+          const ticket = row.original;
 
-        return (
-          <div className="flex items-center justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push(`/tickets/${ticket.id}`)}
-              className="h-8 w-8 p-0"
-            >
-              <IconEye className="h-5 w-5" />
-              <span className="sr-only">Xem chi tiết</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push(`/tickets/${ticket.id}/edit`)}
-              className="h-8 w-8 p-0"
-            >
-              <IconEdit className="h-5 w-5" />
-              <span className="sr-only">Chỉnh sửa</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                >
-                  <IconDotsVertical className="h-5 w-5" />
-                  <span className="sr-only">Thao tác khác</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <IconRefresh className="h-4 w-4 mr-2" />
-                    Đổi trạng thái
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {renderStatusOptions(ticket.status, ticket.id, handleStatusChange, getStatusIcon)}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleComment(ticket)}>
-                  <IconMessageCircle className="h-4 w-4 mr-2" />
-                  Thêm bình luận
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleUploadImages(ticket)}>
-                  <IconPhoto className="h-4 w-4 mr-2" />
-                  Tải ảnh lên
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => handleAssignToMe(ticket)}
-                  disabled={!currentUser || ticket.assigned_to === currentUser?.user_id}
-                >
-                  <IconUserCheck className="h-4 w-4 mr-2" />
-                  Phân công cho tôi
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
+          return (
+            <div className="flex items-center justify-end space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/tickets/${ticket.id}`)}
+                className="h-8 w-8 p-0"
+              >
+                <IconEye className="h-5 w-5" />
+                <span className="sr-only">Xem chi tiết</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/tickets/${ticket.id}/edit`)}
+                className="h-8 w-8 p-0"
+              >
+                <IconEdit className="h-5 w-5" />
+                <span className="sr-only">Chỉnh sửa</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <IconDotsVertical className="h-5 w-5" />
+                    <span className="sr-only">Thao tác khác</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <IconRefresh className="h-4 w-4 mr-2" />
+                      Đổi trạng thái
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {renderStatusOptions(
+                        ticket.status,
+                        ticket.id,
+                        handleStatusChange,
+                        getStatusIcon,
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleComment(ticket)}>
+                    <IconMessageCircle className="h-4 w-4 mr-2" />
+                    Thêm bình luận
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleUploadImages(ticket)}>
+                    <IconPhoto className="h-4 w-4 mr-2" />
+                    Tải ảnh lên
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleAssignToMe(ticket)}
+                    disabled={
+                      !currentUser ||
+                      ticket.assigned_to === currentUser?.user_id
+                    }
+                  >
                     <IconUserCheck className="h-4 w-4 mr-2" />
-                    Phân công cho
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-[200px] overflow-y-auto">
-                    {allUsers && allUsers.length > 0 ? (
-                      <>
-                        {allUsers.map((user) => (
+                    Phân công cho tôi
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <IconUserCheck className="h-4 w-4 mr-2" />
+                      Phân công cho
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-h-[200px] overflow-y-auto">
+                      {allUsers && allUsers.length > 0 ? (
+                        <>
+                          {allUsers.map((user) => (
+                            <DropdownMenuItem
+                              key={user.user_id}
+                              onClick={() =>
+                                handleAssignTo(ticket, user.user_id)
+                              }
+                              disabled={ticket.assigned_to === user.user_id}
+                            >
+                              {user.full_name}
+                              {ticket.assigned_to === user.user_id && " ✓"}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            key={user.user_id}
-                            onClick={() => handleAssignTo(ticket, user.user_id)}
-                            disabled={ticket.assigned_to === user.user_id}
+                            onClick={() => handleUnassign(ticket)}
+                            disabled={!ticket.assigned_to}
                           >
-                            {user.full_name}
-                            {ticket.assigned_to === user.user_id && " ✓"}
+                            Hủy phân công
                           </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleUnassign(ticket)}
-                          disabled={!ticket.assigned_to}
-                        >
-                          Hủy phân công
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        Không có người dùng
-                      </div>
-                    )}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
+                        </>
+                      ) : (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          Không có người dùng
+                        </div>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
       },
-    },
-  ], [router, currentUser, allUsers, renderStatusOptions, handleStatusChange, handleComment, handleUploadImages, handleAssignToMe, handleAssignTo, handleUnassign]);
+    ],
+    [
+      router,
+      currentUser,
+      allUsers,
+      renderStatusOptions,
+      handleStatusChange,
+      handleComment,
+      handleUploadImages,
+      handleAssignToMe,
+      handleAssignTo,
+      handleUnassign,
+    ],
+  );
 
   const filteredData = React.useMemo(() => {
     // Lọc và cập nhật assigned_to_name từ assigned_to ID
@@ -570,13 +623,15 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
       // Nếu có assigned_to nhưng chưa có assigned_to_name, tìm tên từ allUsers
       if (item.assigned_to && !assignedUserName && allUsers) {
-        const assignedUser = allUsers.find(user => user.user_id === item.assigned_to);
+        const assignedUser = allUsers.find(
+          (user) => user.user_id === item.assigned_to,
+        );
         assignedUserName = assignedUser?.full_name || null;
       }
 
       return {
         ...item,
-        assigned_to_name: assignedUserName
+        assigned_to_name: assignedUserName,
       };
     });
 
@@ -586,10 +641,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       const customerName = item.customer_name?.toLowerCase() || "";
       const search = searchValue.toLowerCase();
 
-      return (
-        ticketNumber.includes(search) ||
-        customerName.includes(search)
-      );
+      return ticketNumber.includes(search) || customerName.includes(search);
     });
   }, [data, searchValue, allUsers]);
 
@@ -723,7 +775,10 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>

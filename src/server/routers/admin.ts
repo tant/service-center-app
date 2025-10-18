@@ -253,7 +253,10 @@ export const adminRouter = router({
             .insert([profileData]);
 
           if (profileError) {
-            console.error("❌ DATABASE: Profile creation failed:", profileError);
+            console.error(
+              "❌ DATABASE: Profile creation failed:",
+              profileError,
+            );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Failed to create admin profile: ${profileError.message}`,
@@ -287,7 +290,10 @@ export const adminRouter = router({
           console.log(
             "🔧 SETUP: Profile exists but auth user missing. Cleaning up orphaned profile...",
           );
-          console.log("   - Orphaned profile user_id:", existingProfile.user_id);
+          console.log(
+            "   - Orphaned profile user_id:",
+            existingProfile.user_id,
+          );
 
           const { error: deleteError } = await supabaseAdmin
             .from("profiles")
@@ -305,7 +311,9 @@ export const adminRouter = router({
             });
           }
 
-          console.log("✅ DATABASE: Orphaned profile deleted, will create fresh admin account");
+          console.log(
+            "✅ DATABASE: Orphaned profile deleted, will create fresh admin account",
+          );
         }
 
         // Scenario 4: Neither exists OR profile was orphaned - Create everything from scratch

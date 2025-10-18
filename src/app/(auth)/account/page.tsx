@@ -64,7 +64,8 @@ export default function Page() {
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Cập nhật tên thất bại";
+      const errorMessage =
+        error instanceof Error ? error.message : "Cập nhật tên thất bại";
       console.error("[Account] Name update error:", errorMessage, error);
       toast.error(errorMessage);
       setFullName(profile.full_name || "");
@@ -114,14 +115,20 @@ export default function Page() {
       });
 
       const successMessage = "Cập nhật ảnh đại diện thành công!";
-      console.log("[Account] Avatar update success:", successMessage, { url: result.url, path: result.path });
+      console.log("[Account] Avatar update success:", successMessage, {
+        url: result.url,
+        path: result.path,
+      });
       toast.success(successMessage);
       // Invalidate cache to update both account page and nav-user
       utils.profile.getCurrentUser.invalidate();
       setSelectedFile(null);
       setAvatarPreview("");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Tải lên ảnh đại diện thất bại";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Tải lên ảnh đại diện thất bại";
       console.error("[Account] Avatar update error:", errorMessage, error);
       toast.error(errorMessage);
       setAvatarPreview("");
@@ -326,7 +333,8 @@ export default function Page() {
                     {/* Role */}
                     <div className="flex justify-center">
                       <Badge variant={getRoleColor(profile.role)}>
-                        {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+                        {profile.role.charAt(0).toUpperCase() +
+                          profile.role.slice(1)}
                       </Badge>
                     </div>
                   </div>

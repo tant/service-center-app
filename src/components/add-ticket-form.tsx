@@ -13,11 +13,26 @@ import {
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/components/providers/trpc-provider";
@@ -82,16 +97,16 @@ export function AddTicketForm() {
   const { data: products } = trpc.products.getProducts.useQuery();
   const { data: productWithParts } = trpc.products.getProduct.useQuery(
     { id: ticketData.product_id },
-    { enabled: !!ticketData.product_id }
+    { enabled: !!ticketData.product_id },
   );
 
   // Prepare products options for searchable select
   const productsOptions: SearchableSelectOption[] = React.useMemo(
     () =>
       products?.map((product) => {
-        const brandText = product.brands?.name || 'Không có thương hiệu';
-        const modelText = product.model ? ` • ${product.model}` : '';
-        const skuText = product.sku ? ` • SKU: ${product.sku}` : '';
+        const brandText = product.brands?.name || "Không có thương hiệu";
+        const modelText = product.model ? ` • ${product.model}` : "";
+        const skuText = product.sku ? ` • SKU: ${product.sku}` : "";
 
         return {
           label: product.name,
@@ -104,7 +119,7 @@ export function AddTicketForm() {
           type: product.type,
         };
       }) || [],
-    [products]
+    [products],
   );
 
   const createTicketMutation = trpc.tickets.createTicket.useMutation({
@@ -134,14 +149,18 @@ export function AddTicketForm() {
   React.useEffect(() => {
     if (phoneSearch.length >= 3) {
       // Tìm khách hàng phù hợp với số điện thoại
-      const matchedCustomers = customers?.filter(c => {
-        const customerPhone = c.phone?.replace(/\D/g, '') || '';
-        const searchPhone = phoneSearch.replace(/\D/g, '');
-        return customerPhone.includes(searchPhone) || c.phone?.includes(phoneSearch);
-      }) || [];
+      const matchedCustomers =
+        customers?.filter((c) => {
+          const customerPhone = c.phone?.replace(/\D/g, "") || "";
+          const searchPhone = phoneSearch.replace(/\D/g, "");
+          return (
+            customerPhone.includes(searchPhone) ||
+            c.phone?.includes(phoneSearch)
+          );
+        }) || [];
 
       setFilteredCustomers(matchedCustomers);
-      
+
       // Hiển thị popup nếu có khách hàng phù hợp và chưa chọn khách hàng cụ thể
       if (matchedCustomers.length > 0 && !customerData.id) {
         setShowCustomerPopup(true);
@@ -150,10 +169,12 @@ export function AddTicketForm() {
       }
 
       // Tự động điền nếu chỉ có 1 khách hàng khớp hoàn toàn
-      const exactMatch = matchedCustomers.find(c => 
-        c.phone === phoneSearch || c.phone?.replace(/\D/g, '') === phoneSearch.replace(/\D/g, '')
+      const exactMatch = matchedCustomers.find(
+        (c) =>
+          c.phone === phoneSearch ||
+          c.phone?.replace(/\D/g, "") === phoneSearch.replace(/\D/g, ""),
       );
-      
+
       if (exactMatch && !customerData.id) {
         selectCustomer(exactMatch);
       }
@@ -162,7 +183,7 @@ export function AddTicketForm() {
       setFilteredCustomers([]);
       // Reset customer data nếu phone search quá ngắn và chưa có ID
       if (!customerData.id) {
-        setCustomerData(prev => ({
+        setCustomerData((prev) => ({
           ...prev,
           name: "",
           email: "",
@@ -206,79 +227,98 @@ export function AddTicketForm() {
   const handlePhoneChange = (value: string) => {
     setPhoneSearch(value);
     // Store the original format as database expects it
-    setCustomerData(prev => ({ ...prev, phone: value, id: undefined })); // Reset ID khi thay đổi phone
+    setCustomerData((prev) => ({ ...prev, phone: value, id: undefined })); // Reset ID khi thay đổi phone
     // Clear error when user starts typing
     if (errors.phone) {
-      setErrors(prev => ({ ...prev, phone: "" }));
+      setErrors((prev) => ({ ...prev, phone: "" }));
     }
   };
 
   const validatePhone = () => {
     if (!customerData.phone) {
-      setErrors(prev => ({ ...prev, phone: "Số điện thoại là bắt buộc" }));
+      setErrors((prev) => ({ ...prev, phone: "Số điện thoại là bắt buộc" }));
       return false;
     }
     if (!isValidPhone(customerData.phone)) {
-      setErrors(prev => ({ ...prev, phone: "Số điện thoại cần có ít nhất 10 ký tự và chỉ chứa số, dấu cách, gạch ngang, ngoặc đơn, dấu cộng" }));
+      setErrors((prev) => ({
+        ...prev,
+        phone:
+          "Số điện thoại cần có ít nhất 10 ký tự và chỉ chứa số, dấu cách, gạch ngang, ngoặc đơn, dấu cộng",
+      }));
       return false;
     }
-    setErrors(prev => ({ ...prev, phone: "" }));
+    setErrors((prev) => ({ ...prev, phone: "" }));
     return true;
   };
 
   const validateName = () => {
     if (!customerData.name.trim()) {
-      setErrors(prev => ({ ...prev, name: "Tên khách hàng là bắt buộc" }));
+      setErrors((prev) => ({ ...prev, name: "Tên khách hàng là bắt buộc" }));
       return false;
     }
-    setErrors(prev => ({ ...prev, name: "" }));
+    setErrors((prev) => ({ ...prev, name: "" }));
     return true;
   };
 
   const validateDescription = () => {
     if (!ticketData.description.trim()) {
-      setErrors(prev => ({ ...prev, description: "Mô tả vấn đề là bắt buộc" }));
+      setErrors((prev) => ({
+        ...prev,
+        description: "Mô tả vấn đề là bắt buộc",
+      }));
       return false;
     }
-    setErrors(prev => ({ ...prev, description: "" }));
+    setErrors((prev) => ({ ...prev, description: "" }));
     return true;
   };
 
   const validateProduct = () => {
     if (!ticketData.product_id) {
-      setErrors(prev => ({ ...prev, product: "Vui lòng chọn sản phẩm cần sửa" }));
+      setErrors((prev) => ({
+        ...prev,
+        product: "Vui lòng chọn sản phẩm cần sửa",
+      }));
       return false;
     }
-    setErrors(prev => ({ ...prev, product: "" }));
+    setErrors((prev) => ({ ...prev, product: "" }));
     return true;
   };
 
   const handlePartQuantityChange = (partId: string, quantity: number) => {
-    setSelectedParts(prev =>
-      prev.map(part =>
-        part.id === partId
-          ? { ...part, quantity: Math.max(0, quantity) }
-          : part
-      ).filter(part => part.quantity > 0)
+    setSelectedParts((prev) =>
+      prev
+        .map((part) =>
+          part.id === partId
+            ? { ...part, quantity: Math.max(0, quantity) }
+            : part,
+        )
+        .filter((part) => part.quantity > 0),
     );
   };
 
   const addPart = (part: any) => {
-    setSelectedParts(prev => [...prev, {
-      id: part.id,
-      name: part.name,
-      price: part.price,
-      quantity: 1,
-    }]);
+    setSelectedParts((prev) => [
+      ...prev,
+      {
+        id: part.id,
+        name: part.name,
+        price: part.price,
+        quantity: 1,
+      },
+    ]);
   };
 
   const removePart = (partId: string) => {
-    setSelectedParts(prev => prev.filter(part => part.id !== partId));
+    setSelectedParts((prev) => prev.filter((part) => part.id !== partId));
   };
 
   // Calculate totals
-  const partsTotal = selectedParts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
-  const subtotal = ticketData.service_fee + ticketData.diagnosis_fee + partsTotal;
+  const partsTotal = selectedParts.reduce(
+    (sum, part) => sum + part.price * part.quantity,
+    0,
+  );
+  const subtotal =
+    ticketData.service_fee + ticketData.diagnosis_fee + partsTotal;
   const total = subtotal - ticketData.discount_amount;
 
   // Phone validation helper - matches database constraints
@@ -287,7 +327,8 @@ export function AddTicketForm() {
     return phone.length >= 10 && /^[0-9+\-\s()]+$/.test(phone);
   };
 
-  const canProceedToStep2 = customerData.name && customerData.phone && isValidPhone(customerData.phone);
+  const canProceedToStep2 =
+    customerData.name && customerData.phone && isValidPhone(customerData.phone);
   const canProceedToStep3 = canProceedToStep2 && ticketData.description.trim();
   const canProceedToStep4 = canProceedToStep3 && ticketData.product_id;
   const canSubmit = canProceedToStep4 && ticketData.service_fee >= 0;
@@ -337,7 +378,7 @@ export function AddTicketForm() {
         service_fee: ticketData.service_fee,
         diagnosis_fee: ticketData.diagnosis_fee,
         discount_amount: ticketData.discount_amount,
-        parts: selectedParts.map(part => ({
+        parts: selectedParts.map((part) => ({
           part_id: part.id,
           quantity: part.quantity,
           unit_price: part.price,
@@ -403,11 +444,9 @@ export function AddTicketForm() {
                 className={errors.phone ? "border-red-500" : ""}
               />
               {errors.phone && (
-                <p className="text-sm text-red-500">
-                  {errors.phone}
-                </p>
+                <p className="text-sm text-red-500">{errors.phone}</p>
               )}
-              
+
               {/* Popup chọn khách hàng */}
               {showCustomerPopup && filteredCustomers.length > 0 && (
                 <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -422,9 +461,13 @@ export function AddTicketForm() {
                       className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                     >
                       <div className="font-medium text-sm">{customer.name}</div>
-                      <div className="text-xs text-gray-500">{customer.phone}</div>
+                      <div className="text-xs text-gray-500">
+                        {customer.phone}
+                      </div>
                       {customer.email && (
-                        <div className="text-xs text-gray-400">{customer.email}</div>
+                        <div className="text-xs text-gray-400">
+                          {customer.email}
+                        </div>
                       )}
                     </button>
                   ))}
@@ -436,7 +479,9 @@ export function AddTicketForm() {
               <Label htmlFor="name" className="flex items-center gap-2">
                 Tên khách hàng *
                 {customerData.id && (
-                  <span className="text-xs text-green-600">(Đã chọn từ danh sách)</span>
+                  <span className="text-xs text-green-600">
+                    (Đã chọn từ danh sách)
+                  </span>
                 )}
               </Label>
               <Input
@@ -445,9 +490,12 @@ export function AddTicketForm() {
                 onChange={(e) => {
                   // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
                   if (!customerData.id) {
-                    setCustomerData(prev => ({ ...prev, name: e.target.value }));
+                    setCustomerData((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }));
                     if (errors.name) {
-                      setErrors(prev => ({ ...prev, name: "" }));
+                      setErrors((prev) => ({ ...prev, name: "" }));
                     }
                   }
                 }}
@@ -457,9 +505,7 @@ export function AddTicketForm() {
                 className={`${errors.name ? "border-red-500" : ""} ${customerData.id ? "bg-muted" : ""}`}
               />
               {errors.name && (
-                <p className="text-sm text-red-500">
-                  {errors.name}
-                </p>
+                <p className="text-sm text-red-500">{errors.name}</p>
               )}
             </div>
 
@@ -467,7 +513,9 @@ export function AddTicketForm() {
               <Label htmlFor="email" className="flex items-center gap-2">
                 Email (tùy chọn)
                 {customerData.id && customerData.email && (
-                  <span className="text-xs text-green-600">(Từ thông tin có sẵn)</span>
+                  <span className="text-xs text-green-600">
+                    (Từ thông tin có sẵn)
+                  </span>
                 )}
               </Label>
               <Input
@@ -477,7 +525,10 @@ export function AddTicketForm() {
                 onChange={(e) => {
                   // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
                   if (!customerData.id) {
-                    setCustomerData(prev => ({ ...prev, email: e.target.value }));
+                    setCustomerData((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }));
                   }
                 }}
                 placeholder="Nhập email"
@@ -490,7 +541,9 @@ export function AddTicketForm() {
               <Label htmlFor="address" className="flex items-center gap-2">
                 Địa chỉ (tùy chọn)
                 {customerData.id && customerData.address && (
-                  <span className="text-xs text-green-600">(Từ thông tin có sẵn)</span>
+                  <span className="text-xs text-green-600">
+                    (Từ thông tin có sẵn)
+                  </span>
                 )}
               </Label>
               <Textarea
@@ -499,7 +552,10 @@ export function AddTicketForm() {
                 onChange={(e) => {
                   // Chỉ cho phép thay đổi nếu không phải khách hàng đã tồn tại
                   if (!customerData.id) {
-                    setCustomerData(prev => ({ ...prev, address: e.target.value }));
+                    setCustomerData((prev) => ({
+                      ...prev,
+                      address: e.target.value,
+                    }));
                   }
                 }}
                 placeholder="Nhập địa chỉ"
@@ -535,9 +591,7 @@ export function AddTicketForm() {
               <IconSettings className="h-5 w-5" />
               Cài Đặt Phiếu Dịch Vụ
             </CardTitle>
-            <CardDescription>
-              Chọn độ ưu tiên và loại bảo hành
-            </CardDescription>
+            <CardDescription>Chọn độ ưu tiên và loại bảo hành</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -545,8 +599,13 @@ export function AddTicketForm() {
                 <Label>Độ ưu tiên</Label>
                 <Select
                   value={ticketData.priority_level}
-                  onValueChange={(value: "low" | "normal" | "high" | "urgent") =>
-                    setTicketData(prev => ({ ...prev, priority_level: value }))
+                  onValueChange={(
+                    value: "low" | "normal" | "high" | "urgent",
+                  ) =>
+                    setTicketData((prev) => ({
+                      ...prev,
+                      priority_level: value,
+                    }))
                   }
                 >
                   <SelectTrigger>
@@ -586,7 +645,7 @@ export function AddTicketForm() {
                 <Select
                   value={ticketData.warranty_type}
                   onValueChange={(value: "warranty" | "paid" | "goodwill") =>
-                    setTicketData(prev => ({ ...prev, warranty_type: value }))
+                    setTicketData((prev) => ({ ...prev, warranty_type: value }))
                   }
                 >
                   <SelectTrigger>
@@ -607,9 +666,12 @@ export function AddTicketForm() {
                 id="description"
                 value={ticketData.description}
                 onChange={(e) => {
-                  setTicketData(prev => ({ ...prev, description: e.target.value }));
+                  setTicketData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }));
                   if (errors.description) {
-                    setErrors(prev => ({ ...prev, description: "" }));
+                    setErrors((prev) => ({ ...prev, description: "" }));
                   }
                 }}
                 onBlur={validateDescription}
@@ -618,9 +680,7 @@ export function AddTicketForm() {
                 className={errors.description ? "border-red-500" : ""}
               />
               {errors.description && (
-                <p className="text-sm text-red-500">
-                  {errors.description}
-                </p>
+                <p className="text-sm text-red-500">{errors.description}</p>
               )}
             </div>
 
@@ -662,14 +722,15 @@ export function AddTicketForm() {
                 options={productsOptions}
                 value={ticketData.product_id}
                 onValueChange={(value) => {
-                  setTicketData(prev => ({ ...prev, product_id: value }));
+                  setTicketData((prev) => ({ ...prev, product_id: value }));
                   if (errors.product) {
-                    setErrors(prev => ({ ...prev, product: "" }));
+                    setErrors((prev) => ({ ...prev, product: "" }));
                   }
                 }}
-                placeholder={productsOptions.length > 0
-                  ? `Chọn sản phẩm cần sửa... (${productsOptions.length} sản phẩm)`
-                  : "Đang tải danh sách sản phẩm..."
+                placeholder={
+                  productsOptions.length > 0
+                    ? `Chọn sản phẩm cần sửa... (${productsOptions.length} sản phẩm)`
+                    : "Đang tải danh sách sản phẩm..."
                 }
                 searchPlaceholder="Tìm kiếm theo tên, thương hiệu, loại, model hoặc SKU..."
                 emptyMessage="Không tìm thấy sản phẩm phù hợp với từ khóa tìm kiếm."
@@ -683,9 +744,7 @@ export function AddTicketForm() {
                 )}
               />
               {errors.product && (
-                <p className="text-sm text-red-500">
-                  {errors.product}
-                </p>
+                <p className="text-sm text-red-500">{errors.product}</p>
               )}
             </div>
 
@@ -694,29 +753,47 @@ export function AddTicketForm() {
               <div className="space-y-4">
                 <Separator />
                 <div>
-                  <Label className="text-base font-medium">Linh kiện có thể sử dụng</Label>
+                  <Label className="text-base font-medium">
+                    Linh kiện có thể sử dụng
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Các linh kiện được cấu hình cho sản phẩm này ({availableParts.filter(part => !selectedParts.find(sp => sp.id === part.id)).length} linh kiện)
+                    Các linh kiện được cấu hình cho sản phẩm này (
+                    {
+                      availableParts.filter(
+                        (part) =>
+                          !selectedParts.find((sp) => sp.id === part.id),
+                      ).length
+                    }{" "}
+                    linh kiện)
                   </p>
                 </div>
 
                 {availableParts.length > 0 ? (
                   <>
-                    {availableParts.filter(part => !selectedParts.find(sp => sp.id === part.id)).length > 0 ? (
+                    {availableParts.filter(
+                      (part) => !selectedParts.find((sp) => sp.id === part.id),
+                    ).length > 0 ? (
                       <div className="grid gap-3">
                         {availableParts
-                          .filter(part => !selectedParts.find(sp => sp.id === part.id))
+                          .filter(
+                            (part) =>
+                              !selectedParts.find((sp) => sp.id === part.id),
+                          )
                           .map((part) => (
-                            <div key={part.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div
+                              key={part.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                            >
                               <div className="flex flex-col">
                                 <span className="font-medium">{part.name}</span>
                                 <span className="text-sm text-muted-foreground">
-                                  {part.part_number} • Tồn kho: {part.stock_quantity}
+                                  {part.part_number} • Tồn kho:{" "}
+                                  {part.stock_quantity}
                                 </span>
                                 <span className="text-sm font-medium text-primary">
-                                  {new Intl.NumberFormat('vi-VN', {
-                                    style: 'currency',
-                                    currency: 'VND'
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    style: "currency",
+                                    currency: "VND",
                                   }).format(part.price)}
                                 </span>
                               </div>
@@ -733,14 +810,19 @@ export function AddTicketForm() {
                       </div>
                     ) : (
                       <div className="text-center py-6 text-muted-foreground">
-                        <p className="text-sm">Tất cả linh kiện đã được thêm vào danh sách bên dưới.</p>
+                        <p className="text-sm">
+                          Tất cả linh kiện đã được thêm vào danh sách bên dưới.
+                        </p>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Sản phẩm này chưa có linh kiện nào được cấu hình.</p>
-                    <p className="text-sm mt-1">Bạn có thể thêm linh kiện vào sản phẩm này trong trang Quản lý sản phẩm.</p>
+                    <p className="text-sm mt-1">
+                      Bạn có thể thêm linh kiện vào sản phẩm này trong trang
+                      Quản lý sản phẩm.
+                    </p>
                   </div>
                 )}
               </div>
@@ -751,19 +833,25 @@ export function AddTicketForm() {
               <div className="space-y-4">
                 <Separator />
                 <div>
-                  <Label className="text-base font-medium">Linh kiện đã chọn</Label>
+                  <Label className="text-base font-medium">
+                    Linh kiện đã chọn
+                  </Label>
                 </div>
 
                 <div className="grid gap-3">
                   {selectedParts.map((part) => (
-                    <div key={part.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div
+                      key={part.id}
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                    >
                       <div className="flex flex-col">
                         <span className="font-medium">{part.name}</span>
                         <span className="text-sm text-primary">
-                          {new Intl.NumberFormat('vi-VN', {
-                            style: 'currency',
-                            currency: 'VND'
-                          }).format(part.price)} × {part.quantity}
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(part.price)}{" "}
+                          × {part.quantity}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -771,7 +859,12 @@ export function AddTicketForm() {
                           type="number"
                           min="1"
                           value={part.quantity}
-                          onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
+                          onChange={(e) =>
+                            handlePartQuantityChange(
+                              part.id,
+                              parseInt(e.target.value) || 0,
+                            )
+                          }
                           className="w-20"
                         />
                         <Button
@@ -828,10 +921,12 @@ export function AddTicketForm() {
                   type="number"
                   min="0"
                   value={ticketData.service_fee}
-                  onChange={(e) => setTicketData(prev => ({
-                    ...prev,
-                    service_fee: parseFloat(e.target.value) || 0
-                  }))}
+                  onChange={(e) =>
+                    setTicketData((prev) => ({
+                      ...prev,
+                      service_fee: parseFloat(e.target.value) || 0,
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -843,10 +938,12 @@ export function AddTicketForm() {
                   type="number"
                   min="0"
                   value={ticketData.diagnosis_fee}
-                  onChange={(e) => setTicketData(prev => ({
-                    ...prev,
-                    diagnosis_fee: parseFloat(e.target.value) || 0
-                  }))}
+                  onChange={(e) =>
+                    setTicketData((prev) => ({
+                      ...prev,
+                      diagnosis_fee: parseFloat(e.target.value) || 0,
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -858,10 +955,12 @@ export function AddTicketForm() {
                   type="number"
                   min="0"
                   value={ticketData.discount_amount}
-                  onChange={(e) => setTicketData(prev => ({
-                    ...prev,
-                    discount_amount: parseFloat(e.target.value) || 0
-                  }))}
+                  onChange={(e) =>
+                    setTicketData((prev) => ({
+                      ...prev,
+                      discount_amount: parseFloat(e.target.value) || 0,
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -871,30 +970,59 @@ export function AddTicketForm() {
             <div className="space-y-3 p-4 bg-muted rounded-lg">
               <div className="flex justify-between text-sm">
                 <span>Giá dịch vụ:</span>
-                <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(ticketData.service_fee)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticketData.service_fee)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Phí kiểm tra:</span>
-                <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(ticketData.diagnosis_fee)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticketData.diagnosis_fee)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Linh kiện:</span>
-                <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(partsTotal)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(partsTotal)}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between text-sm">
                 <span>Tạm tính:</span>
-                <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(subtotal)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(subtotal)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Giảm giá:</span>
-                <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(ticketData.discount_amount)}</span>
+                <span>
+                  -
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticketData.discount_amount)}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between font-medium">
                 <span>Tổng cộng:</span>
                 <span className="text-primary">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(total)}
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(total)}
                 </span>
               </div>
             </div>

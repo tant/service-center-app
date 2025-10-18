@@ -627,7 +627,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
             }
             onSuccess={() => window.location.reload()}
           />
-          <AddSampleCustomersButton onSuccess={() => window.location.reload()} />
+          <AddSampleCustomersButton
+            onSuccess={() => window.location.reload()}
+          />
         </div>
       </div>
       <TabsContent
@@ -922,22 +924,102 @@ function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
   });
 
   // Vietnamese names data
-  const lastNames = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý"];
-  const middleNames = ["Văn", "Thị", "Minh", "Hoàng", "Đức", "Anh", "Thu", "Hồng", "Quốc", "Thanh", "Tuấn", "Hải", "Mai", "Lan"];
-  const firstNames = ["An", "Bình", "Cường", "Dũng", "Hà", "Hùng", "Linh", "Long", "Mai", "Nam", "Phong", "Quân", "Tâm", "Thảo", "Tú", "Uyên", "Vân", "Xuân", "Yến"];
+  const lastNames = [
+    "Nguyễn",
+    "Trần",
+    "Lê",
+    "Phạm",
+    "Hoàng",
+    "Huỳnh",
+    "Phan",
+    "Vũ",
+    "Võ",
+    "Đặng",
+    "Bùi",
+    "Đỗ",
+    "Hồ",
+    "Ngô",
+    "Dương",
+    "Lý",
+  ];
+  const middleNames = [
+    "Văn",
+    "Thị",
+    "Minh",
+    "Hoàng",
+    "Đức",
+    "Anh",
+    "Thu",
+    "Hồng",
+    "Quốc",
+    "Thanh",
+    "Tuấn",
+    "Hải",
+    "Mai",
+    "Lan",
+  ];
+  const firstNames = [
+    "An",
+    "Bình",
+    "Cường",
+    "Dũng",
+    "Hà",
+    "Hùng",
+    "Linh",
+    "Long",
+    "Mai",
+    "Nam",
+    "Phong",
+    "Quân",
+    "Tâm",
+    "Thảo",
+    "Tú",
+    "Uyên",
+    "Vân",
+    "Xuân",
+    "Yến",
+  ];
 
-  const streets = ["Nguyễn Huệ", "Lê Lợi", "Trần Hưng Đạo", "Hai Bà Trưng", "Lý Thường Kiệt", "Phan Bội Châu", "Điện Biên Phủ", "Võ Văn Tần", "Pasteur", "Cách Mạng Tháng 8"];
-  const districts = ["Quận 1", "Quận 2", "Quận 3", "Quận 5", "Quận 7", "Quận 10", "Bình Thạnh", "Tân Bình", "Phú Nhuận", "Gò Vấp"];
-  const cities = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng"];
+  const streets = [
+    "Nguyễn Huệ",
+    "Lê Lợi",
+    "Trần Hưng Đạo",
+    "Hai Bà Trưng",
+    "Lý Thường Kiệt",
+    "Phan Bội Châu",
+    "Điện Biên Phủ",
+    "Võ Văn Tần",
+    "Pasteur",
+    "Cách Mạng Tháng 8",
+  ];
+  const districts = [
+    "Quận 1",
+    "Quận 2",
+    "Quận 3",
+    "Quận 5",
+    "Quận 7",
+    "Quận 10",
+    "Bình Thạnh",
+    "Tân Bình",
+    "Phú Nhuận",
+    "Gò Vấp",
+  ];
+  const cities = [
+    "TP. Hồ Chí Minh",
+    "Hà Nội",
+    "Đà Nẵng",
+    "Cần Thơ",
+    "Hải Phòng",
+  ];
 
   const emailDomains = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"];
 
   const normalizeVietnamese = (str: string) => {
     return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
       .toLowerCase();
   };
 
@@ -945,16 +1027,22 @@ function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
     const customers = [];
     for (let i = 0; i < 500; i++) {
       const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-      const middleName = middleNames[Math.floor(Math.random() * middleNames.length)];
-      const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const middleName =
+        middleNames[Math.floor(Math.random() * middleNames.length)];
+      const firstName =
+        firstNames[Math.floor(Math.random() * firstNames.length)];
       const fullName = `${lastName} ${middleName} ${firstName}`;
 
       const phone = `0${Math.floor(Math.random() * 900000000) + 100000000}`;
       const hasEmail = Math.random() > 0.3; // 70% have email
-      const email = hasEmail ? `${normalizeVietnamese(lastName)}${normalizeVietnamese(firstName)}${Math.floor(Math.random() * 1000)}@${emailDomains[Math.floor(Math.random() * emailDomains.length)]}` : undefined;
+      const email = hasEmail
+        ? `${normalizeVietnamese(lastName)}${normalizeVietnamese(firstName)}${Math.floor(Math.random() * 1000)}@${emailDomains[Math.floor(Math.random() * emailDomains.length)]}`
+        : undefined;
 
       const hasAddress = Math.random() > 0.2; // 80% have address
-      const address = hasAddress ? `${Math.floor(Math.random() * 500) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${districts[Math.floor(Math.random() * districts.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}` : undefined;
+      const address = hasAddress
+        ? `${Math.floor(Math.random() * 500) + 1} ${streets[Math.floor(Math.random() * streets.length)]}, ${districts[Math.floor(Math.random() * districts.length)]}, ${cities[Math.floor(Math.random() * cities.length)]}`
+        : undefined;
 
       customers.push({
         name: fullName,
@@ -979,14 +1067,19 @@ function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
           await createCustomerMutation.mutateAsync(customer);
           successCount++;
         } catch (error) {
-          console.error(`Failed to create sample customer: ${customer.name}`, error);
+          console.error(
+            `Failed to create sample customer: ${customer.name}`,
+            error,
+          );
         }
       }
 
       if (successCount === totalCustomers) {
         toast.success(`Đã thêm thành công ${successCount} khách hàng mẫu`);
       } else if (successCount > 0) {
-        toast.success(`Đã thêm thành công ${successCount}/${totalCustomers} khách hàng mẫu`);
+        toast.success(
+          `Đã thêm thành công ${successCount}/${totalCustomers} khách hàng mẫu`,
+        );
       } else {
         toast.error("Không thể thêm khách hàng mẫu nào");
       }
@@ -1009,8 +1102,9 @@ function AddSampleCustomersButton({ onSuccess }: { onSuccess?: () => void }) {
       size="sm"
     >
       <IconDatabase className="h-4 w-4" />
-      <span className="hidden lg:inline">{isLoading ? "Đang thêm..." : "Thêm 500 mẫu"}</span>
-      
+      <span className="hidden lg:inline">
+        {isLoading ? "Đang thêm..." : "Thêm 500 mẫu"}
+      </span>
     </Button>
   );
 }

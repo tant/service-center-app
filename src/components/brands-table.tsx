@@ -87,13 +87,7 @@ export const brandSchema = z.object({
 
 type Brand = z.infer<typeof brandSchema>;
 
-function QuickActions({
-  brand,
-  onEdit,
-}: {
-  brand: Brand;
-  onEdit: () => void;
-}) {
+function QuickActions({ brand, onEdit }: { brand: Brand; onEdit: () => void }) {
   return (
     <div className="flex items-center gap-1">
       {/* Edit Brand */}
@@ -211,7 +205,9 @@ function BrandFormDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {mode === "create" ? "Thêm thương hiệu mới" : "Chỉnh sửa thương hiệu"}
+              {mode === "create"
+                ? "Thêm thương hiệu mới"
+                : "Chỉnh sửa thương hiệu"}
             </DialogTitle>
             <DialogDescription>
               {mode === "create"
@@ -297,11 +293,13 @@ function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
     },
     {
       name: "ASUS",
-      description: "Motherboards, graphics cards, laptops, and gaming peripherals manufacturer",
+      description:
+        "Motherboards, graphics cards, laptops, and gaming peripherals manufacturer",
     },
     {
       name: "MSI",
-      description: "Micro-Star International - Gaming hardware and computer components",
+      description:
+        "Micro-Star International - Gaming hardware and computer components",
     },
     {
       name: "Gigabyte",
@@ -309,7 +307,8 @@ function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
     },
     {
       name: "Corsair",
-      description: "Gaming peripherals, memory, cooling systems, and PC components",
+      description:
+        "Gaming peripherals, memory, cooling systems, and PC components",
     },
     {
       name: "Kingston",
@@ -407,11 +406,7 @@ function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
   );
 }
 
-export function BrandsTable({
-  data: initialData,
-}: {
-  data: Brand[];
-}) {
+export function BrandsTable({ data: initialData }: { data: Brand[] }) {
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -443,7 +438,9 @@ export function BrandsTable({
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Chọn tất cả"
           />
         </div>

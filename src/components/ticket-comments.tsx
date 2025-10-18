@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -11,8 +17,20 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
-import { IconSend, IconMessageCircle, IconLock, IconUser, IconRobot } from "@tabler/icons-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  IconSend,
+  IconMessageCircle,
+  IconLock,
+  IconUser,
+  IconRobot,
+} from "@tabler/icons-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Comment {
   id: string;
@@ -32,14 +50,22 @@ interface TicketCommentsProps {
   initialComments: Comment[];
 }
 
-export function TicketComments({ ticketId, initialComments }: TicketCommentsProps) {
+export function TicketComments({
+  ticketId,
+  initialComments,
+}: TicketCommentsProps) {
   const router = useRouter();
   const [comments, setComments] = useState<Comment[]>(
-    (initialComments || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    (initialComments || []).sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    ),
   );
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
-  const [commentFilter, setCommentFilter] = useState<"all" | "bot" | "staff">("all");
+  const [commentFilter, setCommentFilter] = useState<"all" | "bot" | "staff">(
+    "all",
+  );
 
   const addCommentMutation = trpc.tickets.addComment.useMutation({
     onSuccess: (result) => {
@@ -98,13 +124,16 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
 
   // Xử lý tổ hợp phím Ctrl + Enter để gửi bình luận
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.ctrlKey && e.key === 'Enter') {
+    if (e.ctrlKey && e.key === "Enter") {
       e.preventDefault();
-      
+
       // Kiểm tra điều kiện: textarea được focus và có nội dung
       if (document.activeElement === e.target && newComment.trim()) {
         // Kích hoạt gửi bình luận sử dụng logic hiện có
-        const formEvent = new Event('submit', { bubbles: true, cancelable: true }) as any;
+        const formEvent = new Event("submit", {
+          bubbles: true,
+          cancelable: true,
+        }) as any;
         handleSubmit(formEvent);
       }
     }
@@ -134,8 +163,22 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
 
   // Check if a comment is auto-generated based on emoji prefixes
   const isAutoComment = (commentText: string) => {
-    const autoCommentPrefixes = ['🔄', '➕', '✏️', '➖', '💵', '🔍', '🎁', '⚠️', '📋', '👤', '📝', '📌', '🎫'];
-    return autoCommentPrefixes.some(prefix => commentText.startsWith(prefix));
+    const autoCommentPrefixes = [
+      "🔄",
+      "➕",
+      "✏️",
+      "➖",
+      "💵",
+      "🔍",
+      "🎁",
+      "⚠️",
+      "📋",
+      "👤",
+      "📝",
+      "📌",
+      "🎫",
+    ];
+    return autoCommentPrefixes.some((prefix) => commentText.startsWith(prefix));
   };
 
   // Filter comments based on selected filter
@@ -196,7 +239,9 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                   <Checkbox
                     id="is-internal"
                     checked={isInternal}
-                    onCheckedChange={(checked) => setIsInternal(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setIsInternal(checked as boolean)
+                    }
                   />
                   <Label
                     htmlFor="is-internal"
@@ -214,10 +259,14 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={addCommentMutation.isPending || !newComment.trim()}
+                    disabled={
+                      addCommentMutation.isPending || !newComment.trim()
+                    }
                   >
                     <IconSend className="h-4 w-4" />
-                    {addCommentMutation.isPending ? "Đang gửi..." : "Gửi bình luận"}
+                    {addCommentMutation.isPending
+                      ? "Đang gửi..."
+                      : "Gửi bình luận"}
                   </Button>
                 </div>
               </div>
@@ -239,15 +288,17 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                     isAuto
                       ? "bg-blue-50/50 border-blue-200/50"
                       : comment.is_internal
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-muted/50 border-border"
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-muted/50 border-border"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                      <div className={`flex items-center justify-center h-8 w-8 rounded-full ${
-                        isAuto ? "bg-blue-100" : "bg-primary/10"
-                      }`}>
+                      <div
+                        className={`flex items-center justify-center h-8 w-8 rounded-full ${
+                          isAuto ? "bg-blue-100" : "bg-primary/10"
+                        }`}
+                      >
                         {isAuto ? (
                           <IconRobot className="h-4 w-4 text-blue-600" />
                         ) : (
@@ -273,13 +324,18 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
                       </div>
                     </div>
                     {comment.is_internal && !isAuto && (
-                      <Badge variant="secondary" className="flex items-center gap-1">
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1"
+                      >
                         <IconLock className="h-3 w-3" />
                         Nội bộ
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap ml-10">{comment.comment}</p>
+                  <p className="text-sm whitespace-pre-wrap ml-10">
+                    {comment.comment}
+                  </p>
                 </div>
               );
             })}
@@ -288,12 +344,11 @@ export function TicketComments({ ticketId, initialComments }: TicketCommentsProp
           <div className="text-center py-8 text-muted-foreground">
             <IconMessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>
-              {commentFilter === "all" 
-                ? "Chưa có bình luận nào" 
-                : commentFilter === "bot" 
-                ? "Không có bình luận từ bot" 
-                : "Không có bình luận từ nhân viên"
-              }
+              {commentFilter === "all"
+                ? "Chưa có bình luận nào"
+                : commentFilter === "bot"
+                  ? "Không có bình luận từ bot"
+                  : "Không có bình luận từ nhân viên"}
             </p>
           </div>
         )}

@@ -4,7 +4,9 @@ import { TicketTable, type ticketSchema } from "@/components/ticket-table";
 import { createClient } from "@/utils/supabase/server";
 
 // Map database status to UI status
-function mapStatus(dbStatus: string): "open" | "in_progress" | "resolved" | "closed" {
+function mapStatus(
+  dbStatus: string,
+): "open" | "in_progress" | "resolved" | "closed" {
   switch (dbStatus) {
     case "pending":
       return "open";
@@ -80,7 +82,8 @@ async function getTicketsData(): Promise<z.infer<typeof ticketSchema>[]> {
     assigned_to: ticket.assigned_to,
     assigned_to_name: null, // TODO: Add profile join
     estimated_total: ticket.total_cost ? Number(ticket.total_cost) : null,
-    actual_total: ticket.status === "completed" ? Number(ticket.total_cost) : null,
+    actual_total:
+      ticket.status === "completed" ? Number(ticket.total_cost) : null,
     created_at: ticket.created_at,
     updated_at: ticket.updated_at,
     created_by: ticket.created_by || "",

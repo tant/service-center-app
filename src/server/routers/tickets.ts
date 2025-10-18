@@ -3,9 +3,15 @@ import { router, publicProcedure } from "../trpc";
 import { createAutoComment } from "../utils/auto-comment";
 import { formatCurrency } from "../utils/format-currency";
 import { PRIORITY_LABELS, WARRANTY_LABELS } from "../utils/label-helpers";
-import { STATUS_FLOW, VALID_STATUS_TRANSITIONS } from "@/lib/constants/ticket-status";
+import {
+  STATUS_FLOW,
+  VALID_STATUS_TRANSITIONS,
+} from "@/lib/constants/ticket-status";
 
-function validateStatusTransition(currentStatus: string, newStatus: string): void {
+function validateStatusTransition(
+  currentStatus: string,
+  newStatus: string,
+): void {
   // If status hasn't changed, allow it
   if (currentStatus === newStatus) {
     return;
@@ -20,17 +26,17 @@ function validateStatusTransition(currentStatus: string, newStatus: string): voi
     if (isTerminal) {
       throw new Error(
         `Không thể thay đổi trạng thái từ "${statusInfo.label}" (trạng thái cuối). ` +
-        `Vui lòng tạo phiếu dịch vụ mới nếu cần.`
+          `Vui lòng tạo phiếu dịch vụ mới nếu cần.`,
       );
     }
 
     const allowedLabels = allowedTransitions
-      .map(s => STATUS_FLOW[s as keyof typeof STATUS_FLOW]?.label)
-      .join(', ');
+      .map((s) => STATUS_FLOW[s as keyof typeof STATUS_FLOW]?.label)
+      .join(", ");
 
     throw new Error(
       `Trạng thái không hợp lệ: Không thể chuyển từ "${statusInfo?.label}" sang "${STATUS_FLOW[newStatus as keyof typeof STATUS_FLOW]?.label}". ` +
-      `Chỉ có thể chuyển sang: ${allowedLabels}`
+        `Chỉ có thể chuyển sang: ${allowedLabels}`,
     );
   }
 }
@@ -40,7 +46,13 @@ const createTicketSchema = z.object({
   customer_data: z.object({
     id: z.string().uuid().optional(),
     name: z.string().min(1, "Customer name is required"),
-    phone: z.string().min(10, "Phone number must be at least 10 characters").regex(/^[0-9+\-\s()]+$/, "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign"),
+    phone: z
+      .string()
+      .min(10, "Phone number must be at least 10 characters")
+      .regex(
+        /^[0-9+\-\s()]+$/,
+        "Phone number can only contain digits, spaces, hyphens, parentheses, and plus sign",
+      ),
     email: z.string().email().or(z.literal("")).nullable().optional(),
     address: z.string().nullable().optional(),
   }),
@@ -49,13 +61,23 @@ const createTicketSchema = z.object({
   priority_level: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).default("paid"),
   service_fee: z.number().min(0, "Service fee must be non-negative"),
-  diagnosis_fee: z.number().min(0, "Diagnosis fee must be non-negative").default(0),
-  discount_amount: z.number().min(0, "Discount amount must be non-negative").default(0),
-  parts: z.array(z.object({
-    part_id: z.string().uuid(),
-    quantity: z.number().int().min(1),
-    unit_price: z.number().min(0),
-  })).default([]),
+  diagnosis_fee: z
+    .number()
+    .min(0, "Diagnosis fee must be non-negative")
+    .default(0),
+  discount_amount: z
+    .number()
+    .min(0, "Discount amount must be non-negative")
+    .default(0),
+  parts: z
+    .array(
+      z.object({
+        part_id: z.string().uuid(),
+        quantity: z.number().int().min(1),
+        unit_price: z.number().min(0),
+      }),
+    )
+    .default([]),
 });
 
 const updateTicketStatusSchema = z.object({
@@ -65,13 +87,24 @@ const updateTicketStatusSchema = z.object({
 
 const updateTicketSchema = z.object({
   id: z.string().uuid("Ticket ID must be a valid UUID"),
-  issue_description: z.string().min(1, "Issue description is required").optional(),
+  issue_description: z
+    .string()
+    .min(1, "Issue description is required")
+    .optional(),
   priority_level: z.enum(["low", "normal", "high", "urgent"]).optional(),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).optional(),
-  status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+  status: z
+    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .optional(),
   service_fee: z.number().min(0, "Service fee must be non-negative").optional(),
-  diagnosis_fee: z.number().min(0, "Diagnosis fee must be non-negative").optional(),
-  discount_amount: z.number().min(0, "Discount amount must be non-negative").optional(),
+  diagnosis_fee: z
+    .number()
+    .min(0, "Diagnosis fee must be non-negative")
+    .optional(),
+  discount_amount: z
+    .number()
+    .min(0, "Discount amount must be non-negative")
+    .optional(),
   notes: z.string().nullable().optional(),
   assigned_to: z.string().uuid().nullable().optional(),
 });
@@ -80,11 +113,13 @@ export const ticketsRouter = router({
   getPendingCount: publicProcedure.query(async ({ ctx }) => {
     const { count, error } = await ctx.supabaseAdmin
       .from("service_tickets")
-      .select("*", { count: 'exact', head: true })
+      .select("*", { count: "exact", head: true })
       .neq("status", "completed");
 
     if (error) {
-      throw new Error(`Failed to fetch pending tickets count: ${error.message}`);
+      throw new Error(
+        `Failed to fetch pending tickets count: ${error.message}`,
+      );
     }
 
     return count || 0;
@@ -102,16 +137,17 @@ export const ticketsRouter = router({
     }
 
     // Group by date and calculate total revenue
-    const dailyRevenue = tickets?.reduce((acc: Record<string, number>, ticket) => {
-      const date = new Date(ticket.created_at).toISOString().split("T")[0];
-      acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
-      return acc;
-    }, {}) || {};
+    const dailyRevenue =
+      tickets?.reduce((acc: Record<string, number>, ticket) => {
+        const date = new Date(ticket.created_at).toISOString().split("T")[0];
+        acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
+        return acc;
+      }, {}) || {};
 
     // Convert to array format for chart
     return Object.entries(dailyRevenue).map(([date, revenue]) => ({
       date,
-      revenue
+      revenue,
     }));
   }),
 
@@ -119,9 +155,14 @@ export const ticketsRouter = router({
     .input(createTicketSchema)
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
-        throw new Error("Unauthorized: You must be logged in to create tickets");
+        throw new Error(
+          "Unauthorized: You must be logged in to create tickets",
+        );
       }
 
       // Note: Ticket number is now auto-generated by database trigger
@@ -142,19 +183,22 @@ export const ticketsRouter = router({
           customerId = existingCustomer.id;
         } else {
           // Create new customer
-          const { data: newCustomer, error: customerError } = await ctx.supabaseAdmin
-            .from("customers")
-            .insert({
-              name: input.customer_data.name,
-              phone: input.customer_data.phone,
-              email: input.customer_data.email || null,
-              address: input.customer_data.address || null,
-            })
-            .select("id")
-            .single();
+          const { data: newCustomer, error: customerError } =
+            await ctx.supabaseAdmin
+              .from("customers")
+              .insert({
+                name: input.customer_data.name,
+                phone: input.customer_data.phone,
+                email: input.customer_data.email || null,
+                address: input.customer_data.address || null,
+              })
+              .select("id")
+              .single();
 
           if (customerError) {
-            throw new Error(`Failed to create customer: ${customerError.message}`);
+            throw new Error(
+              `Failed to create customer: ${customerError.message}`,
+            );
           }
 
           customerId = newCustomer.id;
@@ -162,7 +206,10 @@ export const ticketsRouter = router({
       }
 
       // Calculate parts total
-      const partsTotal = input.parts.reduce((sum, part) => sum + (part.unit_price * part.quantity), 0);
+      const partsTotal = input.parts.reduce(
+        (sum, part) => sum + part.unit_price * part.quantity,
+        0,
+      );
 
       // Create the ticket
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
@@ -190,7 +237,7 @@ export const ticketsRouter = router({
 
       // Add ticket parts if any
       if (input.parts.length > 0) {
-        const ticketParts = input.parts.map(part => ({
+        const ticketParts = input.parts.map((part) => ({
           ticket_id: ticketData.id,
           part_id: part.part_id,
           quantity: part.quantity,
@@ -204,37 +251,49 @@ export const ticketsRouter = router({
 
         if (partsError) {
           // Cleanup ticket if parts insertion fails
-          await ctx.supabaseAdmin.from("service_tickets").delete().eq("id", ticketData.id);
+          await ctx.supabaseAdmin
+            .from("service_tickets")
+            .delete()
+            .eq("id", ticketData.id);
           throw new Error(`Failed to add ticket parts: ${partsError.message}`);
         }
 
         // Update stock quantities
         for (const part of input.parts) {
           try {
-            const { error: stockError } = await ctx.supabaseAdmin
-              .rpc('decrease_part_stock', {
+            const { error: stockError } = await ctx.supabaseAdmin.rpc(
+              "decrease_part_stock",
+              {
                 part_id: part.part_id,
-                quantity_to_decrease: part.quantity
-              });
+                quantity_to_decrease: part.quantity,
+              },
+            );
 
             if (stockError) {
               // Fallback to manual stock update if RPC function doesn't exist
-              const { data: currentPart, error: fetchError } = await ctx.supabaseAdmin
-                .from('parts')
-                .select('stock_quantity')
-                .eq('id', part.part_id)
-                .single();
+              const { data: currentPart, error: fetchError } =
+                await ctx.supabaseAdmin
+                  .from("parts")
+                  .select("stock_quantity")
+                  .eq("id", part.part_id)
+                  .single();
 
               if (!fetchError && currentPart) {
-                const newStock = Math.max(0, currentPart.stock_quantity - part.quantity);
+                const newStock = Math.max(
+                  0,
+                  currentPart.stock_quantity - part.quantity,
+                );
                 await ctx.supabaseAdmin
-                  .from('parts')
+                  .from("parts")
                   .update({ stock_quantity: newStock })
-                  .eq('id', part.part_id);
+                  .eq("id", part.part_id);
               }
             }
           } catch (error) {
-            console.error(`Failed to update stock for part ${part.part_id}:`, error);
+            console.error(
+              `Failed to update stock for part ${part.part_id}:`,
+              error,
+            );
             // Don't fail the entire operation for stock update errors
           }
         }
@@ -254,8 +313,10 @@ export const ticketsRouter = router({
         .single();
 
       // Create auto-comment for ticket creation
-      const priorityLabel = PRIORITY_LABELS[input.priority_level as keyof typeof PRIORITY_LABELS];
-      const warrantyLabel = WARRANTY_LABELS[input.warranty_type as keyof typeof WARRANTY_LABELS];
+      const priorityLabel =
+        PRIORITY_LABELS[input.priority_level as keyof typeof PRIORITY_LABELS];
+      const warrantyLabel =
+        WARRANTY_LABELS[input.warranty_type as keyof typeof WARRANTY_LABELS];
       const productName = productData?.name || "Sản phẩm";
       const productBrand = (productData?.brands as any)?.name || "";
       const productType = productData?.type || "";
@@ -379,7 +440,9 @@ export const ticketsRouter = router({
         .order("created_at", { ascending: true });
 
       if (commentsError) {
-        throw new Error(`Failed to fetch ticket comments: ${commentsError.message}`);
+        throw new Error(
+          `Failed to fetch ticket comments: ${commentsError.message}`,
+        );
       }
 
       return {
@@ -393,9 +456,14 @@ export const ticketsRouter = router({
     .input(updateTicketStatusSchema)
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
-        throw new Error("Unauthorized: You must be logged in to update ticket status");
+        throw new Error(
+          "Unauthorized: You must be logged in to update ticket status",
+        );
       }
 
       // Fetch current ticket to validate status transition
@@ -419,15 +487,21 @@ export const ticketsRouter = router({
         .update({
           status: input.status,
           updated_by: user.id, // Set updated_by for database trigger
-          ...(input.status === "in_progress" && { started_at: new Date().toISOString() }),
-          ...(input.status === "completed" && { completed_at: new Date().toISOString() }),
+          ...(input.status === "in_progress" && {
+            started_at: new Date().toISOString(),
+          }),
+          ...(input.status === "completed" && {
+            completed_at: new Date().toISOString(),
+          }),
         })
         .eq("id", input.id)
         .select()
         .single();
 
       if (ticketError) {
-        throw new Error(`Failed to update ticket status: ${ticketError.message}`);
+        throw new Error(
+          `Failed to update ticket status: ${ticketError.message}`,
+        );
       }
 
       if (!ticketData) {
@@ -449,7 +523,10 @@ export const ticketsRouter = router({
       const { id, ...updateData } = input;
 
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
         throw new Error("Unauthorized: You must be logged in to update ticket");
       }
@@ -499,19 +576,28 @@ export const ticketsRouter = router({
         updated_by: user.id, // Always set updated_by to current user
       };
 
-      if (updateData.issue_description !== undefined) updateObject.issue_description = updateData.issue_description;
-      if (updateData.priority_level !== undefined) updateObject.priority_level = updateData.priority_level;
-      if (updateData.warranty_type !== undefined) updateObject.warranty_type = updateData.warranty_type;
+      if (updateData.issue_description !== undefined)
+        updateObject.issue_description = updateData.issue_description;
+      if (updateData.priority_level !== undefined)
+        updateObject.priority_level = updateData.priority_level;
+      if (updateData.warranty_type !== undefined)
+        updateObject.warranty_type = updateData.warranty_type;
       if (updateData.status !== undefined) {
         updateObject.status = updateData.status;
-        if (updateData.status === "in_progress") updateObject.started_at = new Date().toISOString();
-        if (updateData.status === "completed") updateObject.completed_at = new Date().toISOString();
+        if (updateData.status === "in_progress")
+          updateObject.started_at = new Date().toISOString();
+        if (updateData.status === "completed")
+          updateObject.completed_at = new Date().toISOString();
       }
-      if (updateData.service_fee !== undefined) updateObject.service_fee = updateData.service_fee;
-      if (updateData.diagnosis_fee !== undefined) updateObject.diagnosis_fee = updateData.diagnosis_fee;
-      if (updateData.discount_amount !== undefined) updateObject.discount_amount = updateData.discount_amount;
+      if (updateData.service_fee !== undefined)
+        updateObject.service_fee = updateData.service_fee;
+      if (updateData.diagnosis_fee !== undefined)
+        updateObject.diagnosis_fee = updateData.diagnosis_fee;
+      if (updateData.discount_amount !== undefined)
+        updateObject.discount_amount = updateData.discount_amount;
       if (updateData.notes !== undefined) updateObject.notes = updateData.notes;
-      if (updateData.assigned_to !== undefined) updateObject.assigned_to = updateData.assigned_to;
+      if (updateData.assigned_to !== undefined)
+        updateObject.assigned_to = updateData.assigned_to;
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -532,7 +618,10 @@ export const ticketsRouter = router({
       // Note: Status change comments are now automatically created by database trigger
 
       // 1. Service fee change
-      if (updateData.service_fee !== undefined && updateData.service_fee !== currentTicket.service_fee) {
+      if (
+        updateData.service_fee !== undefined &&
+        updateData.service_fee !== currentTicket.service_fee
+      ) {
         await createAutoComment({
           ticketId: id,
           userId: user.id,
@@ -544,7 +633,10 @@ export const ticketsRouter = router({
       }
 
       // 3. Diagnosis fee change
-      if (updateData.diagnosis_fee !== undefined && updateData.diagnosis_fee !== currentTicket.diagnosis_fee) {
+      if (
+        updateData.diagnosis_fee !== undefined &&
+        updateData.diagnosis_fee !== currentTicket.diagnosis_fee
+      ) {
         await createAutoComment({
           ticketId: id,
           userId: user.id,
@@ -556,12 +648,21 @@ export const ticketsRouter = router({
       }
 
       // 4. Discount change
-      if (updateData.discount_amount !== undefined && updateData.discount_amount !== currentTicket.discount_amount) {
+      if (
+        updateData.discount_amount !== undefined &&
+        updateData.discount_amount !== currentTicket.discount_amount
+      ) {
         let discountComment = "";
-        if (currentTicket.discount_amount === 0 && updateData.discount_amount > 0) {
+        if (
+          currentTicket.discount_amount === 0 &&
+          updateData.discount_amount > 0
+        ) {
           // New discount
           discountComment = `🎁 Đã áp dụng giảm giá: ${formatCurrency(updateData.discount_amount)}`;
-        } else if (updateData.discount_amount === 0 && currentTicket.discount_amount > 0) {
+        } else if (
+          updateData.discount_amount === 0 &&
+          currentTicket.discount_amount > 0
+        ) {
           // Remove discount
           discountComment = `🎁 Đã hủy giảm giá: ${formatCurrency(currentTicket.discount_amount)}`;
         } else {
@@ -580,9 +681,18 @@ export const ticketsRouter = router({
       }
 
       // 5. Priority change
-      if (updateData.priority_level !== undefined && updateData.priority_level !== currentTicket.priority_level) {
-        const oldPriorityLabel = PRIORITY_LABELS[currentTicket.priority_level as keyof typeof PRIORITY_LABELS];
-        const newPriorityLabel = PRIORITY_LABELS[updateData.priority_level as keyof typeof PRIORITY_LABELS];
+      if (
+        updateData.priority_level !== undefined &&
+        updateData.priority_level !== currentTicket.priority_level
+      ) {
+        const oldPriorityLabel =
+          PRIORITY_LABELS[
+            currentTicket.priority_level as keyof typeof PRIORITY_LABELS
+          ];
+        const newPriorityLabel =
+          PRIORITY_LABELS[
+            updateData.priority_level as keyof typeof PRIORITY_LABELS
+          ];
 
         await createAutoComment({
           ticketId: id,
@@ -594,9 +704,18 @@ export const ticketsRouter = router({
       }
 
       // 6. Warranty type change
-      if (updateData.warranty_type !== undefined && updateData.warranty_type !== currentTicket.warranty_type) {
-        const oldWarrantyLabel = WARRANTY_LABELS[currentTicket.warranty_type as keyof typeof WARRANTY_LABELS];
-        const newWarrantyLabel = WARRANTY_LABELS[updateData.warranty_type as keyof typeof WARRANTY_LABELS];
+      if (
+        updateData.warranty_type !== undefined &&
+        updateData.warranty_type !== currentTicket.warranty_type
+      ) {
+        const oldWarrantyLabel =
+          WARRANTY_LABELS[
+            currentTicket.warranty_type as keyof typeof WARRANTY_LABELS
+          ];
+        const newWarrantyLabel =
+          WARRANTY_LABELS[
+            updateData.warranty_type as keyof typeof WARRANTY_LABELS
+          ];
 
         await createAutoComment({
           ticketId: id,
@@ -608,10 +727,16 @@ export const ticketsRouter = router({
       }
 
       // 7. Assignment change
-      if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+      if (
+        updateData.assigned_to !== undefined &&
+        updateData.assigned_to !== currentTicket.assigned_to
+      ) {
         let assignmentComment = "";
 
-        if (currentTicket.assigned_to === null && updateData.assigned_to !== null) {
+        if (
+          currentTicket.assigned_to === null &&
+          updateData.assigned_to !== null
+        ) {
           // New assignment
           const { data: newTechnician } = await ctx.supabaseAdmin
             .from("profiles")
@@ -619,7 +744,10 @@ export const ticketsRouter = router({
             .eq("user_id", updateData.assigned_to)
             .single();
           assignmentComment = `👤 Đã phân công cho: ${newTechnician?.name || "Kỹ thuật viên"}`;
-        } else if (updateData.assigned_to === null && currentTicket.assigned_to !== null) {
+        } else if (
+          updateData.assigned_to === null &&
+          currentTicket.assigned_to !== null
+        ) {
           // Remove assignment
           assignmentComment = `👤 Đã hủy phân công cho ${assignedTechnicianName || "Kỹ thuật viên"}`;
         } else {
@@ -636,14 +764,17 @@ export const ticketsRouter = router({
           ticketId: id,
           userId: user.id,
           comment: assignmentComment,
-          commentType: 'assignment',
+          commentType: "assignment",
           isInternal: true,
           supabaseAdmin: ctx.supabaseAdmin,
         });
       }
 
       // 8. Issue description update
-      if (updateData.issue_description !== undefined && updateData.issue_description !== currentTicket.issue_description) {
+      if (
+        updateData.issue_description !== undefined &&
+        updateData.issue_description !== currentTicket.issue_description
+      ) {
         await createAutoComment({
           ticketId: id,
           userId: user.id,
@@ -654,7 +785,10 @@ export const ticketsRouter = router({
       }
 
       // 9. Notes update
-      if (updateData.notes !== undefined && updateData.notes !== currentTicket.notes) {
+      if (
+        updateData.notes !== undefined &&
+        updateData.notes !== currentTicket.notes
+      ) {
         await createAutoComment({
           ticketId: id,
           userId: user.id,
@@ -671,15 +805,20 @@ export const ticketsRouter = router({
     }),
 
   addTicketPart: publicProcedure
-    .input(z.object({
-      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-      part_id: z.string().uuid("Part ID must be a valid UUID"),
-      quantity: z.number().int().min(1, "Quantity must be at least 1"),
-      unit_price: z.number().min(0, "Unit price must be non-negative"),
-    }))
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        part_id: z.string().uuid("Part ID must be a valid UUID"),
+        quantity: z.number().int().min(1, "Quantity must be at least 1"),
+        unit_price: z.number().min(0, "Unit price must be non-negative"),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
         throw new Error("Unauthorized: You must be logged in to add parts");
       }
@@ -715,30 +854,39 @@ export const ticketsRouter = router({
 
       // Update stock quantity (decrease)
       try {
-        const { error: stockError } = await ctx.supabaseAdmin
-          .rpc('decrease_part_stock', {
+        const { error: stockError } = await ctx.supabaseAdmin.rpc(
+          "decrease_part_stock",
+          {
             part_id: input.part_id,
-            quantity_to_decrease: input.quantity
-          });
+            quantity_to_decrease: input.quantity,
+          },
+        );
 
         if (stockError) {
           // Fallback to manual stock update if RPC function doesn't exist
-          const { data: currentPart, error: fetchError } = await ctx.supabaseAdmin
-            .from('parts')
-            .select('stock_quantity')
-            .eq('id', input.part_id)
-            .single();
+          const { data: currentPart, error: fetchError } =
+            await ctx.supabaseAdmin
+              .from("parts")
+              .select("stock_quantity")
+              .eq("id", input.part_id)
+              .single();
 
           if (!fetchError && currentPart) {
-            const newStock = Math.max(0, currentPart.stock_quantity - input.quantity);
+            const newStock = Math.max(
+              0,
+              currentPart.stock_quantity - input.quantity,
+            );
             await ctx.supabaseAdmin
-              .from('parts')
+              .from("parts")
               .update({ stock_quantity: newStock })
-              .eq('id', input.part_id);
+              .eq("id", input.part_id);
           }
         }
       } catch (error) {
-        console.error(`Failed to update stock for part ${input.part_id}:`, error);
+        console.error(
+          `Failed to update stock for part ${input.part_id}:`,
+          error,
+        );
         // Don't fail the entire operation for stock update errors
       }
 
@@ -763,26 +911,41 @@ export const ticketsRouter = router({
     }),
 
   updateTicketPart: publicProcedure
-    .input(z.object({
-      id: z.string().uuid("Part ID must be a valid UUID"),
-      quantity: z.number().int().min(1, "Quantity must be at least 1").optional(),
-      unit_price: z.number().min(0, "Unit price must be non-negative").optional(),
-    }))
+    .input(
+      z.object({
+        id: z.string().uuid("Part ID must be a valid UUID"),
+        quantity: z
+          .number()
+          .int()
+          .min(1, "Quantity must be at least 1")
+          .optional(),
+        unit_price: z
+          .number()
+          .min(0, "Unit price must be non-negative")
+          .optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const { id, ...updateData } = input;
 
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
         throw new Error("Unauthorized: You must be logged in to update parts");
       }
 
       // Get current part data for comparison
-      const { data: currentPart, error: currentPartError } = await ctx.supabaseAdmin
-        .from("service_ticket_parts")
-        .select("ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
-        .eq("id", id)
-        .single();
+      const { data: currentPart, error: currentPartError } =
+        await ctx.supabaseAdmin
+          .from("service_ticket_parts")
+          .select(
+            "ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)",
+          )
+          .eq("id", id)
+          .single();
 
       if (currentPartError || !currentPart) {
         throw new Error("Part not found");
@@ -800,61 +963,74 @@ export const ticketsRouter = router({
       }
 
       // Update stock quantity if quantity changed
-      if (updateData.quantity !== undefined && updateData.quantity !== currentPart.quantity) {
+      if (
+        updateData.quantity !== undefined &&
+        updateData.quantity !== currentPart.quantity
+      ) {
         const quantityDiff = updateData.quantity - currentPart.quantity;
 
         try {
           if (quantityDiff > 0) {
             // Quantity increased - need MORE parts from stock (decrease stock)
-            const { error: stockError } = await ctx.supabaseAdmin
-              .rpc('decrease_part_stock', {
+            const { error: stockError } = await ctx.supabaseAdmin.rpc(
+              "decrease_part_stock",
+              {
                 part_id: currentPart.part_id,
-                quantity_to_decrease: quantityDiff
-              });
+                quantity_to_decrease: quantityDiff,
+              },
+            );
 
             if (stockError) {
               // Fallback to manual update
               const { data: part, error: fetchError } = await ctx.supabaseAdmin
-                .from('parts')
-                .select('stock_quantity')
-                .eq('id', currentPart.part_id)
+                .from("parts")
+                .select("stock_quantity")
+                .eq("id", currentPart.part_id)
                 .single();
 
               if (!fetchError && part) {
-                const newStock = Math.max(0, part.stock_quantity - quantityDiff);
+                const newStock = Math.max(
+                  0,
+                  part.stock_quantity - quantityDiff,
+                );
                 await ctx.supabaseAdmin
-                  .from('parts')
+                  .from("parts")
                   .update({ stock_quantity: newStock })
-                  .eq('id', currentPart.part_id);
+                  .eq("id", currentPart.part_id);
               }
             }
           } else if (quantityDiff < 0) {
             // Quantity decreased - return parts to stock (increase stock)
-            const { error: stockError } = await ctx.supabaseAdmin
-              .rpc('increase_part_stock', {
+            const { error: stockError } = await ctx.supabaseAdmin.rpc(
+              "increase_part_stock",
+              {
                 part_id: currentPart.part_id,
-                quantity_to_increase: Math.abs(quantityDiff)
-              });
+                quantity_to_increase: Math.abs(quantityDiff),
+              },
+            );
 
             if (stockError) {
               // Fallback to manual update
               const { data: part, error: fetchError } = await ctx.supabaseAdmin
-                .from('parts')
-                .select('stock_quantity')
-                .eq('id', currentPart.part_id)
+                .from("parts")
+                .select("stock_quantity")
+                .eq("id", currentPart.part_id)
                 .single();
 
               if (!fetchError && part) {
                 const newStock = part.stock_quantity + Math.abs(quantityDiff);
                 await ctx.supabaseAdmin
-                  .from('parts')
+                  .from("parts")
                   .update({ stock_quantity: newStock })
-                  .eq('id', currentPart.part_id);
+                  .eq("id", currentPart.part_id);
               }
             }
           }
         } catch (error) {
-          console.error(`Failed to update stock for part ${currentPart.part_id}:`, error);
+          console.error(
+            `Failed to update stock for part ${currentPart.part_id}:`,
+            error,
+          );
           // Don't fail the entire operation for stock update errors
         }
       }
@@ -870,18 +1046,30 @@ export const ticketsRouter = router({
       const partName = (currentPart.parts as any)?.name || "Linh kiện";
       const changes: string[] = [];
 
-      if (updateData.quantity !== undefined && updateData.quantity !== currentPart.quantity) {
-        changes.push(`  • Số lượng: ${currentPart.quantity} → ${updateData.quantity}`);
+      if (
+        updateData.quantity !== undefined &&
+        updateData.quantity !== currentPart.quantity
+      ) {
+        changes.push(
+          `  • Số lượng: ${currentPart.quantity} → ${updateData.quantity}`,
+        );
       }
 
-      if (updateData.unit_price !== undefined && updateData.unit_price !== currentPart.unit_price) {
-        changes.push(`  • Đơn giá: ${formatCurrency(currentPart.unit_price)} → ${formatCurrency(updateData.unit_price)}`);
+      if (
+        updateData.unit_price !== undefined &&
+        updateData.unit_price !== currentPart.unit_price
+      ) {
+        changes.push(
+          `  • Đơn giá: ${formatCurrency(currentPart.unit_price)} → ${formatCurrency(updateData.unit_price)}`,
+        );
       }
 
       const oldTotal = currentPart.total_price;
       const newTotal = partData.total_price;
       if (oldTotal !== newTotal) {
-        changes.push(`  • Thành tiền: ${formatCurrency(oldTotal)} → ${formatCurrency(newTotal)}`);
+        changes.push(
+          `  • Thành tiền: ${formatCurrency(oldTotal)} → ${formatCurrency(newTotal)}`,
+        );
       }
 
       if (changes.length > 0) {
@@ -889,7 +1077,7 @@ export const ticketsRouter = router({
           ticketId: currentPart.ticket_id,
           userId: user.id,
           comment: `✏️ Đã cập nhật linh kiện: ${partName}
-${changes.join('\n')}
+${changes.join("\n")}
 💰 Tổng chi phí linh kiện: ${formatCurrency(ticketData?.parts_total || 0)} | Tổng hóa đơn: ${formatCurrency(ticketData?.total_cost || 0)}`,
           isInternal: true,
           supabaseAdmin: ctx.supabaseAdmin,
@@ -903,12 +1091,17 @@ ${changes.join('\n')}
     }),
 
   deleteTicketPart: publicProcedure
-    .input(z.object({
-      id: z.string().uuid("Part ID must be a valid UUID"),
-    }))
+    .input(
+      z.object({
+        id: z.string().uuid("Part ID must be a valid UUID"),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
         throw new Error("Unauthorized: You must be logged in to delete parts");
       }
@@ -916,7 +1109,9 @@ ${changes.join('\n')}
       // Get part data before deletion for the auto-comment
       const { data: partData, error: fetchError } = await ctx.supabaseAdmin
         .from("service_ticket_parts")
-        .select("ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)")
+        .select(
+          "ticket_id, part_id, quantity, unit_price, total_price, parts(name, sku, part_number)",
+        )
         .eq("id", input.id)
         .single();
 
@@ -935,30 +1130,36 @@ ${changes.join('\n')}
 
       // Return parts to stock (increase)
       try {
-        const { error: stockError } = await ctx.supabaseAdmin
-          .rpc('increase_part_stock', {
+        const { error: stockError } = await ctx.supabaseAdmin.rpc(
+          "increase_part_stock",
+          {
             part_id: partData.part_id,
-            quantity_to_increase: partData.quantity
-          });
+            quantity_to_increase: partData.quantity,
+          },
+        );
 
         if (stockError) {
           // Fallback to manual stock update
-          const { data: currentPart, error: fetchError } = await ctx.supabaseAdmin
-            .from('parts')
-            .select('stock_quantity')
-            .eq('id', partData.part_id)
-            .single();
+          const { data: currentPart, error: fetchError } =
+            await ctx.supabaseAdmin
+              .from("parts")
+              .select("stock_quantity")
+              .eq("id", partData.part_id)
+              .single();
 
           if (!fetchError && currentPart) {
             const newStock = currentPart.stock_quantity + partData.quantity;
             await ctx.supabaseAdmin
-              .from('parts')
+              .from("parts")
               .update({ stock_quantity: newStock })
-              .eq('id', partData.part_id);
+              .eq("id", partData.part_id);
           }
         }
       } catch (error) {
-        console.error(`Failed to update stock for part ${partData.part_id}:`, error);
+        console.error(
+          `Failed to update stock for part ${partData.part_id}:`,
+          error,
+        );
         // Don't fail the entire operation for stock update errors
       }
 
@@ -971,7 +1172,10 @@ ${changes.join('\n')}
 
       // Create auto-comment for deleting part
       const partName = (partData.parts as any)?.name || "Linh kiện";
-      const partSKU = (partData.parts as any)?.sku || (partData.parts as any)?.part_number || "N/A";
+      const partSKU =
+        (partData.parts as any)?.sku ||
+        (partData.parts as any)?.part_number ||
+        "N/A";
 
       await createAutoComment({
         ticketId: partData.ticket_id,
@@ -988,15 +1192,22 @@ ${changes.join('\n')}
     }),
 
   addComment: publicProcedure
-    .input(z.object({
-      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-      comment: z.string().min(1, "Comment cannot be empty"),
-      is_internal: z.boolean().default(false),
-      comment_type: z.enum(['note', 'status_change', 'assignment', 'system']).default('note'),
-    }))
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        comment: z.string().min(1, "Comment cannot be empty"),
+        is_internal: z.boolean().default(false),
+        comment_type: z
+          .enum(["note", "status_change", "assignment", "system"])
+          .default("note"),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user from context
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
 
       if (authError || !user) {
         throw new Error("Unauthorized: You must be logged in to add comments");
@@ -1032,34 +1243,42 @@ ${changes.join('\n')}
     }),
 
   addAttachment: publicProcedure
-    .input(z.object({
-      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-      file_name: z.string().min(1, "File name is required"),
-      file_path: z.string().min(1, "File path is required"),
-      file_type: z.string().min(1, "File type is required"),
-      file_size: z.number().min(0, "File size must be non-negative"),
-      description: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        file_name: z.string().min(1, "File name is required"),
+        file_path: z.string().min(1, "File path is required"),
+        file_type: z.string().min(1, "File type is required"),
+        file_size: z.number().min(0, "File size must be non-negative"),
+        description: z.string().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
-        throw new Error("Unauthorized: You must be logged in to add attachments");
+        throw new Error(
+          "Unauthorized: You must be logged in to add attachments",
+        );
       }
 
-      const { data: attachmentData, error: attachmentError } = await ctx.supabaseAdmin
-        .from("service_ticket_attachments")
-        .insert({
-          ticket_id: input.ticket_id,
-          file_name: input.file_name,
-          file_path: input.file_path,
-          file_type: input.file_type,
-          file_size: input.file_size,
-          description: input.description,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+      const { data: attachmentData, error: attachmentError } =
+        await ctx.supabaseAdmin
+          .from("service_ticket_attachments")
+          .insert({
+            ticket_id: input.ticket_id,
+            file_name: input.file_name,
+            file_path: input.file_path,
+            file_type: input.file_type,
+            file_size: input.file_size,
+            description: input.description,
+            created_by: user.id,
+          })
+          .select()
+          .single();
 
       if (attachmentError) {
         throw new Error(`Failed to add attachment: ${attachmentError.message}`);
@@ -1072,7 +1291,11 @@ ${changes.join('\n')}
     }),
 
   getAttachments: publicProcedure
-    .input(z.object({ ticket_id: z.string().uuid("Ticket ID must be a valid UUID") }))
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+      }),
+    )
     .query(async ({ input, ctx }) => {
       const { data: attachments, error } = await ctx.supabaseAdmin
         .from("service_ticket_attachments")
@@ -1088,12 +1311,19 @@ ${changes.join('\n')}
     }),
 
   deleteAttachment: publicProcedure
-    .input(z.object({ id: z.string().uuid("Attachment ID must be a valid UUID") }))
+    .input(
+      z.object({ id: z.string().uuid("Attachment ID must be a valid UUID") }),
+    )
     .mutation(async ({ input, ctx }) => {
       // Get authenticated user
-      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
       if (authError || !user) {
-        throw new Error("Unauthorized: You must be logged in to delete attachments");
+        throw new Error(
+          "Unauthorized: You must be logged in to delete attachments",
+        );
       }
 
       const { error: deleteError } = await ctx.supabaseAdmin

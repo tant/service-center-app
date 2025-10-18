@@ -1,7 +1,20 @@
-import { GalleryVerticalEnd, ArrowRight, LayoutDashboard, Package, Users, Wrench } from "lucide-react";
+import {
+  GalleryVerticalEnd,
+  ArrowRight,
+  LayoutDashboard,
+  Package,
+  Users,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Home() {
   return (
@@ -42,8 +55,9 @@ export default function Home() {
                 <span className="text-primary">Trung tâm bảo hành</span>
               </h1>
               <p className="text-muted-foreground max-w-[700px] text-lg sm:text-xl leading-relaxed mx-auto">
-                Giải pháp toàn diện cho việc quản lý phiếu bảo hành, theo dõi linh kiện,
-                quản lý khách hàng và báo cáo doanh thu cho trung tâm dịch vụ của bạn.
+                Giải pháp toàn diện cho việc quản lý phiếu bảo hành, theo dõi
+                linh kiện, quản lý khách hàng và báo cáo doanh thu cho trung tâm
+                dịch vụ của bạn.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row mt-4">
                 <Button size="lg" asChild>
@@ -53,9 +67,7 @@ export default function Home() {
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/login">
-                    Đăng nhập vào hệ thống
-                  </Link>
+                  <Link href="/login">Đăng nhập vào hệ thống</Link>
                 </Button>
               </div>
             </div>
@@ -80,9 +92,12 @@ export default function Home() {
                   <div className="flex justify-center mb-4">
                     <Wrench className="text-primary size-12" />
                   </div>
-                  <CardTitle className="text-xl">Quản lý phiếu bảo hành</CardTitle>
+                  <CardTitle className="text-xl">
+                    Quản lý phiếu bảo hành
+                  </CardTitle>
                   <CardDescription className="text-base">
-                    Tạo, theo dõi và quản lý phiếu bảo hành từ tiếp nhận đến hoàn thành
+                    Tạo, theo dõi và quản lý phiếu bảo hành từ tiếp nhận đến
+                    hoàn thành
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -94,7 +109,8 @@ export default function Home() {
                   </div>
                   <CardTitle className="text-xl">Quản lý linh kiện</CardTitle>
                   <CardDescription className="text-base">
-                    Theo dõi tồn kho, giá cả và sử dụng linh kiện trong quá trình sửa chữa
+                    Theo dõi tồn kho, giá cả và sử dụng linh kiện trong quá
+                    trình sửa chữa
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -106,7 +122,8 @@ export default function Home() {
                   </div>
                   <CardTitle className="text-xl">Quản lý khách hàng</CardTitle>
                   <CardDescription className="text-base">
-                    Lưu trữ thông tin khách hàng, lịch sử bảo hành và sản phẩm của họ
+                    Lưu trữ thông tin khách hàng, lịch sử bảo hành và sản phẩm
+                    của họ
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -118,7 +135,8 @@ export default function Home() {
                   </div>
                   <CardTitle className="text-xl">Báo cáo & Thống kê</CardTitle>
                   <CardDescription className="text-base">
-                    Dashboard trực quan với các chỉ số quan trọng và báo cáo chi tiết
+                    Dashboard trực quan với các chỉ số quan trọng và báo cáo chi
+                    tiết
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -135,7 +153,8 @@ export default function Home() {
                   Sẵn sàng bắt đầu?
                 </h2>
                 <p className="text-muted-foreground max-w-[600px] text-lg sm:text-xl leading-relaxed">
-                  Đăng nhập vào hệ thống để bắt đầu quản lý trung tâm dịch vụ của bạn một cách chuyên nghiệp và hiệu quả.
+                  Đăng nhập vào hệ thống để bắt đầu quản lý trung tâm dịch vụ
+                  của bạn một cách chuyên nghiệp và hiệu quả.
                 </p>
                 <div className="flex flex-col gap-4 sm:flex-row mt-2">
                   <Button size="lg" asChild>
@@ -145,9 +164,7 @@ export default function Home() {
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" asChild>
-                    <Link href="/dashboard">
-                      Xem Demo
-                    </Link>
+                    <Link href="/dashboard">Xem Demo</Link>
                   </Button>
                 </div>
               </CardContent>

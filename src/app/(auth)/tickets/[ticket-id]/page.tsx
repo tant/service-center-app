@@ -1,11 +1,27 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
-import { IconEdit, IconUser, IconPhone, IconMail, IconPackage, IconCalendar, IconClipboardText, IconTool, IconCurrencyDollar } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconUser,
+  IconPhone,
+  IconMail,
+  IconPackage,
+  IconCalendar,
+  IconClipboardText,
+  IconTool,
+  IconCurrencyDollar,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
 
@@ -18,7 +34,12 @@ async function getTicketData(ticketId: string) {
   console.log("[TicketDetailPage] Input ticketId:", ticketId);
   console.log("[TicketDetailPage] ticketId type:", typeof ticketId);
   console.log("[TicketDetailPage] ticketId length:", ticketId?.length);
-  console.log("[TicketDetailPage] ticketId is valid UUID:", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId));
+  console.log(
+    "[TicketDetailPage] ticketId is valid UUID:",
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      ticketId,
+    ),
+  );
 
   console.log("[TicketDetailPage] Creating Supabase client...");
   const supabase = await createClient();
@@ -86,7 +107,10 @@ async function getTicketData(ticketId: string) {
     console.error("[TicketDetailPage] Error code:", error.code);
     console.error("[TicketDetailPage] Error details:", error.details);
     console.error("[TicketDetailPage] Error hint:", error.hint);
-    console.error("[TicketDetailPage] Full error:", JSON.stringify(error, null, 2));
+    console.error(
+      "[TicketDetailPage] Full error:",
+      JSON.stringify(error, null, 2),
+    );
     console.error("[TicketDetailPage] === END DATABASE ERROR ===");
     return null;
   }
@@ -97,7 +121,10 @@ async function getTicketData(ticketId: string) {
 
   if (!ticket) {
     console.warn("[TicketDetailPage] === TICKET NOT FOUND ===");
-    console.warn("[TicketDetailPage] No ticket data returned for ID:", ticketId);
+    console.warn(
+      "[TicketDetailPage] No ticket data returned for ID:",
+      ticketId,
+    );
     console.warn("[TicketDetailPage] This will trigger 404");
     console.warn("[TicketDetailPage] === END TICKET NOT FOUND ===");
     return null;
@@ -113,15 +140,30 @@ async function getTicketData(ticketId: string) {
   console.log("[TicketDetailPage] Product ID:", ticket.product_id);
   console.log("[TicketDetailPage] Product object:", !!ticket.products);
   console.log("[TicketDetailPage] Product name:", ticket.products?.name);
-  console.log("[TicketDetailPage] Parts array:", Array.isArray(ticket.service_ticket_parts));
-  console.log("[TicketDetailPage] Parts count:", ticket.service_ticket_parts?.length || 0);
-  console.log("[TicketDetailPage] Comments array:", Array.isArray(ticket.service_ticket_comments));
-  console.log("[TicketDetailPage] Comments count:", ticket.service_ticket_comments?.length || 0);
+  console.log(
+    "[TicketDetailPage] Parts array:",
+    Array.isArray(ticket.service_ticket_parts),
+  );
+  console.log(
+    "[TicketDetailPage] Parts count:",
+    ticket.service_ticket_parts?.length || 0,
+  );
+  console.log(
+    "[TicketDetailPage] Comments array:",
+    Array.isArray(ticket.service_ticket_comments),
+  );
+  console.log(
+    "[TicketDetailPage] Comments count:",
+    ticket.service_ticket_comments?.length || 0,
+  );
   console.log("[TicketDetailPage] Service Fee:", ticket.service_fee);
   console.log("[TicketDetailPage] Diagnosis Fee:", ticket.diagnosis_fee);
   console.log("[TicketDetailPage] Parts Total:", ticket.parts_total);
   console.log("[TicketDetailPage] Total Cost:", ticket.total_cost);
-  console.log("[TicketDetailPage] Full ticket object keys:", Object.keys(ticket));
+  console.log(
+    "[TicketDetailPage] Full ticket object keys:",
+    Object.keys(ticket),
+  );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
   return ticket;
@@ -134,7 +176,8 @@ function getStatusBadge(status: string) {
     completed: { label: "Hoàn thành", variant: "resolved" as const },
     cancelled: { label: "Đã hủy", variant: "closed" as const },
   };
-  const statusConfig = statusMap[status as keyof typeof statusMap] || statusMap.pending;
+  const statusConfig =
+    statusMap[status as keyof typeof statusMap] || statusMap.pending;
   return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
 }
 
@@ -145,9 +188,12 @@ function getPriorityBadge(priority: string) {
     high: { label: "Cao", className: "bg-orange-100 text-orange-800" },
     urgent: { label: "Khẩn cấp", className: "bg-red-100 text-red-800" },
   };
-  const priorityConfig = priorityMap[priority as keyof typeof priorityMap] || priorityMap.normal;
+  const priorityConfig =
+    priorityMap[priority as keyof typeof priorityMap] || priorityMap.normal;
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.className}`}>
+    <span
+      className={`px-2 py-1 text-xs font-medium rounded-full ${priorityConfig.className}`}
+    >
       {priorityConfig.label}
     </span>
   );
@@ -175,7 +221,10 @@ export default async function Page({ params }: PageProps) {
 
   console.log("[TicketDetailPage] Calling getTicketData with ID:", ticketId);
   const ticket = await getTicketData(ticketId);
-  console.log("[TicketDetailPage] getTicketData returned:", ticket ? "DATA" : "NULL");
+  console.log(
+    "[TicketDetailPage] getTicketData returned:",
+    ticket ? "DATA" : "NULL",
+  );
 
   if (!ticket) {
     console.error("[TicketDetailPage] ========== 404 TRIGGERED ==========");
@@ -186,12 +235,20 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  console.log("[TicketDetailPage] ========== SUCCESS - RENDERING PAGE ==========");
+  console.log(
+    "[TicketDetailPage] ========== SUCCESS - RENDERING PAGE ==========",
+  );
   console.log("[TicketDetailPage] Ticket Number:", ticket.ticket_number);
   console.log("[TicketDetailPage] Has Customer:", !!ticket.customers);
   console.log("[TicketDetailPage] Has Product:", !!ticket.products);
-  console.log("[TicketDetailPage] Has Parts:", (ticket.service_ticket_parts?.length || 0) > 0);
-  console.log("[TicketDetailPage] Has Comments:", (ticket.service_ticket_comments?.length || 0) > 0);
+  console.log(
+    "[TicketDetailPage] Has Parts:",
+    (ticket.service_ticket_parts?.length || 0) > 0,
+  );
+  console.log(
+    "[TicketDetailPage] Has Comments:",
+    (ticket.service_ticket_comments?.length || 0) > 0,
+  );
   console.log("[TicketDetailPage] ========== PROCEEDING TO RENDER ==========");
 
   return (
@@ -230,12 +287,18 @@ export default async function Page({ params }: PageProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ngày tạo:</span>
-                <span>{new Date(ticket.created_at).toLocaleDateString("vi-VN")}</span>
+                <span>
+                  {new Date(ticket.created_at).toLocaleDateString("vi-VN")}
+                </span>
               </div>
               {ticket.completed_at && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ngày hoàn thành:</span>
-                  <span>{new Date(ticket.completed_at).toLocaleDateString("vi-VN")}</span>
+                  <span className="text-muted-foreground">
+                    Ngày hoàn thành:
+                  </span>
+                  <span>
+                    {new Date(ticket.completed_at).toLocaleDateString("vi-VN")}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -251,23 +314,35 @@ export default async function Page({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-y-3 gap-x-4">
-                <p className="text-sm text-muted-foreground font-medium">Tên khách hàng</p>
-                <p className="font-medium col-span-2">{ticket.customers?.name}</p>
-                
-                <p className="text-sm text-muted-foreground font-medium">Số điện thoại</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Tên khách hàng
+                </p>
+                <p className="font-medium col-span-2">
+                  {ticket.customers?.name}
+                </p>
+
+                <p className="text-sm text-muted-foreground font-medium">
+                  Số điện thoại
+                </p>
                 <span className="col-span-2">{ticket.customers?.phone}</span>
-                
+
                 {ticket.customers?.email && (
                   <>
-                    <p className="text-sm text-muted-foreground font-medium">Email</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Email
+                    </p>
                     <span className="col-span-2">{ticket.customers.email}</span>
                   </>
                 )}
-                
+
                 {ticket.customers?.address && (
                   <>
-                    <p className="text-sm text-muted-foreground font-medium">Địa chỉ</p>
-                    <p className="text-sm col-span-2">{ticket.customers.address}</p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Địa chỉ
+                    </p>
+                    <p className="text-sm col-span-2">
+                      {ticket.customers.address}
+                    </p>
                   </>
                 )}
               </div>
@@ -285,69 +360,92 @@ export default async function Page({ params }: PageProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Tên sản phẩm</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Tên sản phẩm
+              </p>
               <p className="font-medium">{ticket.products?.name}</p>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <p className="text-sm text-muted-foreground font-medium">Loại</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Loại
+                </p>
                 <p>{ticket.products?.type}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-medium">Thương hiệu</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Thương hiệu
+                </p>
                 <p>{ticket.products?.brands?.name || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-medium">Model</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Model
+                </p>
                 <p>{ticket.products?.model || "—"}</p>
               </div>
             </div>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Mô tả vấn đề</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Mô tả vấn đề
+              </p>
               <p className="mt-1">{ticket.issue_description}</p>
             </div>
             <Separator />
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Ghi chú</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Ghi chú
+              </p>
               <p className="mt-1">{ticket?.notes || "—"}</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Parts Used */}
-        {ticket.service_ticket_parts && ticket.service_ticket_parts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconTool className="h-5 w-5" />
-                Linh kiện đã sử dụng
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {ticket.service_ticket_parts.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-center border-b pb-2">
-                    <div>
-                      <p className="font-medium">{item.parts?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.parts?.part_number} • Số lượng: {item.quantity}
-                      </p>
+        {ticket.service_ticket_parts &&
+          ticket.service_ticket_parts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IconTool className="h-5 w-5" />
+                  Linh kiện đã sử dụng
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {ticket.service_ticket_parts.map((item: any) => (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-center border-b pb-2"
+                    >
+                      <div>
+                        <p className="font-medium">{item.parts?.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.parts?.part_number} • Số lượng: {item.quantity}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(item.total_price)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(item.unit_price)}{" "}
+                          × {item.quantity}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(item.total_price)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(item.unit_price)} × {item.quantity}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Cost Summary */}
         <Card>
@@ -361,26 +459,52 @@ export default async function Page({ params }: PageProps) {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Giá dịch vụ:</span>
-                <span>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ticket.service_fee)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticket.service_fee)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Phí kiểm tra:</span>
-                <span>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ticket.diagnosis_fee)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticket.diagnosis_fee)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Linh kiện:</span>
-                <span>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ticket.parts_total)}</span>
+                <span>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticket.parts_total)}
+                </span>
               </div>
               {ticket.discount_amount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Giảm giá:</span>
-                  <span className="text-red-600">-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ticket.discount_amount)}</span>
+                  <span className="text-red-600">
+                    -
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(ticket.discount_amount)}
+                  </span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Tổng cộng:</span>
-                <span className="text-primary">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ticket.total_cost)}</span>
+                <span className="text-primary">
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(ticket.total_cost)}
+                </span>
               </div>
             </div>
           </CardContent>

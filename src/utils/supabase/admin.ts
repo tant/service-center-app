@@ -27,23 +27,30 @@ function getAdminClient(): SupabaseClient {
   console.log("🔧 [ADMIN] Initializing admin client module");
 
   // Use internal SUPABASE_URL for server-side (Docker network) or fall back to public URL
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleJWT = process.env.SUPABASE_SERVICE_ROLE_JWT;
 
-  console.log(`🔧 [ADMIN] Using Supabase URL: ${supabaseUrl} (internal: ${!!process.env.SUPABASE_URL})`);
+  console.log(
+    `🔧 [ADMIN] Using Supabase URL: ${supabaseUrl} (internal: ${!!process.env.SUPABASE_URL})`,
+  );
 
   if (!supabaseUrl) {
     console.error(
       "❌ [ADMIN] Missing SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL in environment variables",
     );
-    throw new Error("Missing SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL in environment variables");
+    throw new Error(
+      "Missing SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL in environment variables",
+    );
   }
 
   if (!supabaseServiceRoleJWT) {
     console.error(
       "❌ [ADMIN] Missing SUPABASE_SERVICE_ROLE_JWT in environment variables",
     );
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_JWT in environment variables");
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_JWT in environment variables",
+    );
   }
 
   console.log("🔧 [ADMIN] Creating admin client with service role JWT");

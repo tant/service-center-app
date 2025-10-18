@@ -81,7 +81,7 @@ export async function getEmployeePerformance(): Promise<EmployeePerformance[]> {
           pending: pending || 0,
           completionRate,
         };
-      })
+      }),
     );
 
     return employeeStats;

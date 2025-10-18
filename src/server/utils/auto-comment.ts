@@ -8,7 +8,7 @@ export interface AutoCommentParams {
   userId: string;
   comment: string;
   isInternal?: boolean;
-  commentType?: 'note' | 'status_change' | 'assignment' | 'system';
+  commentType?: "note" | "status_change" | "assignment" | "system";
   supabaseAdmin: SupabaseClient;
 }
 
@@ -27,7 +27,7 @@ export async function createAutoComment({
   userId,
   comment,
   isInternal = true,
-  commentType = 'system',
+  commentType = "system",
   supabaseAdmin,
 }: AutoCommentParams): Promise<void> {
   try {

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
 import { trpc } from "@/components/providers/trpc-provider";
 
@@ -32,14 +32,20 @@ export function SectionCards() {
   });
 
   // Get new customers data
-  const { data: newCustomers } = trpc.customers.getNewCustomers.useQuery(undefined, {
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-  });
+  const { data: newCustomers } = trpc.customers.getNewCustomers.useQuery(
+    undefined,
+    {
+      refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    },
+  );
 
   // Get new products data
-  const { data: newProducts } = trpc.products.getNewProducts.useQuery(undefined, {
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-  });
+  const { data: newProducts } = trpc.products.getNewProducts.useQuery(
+    undefined,
+    {
+      refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    },
+  );
 
   // Get new parts data
   const { data: newParts } = trpc.parts.getNewParts.useQuery(undefined, {
@@ -52,18 +58,27 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Doanh thu tháng này</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {revenue?.currentMonthRevenue?.toLocaleString('vi-VN')} ₫
+            {revenue?.currentMonthRevenue?.toLocaleString("vi-VN")} ₫
           </CardTitle>
           <CardAction>
-            <Badge className={cn(
-              revenue?.growthRate !== undefined && revenue.growthRate > 0 ? "bg-green-100 text-green-800" : 
-              revenue?.growthRate !== undefined && revenue.growthRate < 0 ? "bg-red-100 text-red-800" : 
-              "bg-gray-100 text-gray-800"
-            )}>
+            <Badge
+              className={cn(
+                revenue?.growthRate !== undefined && revenue.growthRate > 0
+                  ? "bg-green-100 text-green-800"
+                  : revenue?.growthRate !== undefined && revenue.growthRate < 0
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800",
+              )}
+            >
               {revenue?.hasPreviousData && revenue?.growthRate !== undefined ? (
                 <>
-                  {revenue.growthRate > 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                  {revenue.growthRate > 0 ? "+" : ""}{revenue.growthRate.toFixed(1)}%
+                  {revenue.growthRate > 0 ? (
+                    <IconTrendingUp />
+                  ) : (
+                    <IconTrendingDown />
+                  )}
+                  {revenue.growthRate > 0 ? "+" : ""}
+                  {revenue.growthRate.toFixed(1)}%
                 </>
               ) : (
                 "-"
@@ -76,14 +91,23 @@ export function SectionCards() {
             {revenue?.hasPreviousData ? (
               <>
                 {revenue.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng trước
-                {revenue.growthRate > 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
+                {revenue.growthRate > 0 ? (
+                  <IconTrendingUp className="size-4" />
+                ) : (
+                  <IconTrendingDown className="size-4" />
+                )}
               </>
             ) : (
               "Không có dữ liệu tháng trước để so sánh"
             )}
           </div>
           <div className="text-muted-foreground">
-            Cập nhật từ {formatDateTime(revenue?.latestUpdate ? new Date(revenue.latestUpdate) : undefined)}
+            Cập nhật từ{" "}
+            {formatDateTime(
+              revenue?.latestUpdate
+                ? new Date(revenue.latestUpdate)
+                : undefined,
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -91,18 +115,30 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Khách hàng mới tháng này</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {newCustomers?.currentMonthCount?.toLocaleString('vi-VN') ?? "-"}
+            {newCustomers?.currentMonthCount?.toLocaleString("vi-VN") ?? "-"}
           </CardTitle>
           <CardAction>
-            <Badge className={cn(
-              newCustomers?.growthRate !== undefined && newCustomers.growthRate > 0 ? "bg-green-100 text-green-800" : 
-              newCustomers?.growthRate !== undefined && newCustomers.growthRate < 0 ? "bg-red-100 text-red-800" : 
-              "bg-gray-100 text-gray-800"
-            )}>
-              {newCustomers?.hasPreviousData && newCustomers?.growthRate !== undefined ? (
+            <Badge
+              className={cn(
+                newCustomers?.growthRate !== undefined &&
+                  newCustomers.growthRate > 0
+                  ? "bg-green-100 text-green-800"
+                  : newCustomers?.growthRate !== undefined &&
+                      newCustomers.growthRate < 0
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800",
+              )}
+            >
+              {newCustomers?.hasPreviousData &&
+              newCustomers?.growthRate !== undefined ? (
                 <>
-                  {newCustomers.growthRate > 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                  {newCustomers.growthRate > 0 ? "+" : ""}{newCustomers.growthRate.toFixed(1)}%
+                  {newCustomers.growthRate > 0 ? (
+                    <IconTrendingUp />
+                  ) : (
+                    <IconTrendingDown />
+                  )}
+                  {newCustomers.growthRate > 0 ? "+" : ""}
+                  {newCustomers.growthRate.toFixed(1)}%
                 </>
               ) : (
                 "-"
@@ -114,15 +150,25 @@ export function SectionCards() {
           <div className="line-clamp-1 flex gap-2 font-medium">
             {newCustomers?.hasPreviousData ? (
               <>
-                {newCustomers.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng trước
-                {newCustomers.growthRate > 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
+                {newCustomers.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng
+                trước
+                {newCustomers.growthRate > 0 ? (
+                  <IconTrendingUp className="size-4" />
+                ) : (
+                  <IconTrendingDown className="size-4" />
+                )}
               </>
             ) : (
               "Không có dữ liệu tháng trước để so sánh"
             )}
           </div>
           <div className="text-muted-foreground">
-            Cập nhật từ {formatDateTime(newCustomers?.latestUpdate ? new Date(newCustomers.latestUpdate) : undefined)}
+            Cập nhật từ{" "}
+            {formatDateTime(
+              newCustomers?.latestUpdate
+                ? new Date(newCustomers.latestUpdate)
+                : undefined,
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -130,18 +176,30 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Sản phẩm mới tháng này</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {newProducts?.currentMonthCount?.toLocaleString('vi-VN') ?? "-"}
+            {newProducts?.currentMonthCount?.toLocaleString("vi-VN") ?? "-"}
           </CardTitle>
           <CardAction>
-            <Badge className={cn(
-              newProducts?.growthRate !== undefined && newProducts.growthRate > 0 ? "bg-green-100 text-green-800" : 
-              newProducts?.growthRate !== undefined && newProducts.growthRate < 0 ? "bg-red-100 text-red-800" : 
-              "bg-gray-100 text-gray-800"
-            )}>
-              {newProducts?.hasPreviousData && newProducts?.growthRate !== undefined ? (
+            <Badge
+              className={cn(
+                newProducts?.growthRate !== undefined &&
+                  newProducts.growthRate > 0
+                  ? "bg-green-100 text-green-800"
+                  : newProducts?.growthRate !== undefined &&
+                      newProducts.growthRate < 0
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800",
+              )}
+            >
+              {newProducts?.hasPreviousData &&
+              newProducts?.growthRate !== undefined ? (
                 <>
-                  {newProducts.growthRate > 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                  {newProducts.growthRate > 0 ? "+" : ""}{newProducts.growthRate.toFixed(1)}%
+                  {newProducts.growthRate > 0 ? (
+                    <IconTrendingUp />
+                  ) : (
+                    <IconTrendingDown />
+                  )}
+                  {newProducts.growthRate > 0 ? "+" : ""}
+                  {newProducts.growthRate.toFixed(1)}%
                 </>
               ) : (
                 "-"
@@ -153,15 +211,25 @@ export function SectionCards() {
           <div className="line-clamp-1 flex gap-2 font-medium">
             {newProducts?.hasPreviousData ? (
               <>
-                {newProducts.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng trước
-                {newProducts.growthRate > 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
+                {newProducts.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng
+                trước
+                {newProducts.growthRate > 0 ? (
+                  <IconTrendingUp className="size-4" />
+                ) : (
+                  <IconTrendingDown className="size-4" />
+                )}
               </>
             ) : (
               "Không có dữ liệu tháng trước để so sánh"
             )}
           </div>
           <div className="text-muted-foreground">
-            Cập nhật từ {formatDateTime(newProducts?.latestUpdate ? new Date(newProducts.latestUpdate) : undefined)}
+            Cập nhật từ{" "}
+            {formatDateTime(
+              newProducts?.latestUpdate
+                ? new Date(newProducts.latestUpdate)
+                : undefined,
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -169,18 +237,29 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Linh kiện mới tháng này</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {newParts?.currentMonthCount?.toLocaleString('vi-VN') ?? "-"}
+            {newParts?.currentMonthCount?.toLocaleString("vi-VN") ?? "-"}
           </CardTitle>
           <CardAction>
-            <Badge className={cn(
-              newParts?.growthRate !== undefined && newParts.growthRate > 0 ? "bg-green-100 text-green-800" : 
-              newParts?.growthRate !== undefined && newParts.growthRate < 0 ? "bg-red-100 text-red-800" : 
-              "bg-gray-100 text-gray-800"
-            )}>
-              {newParts?.hasPreviousData && newParts?.growthRate !== undefined ? (
+            <Badge
+              className={cn(
+                newParts?.growthRate !== undefined && newParts.growthRate > 0
+                  ? "bg-green-100 text-green-800"
+                  : newParts?.growthRate !== undefined &&
+                      newParts.growthRate < 0
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800",
+              )}
+            >
+              {newParts?.hasPreviousData &&
+              newParts?.growthRate !== undefined ? (
                 <>
-                  {newParts.growthRate > 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                  {newParts.growthRate > 0 ? "+" : ""}{newParts.growthRate.toFixed(1)}%
+                  {newParts.growthRate > 0 ? (
+                    <IconTrendingUp />
+                  ) : (
+                    <IconTrendingDown />
+                  )}
+                  {newParts.growthRate > 0 ? "+" : ""}
+                  {newParts.growthRate.toFixed(1)}%
                 </>
               ) : (
                 "-"
@@ -193,14 +272,23 @@ export function SectionCards() {
             {newParts?.hasPreviousData ? (
               <>
                 {newParts.growthRate > 0 ? "Tăng" : "Giảm"} so với tháng trước
-                {newParts.growthRate > 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
+                {newParts.growthRate > 0 ? (
+                  <IconTrendingUp className="size-4" />
+                ) : (
+                  <IconTrendingDown className="size-4" />
+                )}
               </>
             ) : (
               "Không có dữ liệu tháng trước để so sánh"
             )}
           </div>
           <div className="text-muted-foreground">
-            Cập nhật từ {formatDateTime(newParts?.latestUpdate ? new Date(newParts.latestUpdate) : undefined)}
+            Cập nhật từ{" "}
+            {formatDateTime(
+              newParts?.latestUpdate
+                ? new Date(newParts.latestUpdate)
+                : undefined,
+            )}
           </div>
         </CardFooter>
       </Card>

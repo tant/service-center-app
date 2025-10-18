@@ -558,14 +558,20 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
   const createPartMutation = trpc.parts.createPart.useMutation({
     onSuccess: (data) => {
       const successMessage = "Tạo linh kiện thành công";
-      console.log("[Parts] Create part success:", successMessage, { partData: formData, response: data });
+      console.log("[Parts] Create part success:", successMessage, {
+        partData: formData,
+        response: data,
+      });
       toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
       const errorMessage = error.message || "Tạo linh kiện thất bại";
-      console.error("[Parts] Create part error:", errorMessage, { partData: formData, error });
+      console.error("[Parts] Create part error:", errorMessage, {
+        partData: formData,
+        error,
+      });
       toast.error(errorMessage);
     },
   });
@@ -573,14 +579,22 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
   const updatePartMutation = trpc.parts.updatePart.useMutation({
     onSuccess: (data) => {
       const successMessage = "Cập nhật linh kiện thành công";
-      console.log("[Parts] Update part success:", successMessage, { partId: part?.id, partData: formData, response: data });
+      console.log("[Parts] Update part success:", successMessage, {
+        partId: part?.id,
+        partData: formData,
+        response: data,
+      });
       toast.success(successMessage);
       setOpen(false);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
       const errorMessage = error.message || "Cập nhật linh kiện thất bại";
-      console.error("[Parts] Update part error:", errorMessage, { partId: part?.id, partData: formData, error });
+      console.error("[Parts] Update part error:", errorMessage, {
+        partId: part?.id,
+        partData: formData,
+        error,
+      });
       toast.error(errorMessage);
     },
   });
@@ -617,21 +631,30 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
 
     if (formData.price <= 0) {
       const errorMessage = "Vui lòng nhập giá hợp lệ";
-      console.error("[Parts] Validation error:", errorMessage, { price: formData.price, formData });
+      console.error("[Parts] Validation error:", errorMessage, {
+        price: formData.price,
+        formData,
+      });
       toast.error(errorMessage);
       return;
     }
 
     if (formData.cost_price < 0) {
       const errorMessage = "Giá vốn không thể âm";
-      console.error("[Parts] Validation error:", errorMessage, { cost_price: formData.cost_price, formData });
+      console.error("[Parts] Validation error:", errorMessage, {
+        cost_price: formData.cost_price,
+        formData,
+      });
       toast.error(errorMessage);
       return;
     }
 
     if (formData.stock_quantity < 0) {
       const errorMessage = "Số lượng tồn kho không thể âm";
-      console.error("[Parts] Validation error:", errorMessage, { stock_quantity: formData.stock_quantity, formData });
+      console.error("[Parts] Validation error:", errorMessage, {
+        stock_quantity: formData.stock_quantity,
+        formData,
+      });
       toast.error(errorMessage);
       return;
     }
@@ -807,7 +830,9 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                 <Separator />
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">ID Linh kiện</Label>
+                    <Label className="text-muted-foreground">
+                      ID Linh kiện
+                    </Label>
                     <div className="font-mono text-xs">{part.id}</div>
                   </div>
                   <div className="space-y-1">
@@ -852,7 +877,9 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Giá trị tồn kho</Label>
+                    <Label className="text-muted-foreground">
+                      Giá trị tồn kho
+                    </Label>
                     <div>
                       {new Intl.NumberFormat("vi-VN", {
                         style: "currency",
@@ -892,7 +919,9 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                     <div>{new Date(part.created_at).toLocaleDateString()}</div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground">Ngày cập nhật</Label>
+                    <Label className="text-muted-foreground">
+                      Ngày cập nhật
+                    </Label>
                     <div>{new Date(part.updated_at).toLocaleDateString()}</div>
                   </div>
                 </div>
@@ -901,10 +930,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
           </div>
         </div>
         <DrawerFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading}
-          >
+          <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading
               ? mode === "add"
                 ? "Đang tạo..."
@@ -934,7 +960,9 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
     },
     onError: (error) => {
       const errorMessage = error.message || "Lỗi khi tạo linh kiện mẫu";
-      console.error("[Parts] Sample part creation error:", errorMessage, { error });
+      console.error("[Parts] Sample part creation error:", errorMessage, {
+        error,
+      });
       toast.error(errorMessage);
     },
   });
@@ -1014,7 +1042,8 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
       name: "Cụm Tản Nhiệt + ốp - Bộ tản nhiệt Zotac mã 251-20927-732TF",
       part_number: "TN-ZOTAC-251-20927-732TF",
       sku: "SKU-008",
-      description: "Bộ tản nhiệt hoàn chỉnh cho card đồ họa Zotac mã 251-20927-732TF",
+      description:
+        "Bộ tản nhiệt hoàn chỉnh cho card đồ họa Zotac mã 251-20927-732TF",
       price: Math.floor(Math.random() * 500000) + 300000,
       cost_price: Math.floor(Math.random() * 300000) + 180000,
       stock_quantity: Math.floor(Math.random() * 20) + 3,
@@ -1034,7 +1063,9 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
 
   const handleAddSampleParts = async () => {
     setIsLoading(true);
-    console.log("[Parts] Adding sample parts started:", { totalParts: sampleParts.length });
+    console.log("[Parts] Adding sample parts started:", {
+      totalParts: sampleParts.length,
+    });
 
     try {
       let successCount = 0;
@@ -1045,21 +1076,34 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
           await createPartMutation.mutateAsync(part);
           successCount++;
         } catch (error) {
-          console.error(`[Parts] Failed to create sample part: ${part.name}`, error);
+          console.error(
+            `[Parts] Failed to create sample part: ${part.name}`,
+            error,
+          );
         }
       }
 
       if (successCount === totalParts) {
         const successMessage = `Đã thêm thành công ${successCount} linh kiện mẫu`;
-        console.log("[Parts] All sample parts added successfully:", successMessage, { successCount, totalParts });
+        console.log(
+          "[Parts] All sample parts added successfully:",
+          successMessage,
+          { successCount, totalParts },
+        );
         toast.success(successMessage);
       } else if (successCount > 0) {
         const successMessage = `Đã thêm thành công ${successCount}/${totalParts} linh kiện mẫu`;
-        console.log("[Parts] Partial sample parts added:", successMessage, { successCount, totalParts });
+        console.log("[Parts] Partial sample parts added:", successMessage, {
+          successCount,
+          totalParts,
+        });
         toast.success(successMessage);
       } else {
         const errorMessage = "Không thể thêm linh kiện mẫu nào";
-        console.error("[Parts] No sample parts added:", errorMessage, { successCount, totalParts });
+        console.error("[Parts] No sample parts added:", errorMessage, {
+          successCount,
+          totalParts,
+        });
         toast.error(errorMessage);
       }
 
@@ -1068,7 +1112,9 @@ function AddSamplePartsButton({ onSuccess }: { onSuccess?: () => void }) {
       }
     } catch (error) {
       const errorMessage = "Lỗi khi thêm linh kiện mẫu";
-      console.error("[Parts] Sample parts addition error:", errorMessage, { error });
+      console.error("[Parts] Sample parts addition error:", errorMessage, {
+        error,
+      });
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

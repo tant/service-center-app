@@ -14,9 +14,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, children }: PageHeaderProps) {
   const [currentTime, setCurrentTime] = React.useState(new Date());
-  const { data: pendingCount } = trpc.tickets.getPendingCount.useQuery(undefined, {
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
+  const { data: pendingCount } = trpc.tickets.getPendingCount.useQuery(
+    undefined,
+    {
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
+  );
 
   React.useEffect(() => {
     const timer = setInterval(() => {

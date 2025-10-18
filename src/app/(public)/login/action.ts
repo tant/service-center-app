@@ -14,15 +14,17 @@ export async function login(formData: FormData) {
   const allCookies = cookieStore.getAll();
 
   // Clear all Supabase auth cookies (handles both localhost and IP-based cookies)
-  const authCookies = allCookies.filter(cookie =>
-    cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')
+  const authCookies = allCookies.filter(
+    (cookie) =>
+      cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"),
   );
 
   if (authCookies.length > 0) {
-    console.log(`🔐 [LOGIN ACTION] Clearing ${authCookies.length} existing auth cookie(s):`,
-      authCookies.map(c => c.name)
+    console.log(
+      `🔐 [LOGIN ACTION] Clearing ${authCookies.length} existing auth cookie(s):`,
+      authCookies.map((c) => c.name),
     );
-    authCookies.forEach(cookie => {
+    authCookies.forEach((cookie) => {
       cookieStore.delete(cookie.name);
     });
   }

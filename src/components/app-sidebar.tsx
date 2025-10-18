@@ -36,7 +36,6 @@ type UserRole = "admin" | "manager" | "technician" | "reception";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
-
 const baseData = {
   navMain: [
     {
@@ -89,7 +88,12 @@ const baseData = {
       name: "Quản lý nhãn hàng",
       url: "/brands",
       icon: IconComponents,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      allowedRoles: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+      ] as UserRole[],
     },
     {
       name: "Quản lý nhân sự",
@@ -104,7 +108,7 @@ function getFilteredData(userRole: UserRole = "reception") {
   return {
     ...baseData,
     documents: baseData.documents.filter((item) =>
-      item.allowedRoles.includes(userRole)
+      item.allowedRoles.includes(userRole),
     ),
   };
 }

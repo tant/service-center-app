@@ -26,20 +26,24 @@ export async function logout() {
 
   // Explicitly clear all Supabase auth cookies to ensure complete cleanup
   const allCookies = cookieStore.getAll();
-  const authCookies = allCookies.filter(cookie =>
-    cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')
+  const authCookies = allCookies.filter(
+    (cookie) =>
+      cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"),
   );
 
   if (authCookies.length > 0) {
-    console.log(`🔐 [LOGOUT ACTION] Clearing ${authCookies.length} auth cookie(s):`,
-      authCookies.map(c => c.name)
+    console.log(
+      `🔐 [LOGOUT ACTION] Clearing ${authCookies.length} auth cookie(s):`,
+      authCookies.map((c) => c.name),
     );
-    authCookies.forEach(cookie => {
+    authCookies.forEach((cookie) => {
       cookieStore.delete(cookie.name);
     });
   }
 
-  console.log("🔐 [LOGOUT ACTION] All cookies cleared, revalidating and redirecting to /login");
+  console.log(
+    "🔐 [LOGOUT ACTION] All cookies cleared, revalidating and redirecting to /login",
+  );
 
   // Revalidate all paths to clear any cached data
   revalidatePath("/", "layout");

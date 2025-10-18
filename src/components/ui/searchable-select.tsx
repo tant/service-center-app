@@ -55,7 +55,7 @@ export function SearchableSelect({
 
   const selectedOption = React.useMemo(
     () => options.find((option) => option.value === value),
-    [options, value]
+    [options, value],
   );
 
   const filteredOptions = React.useMemo(
@@ -64,18 +64,20 @@ export function SearchableSelect({
         const searchLower = searchValue.toLowerCase();
 
         // Search in main label and description
-        if (option.label.toLowerCase().includes(searchLower) ||
-            option.description?.toLowerCase().includes(searchLower)) {
+        if (
+          option.label.toLowerCase().includes(searchLower) ||
+          option.description?.toLowerCase().includes(searchLower)
+        ) {
           return true;
         }
 
         // Search in additional fields (brand, model, sku, type, etc.)
-        const searchableFields = ['brand', 'model', 'sku', 'type'];
-        return searchableFields.some(field =>
-          option[field]?.toString().toLowerCase().includes(searchLower)
+        const searchableFields = ["brand", "model", "sku", "type"];
+        return searchableFields.some((field) =>
+          option[field]?.toString().toLowerCase().includes(searchLower),
         );
       }),
-    [options, searchValue]
+    [options, searchValue],
   );
 
   const handleSelect = React.useCallback(
@@ -88,12 +90,17 @@ export function SearchableSelect({
       setOpen(false);
       setSearchValue("");
     },
-    [value, onValueChange]
+    [value, onValueChange],
   );
 
   const defaultRenderOption = (option: SearchableSelectOption) => (
     <div className="flex flex-col items-start w-full">
-      <span className={cn("font-medium", option.disabled && "text-muted-foreground")}>
+      <span
+        className={cn(
+          "font-medium",
+          option.disabled && "text-muted-foreground",
+        )}
+      >
         {option.label}
       </span>
       {option.description && (
@@ -114,13 +121,17 @@ export function SearchableSelect({
           className={cn(
             "w-full justify-between text-left font-normal h-auto py-2",
             !selectedOption && "text-muted-foreground",
-            className
+            className,
           )}
           disabled={disabled}
         >
           <div className="flex flex-col items-start flex-1 min-h-6">
             {selectedOption ? (
-              renderOption ? renderOption(selectedOption) : defaultRenderOption(selectedOption)
+              renderOption ? (
+                renderOption(selectedOption)
+              ) : (
+                defaultRenderOption(selectedOption)
+              )
             ) : (
               <span>{placeholder}</span>
             )}
@@ -151,10 +162,12 @@ export function SearchableSelect({
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          value === option.value ? "opacity-100" : "opacity-0"
+                          value === option.value ? "opacity-100" : "opacity-0",
                         )}
                       />
-                      {renderOption ? renderOption(option) : defaultRenderOption(option)}
+                      {renderOption
+                        ? renderOption(option)
+                        : defaultRenderOption(option)}
                     </CommandItem>
                   ))}
                 </div>

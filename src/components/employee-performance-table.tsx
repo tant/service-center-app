@@ -2,7 +2,13 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -12,7 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IconCheck, IconClock, IconClipboardList, IconLoader, IconTrendingUp } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconClock,
+  IconClipboardList,
+  IconLoader,
+  IconTrendingUp,
+} from "@tabler/icons-react";
 
 interface EmployeePerformance {
   id: string;
@@ -109,7 +121,9 @@ export function EmployeePerformanceTable({
   }
 
   // Sort by completion rate descending
-  const sortedData = [...data].sort((a, b) => b.completionRate - a.completionRate);
+  const sortedData = [...data].sort(
+    (a, b) => b.completionRate - a.completionRate,
+  );
   const topPerformer = sortedData[0];
 
   return (
@@ -164,10 +178,15 @@ export function EmployeePerformanceTable({
             </TableHeader>
             <TableBody>
               {sortedData.map((employee) => {
-                const isTopPerformer = employee.id === topPerformer?.id && employee.completionRate > 0;
+                const isTopPerformer =
+                  employee.id === topPerformer?.id &&
+                  employee.completionRate > 0;
 
                 return (
-                  <TableRow key={employee.id} className={isTopPerformer ? "bg-primary/5" : ""}>
+                  <TableRow
+                    key={employee.id}
+                    className={isTopPerformer ? "bg-primary/5" : ""}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="size-9">
@@ -184,7 +203,10 @@ export function EmployeePerformanceTable({
                           <span className="font-medium leading-none">
                             {employee.fullName}
                             {isTopPerformer && (
-                              <Badge variant="default" className="ml-2 text-xs py-0 px-1.5">
+                              <Badge
+                                variant="default"
+                                className="ml-2 text-xs py-0 px-1.5"
+                              >
                                 Top
                               </Badge>
                             )}
@@ -211,12 +233,18 @@ export function EmployeePerformanceTable({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="outline" className="font-semibold text-green-600 border-green-600">
+                      <Badge
+                        variant="outline"
+                        className="font-semibold text-green-600 border-green-600"
+                      >
                         {employee.completed}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="outline" className="font-semibold text-orange-600 border-orange-600">
+                      <Badge
+                        variant="outline"
+                        className="font-semibold text-orange-600 border-orange-600"
+                      >
                         {employee.pending}
                       </Badge>
                     </TableCell>
@@ -237,15 +265,20 @@ export function EmployeePerformanceTable({
             </TableBody>
           </Table>
         </div>
-        {sortedData.length > 0 && topPerformer && topPerformer.completionRate > 0 && (
-          <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
-            <IconTrendingUp className="size-4 text-primary" />
-            <span>
-              <span className="font-medium text-foreground">{topPerformer.fullName}</span>
-              {" "}đang dẫn đầu với tỷ lệ hoàn thành {topPerformer.completionRate.toFixed(0)}%
-            </span>
-          </div>
-        )}
+        {sortedData.length > 0 &&
+          topPerformer &&
+          topPerformer.completionRate > 0 && (
+            <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+              <IconTrendingUp className="size-4 text-primary" />
+              <span>
+                <span className="font-medium text-foreground">
+                  {topPerformer.fullName}
+                </span>{" "}
+                đang dẫn đầu với tỷ lệ hoàn thành{" "}
+                {topPerformer.completionRate.toFixed(0)}%
+              </span>
+            </div>
+          )}
       </CardContent>
     </Card>
   );

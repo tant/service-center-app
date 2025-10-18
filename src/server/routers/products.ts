@@ -15,7 +15,11 @@ const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   sku: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
-  brand_id: z.string().uuid("Brand ID must be a valid UUID").nullable().optional(),
+  brand_id: z
+    .string()
+    .uuid("Brand ID must be a valid UUID")
+    .nullable()
+    .optional(),
   model: z.string().nullable().optional(),
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
@@ -27,7 +31,11 @@ const updateProductSchema = z.object({
   name: z.string().min(1, "Product name is required").optional(),
   sku: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
-  brand_id: z.string().uuid("Brand ID must be a valid UUID").nullable().optional(),
+  brand_id: z
+    .string()
+    .uuid("Brand ID must be a valid UUID")
+    .nullable()
+    .optional(),
   model: z.string().nullable().optional(),
   type: productTypeEnum.optional(),
   primary_image: z.string().nullable().optional(),
@@ -42,18 +50,19 @@ export const productsRouter = router({
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     // Get current month's new products
-    const { data: currentMonthData, error: currentError } = await ctx.supabaseAdmin
-      .from("products")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfMonth.toISOString())
-      .lt('created_at', now.toISOString());
+    const { data: currentMonthData, error: currentError } =
+      await ctx.supabaseAdmin
+        .from("products")
+        .select("count", { count: "exact" })
+        .gte("created_at", startOfMonth.toISOString())
+        .lt("created_at", now.toISOString());
 
     // Get previous month's new products
     const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
       .from("products")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfPrevMonth.toISOString())
-      .lt('created_at', startOfMonth.toISOString());
+      .select("count", { count: "exact" })
+      .gte("created_at", startOfPrevMonth.toISOString())
+      .lt("created_at", startOfMonth.toISOString());
 
     if (currentError || prevError) {
       throw new Error(currentError?.message || prevError?.message);
@@ -61,7 +70,8 @@ export const productsRouter = router({
 
     const currentCount = currentMonthData?.[0]?.count || 0;
     const prevCount = prevMonthData?.[0]?.count || 0;
-    const growthRate = prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
+    const growthRate =
+      prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
 
     return {
       currentMonthCount: currentCount,
@@ -106,7 +116,10 @@ export const productsRouter = router({
 
         if (relationError) {
           // If relationship creation fails, we should cleanup the product
-          await ctx.supabaseAdmin.from("products").delete().eq("id", productData.id);
+          await ctx.supabaseAdmin
+            .from("products")
+            .delete()
+            .eq("id", productData.id);
           throw new Error(
             `Failed to create product-part relationships: ${relationError.message}`,
           );
@@ -234,7 +247,7 @@ export const productsRouter = router({
         throw new Error(`Failed to fetch product parts: ${partsError.message}`);
       }
 
-      const parts = productParts?.map(pp => pp.parts).filter(Boolean) || [];
+      const parts = productParts?.map((pp) => pp.parts).filter(Boolean) || [];
 
       return {
         ...product,

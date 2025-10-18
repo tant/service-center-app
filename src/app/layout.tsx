@@ -18,8 +18,15 @@ export const metadata: Metadata = {
     default: "Service Center Management",
     template: "%s | Service Center",
   },
-  description: "Hệ thống quản lý trung tâm bảo hành và sửa chữa - Quản lý phiếu bảo hành, khách hàng, linh kiện và sản phẩm",
-  keywords: ["service center", "warranty management", "repair management", "customer management", "trung tâm bảo hành"],
+  description:
+    "Hệ thống quản lý trung tâm bảo hành và sửa chữa - Quản lý phiếu bảo hành, khách hàng, linh kiện và sản phẩm",
+  keywords: [
+    "service center",
+    "warranty management",
+    "repair management",
+    "customer management",
+    "trung tâm bảo hành",
+  ],
   authors: [{ name: "Service Center Team" }],
   creator: "Service Center Team",
   publisher: "Service Center Team",

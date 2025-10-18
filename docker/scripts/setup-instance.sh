@@ -15,12 +15,15 @@ set -e
 
 # Instance Information
 CENTER_NAME="Service Center"
-APP_PORT=3025
-STUDIO_PORT=3000
-KONG_PORT=8000
-SITE_URL="http://localhost:3025"
-API_EXTERNAL_URL="http://localhost:3025"
-SUPABASE_API_URL="http://localhost:8000"
+APP_PORT=3025          # App runs on http://localhost:3025
+
+# Site URL (configure your Cloudflare Tunnel to point to http://localhost:${APP_PORT})
+# For production: sv.mydomain.com
+# For local: localhost (will auto-use APP_PORT)
+SITE_URL="localhost"
+
+# Setup Password (leave empty to auto-generate)
+SETUP_PASSWORD=""
 
 # SMTP Configuration
 SMTP_HOST="supabase-mail"
@@ -30,12 +33,10 @@ SMTP_PASS="fake_mail_password"
 SMTP_ADMIN_EMAIL="admin@example.com"
 SMTP_SENDER_NAME="${CENTER_NAME}"
 
-# Setup Password (leave empty to auto-generate)
-SETUP_PASSWORD=""
-
 ############################################
 # END CONFIGURATION
 ############################################
+# Everything below is auto-calculated - do not edit
 
 # Colors
 RED='\033[0;31m'
@@ -55,6 +56,35 @@ if [ ! -f "docker-compose.yml" ]; then
     exit 1
 fi
 
+############################################
+# Auto-calculate all derived values
+############################################
+
+# Studio port auto-calculated from APP_PORT
+# APP_PORT=3025 → STUDIO_PORT=3000
+# APP_PORT=3026 → STUDIO_PORT=3100
+# APP_PORT=3027 → STUDIO_PORT=3200
+STUDIO_PORT=$((3000 + (APP_PORT - 3025) * 100))
+
+# Kong port auto-calculated from APP_PORT
+# APP_PORT=3025 → KONG_PORT=8000
+# APP_PORT=3026 → KONG_PORT=8001
+# APP_PORT=3027 → KONG_PORT=8002
+KONG_PORT=$((8000 + APP_PORT - 3025))
+
+# Build URLs based on SITE_URL
+if [[ "$SITE_URL" == "localhost" ]]; then
+    # Local development mode
+    SITE_URL="http://localhost:${APP_PORT}"
+    API_EXTERNAL_URL="http://localhost:${KONG_PORT}"
+    SUPABASE_EXTERNAL_URL="http://localhost:${STUDIO_PORT}"
+else
+    # Production mode with domain
+    API_EXTERNAL_URL="https://api.${SITE_URL}"
+    SUPABASE_EXTERNAL_URL="https://supabase.${SITE_URL}"
+    SITE_URL="https://${SITE_URL}"
+fi
+
 # Check if .env already exists
 if [ -f ".env" ]; then
     echo -e "${YELLOW}⚠️  Warning: .env file already exists${NC}"
@@ -66,16 +96,33 @@ if [ -f ".env" ]; then
     echo ""
 fi
 
-echo -e "${BLUE}📋 Using configuration:${NC}"
+echo -e "${BLUE}📋 Configuration Summary:${NC}"
+echo ""
+echo -e "${GREEN}Instance:${NC}"
 echo "  Center Name: ${CENTER_NAME}"
 echo "  App Port: ${APP_PORT}"
-echo "  Studio Port: ${STUDIO_PORT}"
-echo "  Kong Port: ${KONG_PORT}"
-echo "  Site URL: ${SITE_URL}"
-echo "  API External URL: ${API_EXTERNAL_URL}"
-echo "  Supabase API URL: ${SUPABASE_API_URL}"
-echo "  SMTP Host: ${SMTP_HOST}"
+echo "  Studio Port: ${STUDIO_PORT} (auto-calculated)"
+echo "  Kong Port: ${KONG_PORT} (auto-calculated)"
 echo ""
+echo -e "${GREEN}URLs:${NC}"
+echo "  Site: ${SITE_URL}"
+echo "  API: ${API_EXTERNAL_URL}"
+echo "  Studio: ${SUPABASE_EXTERNAL_URL}"
+echo ""
+echo -e "${GREEN}SMTP:${NC}"
+echo "  Host: ${SMTP_HOST}:${SMTP_PORT}"
+echo "  Admin: ${SMTP_ADMIN_EMAIL}"
+echo ""
+if [[ "$SITE_URL" == https://* ]]; then
+    # Extract domain from SITE_URL for Cloudflare instructions
+    DOMAIN="${SITE_URL#https://}"
+    echo -e "${YELLOW}⚠️  Cloudflare Tunnel Required:${NC}"
+    echo "  Configure these tunnels pointing to localhost:"
+    echo "    ${DOMAIN} → localhost:${APP_PORT}"
+    echo "    api.${DOMAIN} → localhost:${KONG_PORT}"
+    echo "    supabase.${DOMAIN} → localhost:${STUDIO_PORT}"
+    echo ""
+fi
 
 # Step 1.2: Generate Secrets
 echo -e "${BLUE}🔑 Step 1.2: Generating secrets...${NC}"
@@ -230,7 +277,7 @@ SITE_URL=${SITE_URL}
 ADDITIONAL_REDIRECT_URLS=
 JWT_EXPIRY=3600
 DISABLE_SIGNUP=false
-API_EXTERNAL_URL=${API_EXTERNAL_URL}
+API_EXTERNAL_URL=${SITE_URL}
 
 ## Mailer Config
 MAILER_URLPATHS_CONFIRMATION="/auth/v1/verify"
@@ -264,7 +311,7 @@ STUDIO_DEFAULT_PROJECT=Production
 STUDIO_PORT=${STUDIO_PORT}
 
 # Supabase Public URL for Studio (points to Kong Gateway)
-SUPABASE_PUBLIC_URL=${SUPABASE_API_URL}
+SUPABASE_PUBLIC_URL=${API_EXTERNAL_URL}
 
 # Enable webp support
 IMGPROXY_ENABLE_WEBP_DETECTION=true
@@ -303,7 +350,7 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
 # Browser needs to access this URL, so use localhost or public domain
 # For local: http://localhost:8000 (matches KONG_PORT)
 # For production: https://api.yourdomain.com (via Cloudflare Tunnel)
-NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_API_URL}
+NEXT_PUBLIC_SUPABASE_URL=${API_EXTERNAL_URL}
 
 EOF
 
@@ -354,7 +401,8 @@ echo ""
 echo -e "${BLUE}Instance Configuration:${NC}"
 echo "  Center Name: ${CENTER_NAME}"
 echo "  App Port: ${APP_PORT}"
-echo "  Studio Port: ${STUDIO_PORT}"
+echo "  Studio Port: ${STUDIO_PORT} (auto-calculated)"
+echo "  Kong Port: ${KONG_PORT} (auto-calculated)"
 echo "  Site URL: ${SITE_URL}"
 echo ""
 echo -e "${BLUE}Setup Password:${NC}"

@@ -74,15 +74,20 @@ su - deploy
 
 ### Domain & Cloudflare Tunnel
 
-**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình Cloudflare Tunnel để trỏ 2 domains đến localhost ports:
+**YÊU CẦU QUAN TRỌNG:** Bạn cần đã cấu hình Cloudflare Tunnel để trỏ 3 domains đến localhost ports:
 
 1. **Main Application Domain**
    - Ví dụ: `dichvu.sstc.cloud` → `localhost:3025`
    - Port này được set trong biến `APP_PORT` (có thể thay đổi: 3025, 3026, 3027...)
 
-2. **Supabase Studio Domain**
+2. **Supabase API Domain** ⚠️ **BẮT BUỘC cho browser access**
+   - Ví dụ: `api.dichvu.sstc.cloud` → `localhost:8000`
+   - Port này được tự động tính từ `APP_PORT`: `KONG_PORT = 8000 + (APP_PORT - 3025)`
+   - Browser cần access Kong để sử dụng auth, storage, realtime, REST API
+
+3. **Supabase Studio Domain**
    - Ví dụ: `supabase.dichvu.sstc.cloud` → `localhost:3000`
-   - Port này được set trong biến `STUDIO_PORT` (có thể thay đổi: 3000, 3100, 3200...)
+   - Port này được tự động tính từ `APP_PORT`: `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
 
 **Lưu ý:** Hướng dẫn này giả định bạn đã setup Cloudflare Tunnel. Nếu chưa có, hãy cấu hình trước khi tiếp tục.
 
@@ -108,10 +113,15 @@ Chỉnh sửa các giá trị trong phần `CONFIGURATION`:
 ```bash
 # Instance Information
 CENTER_NAME="SSTC Service Center"
-APP_PORT=3025
-STUDIO_PORT=3000
-SITE_URL="https://dichvu.sstc.cloud"
-API_EXTERNAL_URL="https://dichvu.sstc.cloud"
+APP_PORT=3025          # App runs on http://localhost:3025
+
+# Site URL (configure your Cloudflare Tunnel to point to http://localhost:${APP_PORT})
+# For production: dichvu.sstc.cloud (script auto-derives API and Studio URLs)
+# For local: localhost
+SITE_URL="dichvu.sstc.cloud"
+
+# Setup Password (leave empty to auto-generate)
+SETUP_PASSWORD=""
 
 # SMTP Configuration
 SMTP_HOST="smtp.gmail.com"
@@ -120,10 +130,16 @@ SMTP_USER="noreply@sstc.cloud"
 SMTP_PASS="your-smtp-password"
 SMTP_ADMIN_EMAIL="admin@sstc.cloud"
 SMTP_SENDER_NAME="SSTC Service Center"
-
-# Setup Password (leave empty to auto-generate)
-SETUP_PASSWORD=""
 ```
+
+**Lưu ý:**
+- Chỉ cần config `APP_PORT` duy nhất - tất cả ports khác tự động tính!
+- `SITE_URL` chỉ cần domain (ví dụ: `dichvu.sstc.cloud`), không cần `https://`
+- Script tự động tạo:
+  - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100` (3025→3000, 3026→3100, 3027→3200...)
+  - `KONG_PORT = 8000 + (APP_PORT - 3025)` (3025→8000, 3026→8001, 3027→8002...)
+  - `api.dichvu.sstc.cloud` cho Supabase API
+  - `supabase.dichvu.sstc.cloud` cho Supabase Studio
 
 **2. Chạy script:**
 ```bash
@@ -143,11 +159,28 @@ Script sẽ tự động:
 🚀 Service Center - Instance Setup
 =====================================
 
-📋 Using configuration:
+📋 Configuration Summary:
+
+Instance:
   Center Name: SSTC Service Center
   App Port: 3025
-  Studio Port: 3000
-  Site URL: https://dichvu.sstc.cloud
+  Studio Port: 3000 (auto-calculated)
+  Kong Port: 8000 (auto-calculated)
+
+URLs:
+  Site: https://dichvu.sstc.cloud
+  API: https://api.dichvu.sstc.cloud
+  Studio: https://supabase.dichvu.sstc.cloud
+
+SMTP:
+  Host: smtp.gmail.com:587
+  Admin: admin@sstc.cloud
+
+⚠️  Cloudflare Tunnel Required:
+  Configure these tunnels pointing to localhost:
+    dichvu.sstc.cloud → localhost:3025
+    api.dichvu.sstc.cloud → localhost:8000
+    supabase.dichvu.sstc.cloud → localhost:3000
 
 🔑 Step 1.2: Generating secrets...
   ✓ Generated SETUP_PASSWORD
@@ -684,15 +717,18 @@ CENTER_NAME="Customer A Service Center"
 APP_PORT=3025
 STUDIO_PORT=3000
 KONG_PORT=8000
-SITE_URL="https://customer-a.yourdomain.com"
-API_EXTERNAL_URL="https://customer-a.yourdomain.com"
-SUPABASE_API_URL="https://api-a.yourdomain.com"
+SITE_URL="customer-a.yourdomain.com"   # Script auto-derives API and Studio URLs
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
 SMTP_USER="noreply@yourdomain.com"
 SMTP_PASS="your-smtp-password"
 SMTP_ADMIN_EMAIL="admin@yourdomain.com"
 SMTP_SENDER_NAME="Customer A Service Center"
+
+# URLs auto-derived from SITE_URL:
+# - App: https://customer-a.yourdomain.com
+# - API: https://api.customer-a.yourdomain.com
+# - Studio: https://supabase.customer-a.yourdomain.com
 
 # 3. Run setup script
 chmod +x docker/scripts/setup-instance.sh
@@ -730,9 +766,8 @@ nano docker/scripts/setup-instance.sh
 # Set: APP_PORT=3026
 # Set: STUDIO_PORT=3100
 # Set: KONG_PORT=8001
-# Set: SITE_URL="https://customer-b.yourdomain.com"
-# Set: API_EXTERNAL_URL="https://customer-b.yourdomain.com"
-# Set: SUPABASE_API_URL="https://api-b.yourdomain.com"
+# Set: SITE_URL="customer-b.yourdomain.com"
+# URLs auto-derived: api.customer-b.yourdomain.com, supabase.customer-b.yourdomain.com
 
 # Run setup
 ./docker/scripts/setup-instance.sh
@@ -756,9 +791,8 @@ nano docker/scripts/setup-instance.sh
 # Set: APP_PORT=3027
 # Set: STUDIO_PORT=3200
 # Set: KONG_PORT=8002
-# Set: SITE_URL="https://customer-c.yourdomain.com"
-# Set: API_EXTERNAL_URL="https://customer-c.yourdomain.com"
-# Set: SUPABASE_API_URL="https://api-c.yourdomain.com"
+# Set: SITE_URL="customer-c.yourdomain.com"
+# URLs auto-derived: api.customer-c.yourdomain.com, supabase.customer-c.yourdomain.com
 
 # Run setup
 ./docker/scripts/setup-instance.sh

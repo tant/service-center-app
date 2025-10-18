@@ -17,16 +17,20 @@ set -e
 CENTER_NAME="Tân test Service Center"
 APP_PORT=3025          # App runs on http://localhost:3025
 
-# Site URL (configure your Cloudflare Tunnel to point to http://localhost:${APP_PORT})
+# Deployment Mode
+# Choose between 'local' for local development or 'production' for public domain
+# - local: Uses http://localhost with port numbers (no Cloudflare Tunnel needed)
+# - production: Uses https:// with your domain (requires Cloudflare Tunnel setup)
+DEPLOYMENT_MODE=local  # Change to 'production' when ready for public access
+
+# Site URL (only used when DEPLOYMENT_MODE=production)
 # IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
 # For production: sv.mydomain.com (script will add https://)
-# For local: localhost (script will add http://localhost:${APP_PORT})
 # Examples:
 #   ✓ Correct: sv.mydomain.com
-#   ✓ Correct: localhost
 #   ✗ Wrong: https://sv.mydomain.com
 #   ✗ Wrong: http://localhost:3025
-SITE_URL=sv.tantran.dev
+PRODUCTION_DOMAIN=sv.tantran.dev
 
 # Setup Password (leave empty to auto-generate)
 SETUP_PASSWORD=tantran
@@ -78,21 +82,23 @@ STUDIO_PORT=$((3000 + (APP_PORT - 3025) * 100))
 # APP_PORT=3027 → KONG_PORT=8002
 KONG_PORT=$((8000 + APP_PORT - 3025))
 
-# Clean up SITE_URL - remove any http:// or https:// prefix if provided
-SITE_URL="${SITE_URL#http://}"
-SITE_URL="${SITE_URL#https://}"
-
-# Build URLs based on SITE_URL
-if [[ "$SITE_URL" == "localhost" ]]; then
-    # Local development mode
+# Build URLs based on DEPLOYMENT_MODE
+if [[ "$DEPLOYMENT_MODE" == "local" ]]; then
+    # Local development mode - use localhost with port numbers
     SITE_URL="http://localhost:${APP_PORT}"
     API_EXTERNAL_URL="http://localhost:${KONG_PORT}"
     SUPABASE_EXTERNAL_URL="http://localhost:${STUDIO_PORT}"
+    MODE_DESCRIPTION="Local Development (no Cloudflare Tunnel needed)"
 else
-    # Production mode with domain
-    API_EXTERNAL_URL="https://api.${SITE_URL}"
-    SUPABASE_EXTERNAL_URL="https://supabase.${SITE_URL}"
-    SITE_URL="https://${SITE_URL}"
+    # Production mode - use domain with https
+    # Clean up domain - remove any http:// or https:// prefix if provided
+    PRODUCTION_DOMAIN="${PRODUCTION_DOMAIN#http://}"
+    PRODUCTION_DOMAIN="${PRODUCTION_DOMAIN#https://}"
+
+    SITE_URL="https://${PRODUCTION_DOMAIN}"
+    API_EXTERNAL_URL="https://api.${PRODUCTION_DOMAIN}"
+    SUPABASE_EXTERNAL_URL="https://supabase.${PRODUCTION_DOMAIN}"
+    MODE_DESCRIPTION="Production (requires Cloudflare Tunnel)"
 fi
 
 # Check if .env already exists
@@ -107,6 +113,9 @@ if [ -f ".env" ]; then
 fi
 
 echo -e "${BLUE}📋 Configuration Summary:${NC}"
+echo ""
+echo -e "${GREEN}Deployment Mode:${NC}"
+echo "  ${MODE_DESCRIPTION}"
 echo ""
 echo -e "${GREEN}Instance:${NC}"
 echo "  Center Name: ${CENTER_NAME}"
@@ -123,14 +132,12 @@ echo -e "${GREEN}SMTP:${NC}"
 echo "  Host: ${SMTP_HOST}:${SMTP_PORT}"
 echo "  Admin: ${SMTP_ADMIN_EMAIL}"
 echo ""
-if [[ "$SITE_URL" == https://* ]]; then
-    # Extract domain from SITE_URL for Cloudflare instructions
-    DOMAIN="${SITE_URL#https://}"
+if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
     echo -e "${YELLOW}⚠️  Cloudflare Tunnel Required:${NC}"
     echo "  Configure these tunnels pointing to localhost:"
-    echo "    ${DOMAIN} → localhost:${APP_PORT}"
-    echo "    api.${DOMAIN} → localhost:${KONG_PORT}"
-    echo "    supabase.${DOMAIN} → localhost:${STUDIO_PORT}"
+    echo "    ${PRODUCTION_DOMAIN} → localhost:${APP_PORT}"
+    echo "    api.${PRODUCTION_DOMAIN} → localhost:${KONG_PORT}"
+    echo "    supabase.${PRODUCTION_DOMAIN} → localhost:${STUDIO_PORT}"
     echo ""
 fi
 
@@ -290,7 +297,7 @@ SITE_URL=${SITE_URL}
 ADDITIONAL_REDIRECT_URLS=
 JWT_EXPIRY=3600
 DISABLE_SIGNUP=false
-API_EXTERNAL_URL=${SITE_URL}
+API_EXTERNAL_URL=${API_EXTERNAL_URL}
 
 ## Mailer Config
 MAILER_URLPATHS_CONFIRMATION="/auth/v1/verify"
@@ -359,6 +366,11 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
 # Next.js Application
 ############################################
 
+# Internal Supabase URL (for server-side Docker network access)
+# This is ONLY for server-side code running inside Docker containers
+# Always uses internal Kong service: http://kong:8000
+SUPABASE_URL=http://kong:8000
+
 # Public Supabase URL (for client-side browser access)
 # Browser needs to access this URL, so use localhost or public domain
 # For local: http://localhost:8000 (matches KONG_PORT)
@@ -414,6 +426,13 @@ SERVICE CENTER INSTANCE INFORMATION
 Generated: $(date)
 
 ================================================================================
+DEPLOYMENT MODE
+================================================================================
+
+Mode:                  ${DEPLOYMENT_MODE}
+Description:           ${MODE_DESCRIPTION}
+
+================================================================================
 INSTANCE CONFIGURATION
 ================================================================================
 
@@ -433,8 +452,7 @@ Supabase Studio URL:   ${SUPABASE_EXTERNAL_URL}
 EOF
 
 # Add Cloudflare Tunnel instructions if production
-if [[ "$SITE_URL" == https://* ]]; then
-    DOMAIN="${SITE_URL#https://}"
+if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
     cat >> INSTANCE_INFO.txt <<EOF
 ================================================================================
 CLOUDFLARE TUNNEL CONFIGURATION
@@ -443,22 +461,22 @@ CLOUDFLARE TUNNEL CONFIGURATION
 Required tunnels pointing to localhost:
 
 1. Main Application:
-   ${DOMAIN} → localhost:${APP_PORT}
+   ${PRODUCTION_DOMAIN} → localhost:${APP_PORT}
 
 2. Supabase API (Kong):
-   api.${DOMAIN} → localhost:${KONG_PORT}
+   api.${PRODUCTION_DOMAIN} → localhost:${KONG_PORT}
 
 3. Supabase Studio:
-   supabase.${DOMAIN} → localhost:${STUDIO_PORT}
+   supabase.${PRODUCTION_DOMAIN} → localhost:${STUDIO_PORT}
 
 Example cloudflared config.yml:
 ---
 ingress:
-  - hostname: ${DOMAIN}
+  - hostname: ${PRODUCTION_DOMAIN}
     service: http://localhost:${APP_PORT}
-  - hostname: api.${DOMAIN}
+  - hostname: api.${PRODUCTION_DOMAIN}
     service: http://localhost:${KONG_PORT}
-  - hostname: supabase.${DOMAIN}
+  - hostname: supabase.${PRODUCTION_DOMAIN}
     service: http://localhost:${STUDIO_PORT}
   - service: http_status:404
 

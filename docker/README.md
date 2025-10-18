@@ -90,8 +90,15 @@ To modify configuration:
 - Usage: `./docker/scripts/apply-schema.sh`
 
 **scripts/generate-keys.js**
-- Generates SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY
-- Uses JWT_SECRET to sign tokens
+- Generates Supabase API keys from JWT_SECRET
+- **Generates:**
+  - `SUPABASE_ANON_KEY` - For Docker Compose services (Kong, Analytics, etc.)
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - For Next.js browser + server client access (same value as SUPABASE_ANON_KEY)
+  - `SUPABASE_SERVICE_ROLE_KEY` - For server-side admin operations (bypasses RLS)
+- **Note:** SUPABASE_ANON_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY have the **same value** but different purposes:
+  - SUPABASE_ANON_KEY: Used in docker-compose.yml for Supabase services
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY: Used by Next.js (accessible to browser via NEXT_PUBLIC_ prefix)
+- Uses JWT_SECRET to sign tokens with 10-year expiration
 - Called automatically by `setup-instance.sh`
 - Manual usage: `node docker/scripts/generate-keys.js <JWT_SECRET>`
 
@@ -354,6 +361,76 @@ Internet
 - ✅ Easy to setup both modes
 - ✅ Multi-instance support
 - ✅ Seamless transition from local to production
+
+## Environment Variables
+
+### Supabase Configuration
+
+The application uses a **consolidated environment variable scheme** to eliminate redundancy:
+
+**Required Variables:**
+
+1. **`NEXT_PUBLIC_SUPABASE_URL`** - Public Supabase URL
+   - Browser and server-side access
+   - Local: `http://localhost:8000` (matches KONG_PORT)
+   - Production: `https://api.yourdomain.com` (via Cloudflare Tunnel)
+
+2. **`SUPABASE_ANON_KEY`** - Anon/Public key (Docker services)
+   - Used by Docker Compose services (Kong, Analytics, Vector)
+   - Respects Row Level Security (RLS)
+   - Generated from JWT_SECRET
+
+3. **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** - Anon/Public key (Next.js)
+   - Same value as SUPABASE_ANON_KEY
+   - Accessible to browser via NEXT_PUBLIC_ prefix
+   - Used by all Supabase client code (browser, server, middleware)
+   - Respects Row Level Security (RLS)
+
+4. **`SUPABASE_SERVICE_ROLE_KEY`** - Service role key (Server-side only)
+   - Server-side admin operations only
+   - **Bypasses RLS** - never expose to client
+   - Used by admin client and tRPC procedures
+   - Generated from JWT_SECRET
+
+5. **`SUPABASE_URL`** - Internal Docker network URL
+   - Server-side code running inside Docker containers
+   - Always `http://kong:8000` (internal network)
+   - Fallback to NEXT_PUBLIC_SUPABASE_URL if not set
+
+**Why two ANON_KEY variables?**
+
+These have the **same value** but serve different purposes:
+- `SUPABASE_ANON_KEY` → Referenced in `docker-compose.yml` for Supabase infrastructure services
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Used by Next.js application (accessible in browser)
+
+**Example .env snippet:**
+```bash
+# Supabase Keys (same value, different purposes)
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5...
+
+# Service role key (server-side only, never expose)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5...
+
+# URLs
+SUPABASE_URL=http://kong:8000
+NEXT_PUBLIC_SUPABASE_URL=https://api.yourdomain.com
+```
+
+**Code Usage:**
+- Browser client (`src/utils/supabase/client.ts`): Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Server client (`src/utils/supabase/server.ts`): Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Middleware (`src/utils/supabase/middleware.ts`): Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Admin client (`src/utils/supabase/admin.ts`): Uses `SUPABASE_SERVICE_ROLE_KEY`
+- Docker services (`docker-compose.yml`): Use `SUPABASE_ANON_KEY`
+
+### No Fallback Logic
+
+The application uses **single, well-defined variables** with no fallback logic. This ensures:
+- ✅ Clear error messages if variables are missing
+- ✅ No confusion about which variable is being used
+- ✅ Easier debugging and maintenance
+- ✅ Scripts automatically generate all required variables
 
 ## Documentation
 

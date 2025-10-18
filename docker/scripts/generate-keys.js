@@ -1,13 +1,22 @@
 #!/usr/bin/env node
 
 /**
- * Generate Supabase API Keys (ANON and SERVICE_ROLE)
+ * Generate Supabase API Keys
+ *
+ * Generates:
+ *   - SUPABASE_ANON_KEY: For Docker Compose services (Kong, Analytics, etc.)
+ *   - SUPABASE_SERVICE_ROLE_KEY: For server-side admin operations (bypasses RLS)
+ *
+ * Note: SUPABASE_ANON_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY have the SAME value.
+ *       The setup script automatically sets both variables.
  *
  * Usage:
  *   node generate-keys.js <JWT_SECRET>
  *
  * Or set JWT_SECRET environment variable:
  *   JWT_SECRET="your-secret" node generate-keys.js
+ *
+ * The keys are JWT tokens signed with the JWT_SECRET and valid for 10 years.
  */
 
 const jwt = require("jsonwebtoken");

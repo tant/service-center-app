@@ -288,7 +288,13 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 
 # Supabase Keys (generated from JWT_SECRET using generate-keys.js)
+# SUPABASE_ANON_KEY: Used by Docker Compose services (Kong, Analytics, etc.)
+# NEXT_PUBLIC_SUPABASE_ANON_KEY: For browser + server-side client access (anon role, respects RLS)
+# These are the SAME value - SUPABASE_ANON_KEY for Docker services, NEXT_PUBLIC_SUPABASE_ANON_KEY for Next.js
 SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# SUPABASE_SERVICE_ROLE_KEY: For server-side admin operations (bypasses RLS, never expose to client)
 SUPABASE_SERVICE_ROLE_KEY=
 
 # Supabase Infrastructure
@@ -468,6 +474,7 @@ fi
 
 # Update .env with generated keys
 sed -i "s|^SUPABASE_ANON_KEY=.*|SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}|" .env
+sed -i "s|^NEXT_PUBLIC_SUPABASE_ANON_KEY=.*|NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}|" .env
 sed -i "s|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}|" .env
 
 echo -e "${GREEN}  ✓ API keys generated and added to .env${NC}"

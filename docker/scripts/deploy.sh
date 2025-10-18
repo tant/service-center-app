@@ -69,9 +69,19 @@ case $choice in
             echo "  - Supabase API: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}"
             echo "  - Supabase Studio: http://localhost:${STUDIO_PORT:-3000}"
         else
+            # Extract subdomain and base domain for Studio URL
+            DOMAIN="${SITE_URL#https://}"
+            if [[ "$DOMAIN" =~ ^([^.]+)\.(.+)$ ]]; then
+                SUBDOMAIN="${BASH_REMATCH[1]}"
+                BASE_DOMAIN="${BASH_REMATCH[2]}"
+                STUDIO_URL="https://${SUBDOMAIN}3.${BASE_DOMAIN}"
+            else
+                STUDIO_URL="https://supabase.${DOMAIN}"
+            fi
+
             echo "  - App: ${SITE_URL}"
             echo "  - Supabase API: ${NEXT_PUBLIC_SUPABASE_URL}"
-            echo "  - Supabase Studio: https://supabase.${SITE_URL#https://}"
+            echo "  - Supabase Studio: ${STUDIO_URL}"
         fi
         ;;
 

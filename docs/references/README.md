@@ -48,10 +48,11 @@ cp -r docs/references/volumes/* volumes/
 # 2. Copy environment template
 cp docs/references/.env.docker.example .env
 
-# 3. Generate secrets (see DEPLOYMENT.md Step 2.3)
-openssl rand -base64 32  # For passwords and keys
+# 3. Generate secrets (see DEPLOYMENT.md Step 1.2)
+# Use -hex instead of -base64 for URL-friendly secrets
+openssl rand -hex 32  # For passwords and keys (64 hex chars = 32 bytes)
 
-# 4. Generate API keys (see DEPLOYMENT.md Step 2.4)
+# 4. Generate API keys (see DEPLOYMENT.md Step 1.6)
 node docker/scripts/generate-keys.js "$(grep ^JWT_SECRET .env | cut -d '=' -f2)"
 
 # 5. Build and start services

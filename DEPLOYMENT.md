@@ -98,19 +98,39 @@ cd service-center-app
 ```
 
 ### 1.2 Generate Secrets
+
+**QUAN TRỌNG:** Tất cả secrets được generate dưới dạng URL-friendly (hex) để tránh vấn đề với special characters.
+
 ```bash
-# JWT Secret (32+ characters)
-openssl rand -base64 32
+# JWT Secret (64 characters hex = 32 bytes)
+openssl rand -hex 32
 
-# Postgres Password
-openssl rand -base64 32
+# Postgres Password (64 characters hex = 32 bytes)
+openssl rand -hex 32
 
-# PG Meta Crypto Key (32+ characters)
-openssl rand -base64 32
+# PG Meta Crypto Key (64 characters hex = 32 bytes)
+openssl rand -hex 32
 
-# Setup Password
-openssl rand -base64 16
+# VAULT_ENC_KEY (64 characters hex = 32 bytes)
+openssl rand -hex 32
+
+# SECRET_KEY_BASE (128 characters hex = 64 bytes)
+openssl rand -hex 64
+
+# Setup Password (32 characters hex = 16 bytes)
+openssl rand -hex 16
+
+# LOGFLARE tokens (64 characters hex = 32 bytes)
+openssl rand -hex 32  # Public token
+openssl rand -hex 32  # Private token
+
+# Dashboard password (32 characters hex = 16 bytes)
+openssl rand -hex 16
 ```
+
+**Lưu ý:**
+- Sử dụng `-hex` thay vì `-base64` để tạo chuỗi chỉ gồm `0-9a-f` (URL-safe)
+- Base64 có thể chứa `+`, `/`, `=` gây lỗi khi dùng trong URLs hoặc connection strings
 
 ### 1.3 Configure Public URL
 

@@ -570,8 +570,10 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-http://kong:8000}
       # NEXT_PUBLIC_SUPABASE_URL: External URL for browser/client-side code
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://kong:8000}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_JWT: ${SUPABASE_SERVICE_ROLE_KEY}
+      # NEXT_PUBLIC_SUPABASE_ANON_KEY: For browser client access (anon role, respects RLS)
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # SUPABASE_SERVICE_ROLE_KEY: For server-side admin operations (bypasses RLS)
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
 
       # Application secrets
       SETUP_PASSWORD: ${SETUP_PASSWORD}

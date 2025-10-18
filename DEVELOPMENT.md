@@ -107,10 +107,12 @@ This command will:
 
 ```bash
 # From Supabase output:
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Publishable key>
-SUPABASE_SERVICE_ROLE_KEY=<Secret key>
-SUPABASE_SERVICE_ROLE_JWT=<Secret key>  # Same as above
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from Supabase output>
+SUPABASE_SERVICE_ROLE_KEY=<service_role key from Supabase output>
 ```
+
+Note: The local development setup uses slightly different variable names than Docker deployment.
+For Docker deployment, see `docker/README.md` for the full variable list.
 
 ### 6. Set Up Database Schema
 

@@ -95,19 +95,21 @@ Hệ thống hỗ trợ **2 deployment modes** với URL architecture khác nhau
 
 **YÊU CẦU:** Phải setup Cloudflare Tunnel trước khi deploy
 
-**URLs:**
+**URLs (Numbered Pattern):**
+URL pattern: `subdomain` + `port last digit` + `base domain`
+
 1. **Main Application Domain**
-   - Ví dụ: `https://dichvu.sstc.cloud`
-   - Tunnel: `dichvu.sstc.cloud` → `localhost:3025`
+   - Ví dụ: `https://sv.tantran.dev`
+   - Tunnel: `sv.tantran.dev` → `localhost:3025`
 
 2. **Supabase API Domain** ⚠️ **BẮT BUỘC**
-   - Ví dụ: `https://api.dichvu.sstc.cloud`
-   - Tunnel: `api.dichvu.sstc.cloud` → `localhost:8000`
+   - Ví dụ: `https://sv8.tantran.dev` (sv + 8 from port 8000)
+   - Tunnel: `sv8.tantran.dev` → `localhost:8000`
    - Browser cần access Kong để sử dụng auth, storage, realtime, REST API
 
 3. **Supabase Studio Domain**
-   - Ví dụ: `https://supabase.dichvu.sstc.cloud`
-   - Tunnel: `supabase.dichvu.sstc.cloud` → `localhost:3000`
+   - Ví dụ: `https://sv3.tantran.dev` (sv + 3 from port 3000)
+   - Tunnel: `sv3.tantran.dev` → `localhost:3000`
 
 **Server-side (internal Docker):** `http://kong:8000` (unchanged)
 

@@ -21,15 +21,19 @@ APP_PORT=3025          # App runs on http://localhost:3025
 # Choose between 'local' for local development or 'production' for public domain
 # - local: Uses http://localhost with port numbers (no Cloudflare Tunnel needed)
 # - production: Uses https:// with your domain (requires Cloudflare Tunnel setup)
-DEPLOYMENT_MODE=local  # Change to 'production' when ready for public access
+DEPLOYMENT_MODE=production  # Set to 'production' - Cloudflare Tunnel configured
 
-# Site URL (only used when DEPLOYMENT_MODE=production)
+# Production Domain (only used when DEPLOYMENT_MODE=production)
 # IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
-# For production: sv.mydomain.com (script will add https://)
-# Examples:
-#   ✓ Correct: sv.mydomain.com
-#   ✗ Wrong: https://sv.mydomain.com
-#   ✗ Wrong: http://localhost:3025
+# URL Pattern: subdomain + port last digit + base domain
+#   Example: sv.tantran.dev generates:
+#     - App:    https://sv.tantran.dev      (main app)
+#     - API:    https://sv8.tantran.dev     (Kong on port 8000)
+#     - Studio: https://sv3.tantran.dev     (Studio on port 3000)
+# Cloudflare Tunnel Configuration Required:
+#   - sv.tantran.dev  → http://localhost:3025
+#   - sv8.tantran.dev → http://localhost:8000
+#   - sv3.tantran.dev → http://localhost:3000
 PRODUCTION_DOMAIN=sv.tantran.dev
 
 # Setup Password (leave empty to auto-generate)
@@ -95,9 +99,26 @@ else
     PRODUCTION_DOMAIN="${PRODUCTION_DOMAIN#http://}"
     PRODUCTION_DOMAIN="${PRODUCTION_DOMAIN#https://}"
 
-    SITE_URL="https://${PRODUCTION_DOMAIN}"
-    API_EXTERNAL_URL="https://api.${PRODUCTION_DOMAIN}"
-    SUPABASE_EXTERNAL_URL="https://supabase.${PRODUCTION_DOMAIN}"
+    # Extract subdomain and base domain
+    # e.g., sv.tantran.dev -> subdomain=sv, base_domain=tantran.dev
+    if [[ "$PRODUCTION_DOMAIN" =~ ^([^.]+)\.(.+)$ ]]; then
+        SUBDOMAIN="${BASH_REMATCH[1]}"
+        BASE_DOMAIN="${BASH_REMATCH[2]}"
+
+        # Generate URLs with numbered pattern
+        # App: https://sv.tantran.dev
+        # API (Kong): https://sv8.tantran.dev (sv + port 8000 last digit)
+        # Studio: https://sv3.tantran.dev (sv + port 3000 last digit)
+        SITE_URL="https://${PRODUCTION_DOMAIN}"
+        API_EXTERNAL_URL="https://${SUBDOMAIN}8.${BASE_DOMAIN}"
+        SUPABASE_EXTERNAL_URL="https://${SUBDOMAIN}3.${BASE_DOMAIN}"
+    else
+        # Fallback if domain doesn't have subdomain
+        SITE_URL="https://${PRODUCTION_DOMAIN}"
+        API_EXTERNAL_URL="https://api.${PRODUCTION_DOMAIN}"
+        SUPABASE_EXTERNAL_URL="https://supabase.${PRODUCTION_DOMAIN}"
+    fi
+
     MODE_DESCRIPTION="Production (requires Cloudflare Tunnel)"
 fi
 
@@ -135,9 +156,20 @@ echo ""
 if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
     echo -e "${YELLOW}⚠️  Cloudflare Tunnel Required:${NC}"
     echo "  Configure these tunnels pointing to localhost:"
-    echo "    ${PRODUCTION_DOMAIN} → localhost:${APP_PORT}"
-    echo "    api.${PRODUCTION_DOMAIN} → localhost:${KONG_PORT}"
-    echo "    supabase.${PRODUCTION_DOMAIN} → localhost:${STUDIO_PORT}"
+
+    # Show the actual generated URLs
+    DOMAIN_FOR_API="${SITE_URL#https://}"
+    if [[ "$DOMAIN_FOR_API" =~ ^([^.]+)\.(.+)$ ]]; then
+        SUBDOMAIN="${BASH_REMATCH[1]}"
+        BASE_DOMAIN="${BASH_REMATCH[2]}"
+        echo "    ${SUBDOMAIN}.${BASE_DOMAIN} → localhost:${APP_PORT}"
+        echo "    ${SUBDOMAIN}8.${BASE_DOMAIN} → localhost:${KONG_PORT}"
+        echo "    ${SUBDOMAIN}3.${BASE_DOMAIN} → localhost:${STUDIO_PORT}"
+    else
+        echo "    ${DOMAIN_FOR_API} → localhost:${APP_PORT}"
+        echo "    api.${DOMAIN_FOR_API} → localhost:${KONG_PORT}"
+        echo "    supabase.${DOMAIN_FOR_API} → localhost:${STUDIO_PORT}"
+    fi
     echo ""
 fi
 
@@ -453,6 +485,17 @@ EOF
 
 # Add Cloudflare Tunnel instructions if production
 if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
+    # Extract subdomain and base domain for tunnel config
+    if [[ "$PRODUCTION_DOMAIN" =~ ^([^.]+)\.(.+)$ ]]; then
+        SUBDOMAIN="${BASH_REMATCH[1]}"
+        BASE_DOMAIN="${BASH_REMATCH[2]}"
+        API_DOMAIN="${SUBDOMAIN}8.${BASE_DOMAIN}"
+        STUDIO_DOMAIN="${SUBDOMAIN}3.${BASE_DOMAIN}"
+    else
+        API_DOMAIN="api.${PRODUCTION_DOMAIN}"
+        STUDIO_DOMAIN="supabase.${PRODUCTION_DOMAIN}"
+    fi
+
     cat >> INSTANCE_INFO.txt <<EOF
 ================================================================================
 CLOUDFLARE TUNNEL CONFIGURATION
@@ -460,23 +503,25 @@ CLOUDFLARE TUNNEL CONFIGURATION
 
 Required tunnels pointing to localhost:
 
+URL Pattern: subdomain + port last digit + base domain
+
 1. Main Application:
    ${PRODUCTION_DOMAIN} → localhost:${APP_PORT}
 
 2. Supabase API (Kong):
-   api.${PRODUCTION_DOMAIN} → localhost:${KONG_PORT}
+   ${API_DOMAIN} → localhost:${KONG_PORT}
 
 3. Supabase Studio:
-   supabase.${PRODUCTION_DOMAIN} → localhost:${STUDIO_PORT}
+   ${STUDIO_DOMAIN} → localhost:${STUDIO_PORT}
 
 Example cloudflared config.yml:
 ---
 ingress:
   - hostname: ${PRODUCTION_DOMAIN}
     service: http://localhost:${APP_PORT}
-  - hostname: api.${PRODUCTION_DOMAIN}
+  - hostname: ${API_DOMAIN}
     service: http://localhost:${KONG_PORT}
-  - hostname: supabase.${PRODUCTION_DOMAIN}
+  - hostname: ${STUDIO_DOMAIN}
     service: http://localhost:${STUDIO_PORT}
   - service: http_status:404
 

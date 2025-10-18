@@ -17,8 +17,10 @@ set -e
 CENTER_NAME="Service Center"
 APP_PORT=3025
 STUDIO_PORT=3000
+KONG_PORT=8000
 SITE_URL="http://localhost:3025"
 API_EXTERNAL_URL="http://localhost:3025"
+SUPABASE_API_URL="http://localhost:8000"
 
 # SMTP Configuration
 SMTP_HOST="supabase-mail"
@@ -68,8 +70,10 @@ echo -e "${BLUE}📋 Using configuration:${NC}"
 echo "  Center Name: ${CENTER_NAME}"
 echo "  App Port: ${APP_PORT}"
 echo "  Studio Port: ${STUDIO_PORT}"
+echo "  Kong Port: ${KONG_PORT}"
 echo "  Site URL: ${SITE_URL}"
 echo "  API External URL: ${API_EXTERNAL_URL}"
+echo "  Supabase API URL: ${SUPABASE_API_URL}"
 echo "  SMTP Host: ${SMTP_HOST}"
 echo ""
 
@@ -185,6 +189,10 @@ SETUP_PASSWORD=${SETUP_PASSWORD}
 # Application port (exposed to host)
 APP_PORT=${APP_PORT}
 
+# Kong API Gateway port (exposed to host)
+# Required for browser access to Supabase
+KONG_PORT=${KONG_PORT}
+
 ############################################
 # Database Configuration
 ############################################
@@ -255,8 +263,8 @@ STUDIO_DEFAULT_PROJECT=Production
 # Studio port (exposed to host)
 STUDIO_PORT=${STUDIO_PORT}
 
-# replace if you intend to use Studio outside of localhost
-SUPABASE_PUBLIC_URL=http://localhost:8000
+# Supabase Public URL for Studio (points to Kong Gateway)
+SUPABASE_PUBLIC_URL=${SUPABASE_API_URL}
 
 # Enable webp support
 IMGPROXY_ENABLE_WEBP_DETECTION=true
@@ -291,10 +299,11 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER
 # Next.js Application
 ############################################
 
-# Public Supabase URL (for client-side)
-# For internal Docker network, use: http://kong:8000
-# For external/production, use your public URL
-NEXT_PUBLIC_SUPABASE_URL=http://kong:8000
+# Public Supabase URL (for client-side browser access)
+# Browser needs to access this URL, so use localhost or public domain
+# For local: http://localhost:8000 (matches KONG_PORT)
+# For production: https://api.yourdomain.com (via Cloudflare Tunnel)
+NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_API_URL}
 
 EOF
 

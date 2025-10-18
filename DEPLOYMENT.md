@@ -216,11 +216,12 @@ curl http://localhost:3000              # ✅ Supabase Studio (nếu đã expose
 |---------|--------------|-----------|---------|
 | App | 3025 | ✅ 3025 | Exposed to host |
 | Supabase Studio | 3000 | ✅ 3000 | Exposed to host |
-| Kong (Supabase API) | 8000 | ❌ Internal | App connects internally |
+| Kong (Supabase API) | 8000 | ✅ 8000 | Exposed to host (required for browser) |
 | PostgreSQL | 5432 | ❌ Internal | App connects internally |
 
-**Reverse Proxy Setup:**
+**Cloudflare Tunnel Setup:**
 - `dichvu.sstc.cloud` → `localhost:3025` (Main App)
+- `api.dichvu.sstc.cloud` → `localhost:8000` (Supabase API - Kong)
 - `supabase.dichvu.sstc.cloud` → `localhost:3000` (Supabase Studio)
 
 **Common Issues:**
@@ -588,10 +589,10 @@ docker compose restart
 ## FAQ
 
 **Q: Cần expose ports nào?**
-A: Chỉ cần APP_PORT (3025, 3026...) và STUDIO_PORT (3000, 3100...). Các services khác đều internal.
+A: Cần expose 3 ports: APP_PORT (3025, 3026...), KONG_PORT (8000, 8001...), và STUDIO_PORT (3000, 3100...). Kong port required để browser access Supabase.
 
 **Q: Có thể chạy nhiều instances không?**
-A: Có! Mỗi instance chỉ cần thay đổi APP_PORT và STUDIO_PORT. Sử dụng setup script để tự động configure.
+A: Có! Mỗi instance chỉ cần thay đổi APP_PORT, KONG_PORT, và STUDIO_PORT. Sử dụng setup script để tự động configure.
 
 **Q: Database có share giữa các instances không?**
 A: Không! Mỗi instance có database riêng, hoàn toàn isolated với Docker network riêng.
@@ -649,20 +650,21 @@ docker compose ps  # Verify all healthy
 
 ### Overview
 
-Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **2 ports**: `APP_PORT` và `STUDIO_PORT`.
+Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **3 ports**: `APP_PORT`, `STUDIO_PORT`, và `KONG_PORT`.
 
 **Tất cả các services khác (database, API, auth, storage, etc.) đều internal và không xung đột!**
 
 ### Ports Configuration
 
-**Cần configure 2 ports cho mỗi instance:**
+**Cần configure 3 ports cho mỗi instance:**
 - ✅ `APP_PORT` - Port của Next.js application (3025, 3026, 3027, ...)
 - ✅ `STUDIO_PORT` - Port của Supabase Studio (3000, 3100, 3200, ...)
+- ✅ `KONG_PORT` - Port của Kong API Gateway (8000, 8001, 8002, ...)
+  - **Required** - Browser cần access Kong để sử dụng Supabase auth, realtime, storage
 
 **Các services internal (KHÔNG cần configure):**
-- ✅ Kong API - App kết nối qua `http://kong:8000` (internal)
-- ✅ PostgreSQL - App kết nối qua `postgresql://db:5432` (internal)
-- ✅ Analytics, Realtime - Tất cả đều internal
+- ✅ PostgreSQL - Kết nối qua `postgresql://db:5432` (internal)
+- ✅ Analytics, Realtime, Auth - Tất cả đều internal, access qua Kong
 
 ### Cách Deploy Multiple Instances
 
@@ -681,8 +683,10 @@ nano docker/scripts/setup-instance.sh
 CENTER_NAME="Customer A Service Center"
 APP_PORT=3025
 STUDIO_PORT=3000
+KONG_PORT=8000
 SITE_URL="https://customer-a.yourdomain.com"
 API_EXTERNAL_URL="https://customer-a.yourdomain.com"
+SUPABASE_API_URL="https://api-a.yourdomain.com"
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
 SMTP_USER="noreply@yourdomain.com"
@@ -725,8 +729,10 @@ nano docker/scripts/setup-instance.sh
 # Set: CENTER_NAME="Customer B Service Center"
 # Set: APP_PORT=3026
 # Set: STUDIO_PORT=3100
+# Set: KONG_PORT=8001
 # Set: SITE_URL="https://customer-b.yourdomain.com"
 # Set: API_EXTERNAL_URL="https://customer-b.yourdomain.com"
+# Set: SUPABASE_API_URL="https://api-b.yourdomain.com"
 
 # Run setup
 ./docker/scripts/setup-instance.sh
@@ -749,8 +755,10 @@ nano docker/scripts/setup-instance.sh
 # Set: CENTER_NAME="Customer C Service Center"
 # Set: APP_PORT=3027
 # Set: STUDIO_PORT=3200
+# Set: KONG_PORT=8002
 # Set: SITE_URL="https://customer-c.yourdomain.com"
 # Set: API_EXTERNAL_URL="https://customer-c.yourdomain.com"
+# Set: SUPABASE_API_URL="https://api-c.yourdomain.com"
 
 # Run setup
 ./docker/scripts/setup-instance.sh
@@ -775,6 +783,10 @@ ingress:
   - hostname: customer-a.yourdomain.com
     service: http://localhost:3025
 
+  # Customer A - Supabase API (Kong)
+  - hostname: api-a.yourdomain.com
+    service: http://localhost:8000
+
   # Customer A - Supabase Studio
   - hostname: supabase-a.yourdomain.com
     service: http://localhost:3000
@@ -783,6 +795,10 @@ ingress:
   - hostname: customer-b.yourdomain.com
     service: http://localhost:3026
 
+  # Customer B - Supabase API (Kong)
+  - hostname: api-b.yourdomain.com
+    service: http://localhost:8001
+
   # Customer B - Supabase Studio
   - hostname: supabase-b.yourdomain.com
     service: http://localhost:3100
@@ -790,6 +806,10 @@ ingress:
   # Customer C - Main App
   - hostname: customer-c.yourdomain.com
     service: http://localhost:3027
+
+  # Customer C - Supabase API (Kong)
+  - hostname: api-c.yourdomain.com
+    service: http://localhost:8002
 
   # Customer C - Supabase Studio
   - hostname: supabase-c.yourdomain.com
@@ -800,7 +820,11 @@ ingress:
 ```
 
 **Lưu ý:**
-- Mỗi instance cần unique **APP_PORT** và **STUDIO_PORT**
+- Mỗi instance cần unique **APP_PORT**, **STUDIO_PORT**, và **KONG_PORT**
+- Mỗi instance cần **3 domains** trong Cloudflare Tunnel:
+  - App domain (customer-a.yourdomain.com)
+  - API domain (api-a.yourdomain.com) - **Required for browser access**
+  - Studio domain (supabase-a.yourdomain.com)
 - Setup script tự động generate tất cả secrets ở hex format (URL-safe)
 - Tất cả configuration được set trong script, không cần manual editing .env
 
@@ -853,19 +877,24 @@ Mỗi instance sử dụng khoảng:
 ```
 Customer A:
   - APP_PORT=3025     → https://customer-a.yourdomain.com
+  - KONG_PORT=8000    → https://api-a.yourdomain.com
   - STUDIO_PORT=3000  → https://supabase-a.yourdomain.com
 
 Customer B:
   - APP_PORT=3026     → https://customer-b.yourdomain.com
+  - KONG_PORT=8001    → https://api-b.yourdomain.com
   - STUDIO_PORT=3100  → https://supabase-b.yourdomain.com
 
 Customer C:
   - APP_PORT=3027     → https://customer-c.yourdomain.com
+  - KONG_PORT=8002    → https://api-c.yourdomain.com
   - STUDIO_PORT=3200  → https://supabase-c.yourdomain.com
 ...
 ```
 
-**Lưu ý:** Studio port cần được expose trong docker-compose.yml của mỗi instance.
+**Lưu ý:**
+- Kong port **REQUIRED** - Browser phải access được để dùng Supabase features
+- Tất cả ports đã được configure trong docker-compose.yml với environment variables
 
 ---
 

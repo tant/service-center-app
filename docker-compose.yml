@@ -61,7 +61,11 @@ services:
     container_name: supabase-kong
     image: kong:2.8.1
     restart: unless-stopped
-    # No ports exposed - App connects internally via http://kong:8000
+    # Expose Kong API Gateway for browser access to Supabase
+    # Configure KONG_PORT in .env (default: 8000)
+    # Required for client-side Supabase operations (auth, realtime, storage)
+    ports:
+      - "${KONG_PORT:-8000}:8000"
     volumes:
       # https://github.com/supabase/supabase/issues/12661
       - ./volumes/api/kong.yml:/home/kong/temp.yml:ro,z
@@ -80,6 +84,16 @@ services:
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kong",
+          "health"
+        ]
+      timeout: 10s
+      interval: 10s
+      retries: 10
     # https://unix.stackexchange.com/a/294837
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
 

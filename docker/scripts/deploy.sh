@@ -56,9 +56,23 @@ case $choice in
         echo "View logs with:"
         echo "  docker compose logs -f"
         echo ""
+
+        # Read URLs from .env
+        APP_PORT=$(grep "^APP_PORT=" .env | cut -d'=' -f2)
+        NEXT_PUBLIC_SUPABASE_URL=$(grep "^NEXT_PUBLIC_SUPABASE_URL=" .env | cut -d'=' -f2)
+        SITE_URL=$(grep "^SITE_URL=" .env | cut -d'=' -f2)
+        STUDIO_PORT=$(grep "^STUDIO_PORT=" .env | cut -d'=' -f2)
+
         echo "Access your application:"
-        echo "  - App: http://localhost (or your configured domain)"
-        echo "  - Supabase Studio: http://localhost:3001"
+        if [[ "$SITE_URL" == http://localhost* ]]; then
+            echo "  - App: ${SITE_URL:-http://localhost:${APP_PORT:-3025}}"
+            echo "  - Supabase API: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}"
+            echo "  - Supabase Studio: http://localhost:${STUDIO_PORT:-3000}"
+        else
+            echo "  - App: ${SITE_URL}"
+            echo "  - Supabase API: ${NEXT_PUBLIC_SUPABASE_URL}"
+            echo "  - Supabase Studio: https://supabase.${SITE_URL#https://}"
+        fi
         ;;
 
     2)

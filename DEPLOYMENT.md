@@ -483,9 +483,10 @@ curl http://localhost:3000
 #     - "3000:3000"
 ```
 
-**Verify reverse proxy configuration:**
-- Check your reverse proxy (Nginx/Cloudflare Tunnel) đã config đúng chưa
-- Domain: `supabase.dichvu.sstc.cloud` → `localhost:3000`
+**Verify Cloudflare Tunnel configuration:**
+- Check your Cloudflare Tunnel config đã setup đúng chưa
+- Example: `supabase.dichvu.sstc.cloud` → `http://localhost:3000`
+- Verify tunnel is running: `cloudflared tunnel info`
 
 ### Vector Container Không Start
 
@@ -552,11 +553,16 @@ docker compose up -d
 
 ### SSL/Certificate Errors
 
-**Nếu sử dụng reverse proxy**, kiểm tra SSL configuration:
+**Nếu sử dụng Cloudflare Tunnel**, kiểm tra SSL configuration:
 
-1. **Verify reverse proxy SSL config** (Nginx/Cloudflare/etc.)
-2. **Check certificate validity**
-3. **Check browser console for errors**
+1. **Verify Cloudflare Tunnel đang chạy**:
+   ```bash
+   ps aux | grep cloudflared
+   cloudflared tunnel list
+   ```
+2. **Check tunnel config** trong `~/.cloudflared/config.yml`
+3. **Verify DNS settings** trong Cloudflare dashboard
+4. **Check browser console for errors**
 
 ### Out of Memory/Disk
 
@@ -582,22 +588,25 @@ docker compose restart
 ## FAQ
 
 **Q: Cần expose ports nào?**
-A: Chỉ cần APP_PORT (3025) và Studio port (3000). Các services khác đều internal.
+A: Chỉ cần APP_PORT (3025, 3026...) và STUDIO_PORT (3000, 3100...). Các services khác đều internal.
 
 **Q: Có thể chạy nhiều instances không?**
-A: Có! Mỗi instance chỉ cần thay đổi APP_PORT (3025, 3026, 3027...).
+A: Có! Mỗi instance chỉ cần thay đổi APP_PORT và STUDIO_PORT. Sử dụng setup script để tự động configure.
 
 **Q: Database có share giữa các instances không?**
-A: Không! Mỗi instance có database riêng, hoàn toàn isolated.
+A: Không! Mỗi instance có database riêng, hoàn toàn isolated với Docker network riêng.
 
-**Q: Cần setup reverse proxy như thế nào?**
-A: Tùy vào solution (Nginx/Cloudflare Tunnel/etc.). Chỉ cần trỏ domain đến localhost ports.
+**Q: Cần setup Cloudflare Tunnel như thế nào?**
+A: Mỗi instance cần 2 domains trong Cloudflare Tunnel config - một cho app, một cho studio. Xem section "Multi-Instance Deployment" để biết config example.
+
+**Q: Secrets có cần URL-safe không?**
+A: Có! Setup script tự động generate tất cả secrets ở hex format (only 0-9a-f), hoàn toàn URL-safe.
 
 **Q: Downtime khi update?**
-A: Minimal. Build image mới, sau đó restart container.
+A: Minimal. Build image mới, sau đó restart container với `docker compose up -d`.
 
 **Q: Có thể restrict access không?**
-A: Có! Dùng reverse proxy firewall rules hoặc Cloudflare Access.
+A: Có! Dùng Cloudflare Access hoặc firewall rules để restrict access theo IP/email.
 
 ---
 
@@ -665,35 +674,64 @@ cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-a
 cd customer-a
 
-# 2. Create .env
-cp .env.docker.example .env
+# 2. Configure instance
+nano docker/scripts/setup-instance.sh
 
-# 3. Configure - Thay đổi APP_PORT và STUDIO_PORT
-nano .env
-# Set: APP_PORT=3025
-# Set: STUDIO_PORT=3000
-# Generate secrets (theo Bước 1.2 và 1.6 ở trên)
+# Edit configuration:
+CENTER_NAME="Customer A Service Center"
+APP_PORT=3025
+STUDIO_PORT=3000
+SITE_URL="https://customer-a.yourdomain.com"
+API_EXTERNAL_URL="https://customer-a.yourdomain.com"
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="noreply@yourdomain.com"
+SMTP_PASS="your-smtp-password"
+SMTP_ADMIN_EMAIL="admin@yourdomain.com"
+SMTP_SENDER_NAME="Customer A Service Center"
 
-# 4. Start services với unique project name
+# 3. Run setup script
+chmod +x docker/scripts/setup-instance.sh
+./docker/scripts/setup-instance.sh
+
+# Script will automatically:
+# - Generate all secrets (hex format, URL-safe)
+# - Create .env with all configuration
+# - Generate Supabase API keys
+# - Display setup password
+
+# 4. Start services with unique project name
 docker compose -p customer-a build
 docker compose -p customer-a up -d
 
 # 5. Apply schema
 ./docker/scripts/apply-schema.sh
 
-# 6. Access
-# http://localhost:3025
+# 6. Setup application
+# Visit: https://customer-a.yourdomain.com/setup
+# Use the setup password from step 3
 ```
 
 #### Instance 2 - Customer B
 
 ```bash
-# Tương tự, nhưng dùng APP_PORT và STUDIO_PORT khác
+# Tương tự, nhưng dùng ports và domains khác
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-b
 cd customer-b
-cp .env.docker.example .env
-nano .env  # Set: APP_PORT=3026, STUDIO_PORT=3100
+
+# Configure với ports khác
+nano docker/scripts/setup-instance.sh
+# Set: CENTER_NAME="Customer B Service Center"
+# Set: APP_PORT=3026
+# Set: STUDIO_PORT=3100
+# Set: SITE_URL="https://customer-b.yourdomain.com"
+# Set: API_EXTERNAL_URL="https://customer-b.yourdomain.com"
+
+# Run setup
+./docker/scripts/setup-instance.sh
+
+# Deploy
 docker compose -p customer-b build
 docker compose -p customer-b up -d
 ./docker/scripts/apply-schema.sh
@@ -705,60 +743,66 @@ docker compose -p customer-b up -d
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-c
 cd customer-c
-cp .env.docker.example .env
-nano .env  # Set: APP_PORT=3027, STUDIO_PORT=3200
+
+# Configure
+nano docker/scripts/setup-instance.sh
+# Set: CENTER_NAME="Customer C Service Center"
+# Set: APP_PORT=3027
+# Set: STUDIO_PORT=3200
+# Set: SITE_URL="https://customer-c.yourdomain.com"
+# Set: API_EXTERNAL_URL="https://customer-c.yourdomain.com"
+
+# Run setup
+./docker/scripts/setup-instance.sh
+
+# Deploy
 docker compose -p customer-c build
 docker compose -p customer-c up -d
 ./docker/scripts/apply-schema.sh
 ```
 
-### Reverse Proxy Configuration
+### Cloudflare Tunnel Configuration
 
-Mỗi instance cần **2 domains** (app + studio):
+Mỗi instance cần **2 domains** (app + studio) được configure trong Cloudflare Tunnel:
 
-**Ví dụ với Nginx:**
-```nginx
-# Customer A - App
-server {
-    listen 443 ssl;
-    server_name customer-a.yourdomain.com;
-    location / {
-        proxy_pass http://localhost:3025;
-    }
-}
+**Ví dụ Cloudflare Tunnel config (`config.yml`):**
+```yaml
+tunnel: your-tunnel-id
+credentials-file: /path/to/credentials.json
 
-# Customer A - Studio
-server {
-    listen 443 ssl;
-    server_name supabase-a.yourdomain.com;
-    location / {
-        proxy_pass http://localhost:3000;
-    }
-}
+ingress:
+  # Customer A - Main App
+  - hostname: customer-a.yourdomain.com
+    service: http://localhost:3025
 
-# Customer B - App
-server {
-    listen 443 ssl;
-    server_name customer-b.yourdomain.com;
-    location / {
-        proxy_pass http://localhost:3026;
-    }
-}
+  # Customer A - Supabase Studio
+  - hostname: supabase-a.yourdomain.com
+    service: http://localhost:3000
 
-# Customer B - Studio
-server {
-    listen 443 ssl;
-    server_name supabase-b.yourdomain.com;
-    location / {
-        proxy_pass http://localhost:3100;  # Studio cho instance B
-    }
-}
+  # Customer B - Main App
+  - hostname: customer-b.yourdomain.com
+    service: http://localhost:3026
+
+  # Customer B - Supabase Studio
+  - hostname: supabase-b.yourdomain.com
+    service: http://localhost:3100
+
+  # Customer C - Main App
+  - hostname: customer-c.yourdomain.com
+    service: http://localhost:3027
+
+  # Customer C - Supabase Studio
+  - hostname: supabase-c.yourdomain.com
+    service: http://localhost:3200
+
+  # Catch-all
+  - service: http_status:404
 ```
 
 **Lưu ý:**
 - Mỗi instance cần unique **APP_PORT** và **STUDIO_PORT**
-- Cả 2 ports đã được configure sẵn trong docker-compose.yml với environment variables
-- Chỉ cần thay đổi giá trị trong file `.env` cho mỗi instance
+- Setup script tự động generate tất cả secrets ở hex format (URL-safe)
+- Tất cả configuration được set trong script, không cần manual editing .env
 
 ### Quản Lý Instances
 

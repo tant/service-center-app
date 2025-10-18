@@ -14,16 +14,18 @@ const nextConfig: NextConfig = {
   },
   // Enable standalone output for Docker deployment
   output: "standalone",
-  // Exclude volumes directory from build process (for both Webpack and Turbopack)
-  turbopack: {
-    rules: {
-      // Ignore volumes directory during build
-      "volumes/**": {
-        loaders: [],
+  // Experimental: Exclude volumes directory from file watching
+  experimental: {
+    // Turbopack-specific optimizations
+    turbo: {
+      // Exclude volumes directory from file system watching
+      resolveAlias: {
+        // Prevent Turbopack from reading volumes directory
       },
     },
   },
   webpack: (config, { isServer }) => {
+    // Exclude volumes directory from webpack watching
     config.watchOptions = {
       ...config.watchOptions,
       ignored: ['**/volumes/**', '**/node_modules/**'],

@@ -60,6 +60,5 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Docker volumes (runtime data)
-volumes/db/data
-volumes/storage
+# Docker volumes (runtime data - exclude all to prevent permission issues during build)
+volumes/

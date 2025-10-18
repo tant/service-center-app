@@ -21,6 +21,11 @@ RUN pnpm install --frozen-lockfile --prod=false
 FROM base AS builder
 WORKDIR /app
 
+# Accept build-time arguments for Next.js public environment variables
+# These will be embedded in the client-side JavaScript bundles
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -30,6 +35,8 @@ COPY . .
 # Build Next.js app with Turbopack
 # Note: The build will create .next/standalone directory
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 RUN pnpm build
 
 # Stage 4: Production runtime

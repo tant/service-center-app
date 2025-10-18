@@ -6,8 +6,82 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/utils/supabase/server";
 
-export async function login(formData: FormData) {
+export type LoginState = {
+  error?: string;
+  fieldErrors?: {
+    email?: string;
+    password?: string;
+  };
+  success?: boolean;
+};
+
+/**
+ * Get user-friendly error message based on Supabase error
+ */
+function getUserFriendlyError(error: any): string {
+  const errorMessage = error.message?.toLowerCase() || "";
+
+  // Invalid credentials
+  if (errorMessage.includes("invalid login credentials")) {
+    return "Invalid email or password. Please check your credentials and try again.";
+  }
+
+  // Email not confirmed
+  if (errorMessage.includes("email not confirmed")) {
+    return "Please verify your email address before logging in. Check your inbox for the verification link.";
+  }
+
+  // Too many requests
+  if (errorMessage.includes("too many") || error.status === 429) {
+    return "Too many login attempts. Please wait a few minutes before trying again.";
+  }
+
+  // Network/server errors
+  if (error.status >= 500 || errorMessage.includes("fetch")) {
+    return "Unable to connect to the server. Please check your internet connection and try again.";
+  }
+
+  // User not found
+  if (errorMessage.includes("user not found")) {
+    return "No account found with this email address.";
+  }
+
+  // Default fallback
+  return "Unable to sign in. Please try again or contact support if the problem persists.";
+}
+
+export async function login(
+  prevState: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
   console.log("🔐 [LOGIN ACTION] Starting login process");
+
+  // Extract and validate inputs
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  // Server-side validation
+  const fieldErrors: LoginState["fieldErrors"] = {};
+
+  if (!email || !email.trim()) {
+    fieldErrors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    fieldErrors.email = "Please enter a valid email address";
+  }
+
+  if (!password || !password.trim()) {
+    fieldErrors.password = "Password is required";
+  } else if (password.length < 6) {
+    fieldErrors.password = "Password must be at least 6 characters";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    console.log("🔐 [LOGIN ACTION] Validation failed:", fieldErrors);
+    return {
+      fieldErrors,
+      success: false,
+    };
+  }
 
   // Get cookie store and clear any existing auth cookies to prevent stale sessions
   const cookieStore = await cookies();
@@ -34,23 +108,18 @@ export async function login(formData: FormData) {
   const supabase = await createClient();
   console.log("🔐 [LOGIN ACTION] Supabase client created");
 
-  // type-casting here for convenience
-  // in practice, you should validate your inputs
-  const data = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
-
   console.log("🔐 [LOGIN ACTION] Form data extracted:", {
-    email: data.email,
-    password: data.password ? "[REDACTED]" : "missing",
-    hasEmail: !!data.email,
-    hasPassword: !!data.password,
+    email,
+    password: password ? "[REDACTED]" : "missing",
+    hasEmail: !!email,
+    hasPassword: !!password,
   });
 
   console.log("🔐 [LOGIN ACTION] Attempting sign in with Supabase...");
-  const { error, data: authData } =
-    await supabase.auth.signInWithPassword(data);
+  const { error, data: authData } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
 
   console.log("🔐 [LOGIN ACTION] Supabase signInWithPassword response:", {
     success: !error,
@@ -71,15 +140,32 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    console.error(
-      "🔐 [LOGIN ACTION] Authentication failed, redirecting to /error",
-    );
-    redirect("/error?from=login");
+    console.error("🔐 [LOGIN ACTION] Authentication failed:", {
+      message: error.message,
+      status: error.status,
+      name: error.name,
+    });
+
+    const userFriendlyError = getUserFriendlyError(error);
+
+    return {
+      error: userFriendlyError,
+      success: false,
+    };
+  }
+
+  // Verify we have a valid session
+  if (!authData?.session) {
+    console.error("🔐 [LOGIN ACTION] No session created after successful auth");
+    return {
+      error: "Login succeeded but session creation failed. Please try again.",
+      success: false,
+    };
   }
 
   console.log(
     "🔐 [LOGIN ACTION] Authentication successful, revalidating and redirecting to /dashboard",
   );
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   redirect("/dashboard");
 }

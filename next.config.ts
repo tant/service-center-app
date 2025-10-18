@@ -14,21 +14,23 @@ const nextConfig: NextConfig = {
   },
   // Enable standalone output for Docker deployment
   output: "standalone",
-  // Experimental: Exclude volumes directory from file watching
-  experimental: {
-    // Turbopack-specific optimizations
-    turbo: {
-      // Exclude volumes directory from file system watching
-      resolveAlias: {
-        // Prevent Turbopack from reading volumes directory
-      },
-    },
+  // Exclude volumes directory from Turbopack file system operations
+  turbopack: {
+    resolveExtensions: [
+      ".mdx",
+      ".tsx",
+      ".ts",
+      ".jsx",
+      ".js",
+      ".mjs",
+      ".json",
+    ],
   },
   webpack: (config, { isServer }) => {
     // Exclude volumes directory from webpack watching
     config.watchOptions = {
       ...config.watchOptions,
-      ignored: ['**/volumes/**', '**/node_modules/**'],
+      ignored: ["**/volumes/**", "**/node_modules/**"],
     };
     return config;
   },

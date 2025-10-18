@@ -95,10 +95,23 @@ To modify configuration:
 - Called automatically by `setup-instance.sh`
 - Manual usage: `node docker/scripts/generate-keys.js <JWT_SECRET>`
 
-**scripts/deploy.sh**
-- Interactive deployment script
-- Options for fresh deploy, update, restart, stop, logs, cleanup
-- Validates environment before deployment
+**scripts/deploy.sh** ⭐ **MAIN ENTRY POINT**
+- **Primary deployment script** - handles complete deployment workflow
+- Interactive menu with 7 options:
+  1. **🆕 Complete fresh deployment** - Runs entire workflow (setup → build → deploy → schema)
+  2. **🏗️ Build and deploy only** - Requires existing .env file
+  3. **🔄 Update application only** - Rebuild app container
+  4. **♻️ Restart all services** - Restart without rebuild
+  5. **📋 View logs** - Stream container logs
+  6. **🛑 Stop all services** - Stop all containers
+  7. **🧹 Clean up** - Remove containers, volumes, .env, INSTANCE_INFO.txt
+- **Option 1 (Complete fresh deployment)** automatically:
+  - Runs setup-instance.sh (generate secrets, create .env)
+  - Builds Docker images
+  - Starts all services
+  - Waits for database to be ready
+  - Applies database schema automatically
+  - Displays access information and next steps
 - Usage: `./docker/scripts/deploy.sh`
 
 **scripts/backup.sh**
@@ -109,9 +122,11 @@ To modify configuration:
 
 ## Quick Start
 
-### Automated Setup (Recommended)
+### ⭐ Automated Deployment (Recommended - ONE COMMAND!)
 
-1. **Edit setup script configuration:**
+**Easiest way** - Use the deploy script which handles everything:
+
+1. **Edit configuration:**
    ```bash
    nano docker/scripts/setup-instance.sh
    ```
@@ -128,7 +143,7 @@ To modify configuration:
    PRODUCTION_DOMAIN="sv.yourdomain.com"
 
    # Setup password (for /setup endpoint)
-   SETUP_PASSWORD=your-setup-password
+   SETUP_PASSWORD=""                  # Auto-generated if empty
 
    # Admin account (created via /setup endpoint)
    ADMIN_EMAIL="admin@example.com"
@@ -140,54 +155,41 @@ To modify configuration:
    # ... etc
    ```
 
-   **Note:** Script automatically calculates and derives:
-   - `STUDIO_PORT = 3000` (from APP_PORT 3025)
-   - `KONG_PORT = 8000` (from APP_PORT 3025)
-   - URLs based on DEPLOYMENT_MODE:
-     - **Local mode**: `http://localhost:3025`, `http://localhost:8000`, `http://localhost:3000`
-     - **Production mode**: `https://sv.yourdomain.com`, `https://api.sv.yourdomain.com`, `https://supabase.sv.yourdomain.com`
-
-2. **Run setup script:**
+2. **Run deployment script:**
    ```bash
-   chmod +x docker/scripts/setup-instance.sh
-   ./docker/scripts/setup-instance.sh
+   chmod +x docker/scripts/deploy.sh
+   ./docker/scripts/deploy.sh
+
+   # Select option 1: Complete fresh deployment
    ```
 
    The script will automatically:
-   - ✅ Generate all secrets (hex format, URL-safe)
-   - ✅ Copy configuration files from `docs/references/volumes/`
-   - ✅ Create `.env` file with all settings (including admin credentials)
-   - ✅ Generate Supabase API keys
-   - ✅ Create `INSTANCE_INFO.txt` with all configuration details
-   - ✅ Display setup password and admin credentials
+   - ✅ **Step 1/4**: Run setup-instance.sh
+     - Generate all secrets (hex format, URL-safe)
+     - Copy configuration files
+     - Create .env and INSTANCE_INFO.txt
+     - Generate Supabase API keys
+   - ✅ **Step 2/4**: Build Docker images
+   - ✅ **Step 3/4**: Start all services and wait for database
+   - ✅ **Step 4/4**: Apply database schema automatically
+   - ✅ Display access information and next steps
 
-3. **Build and deploy:**
-   ```bash
-   docker compose build
-   docker compose up -d
-   ```
+3. **Setup Cloudflare Tunnel** (production mode only - see [DEPLOYMENT.md](../DEPLOYMENT.md) for details)
 
-4. **Apply database schema:**
-   ```bash
-   ./docker/scripts/apply-schema.sh
-   ```
-
-5. **Setup Cloudflare Tunnel** (production mode only - see [DEPLOYMENT.md](../DEPLOYMENT.md) for details)
-
-6. **Access setup page to create admin account:**
+4. **Access setup page to create admin account:**
    - **Local mode**: `http://localhost:3025/setup`
    - **Production mode**: `https://yourdomain.com/setup`
-   - Enter the setup password from step 2
-   - This creates the admin account with the credentials you configured (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME)
+   - Enter the setup password (from INSTANCE_INFO.txt)
+   - This creates the admin account with your configured credentials
 
-7. **Login with admin account:**
+5. **Login with admin account:**
    - **Local mode**: `http://localhost:3025/login`
    - **Production mode**: `https://yourdomain.com/login`
    - Use ADMIN_EMAIL and ADMIN_PASSWORD from your configuration
 
 ### Manual Setup (Advanced)
 
-If you prefer manual configuration:
+If you prefer manual configuration or need more control over individual steps:
 
 1. **Generate environment file:**
    ```bash

@@ -344,13 +344,104 @@ File .env đã chứa:
 
 ## Bước 2: Deploy Docker Stack
 
-### 2.1 Deploy với Script
+### 2.1 Deploy với Script (Automated)
+
+**Cách dễ nhất** - Chạy 1 script tự động cho toàn bộ quá trình:
+
 ```bash
 chmod +x docker/scripts/deploy.sh
 ./docker/scripts/deploy.sh
 
-# Chọn option 1: Fresh deployment
+# Chọn option 1: Complete fresh deployment
 ```
+
+Script này sẽ tự động:
+- ✅ **Step 1/4**: Run setup-instance.sh để tạo .env và INSTANCE_INFO.txt
+- ✅ **Step 2/4**: Build Docker images
+- ✅ **Step 3/4**: Start all services và đợi database ready
+- ✅ **Step 4/4**: Apply database schema automatically
+- ✅ Display access information và next steps
+
+**Output mẫu:**
+```
+🚀 Service Center Management - Docker Deployment
+==================================================
+
+Select deployment action:
+  1) 🆕 Complete fresh deployment (setup + build + deploy + schema)
+  2) 🏗️  Build and deploy only (requires existing .env)
+  3) 🔄 Update application only (rebuild app container)
+  4) ♻️  Restart all services
+  5) 📋 View logs
+  6) 🛑 Stop all services
+  7) 🧹 Clean up (remove containers and volumes)
+
+Enter choice [1-7]: 1
+
+==========================================
+🆕 COMPLETE FRESH DEPLOYMENT
+==========================================
+
+📝 Step 1/4: Running instance setup...
+[setup-instance.sh output...]
+✅ Step 1/4: Instance setup complete!
+
+🏗️  Step 2/4: Building Docker images...
+[docker build output...]
+✅ Step 2/4: Build complete!
+
+🚀 Step 3/4: Starting all services...
+⏳ Waiting for database to be ready...
+✅ Database is ready!
+✅ Step 3/4: All services started!
+
+📊 Step 4/4: Applying database schema...
+[apply-schema.sh output...]
+✅ Step 4/4: Schema applied successfully!
+
+==========================================
+🎉 DEPLOYMENT COMPLETE!
+==========================================
+
+📋 Access Information:
+
+  🌐 Application:
+     https://dichvu.sstc.cloud
+
+  🔧 Supabase API:
+     https://api.dichvu.sstc.cloud
+
+  📊 Supabase Studio (with authentication):
+     https://supabase.dichvu.sstc.cloud
+
+==========================================
+📝 Next Steps:
+==========================================
+
+1️⃣  Access the setup page:
+   https://dichvu.sstc.cloud/setup
+   Password: [from INSTANCE_INFO.txt]
+
+2️⃣  This will create your admin account with:
+   Email: admin@sstc.cloud
+   Password: [from INSTANCE_INFO.txt]
+
+3️⃣  Login to the application:
+   https://dichvu.sstc.cloud/login
+
+📄 For more details, see: INSTANCE_INFO.txt
+
+🔍 Check status: docker compose ps
+📋 View logs:    docker compose logs -f
+```
+
+**Các options khác:**
+- **Option 2**: Build and deploy only (khi đã có .env)
+- **Option 3**: Update application only (rebuild app container)
+- **Option 4**: Restart all services
+- **Option 5**: View logs
+- **Option 6**: Stop all services
+- **Option 7**: Clean up (xóa containers, volumes, .env, INSTANCE_INFO.txt)
 
 ### 2.2 Verify Services
 ```bash
@@ -393,7 +484,13 @@ curl http://localhost:3000              # ✅ Supabase Studio (nếu đã expose
 
 ## Bước 3: Deploy Database Schema
 
-**Đơn giản nhất** - Chạy 1 script tự động:
+**⚠️ IMPORTANT**: Database schema đã được apply tự động bởi `deploy.sh` option 1!
+
+Nếu bạn đã chạy `./docker/scripts/deploy.sh` với option 1 (Complete fresh deployment), schema đã được apply và bạn có thể **skip bước này**.
+
+### Manual Schema Deployment (Optional)
+
+Nếu cần apply schema manually hoặc update schema:
 
 ```bash
 # Make script executable (chỉ cần 1 lần)
@@ -827,16 +924,26 @@ A: Có! Dùng Cloudflare Access hoặc firewall rules để restrict access theo
 ## Commands Reference
 
 ```bash
-# Setup
-./docker/scripts/setup-instance.sh         # Setup new instance (automated)
+# ⭐ Main Deployment Script (Recommended)
+./docker/scripts/deploy.sh                 # Interactive deployment menu
+# Options:
+#   1) Complete fresh deployment (setup + build + deploy + schema)
+#   2) Build and deploy only (requires existing .env)
+#   3) Update application only (rebuild app container)
+#   4) Restart all services
+#   5) View logs
+#   6) Stop all services
+#   7) Clean up (remove containers and volumes)
 
-# Docker
+# Individual Scripts (Advanced)
+./docker/scripts/setup-instance.sh         # Setup new instance (automated)
+./docker/scripts/apply-schema.sh           # Apply database schema (manual)
+./docker/scripts/backup.sh                 # Backup script
+
+# Docker Management
 docker compose ps                          # Status
 docker compose logs -f app                 # Logs
 docker compose restart app                 # Restart
-./docker/scripts/deploy.sh                 # Deploy script
-./docker/scripts/backup.sh                 # Backup script
-./docker/scripts/apply-schema.sh           # Apply database schema
 
 # Troubleshooting specific services
 docker logs supabase-vector --tail 50      # Vector logs
@@ -849,9 +956,13 @@ docker compose exec -T db pg_dump -U postgres postgres > backup.sql  # Backup
 cat backup.sql | docker compose exec -T db psql -U postgres  # Restore
 
 # Update application
+git pull && ./docker/scripts/deploy.sh     # Use deploy.sh option 3
+# Or manually:
 git pull && docker compose build app && docker compose up -d app
 
 # Clean restart (nếu có issues)
+./docker/scripts/deploy.sh                 # Use option 7 then option 1
+# Or manually:
 docker compose down
 docker compose up -d
 docker compose ps  # Verify all healthy
@@ -916,30 +1027,31 @@ SMTP_SENDER_NAME="Customer A Service Center"
 # - API: https://customer-a8.yourdomain.com  (subdomain + 8 from port 8000)
 # - Studio: https://customer-a3.yourdomain.com  (subdomain + 3 from port 3000)
 
-# 3. Run setup script
-chmod +x docker/scripts/setup-instance.sh
-./docker/scripts/setup-instance.sh
+# 3. Deploy with automated script (ONE COMMAND!)
+chmod +x docker/scripts/deploy.sh
+docker compose -p customer-a exec bash -c './docker/scripts/deploy.sh'
+# Or run deploy.sh and select option 1
 
-# Script will automatically:
-# - Generate all secrets (hex format, URL-safe)
-# - Create .env with all configuration (including admin credentials)
-# - Generate Supabase API keys
-# - Create INSTANCE_INFO.txt with all details
-# - Display setup password and admin credentials
+# This will automatically:
+# - Run setup-instance.sh (generate secrets, create .env, INSTANCE_INFO.txt)
+# - Build Docker images
+# - Start all services with project name
+# - Wait for database to be ready
+# - Apply database schema
+# - Display access information and next steps
 
-# 4. Start services with unique project name
-docker compose -p customer-a build
-docker compose -p customer-a up -d
+# Alternatively (manual steps):
+./docker/scripts/setup-instance.sh         # Step 1: Setup
+docker compose -p customer-a build          # Step 2: Build
+docker compose -p customer-a up -d          # Step 3: Start
+./docker/scripts/apply-schema.sh            # Step 4: Schema
 
-# 5. Apply schema
-./docker/scripts/apply-schema.sh
-
-# 6. Setup application
+# 4. Setup application
 # Visit: https://customer-a.yourdomain.com/setup
 # Enter setup password (from INSTANCE_INFO.txt)
 # This will create admin account with credentials from step 2
 
-# 7. Login
+# 5. Login
 # Visit: https://customer-a.yourdomain.com/login
 # Email: admin@customer-a.com
 # Password: SecurePassword123!
@@ -964,10 +1076,12 @@ nano docker/scripts/setup-instance.sh
 # Set: ADMIN_NAME="Customer B Admin"
 # URLs auto-derived (numbered): customer-b8.yourdomain.com, customer-b3.yourdomain.com
 
-# Run setup
-./docker/scripts/setup-instance.sh
+# Deploy (automated - ONE COMMAND!)
+chmod +x docker/scripts/deploy.sh
+./docker/scripts/deploy.sh  # Select option 1
 
-# Deploy
+# Or manual:
+./docker/scripts/setup-instance.sh
 docker compose -p customer-b build
 docker compose -p customer-b up -d
 ./docker/scripts/apply-schema.sh
@@ -993,10 +1107,12 @@ nano docker/scripts/setup-instance.sh
 # Set: ADMIN_NAME="Customer C Admin"
 # URLs auto-derived (numbered): customer-c8.yourdomain.com, customer-c3.yourdomain.com
 
-# Run setup
-./docker/scripts/setup-instance.sh
+# Deploy (automated - ONE COMMAND!)
+chmod +x docker/scripts/deploy.sh
+./docker/scripts/deploy.sh  # Select option 1
 
-# Deploy
+# Or manual:
+./docker/scripts/setup-instance.sh
 docker compose -p customer-c build
 docker compose -p customer-c up -d
 ./docker/scripts/apply-schema.sh

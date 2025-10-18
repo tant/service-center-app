@@ -35,13 +35,13 @@ returns trigger as $$
 begin
   update public.service_tickets
   set parts_total = (
-    select pg_catalog.coalesce(pg_catalog.sum(total_price), 0)
+    select coalesce(sum(total_price), 0)
     from public.service_ticket_parts
-    where ticket_id = pg_catalog.coalesce(new.ticket_id, old.ticket_id)
+    where ticket_id = coalesce(new.ticket_id, old.ticket_id)
   )
-  where id = pg_catalog.coalesce(new.ticket_id, old.ticket_id);
+  where id = coalesce(new.ticket_id, old.ticket_id);
 
-  return pg_catalog.coalesce(new, old);
+  return coalesce(new, old);
 end;
 $$ language plpgsql
 security definer

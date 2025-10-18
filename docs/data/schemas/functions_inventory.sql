@@ -14,7 +14,7 @@ BEGIN
   UPDATE public.parts
   SET
     stock_quantity = stock_quantity - quantity_to_decrease,
-    updated_at = pg_catalog.now()
+    updated_at = now()
   WHERE
     id = part_id
     AND stock_quantity >= quantity_to_decrease;
@@ -23,7 +23,7 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Insufficient stock for part ID: %. Available: %, Requested: %',
       part_id,
-      pg_catalog.coalesce((SELECT stock_quantity FROM public.parts WHERE id = part_id), 0),
+      coalesce((SELECT stock_quantity FROM public.parts WHERE id = part_id), 0),
       quantity_to_decrease;
   END IF;
 
@@ -47,7 +47,7 @@ BEGIN
   UPDATE public.parts
   SET
     stock_quantity = stock_quantity + quantity_to_increase,
-    updated_at = pg_catalog.now()
+    updated_at = now()
   WHERE id = part_id;
 
   -- Check if any row was updated

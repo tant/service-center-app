@@ -424,6 +424,27 @@ NEXT_PUBLIC_SUPABASE_URL=https://api.yourdomain.com
 - Admin client (`src/utils/supabase/admin.ts`): Uses `SUPABASE_SERVICE_ROLE_KEY`
 - Docker services (`docker-compose.yml`): Use `SUPABASE_ANON_KEY`
 
+### Build-Time vs Runtime Variables
+
+**IMPORTANT:** `NEXT_PUBLIC_*` variables are embedded in the client-side JavaScript bundles during the build process:
+
+1. **Build Time (Dockerfile)**
+   - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are passed as build arguments
+   - Next.js embeds these values into the client-side JavaScript bundles
+   - These values cannot be changed without rebuilding the Docker image
+
+2. **Runtime (docker-compose.yml)**
+   - All environment variables (including `NEXT_PUBLIC_*`) are passed to the container
+   - Server-side code can access all variables at runtime
+   - Client-side code uses the embedded build-time values
+
+**Rebuild Required:**
+If you change `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env`, you **must rebuild** the Docker image:
+```bash
+docker compose build app
+docker compose up -d app
+```
+
 ### No Fallback Logic
 
 The application uses **single, well-defined variables** with no fallback logic. This ensures:
@@ -431,6 +452,7 @@ The application uses **single, well-defined variables** with no fallback logic. 
 - ✅ No confusion about which variable is being used
 - ✅ Easier debugging and maintenance
 - ✅ Scripts automatically generate all required variables
+- ✅ Build-time embedding of NEXT_PUBLIC_* variables for client-side access
 
 ## Documentation
 

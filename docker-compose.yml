@@ -556,6 +556,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Pass NEXT_PUBLIC_* vars as build arguments so they're embedded in client bundles
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: service-center-app
     restart: unless-stopped
     ports:

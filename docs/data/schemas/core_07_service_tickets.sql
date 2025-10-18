@@ -110,7 +110,7 @@ begin
       'Status changed from "' || old.status || '" to "' || new.status || '"',
       'status_change',
       false,
-      pg_catalog.coalesce(new.updated_by, (select auth.uid()))
+      coalesce(new.updated_by, (select auth.uid()))
     );
   end if;
 

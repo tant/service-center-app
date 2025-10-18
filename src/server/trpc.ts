@@ -32,14 +32,14 @@ function createSupabaseClients(req: Request) {
 
   const startTime = performance.now();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const supabaseServiceRoleJWT = process.env.SUPABASE_SERVICE_ROLE_JWT;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleJWT) {
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     console.error(`❌ [TRPC-${requestId}] Missing environment variables:`, {
       hasUrl: !!supabaseUrl,
       hasAnonKey: !!supabaseAnonKey,
-      hasServiceRole: !!supabaseServiceRoleJWT,
+      hasServiceRole: !!supabaseServiceRoleKey,
     });
     throw new Error("Missing required Supabase environment variables");
   }
@@ -97,7 +97,7 @@ function createSupabaseClients(req: Request) {
   });
 
   // Admin client with service role JWT (bypasses RLS)
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleJWT, {
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

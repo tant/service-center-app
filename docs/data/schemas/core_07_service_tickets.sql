@@ -43,7 +43,7 @@ create trigger "service_tickets_updated_at_trigger"
   execute function update_updated_at_column();
 
 -- Function to generate ticket number in SV-YYYY-NNN format
--- Security: SET search_path = 'public' and explicit schema qualification
+-- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
 create or replace function generate_ticket_number()
 returns text as $$
 declare
@@ -51,13 +51,13 @@ declare
   next_number integer;
   new_ticket_number text;
 begin
-  current_year := to_char(now(), 'YYYY');
+  current_year := pg_catalog.to_char(pg_catalog.now(), 'YYYY');
 
   -- Get the highest ticket number for current year
-  select coalesce(
-    max(
-      cast(
-        substring(ticket_number from 'SV-' || current_year || '-(\d+)') as integer
+  select pg_catalog.coalesce(
+    pg_catalog.max(
+      pg_catalog.cast(
+        pg_catalog.substring(ticket_number from 'SV-' || current_year || '-(\d+)') as pg_catalog.int4
       )
     ), 0
   ) + 1
@@ -66,25 +66,26 @@ begin
   where ticket_number like 'SV-' || current_year || '-%';
 
   -- Format as SV-YYYY-NNN (zero-padded to 3 digits)
-  new_ticket_number := 'SV-' || current_year || '-' || lpad(next_number::text, 3, '0');
+  new_ticket_number := 'SV-' || current_year || '-' || pg_catalog.lpad(next_number::pg_catalog.text, 3, '0');
 
   return new_ticket_number;
 end;
 $$ language plpgsql
 security definer
-set search_path = 'public';
+set search_path = '';
 
 -- Trigger to automatically generate ticket number on insert
+-- Security: SET search_path = '' prevents schema hijacking
 create or replace function set_ticket_number()
 returns trigger as $$
 begin
   if new.ticket_number is null or new.ticket_number = '' then
-    new.ticket_number := generate_ticket_number();
+    new.ticket_number := public.generate_ticket_number();
   end if;
   return new;
 end;
 $$ language plpgsql
-set search_path = 'public';
+set search_path = '';
 
 create trigger "service_tickets_set_number_trigger"
   before insert on "service_tickets"
@@ -92,7 +93,7 @@ create trigger "service_tickets_set_number_trigger"
   execute function set_ticket_number();
 
 -- Function to log status changes as comments
--- Security: SET search_path = 'public' and explicit schema qualification
+-- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
 create or replace function log_status_change()
 returns trigger as $$
 begin
@@ -109,7 +110,7 @@ begin
       'Status changed from "' || old.status || '" to "' || new.status || '"',
       'status_change',
       false,
-      coalesce(new.updated_by, (select auth.uid()))
+      pg_catalog.coalesce(new.updated_by, (select auth.uid()))
     );
   end if;
 
@@ -117,7 +118,7 @@ begin
 end;
 $$ language plpgsql
 security definer
-set search_path = 'public';
+set search_path = '';
 
 -- Trigger to log status changes
 create trigger "service_tickets_log_status_change_trigger"

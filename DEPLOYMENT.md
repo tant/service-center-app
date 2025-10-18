@@ -19,6 +19,7 @@ Tài liệu này hướng dẫn triển khai Service Center Management lên prod
 - [Bước 2: Deploy Docker Stack](#bước-2-deploy-docker-stack)
 - [Bước 3: Deploy Database Schema](#bước-3-deploy-database-schema)
 - [Bước 4: Initial Setup](#bước-4-initial-setup)
+- [Bước 5: Bảo Mật Supabase Studio](#bước-5-bảo-mật-supabase-studio)
 - [Multi-Instance Deployment](#multi-instance-deployment)
 - [Quản Lý](#quản-lý)
 - [Backup & Monitoring](#backup--monitoring)
@@ -160,6 +161,16 @@ PRODUCTION_DOMAIN="dichvu.sstc.cloud"
 # Setup Password (leave empty to auto-generate)
 SETUP_PASSWORD=""
 
+# Admin Account Configuration
+# These credentials will be used to create the first admin account via /setup endpoint
+ADMIN_EMAIL="admin@sstc.cloud"
+ADMIN_PASSWORD="YourSecurePassword123!"
+ADMIN_NAME="System Administrator"
+
+# Supabase Studio Authentication (leave password empty to auto-generate)
+STUDIO_USERNAME="supabase"
+STUDIO_PASSWORD=""  # Auto-generated if empty
+
 # SMTP Configuration
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
@@ -202,9 +213,9 @@ chmod +x docker/scripts/setup-instance.sh
 Script sẽ tự động:
 - ✅ Generate tất cả secrets (hex format, URL-safe)
 - ✅ Copy configuration files từ `docs/references/volumes`
-- ✅ Tạo .env file với tất cả cấu hình
+- ✅ Tạo .env file với tất cả cấu hình (bao gồm admin credentials)
 - ✅ Generate Supabase API keys
-- ✅ Tạo INSTANCE_INFO.txt với tất cả thông tin (URLs, secrets, credentials)
+- ✅ Tạo INSTANCE_INFO.txt với tất cả thông tin (URLs, secrets, admin credentials)
 - ✅ Hiển thị setup password
 
 **Output mẫu (Production Mode):**
@@ -460,17 +471,24 @@ https://dichvu.sstc.cloud/setup
 ```
 
 ### 4.2 Create Admin User
-1. Nhập `SETUP_PASSWORD` (từ .env)
-2. Điền thông tin admin:
-   - Email
-   - Password
-   - Full name
-3. Submit
+1. Nhập `SETUP_PASSWORD` (từ INSTANCE_INFO.txt hoặc .env)
+2. Click "Complete Setup"
+3. Hệ thống sẽ tự động tạo admin account với credentials đã config trong `setup-instance.sh`:
+   - Email: `ADMIN_EMAIL` (vd: admin@sstc.cloud)
+   - Password: `ADMIN_PASSWORD` (vd: YourSecurePassword123!)
+   - Name: `ADMIN_NAME` (vd: System Administrator)
+
+**Lưu ý:** Admin credentials được lấy từ file `.env` (đã được tạo bởi setup script)
 
 ### 4.3 Login
+Truy cập trang login:
 ```
 https://dichvu.sstc.cloud/login
 ```
+
+Đăng nhập với admin credentials:
+- Email: `admin@sstc.cloud` (hoặc email bạn đã config)
+- Password: Mật khẩu bạn đã config trong `ADMIN_PASSWORD`
 
 Test đầy đủ các chức năng:
 - ✅ Create service ticket
@@ -478,6 +496,60 @@ Test đầy đủ các chức năng:
 - ✅ Add customer
 - ✅ Add parts
 - ✅ Check dashboard
+
+---
+
+## Bước 5: Bảo Mật Supabase Studio
+
+### Studio Authentication
+
+Supabase Studio được bảo vệ bằng **HTTP Basic Authentication** khi truy cập qua Kong Gateway.
+
+**Credentials:**
+- Username: `DASHBOARD_USERNAME` (mặc định: `supabase`)
+- Password: `DASHBOARD_PASSWORD` (tự động generate bởi setup script)
+- Xem credentials trong file `INSTANCE_INFO.txt`
+
+**URLs:**
+- ✅ **Production (có authentication):** `https://sv3.tantran.dev` (qua Kong Gateway)
+- ⚠️ **Direct access (không có authentication):** `http://localhost:3000` (chỉ dùng local)
+
+### Khuyến Nghị Bảo Mật Production
+
+1. **Chỉ truy cập Studio qua Kong Gateway URL**
+   - ✅ Có authentication (HTTP Basic Auth)
+   - ✅ Được bảo vệ bởi Cloudflare
+   - ✅ Có SSL/TLS
+
+2. **Firewall direct port access (STUDIO_PORT)**
+   ```bash
+   # Chỉ cho phép localhost access STUDIO_PORT
+   sudo ufw deny 3000
+   sudo ufw allow from 127.0.0.1 to any port 3000
+   ```
+
+3. **Thêm Cloudflare Access (Optional nhưng khuyến nghị)**
+   - Thêm layer authentication thứ 2
+   - Control ai được phép truy cập Studio
+   - Logs và monitoring
+
+4. **Rotate password định kỳ**
+   ```bash
+   # Generate password mới
+   NEW_PASSWORD=$(openssl rand -hex 16)
+
+   # Update .env
+   sed -i "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=${NEW_PASSWORD}/" .env
+
+   # Restart Kong để apply
+   docker compose restart kong
+   ```
+
+5. **Monitor Studio access**
+   ```bash
+   # Xem Kong logs để monitor Studio access
+   docker compose logs -f kong | grep dashboard
+   ```
 
 ---
 
@@ -823,9 +895,15 @@ nano docker/scripts/setup-instance.sh
 # Edit configuration:
 CENTER_NAME="Customer A Service Center"
 APP_PORT=3025
-STUDIO_PORT=3000
-KONG_PORT=8000
-SITE_URL="customer-a.yourdomain.com"   # Script auto-derives API and Studio URLs
+DEPLOYMENT_MODE=production
+PRODUCTION_DOMAIN="customer-a.yourdomain.com"
+
+# Admin credentials for first admin account
+ADMIN_EMAIL="admin@customer-a.com"
+ADMIN_PASSWORD="SecurePassword123!"
+ADMIN_NAME="Customer A Admin"
+
+# SMTP
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
 SMTP_USER="noreply@yourdomain.com"
@@ -833,10 +911,10 @@ SMTP_PASS="your-smtp-password"
 SMTP_ADMIN_EMAIL="admin@yourdomain.com"
 SMTP_SENDER_NAME="Customer A Service Center"
 
-# URLs auto-derived from SITE_URL:
+# URLs auto-derived (numbered pattern):
 # - App: https://customer-a.yourdomain.com
-# - API: https://api.customer-a.yourdomain.com
-# - Studio: https://supabase.customer-a.yourdomain.com
+# - API: https://customer-a8.yourdomain.com  (subdomain + 8 from port 8000)
+# - Studio: https://customer-a3.yourdomain.com  (subdomain + 3 from port 3000)
 
 # 3. Run setup script
 chmod +x docker/scripts/setup-instance.sh
@@ -844,9 +922,10 @@ chmod +x docker/scripts/setup-instance.sh
 
 # Script will automatically:
 # - Generate all secrets (hex format, URL-safe)
-# - Create .env with all configuration
+# - Create .env with all configuration (including admin credentials)
 # - Generate Supabase API keys
-# - Display setup password
+# - Create INSTANCE_INFO.txt with all details
+# - Display setup password and admin credentials
 
 # 4. Start services with unique project name
 docker compose -p customer-a build
@@ -857,7 +936,13 @@ docker compose -p customer-a up -d
 
 # 6. Setup application
 # Visit: https://customer-a.yourdomain.com/setup
-# Use the setup password from step 3
+# Enter setup password (from INSTANCE_INFO.txt)
+# This will create admin account with credentials from step 2
+
+# 7. Login
+# Visit: https://customer-a.yourdomain.com/login
+# Email: admin@customer-a.com
+# Password: SecurePassword123!
 ```
 
 #### Instance 2 - Customer B
@@ -868,14 +953,16 @@ cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-b
 cd customer-b
 
-# Configure với ports khác
+# Configure với ports và admin credentials khác
 nano docker/scripts/setup-instance.sh
 # Set: CENTER_NAME="Customer B Service Center"
-# Set: APP_PORT=3026
-# Set: STUDIO_PORT=3100
-# Set: KONG_PORT=8001
-# Set: SITE_URL="customer-b.yourdomain.com"
-# URLs auto-derived: api.customer-b.yourdomain.com, supabase.customer-b.yourdomain.com
+# Set: APP_PORT=3026 (auto-derives STUDIO_PORT=3100, KONG_PORT=8001)
+# Set: DEPLOYMENT_MODE=production
+# Set: PRODUCTION_DOMAIN="customer-b.yourdomain.com"
+# Set: ADMIN_EMAIL="admin@customer-b.com"
+# Set: ADMIN_PASSWORD="AnotherSecurePassword!"
+# Set: ADMIN_NAME="Customer B Admin"
+# URLs auto-derived (numbered): customer-b8.yourdomain.com, customer-b3.yourdomain.com
 
 # Run setup
 ./docker/scripts/setup-instance.sh
@@ -884,6 +971,8 @@ nano docker/scripts/setup-instance.sh
 docker compose -p customer-b build
 docker compose -p customer-b up -d
 ./docker/scripts/apply-schema.sh
+
+# Setup and login with admin@customer-b.com
 ```
 
 #### Instance 3 - Customer C
@@ -896,11 +985,13 @@ cd customer-c
 # Configure
 nano docker/scripts/setup-instance.sh
 # Set: CENTER_NAME="Customer C Service Center"
-# Set: APP_PORT=3027
-# Set: STUDIO_PORT=3200
-# Set: KONG_PORT=8002
-# Set: SITE_URL="customer-c.yourdomain.com"
-# URLs auto-derived: api.customer-c.yourdomain.com, supabase.customer-c.yourdomain.com
+# Set: APP_PORT=3027 (auto-derives STUDIO_PORT=3200, KONG_PORT=8002)
+# Set: DEPLOYMENT_MODE=production
+# Set: PRODUCTION_DOMAIN="customer-c.yourdomain.com"
+# Set: ADMIN_EMAIL="admin@customer-c.com"
+# Set: ADMIN_PASSWORD="YetAnotherPassword!"
+# Set: ADMIN_NAME="Customer C Admin"
+# URLs auto-derived (numbered): customer-c8.yourdomain.com, customer-c3.yourdomain.com
 
 # Run setup
 ./docker/scripts/setup-instance.sh
@@ -909,6 +1000,8 @@ nano docker/scripts/setup-instance.sh
 docker compose -p customer-c build
 docker compose -p customer-c up -d
 ./docker/scripts/apply-schema.sh
+
+# Setup and login with admin@customer-c.com
 ```
 
 ### Cloudflare Tunnel Configuration

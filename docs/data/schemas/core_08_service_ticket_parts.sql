@@ -29,23 +29,23 @@ create trigger "service_ticket_parts_updated_at_trigger"
   execute function update_updated_at_column();
 
 -- Function to update service ticket parts total
--- Security: SET search_path = 'public' and explicit schema qualification
+-- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
 create or replace function update_service_ticket_parts_total()
 returns trigger as $$
 begin
   update public.service_tickets
   set parts_total = (
-    select coalesce(sum(total_price), 0)
+    select pg_catalog.coalesce(pg_catalog.sum(total_price), 0)
     from public.service_ticket_parts
-    where ticket_id = coalesce(new.ticket_id, old.ticket_id)
+    where ticket_id = pg_catalog.coalesce(new.ticket_id, old.ticket_id)
   )
-  where id = coalesce(new.ticket_id, old.ticket_id);
+  where id = pg_catalog.coalesce(new.ticket_id, old.ticket_id);
 
-  return coalesce(new, old);
+  return pg_catalog.coalesce(new, old);
 end;
 $$ language plpgsql
 security definer
-set search_path = 'public';
+set search_path = '';
 
 -- Triggers to update parts total when ticket parts change
 create trigger "service_ticket_parts_total_trigger"

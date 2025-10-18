@@ -45,6 +45,13 @@ ADMIN_EMAIL="admin@tantran.dev"
 ADMIN_PASSWORD="Admin123!@#"
 ADMIN_NAME="System Administrator"
 
+# Supabase Studio Authentication
+# Used to protect Studio access (accessed via Kong Gateway with basic auth)
+# In production: Studio is ONLY accessible through Kong (with authentication)
+# In local mode: Studio can be accessed directly on STUDIO_PORT (no auth)
+STUDIO_USERNAME="supabase"
+STUDIO_PASSWORD=""  # Leave empty to auto-generate
+
 # SMTP Configuration
 SMTP_HOST="supabase-mail"
 SMTP_PORT=2500
@@ -211,7 +218,14 @@ LOGFLARE_PRIVATE_ACCESS_TOKEN=$(openssl rand -hex 32)
 echo -e "${GREEN}  ✓ Generated LOGFLARE_PRIVATE_ACCESS_TOKEN${NC}"
 
 DASHBOARD_PASSWORD=$(openssl rand -hex 16)
-echo -e "${GREEN}  ✓ Generated DASHBOARD_PASSWORD${NC}"
+echo -e "${GREEN}  ✓ Generated DASHBOARD_PASSWORD (Studio via Kong)${NC}"
+
+if [ -z "$STUDIO_PASSWORD" ]; then
+    STUDIO_PASSWORD=$(openssl rand -hex 16)
+    echo -e "${GREEN}  ✓ Generated STUDIO_PASSWORD${NC}"
+else
+    echo -e "${GREEN}  ✓ Using provided STUDIO_PASSWORD${NC}"
+fi
 
 echo ""
 
@@ -278,8 +292,8 @@ SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
 # Supabase Infrastructure
-DASHBOARD_USERNAME=supabase
-DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
+DASHBOARD_USERNAME=${STUDIO_USERNAME}
+DASHBOARD_PASSWORD=${STUDIO_PASSWORD}
 SECRET_KEY_BASE=${SECRET_KEY_BASE}
 VAULT_ENC_KEY=${VAULT_ENC_KEY}
 PG_META_CRYPTO_KEY=${PG_META_CRYPTO_KEY}
@@ -594,6 +608,7 @@ Login Page:            ${SITE_URL}/login
 Supabase Studio:       ${SUPABASE_EXTERNAL_URL}
                        Username: ${DASHBOARD_USERNAME}
                        Password: ${DASHBOARD_PASSWORD}
+                       ⚠️  Studio is protected by basic auth through Kong Gateway
 
 Database (via pooler): localhost:${POSTGRES_PORT}
                        (Only accessible when services are running)
@@ -605,7 +620,11 @@ IMPORTANT SECURITY NOTES
 ⚠️  KEEP THIS FILE SECURE - It contains sensitive credentials!
 ⚠️  Do NOT commit INSTANCE_INFO.txt to git
 ⚠️  Change default passwords before going to production
-⚠️  Restrict Supabase Studio access in production (use Cloudflare Access)
+⚠️  Studio Security:
+   - Studio is protected by basic auth when accessed through Kong Gateway
+   - In production: Access Studio ONLY via Kong URL (${SUPABASE_EXTERNAL_URL})
+   - Direct port access (localhost:${STUDIO_PORT}) should be firewalled in production
+   - Consider adding Cloudflare Access for additional protection
 
 ================================================================================
 NEXT STEPS

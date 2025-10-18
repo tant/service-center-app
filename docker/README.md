@@ -109,8 +109,10 @@ To modify configuration:
    CENTER_NAME="Your Service Center"
    APP_PORT=3025
    STUDIO_PORT=3000
+   KONG_PORT=8000
    SITE_URL="https://yourdomain.com"
    API_EXTERNAL_URL="https://yourdomain.com"
+   SUPABASE_API_URL="https://api.yourdomain.com"
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT=587
    # ... etc
@@ -247,19 +249,25 @@ Internet
     ├─> Cloudflare Tunnel (handles SSL/TLS)
     │
     ├─> localhost:3025 (Next.js App)              ← APP_PORT (configurable)
-    │   └─> kong:8000 (Kong/Supabase API - internal)
-    │       ├─> db:5432 (PostgreSQL - internal)
-    │       ├─> auth (GoTrue - internal)
-    │       ├─> storage (Storage API - internal)
-    │       └─> realtime (Realtime - internal)
+    │   └─> kong:8000 (internal network)
+    │
+    ├─> localhost:8000 (Kong/Supabase API)        ← KONG_PORT (configurable)
+    │   ├─> db:5432 (PostgreSQL - internal)
+    │   ├─> auth (GoTrue - internal)
+    │   ├─> storage (Storage API - internal)
+    │   └─> realtime (Realtime - internal)
     │
     └─> localhost:3000 (Supabase Studio)          ← STUDIO_PORT (configurable)
 ```
 
 **Port Configuration:**
 - `APP_PORT` - Application port (default: 3025)
+- `KONG_PORT` - Kong API Gateway port (default: 8000) - **Required for browser access**
 - `STUDIO_PORT` - Studio port (default: 3000)
-- Multi-instance: Use different ports (3025/3026/3027, 3000/3100/3200)
+- Multi-instance: Use different ports
+  - Instance 1: APP_PORT=3025, KONG_PORT=8000, STUDIO_PORT=3000
+  - Instance 2: APP_PORT=3026, KONG_PORT=8001, STUDIO_PORT=3100
+  - Instance 3: APP_PORT=3027, KONG_PORT=8002, STUDIO_PORT=3200
 
 **Benefits:**
 - ✅ No exposed ports (80/443)

@@ -32,6 +32,7 @@ comment on function update_updated_at_column() is 'Trigger function to automatic
 
 -- Check if current user is an admin
 -- Used in: RLS policies, storage policies
+-- Security: SET search_path = '' prevents schema hijacking vulnerabilities
 create or replace function public.is_admin()
 returns boolean as $$
 begin
@@ -42,12 +43,13 @@ begin
       and role = 'admin'
   );
 end;
-$$ language plpgsql security definer set search_path = 'public';
+$$ language plpgsql security definer set search_path = '';
 
 comment on function public.is_admin() is 'Returns true if current user has admin role';
 
 -- Check if current user is an admin or manager
 -- Used in: RLS policies, storage policies
+-- Security: SET search_path = '' prevents schema hijacking vulnerabilities
 create or replace function public.is_admin_or_manager()
 returns boolean as $$
 begin
@@ -58,7 +60,7 @@ begin
       and role in ('admin', 'manager')
   );
 end;
-$$ language plpgsql security definer set search_path = 'public';
+$$ language plpgsql security definer set search_path = '';
 
 comment on function public.is_admin_or_manager() is 'Returns true if current user has admin or manager role';
 

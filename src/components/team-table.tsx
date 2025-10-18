@@ -266,7 +266,7 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
     return activeAdmins.length === 1;
   }, [member, allMembers]);
 
-  const handleRoleChange = (newRole: string) => {
+  const handleRoleChange = async (newRole: string) => {
     // Prevent changing role of last active admin
     if (member.role === "admin" && isLastActiveAdmin && newRole !== "admin") {
       const errorMessage =
@@ -279,13 +279,46 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
       return;
     }
 
-    // TODO: Implement actual role change API call
-    const successMessage = `Vai trò sẽ được cập nhật thành ${newRole === "admin" ? "Quản trị viên" : newRole === "manager" ? "Quản lý" : newRole === "technician" ? "Kỹ thuật viên" : "Lễ tân"}`;
-    console.log("[Team] Role change success:", successMessage, {
-      member,
-      newRole,
-    });
-    toast.success(successMessage);
+    try {
+      const response = await fetch("/api/staff", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: member.user_id,
+          role: newRole,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      const roleLabel =
+        newRole === "admin"
+          ? "Quản trị viên"
+          : newRole === "manager"
+            ? "Quản lý"
+            : newRole === "technician"
+              ? "Kỹ thuật viên"
+              : "Lễ tân";
+      const successMessage = `Vai trò đã được cập nhật thành ${roleLabel}`;
+      console.log("[Team] Role change success:", successMessage, {
+        member,
+        newRole,
+      });
+      toast.success(successMessage);
+
+      // Update local state
+      onUpdate({
+        ...member,
+        role: newRole as any,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể thay đổi vai trò";
+      console.error("[Team] Role change error:", errorMessage, error);
+      toast.error(errorMessage);
+    }
   };
 
   const handlePasswordChange = () => {
@@ -295,7 +328,7 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
     toast.success(successMessage);
   };
 
-  const handleToggleActive = () => {
+  const handleToggleActive = async () => {
     // Prevent deactivating the last active admin
     if (isLastActiveAdmin && member.is_active) {
       const errorMessage =
@@ -308,22 +341,43 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
       return;
     }
 
-    // TODO: Implement active status toggle API call
     const newStatus = !member.is_active;
-    const successMessage = `Tài khoản đã được ${newStatus ? "kích hoạt" : "vô hiệu hóa"}`;
-    console.log("[Team] Toggle active success:", successMessage, {
-      member,
-      newStatus,
-    });
 
-    // Update local state immediately for instant UI feedback
-    onUpdate({
-      ...member,
-      is_active: newStatus,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      const response = await fetch("/api/staff", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: member.user_id,
+          is_active: newStatus,
+        }),
+      });
 
-    toast.success(successMessage);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      const successMessage = `Tài khoản đã được ${newStatus ? "kích hoạt" : "vô hiệu hóa"}`;
+      console.log("[Team] Toggle active success:", successMessage, {
+        member,
+        newStatus,
+      });
+
+      // Update local state immediately for instant UI feedback
+      onUpdate({
+        ...member,
+        is_active: newStatus,
+        updated_at: new Date().toISOString(),
+      });
+
+      toast.success(successMessage);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Không thể thay đổi trạng thái tài khoản";
+      console.error("[Team] Toggle active error:", errorMessage, error);
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -897,9 +951,33 @@ function TeamMemberModal({
         });
         toast.success(successMessage);
       } else {
-        // TODO: Implement update functionality
-        const successMessage = "Tính năng cập nhật sắp ra mắt";
-        console.log("[Team] Update feature:", successMessage);
+        // Update existing user
+        if (!member?.user_id) {
+          throw new Error("User ID is required for update");
+        }
+
+        const response = await fetch("/api/staff", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: member.user_id,
+            full_name: formData.full_name,
+            email: formData.email,
+            role: formData.role,
+            is_active: formData.is_active,
+            avatar_url: formData.avatar_url || null,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+
+        const successMessage = "Cập nhật thông tin nhân viên thành công";
+        console.log("[Team] Staff updated successfully:", successMessage, {
+          user_id: member.user_id,
+          email: formData.email,
+          role: formData.role,
+        });
         toast.success(successMessage);
       }
 

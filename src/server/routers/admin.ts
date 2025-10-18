@@ -68,8 +68,7 @@ export const adminRouter = router({
         const adminPassword = process.env.ADMIN_PASSWORD;
         const adminName = process.env.ADMIN_NAME;
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey =
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
         console.log("🔧 MUTATION: Environment variables check:");
         console.log("   - SETUP_PASSWORD:", !!setupPassword);

@@ -10,11 +10,11 @@ const simultaneousRequests = new Set<string>();
 // Validate environment variables and throw errors if missing
 function validateSupabaseConfig(): void {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const missing: string[] = [];
   if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (!key) missing.push("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  if (!anonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   if (missing.length > 0) {
     const errorMessage = `Missing required environment variables: ${missing.join(", ")}`;
@@ -24,7 +24,7 @@ function validateSupabaseConfig(): void {
 
   console.log("🔄 [MIDDLEWARE] Supabase config validated:", {
     url: `${url?.substring(0, 40)}...`,
-    hasKey: !!key,
+    hasKey: !!anonKey,
     isLocal: url?.includes("localhost") || url?.includes("127.0.0.1"),
   });
 }
@@ -55,16 +55,17 @@ export async function updateSession(request: NextRequest) {
   try {
     // Validate environment variables first - throw error if missing
     validateSupabaseConfig();
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
     console.log(`🔄 [MIDDLEWARE-${requestId}] Environment variables:`, {
-      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      urlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length || 0,
-      urlPrefix:
-        process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) || "none",
-      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-      keyLength: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.length || 0,
-      keyPrefix:
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) ||
-        "none",
+      hasUrl: !!supabaseUrl,
+      urlLength: supabaseUrl?.length || 0,
+      urlPrefix: supabaseUrl?.substring(0, 20) || "none",
+      hasAnonKey: !!supabaseAnonKey,
+      keyLength: supabaseAnonKey?.length || 0,
+      keyPrefix: supabaseAnonKey?.substring(0, 20) || "none",
     });
 
     let supabaseResponse = NextResponse.next({
@@ -76,10 +77,10 @@ export async function updateSession(request: NextRequest) {
       `🔄 [MIDDLEWARE-${requestId}] Creating Supabase client (create #${supabaseClientCreateCount})...`,
     );
     console.log(
-      `🔄 [MIDDLEWARE-${requestId}] Full Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL}`,
+      `🔄 [MIDDLEWARE-${requestId}] Full Supabase URL: ${supabaseUrl}`,
     );
     console.log(
-      `🔄 [MIDDLEWARE-${requestId}] Supabase key prefix: ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.substring(0, 30)}...`,
+      `🔄 [MIDDLEWARE-${requestId}] Supabase key prefix: ${supabaseAnonKey?.substring(0, 30)}...`,
     );
 
     let cookieGetCount = 0;
@@ -87,8 +88,8 @@ export async function updateSession(request: NextRequest) {
 
     const clientCreateStart = performance.now();
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           getAll() {

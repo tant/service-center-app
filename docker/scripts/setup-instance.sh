@@ -14,16 +14,22 @@ set -e
 ############################################
 
 # Instance Information
-CENTER_NAME="Service Center"
+CENTER_NAME="Tân test Service Center"
 APP_PORT=3025          # App runs on http://localhost:3025
 
 # Site URL (configure your Cloudflare Tunnel to point to http://localhost:${APP_PORT})
-# For production: sv.mydomain.com
-# For local: localhost (will auto-use APP_PORT)
-SITE_URL="localhost"
+# IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
+# For production: sv.mydomain.com (script will add https://)
+# For local: localhost (script will add http://localhost:${APP_PORT})
+# Examples:
+#   ✓ Correct: sv.mydomain.com
+#   ✓ Correct: localhost
+#   ✗ Wrong: https://sv.mydomain.com
+#   ✗ Wrong: http://localhost:3025
+SITE_URL=sv.tantran.dev
 
 # Setup Password (leave empty to auto-generate)
-SETUP_PASSWORD=""
+SETUP_PASSWORD=tantran
 
 # SMTP Configuration
 SMTP_HOST="supabase-mail"
@@ -71,6 +77,10 @@ STUDIO_PORT=$((3000 + (APP_PORT - 3025) * 100))
 # APP_PORT=3026 → KONG_PORT=8001
 # APP_PORT=3027 → KONG_PORT=8002
 KONG_PORT=$((8000 + APP_PORT - 3025))
+
+# Clean up SITE_URL - remove any http:// or https:// prefix if provided
+SITE_URL="${SITE_URL#http://}"
+SITE_URL="${SITE_URL#https://}"
 
 # Build URLs based on SITE_URL
 if [[ "$SITE_URL" == "localhost" ]]; then

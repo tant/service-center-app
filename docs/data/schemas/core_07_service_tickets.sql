@@ -44,7 +44,7 @@ create trigger "service_tickets_updated_at_trigger"
 
 -- Function to generate ticket number in SV-YYYY-NNN format
 -- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
-create or replace function generate_ticket_number()
+create or replace function public.generate_ticket_number()
 returns text as $$
 declare
   current_year text;
@@ -76,7 +76,7 @@ set search_path = '';
 
 -- Trigger to automatically generate ticket number on insert
 -- Security: SET search_path = '' prevents schema hijacking
-create or replace function set_ticket_number()
+create or replace function public.set_ticket_number()
 returns trigger as $$
 begin
   if new.ticket_number is null or new.ticket_number = '' then
@@ -94,7 +94,7 @@ create trigger "service_tickets_set_number_trigger"
 
 -- Function to log status changes as comments
 -- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
-create or replace function log_status_change()
+create or replace function public.log_status_change()
 returns trigger as $$
 begin
   -- Only log if status actually changed

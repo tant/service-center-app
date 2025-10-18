@@ -30,7 +30,7 @@ create trigger "service_ticket_parts_updated_at_trigger"
 
 -- Function to update service ticket parts total
 -- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
-create or replace function update_service_ticket_parts_total()
+create or replace function public.update_service_ticket_parts_total()
 returns trigger as $$
 begin
   update public.service_tickets

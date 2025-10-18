@@ -1,6 +1,6 @@
 -- Function to decrease part stock quantity safely
 -- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
-CREATE OR REPLACE FUNCTION decrease_part_stock(
+CREATE OR REPLACE FUNCTION public.decrease_part_stock(
   part_id UUID,
   quantity_to_decrease INTEGER
 )
@@ -33,7 +33,7 @@ $$;
 
 -- Function to increase part stock quantity (for returns/restocks)
 -- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
-CREATE OR REPLACE FUNCTION increase_part_stock(
+CREATE OR REPLACE FUNCTION public.increase_part_stock(
   part_id UUID,
   quantity_to_increase INTEGER
 )

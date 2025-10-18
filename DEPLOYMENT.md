@@ -49,6 +49,36 @@ Tài liệu này hướng dẫn triển khai Service Center Management lên prod
 - Domain đã add vào Cloudflare (nameservers đã trỏ về Cloudflare)
 - Cloudflared CLI sẽ cài trong quá trình setup
 
+### Required Configuration Files
+
+**QUAN TRỌNG:** Supabase stack cần các file cấu hình không có trong repository chính.
+
+**Cách 1: Sử dụng reference volumes từ supabase-project**
+```bash
+# Nếu bạn có access đến reference project:
+cp -r /path/to/supabase-project/volumes/logs volumes/
+```
+
+**Cách 2: Download từ Supabase Docker chính thức**
+```bash
+# Clone Supabase Docker repository (chỉ cần 1 lần)
+cd ~/
+git clone --depth 1 https://github.com/supabase/supabase
+cd supabase/docker
+
+# Copy file cấu hình cần thiết
+mkdir -p ~/service-center-app/volumes/logs
+cp volumes/logs/vector.yml ~/service-center-app/volumes/logs/
+```
+
+**Files cần thiết:**
+- `volumes/logs/vector.yml` - Cấu hình Vector logging (CRITICAL)
+
+**Tại sao cần:** Không có vector.yml, deployment sẽ fail với lỗi:
+```
+ERROR vector::cli: Configuration error. error=Is a directory (os error 21)
+```
+
 ---
 
 ## Bước 1: Chuẩn Bị Server
@@ -130,6 +160,43 @@ openssl rand -base64 32
 # Setup Password
 openssl rand -base64 16
 ```
+
+### 2.2a Setup Volume Directories và Configuration Files
+
+**QUAN TRỌNG:** Bước này phải hoàn thành trước khi deployment.
+
+```bash
+# Tạo các thư mục volume cần thiết
+mkdir -p volumes/logs
+mkdir -p volumes/db/init
+mkdir -p volumes/storage
+mkdir -p volumes/functions
+
+# Copy vector configuration file
+# Cách 1: Từ reference project
+cp /home/tan/work/supabase-project/volumes/logs/vector.yml volumes/logs/
+
+# Cách 2: Từ Supabase docker đã download
+cp ~/supabase/docker/volumes/logs/vector.yml volumes/logs/
+
+# Cách 3: Download trực tiếp (nếu có trong repo của bạn)
+curl -o volumes/logs/vector.yml https://raw.githubusercontent.com/your-org/your-repo/main/volumes/logs/vector.yml
+
+# Verify file tồn tại và không phải là directory
+ls -lh volumes/logs/vector.yml
+# Phải hiển thị là file, không phải directory
+```
+
+**Kiểm tra:**
+```bash
+# Check file tồn tại
+test -f volumes/logs/vector.yml && echo "✅ vector.yml OK" || echo "❌ vector.yml MISSING"
+
+# Check không rỗng
+[ -s volumes/logs/vector.yml ] && echo "✅ vector.yml có nội dung" || echo "❌ vector.yml rỗng"
+```
+
+⚠️ **KHÔNG tiếp tục Bước 3 nếu chưa hoàn thành bước này!**
 
 ### 2.3 Cấu Hình .env
 ```bash
@@ -239,17 +306,58 @@ docker compose ps
 # All containers should be running and healthy
 docker compose ps
 
-# Test locally
-curl http://localhost:3025/api/health
-curl http://localhost:8000/rest/v1/
-curl http://localhost:3001
+# Test locally (chỉ những ports này được expose ra host)
+curl http://localhost:3025/api/health  # ✅ App health check
+curl http://localhost:8000/rest/v1/     # ✅ Supabase REST API
 ```
 
-**Expected Ports (localhost only):**
-- App: `localhost:3025`
-- Supabase API (Kong): `localhost:8000`
-- Supabase Studio: `localhost:3001`
-- PostgreSQL: `localhost:5432`
+**Expected Ports:**
+
+| Service | Internal Port | Host Port | Status |
+|---------|--------------|-----------|---------|
+| App | 3025 | ✅ 3025 | Exposed to host |
+| Kong (Supabase API) | 8000 | ✅ 8000, 8443 | Exposed to host |
+| PostgreSQL | 5432 | ✅ 5432 | Exposed to host |
+| Supabase Studio | 3000 | ❌ Not exposed | **Internal only** |
+
+**⚠️ QUAN TRỌNG: Truy Cập Supabase Studio**
+
+Supabase Studio chạy trên port 3000 **bên trong Docker network** và KHÔNG được expose ra localhost.
+
+```bash
+# Lệnh này sẽ KHÔNG hoạt động:
+curl http://localhost:3000
+# Error: Connection refused
+
+# Studio chỉ truy cập được sau khi setup Cloudflare Tunnel (Bước 4):
+# https://studio.yourdomain.com
+```
+
+Nếu cần truy cập Studio locally trước khi setup tunnel, có thể temporarily expose:
+```bash
+# Thêm vào docker-compose.yml studio service (chỉ để test):
+ports:
+  - "3000:3000"
+
+# Sau đó restart:
+docker compose restart studio
+
+# Truy cập tại:
+curl http://localhost:3000
+```
+
+**Common Issues:**
+
+1. **supabase-pooler hiển thị "Restarting"**
+   - Đây là expected behavior do cấu hình encryption key
+   - KHÔNG ảnh hưởng đến application functionality
+   - Pooler là optional cho local development
+   - Check logs: `docker logs supabase-pooler --tail 20`
+
+2. **realtime-dev hiển thị "unhealthy"**
+   - Có thể mất 1-2 phút để healthy
+   - Check logs: `docker logs realtime-dev.supabase-realtime --tail 20`
+   - Miễn là app responding, không critical
 
 ---
 
@@ -308,7 +416,7 @@ ingress:
 
   # Supabase Studio (optional - có thể restrict access)
   - hostname: studio.yourdomain.com
-    service: http://localhost:3001
+    service: http://localhost:3000
     originRequest:
       noTLSVerify: true
 
@@ -677,7 +785,15 @@ docker compose logs studio
 
 **Test locally:**
 ```bash
-curl http://localhost:3001
+# Studio KHÔNG được expose ra host theo mặc định
+# Chỉ truy cập được qua Cloudflare Tunnel
+
+# Để test nếu Studio container đang chạy:
+docker compose ps studio
+docker compose logs studio --tail 20
+
+# Để temporary access Studio locally:
+docker compose exec studio wget -O- http://localhost:3000 2>/dev/null | head -20
 ```
 
 **If local works but tunnel doesn't:**
@@ -688,6 +804,82 @@ cat ~/.cloudflared/config.yml
 # Verify hostname is correct
 # Restart tunnel
 sudo systemctl restart cloudflared
+```
+
+### Vector Container Không Start
+
+**Symptom:**
+```bash
+docker compose ps
+# Shows: supabase-vector is unhealthy hoặc restarting
+```
+
+**Check logs:**
+```bash
+docker logs supabase-vector --tail 20
+# Error: Configuration error. error=Is a directory (os error 21)
+```
+
+**Nguyên nhân:** Thiếu hoặc sai file `volumes/logs/vector.yml`
+
+**Giải pháp:**
+```bash
+# Stop containers
+docker compose down
+
+# Verify vector.yml tồn tại và là FILE, không phải directory
+ls -lh volumes/logs/vector.yml
+
+# Nếu là directory hoặc không tồn tại:
+rm -rf volumes/logs/vector.yml  # Remove nếu là directory
+mkdir -p volumes/logs
+
+# Copy từ reference
+cp /home/tan/work/supabase-project/volumes/logs/vector.yml volumes/logs/
+
+# Hoặc download từ Supabase docker
+curl -o volumes/logs/vector.yml \
+  https://raw.githubusercontent.com/supabase/supabase/master/docker/volumes/logs/vector.yml
+
+# Verify là file
+test -f volumes/logs/vector.yml && echo "OK" || echo "FAILED"
+
+# Start containers
+docker compose up -d
+
+# Check vector status
+docker compose ps vector
+docker logs supabase-vector --tail 10
+```
+
+### Pooler Container Liên Tục Restart
+
+**Symptom:**
+```bash
+docker compose ps
+# Shows: supabase-pooler - Restarting (1) X seconds ago
+```
+
+**Check logs:**
+```bash
+docker logs supabase-pooler --tail 30
+```
+
+**Common error:** Encryption key mismatch hoặc configuration issue
+
+**Impact:** Pooler là optional cho local development. App sẽ hoạt động tốt không có pooler.
+
+**Giải pháp (nếu cần):**
+```bash
+# Option 1: Ignore nó (recommended cho local dev)
+# App hoạt động tốt không có pooler
+
+# Option 2: Disable pooler temporarily
+# Trong docker-compose.yml, comment out pooler service
+# Sau đó: docker compose up -d
+
+# Option 3: Check pooler configuration
+docker compose exec db psql -U postgres -c "SELECT * FROM _supavisor.tenants;"
 ```
 
 ### SSL/Certificate Errors
@@ -867,8 +1059,14 @@ A: Có! Dùng Cloudflare Access (3$/user/month) hoặc firewall rules.
 docker compose ps                          # Status
 docker compose logs -f app                 # Logs
 docker compose restart app                 # Restart
-./docker/scripts/deploy.sh                 # Deploy
-./docker/scripts/backup.sh                 # Backup
+./docker/scripts/deploy.sh                 # Deploy script
+./docker/scripts/backup.sh                 # Backup script
+./docker/scripts/apply-schema.sh           # Apply database schema
+
+# Troubleshooting specific services
+docker logs supabase-vector --tail 50      # Vector logs
+docker logs supabase-pooler --tail 50      # Pooler logs
+docker logs service-center-app --tail 100  # App logs
 
 # Cloudflare Tunnel
 sudo systemctl status cloudflared          # Status
@@ -878,12 +1076,17 @@ cloudflared tunnel list                    # List tunnels
 cloudflared tunnel info service-center     # Tunnel info
 
 # Database
-docker compose exec db psql -U postgres    # Connect
-docker compose exec -T db pg_dump -U postgres postgres > backup.sql
-./docker/scripts/apply-schema.sh           # Apply schema
+docker compose exec db psql -U postgres    # Connect to DB
+docker compose exec -T db pg_dump -U postgres postgres > backup.sql  # Backup
+cat backup.sql | docker compose exec -T db psql -U postgres  # Restore
 
-# Update
+# Update application
 git pull && docker compose build app && docker compose up -d app
+
+# Clean restart (nếu có issues)
+docker compose down
+docker compose up -d
+docker compose ps  # Verify all healthy
 ```
 
 ---

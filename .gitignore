@@ -36,6 +36,9 @@ yarn-error.log*
 !.env.example
 !.env.docker.example
 
+# Instance information with secrets
+INSTANCE_INFO.txt
+
 # vercel
 .vercel
 

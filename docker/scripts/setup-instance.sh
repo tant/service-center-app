@@ -391,6 +391,153 @@ sed -i "s|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SER
 echo -e "${GREEN}  ✓ API keys generated and added to .env${NC}"
 echo ""
 
+# Generate instance info summary file
+echo -e "${BLUE}📝 Step 1.7: Generating instance info file...${NC}"
+
+cat > INSTANCE_INFO.txt <<EOF
+================================================================================
+SERVICE CENTER INSTANCE INFORMATION
+================================================================================
+Generated: $(date)
+
+================================================================================
+INSTANCE CONFIGURATION
+================================================================================
+
+Center Name:           ${CENTER_NAME}
+App Port:              ${APP_PORT}
+Studio Port:           ${STUDIO_PORT} (auto-calculated)
+Kong Port:             ${KONG_PORT} (auto-calculated)
+
+================================================================================
+URLS & DOMAINS
+================================================================================
+
+Application URL:       ${SITE_URL}
+Supabase API URL:      ${API_EXTERNAL_URL}
+Supabase Studio URL:   ${SUPABASE_EXTERNAL_URL}
+
+EOF
+
+# Add Cloudflare Tunnel instructions if production
+if [[ "$SITE_URL" == https://* ]]; then
+    DOMAIN="${SITE_URL#https://}"
+    cat >> INSTANCE_INFO.txt <<EOF
+================================================================================
+CLOUDFLARE TUNNEL CONFIGURATION
+================================================================================
+
+Required tunnels pointing to localhost:
+
+1. Main Application:
+   ${DOMAIN} → localhost:${APP_PORT}
+
+2. Supabase API (Kong):
+   api.${DOMAIN} → localhost:${KONG_PORT}
+
+3. Supabase Studio:
+   supabase.${DOMAIN} → localhost:${STUDIO_PORT}
+
+Example cloudflared config.yml:
+---
+ingress:
+  - hostname: ${DOMAIN}
+    service: http://localhost:${APP_PORT}
+  - hostname: api.${DOMAIN}
+    service: http://localhost:${KONG_PORT}
+  - hostname: supabase.${DOMAIN}
+    service: http://localhost:${STUDIO_PORT}
+  - service: http_status:404
+
+EOF
+fi
+
+cat >> INSTANCE_INFO.txt <<EOF
+================================================================================
+SECRETS & CREDENTIALS
+================================================================================
+
+Setup Password:        ${SETUP_PASSWORD}
+
+Database:
+  Host:                db (internal)
+  Port:                5432 (internal)
+  Database:            postgres
+  User:                postgres
+  Password:            ${POSTGRES_PASSWORD}
+
+Supabase Dashboard:
+  Username:            ${DASHBOARD_USERNAME}
+  Password:            ${DASHBOARD_PASSWORD}
+
+Supabase API Keys:
+  Anon Key:            ${SUPABASE_ANON_KEY}
+  Service Role Key:    ${SUPABASE_SERVICE_ROLE_KEY}
+
+JWT Secret:            ${JWT_SECRET}
+
+================================================================================
+SMTP CONFIGURATION
+================================================================================
+
+Host:                  ${SMTP_HOST}
+Port:                  ${SMTP_PORT}
+User:                  ${SMTP_USER}
+Password:              ${SMTP_PASS}
+Admin Email:           ${SMTP_ADMIN_EMAIL}
+Sender Name:           ${SMTP_SENDER_NAME}
+
+================================================================================
+ACCESS INFORMATION
+================================================================================
+
+Setup Page:            ${SITE_URL}/setup
+                       Password: ${SETUP_PASSWORD}
+
+Login Page:            ${SITE_URL}/login
+
+Supabase Studio:       ${SUPABASE_EXTERNAL_URL}
+                       Username: ${DASHBOARD_USERNAME}
+                       Password: ${DASHBOARD_PASSWORD}
+
+Database (via pooler): localhost:${POSTGRES_PORT}
+                       (Only accessible when services are running)
+
+================================================================================
+IMPORTANT SECURITY NOTES
+================================================================================
+
+⚠️  KEEP THIS FILE SECURE - It contains sensitive credentials!
+⚠️  Do NOT commit INSTANCE_INFO.txt to git
+⚠️  Change default passwords before going to production
+⚠️  Restrict Supabase Studio access in production (use Cloudflare Access)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review .env file:
+   nano .env
+
+2. Build and start services:
+   docker compose build
+   docker compose up -d
+
+3. Apply database schema:
+   ./docker/scripts/apply-schema.sh
+
+4. Access setup page:
+   ${SITE_URL}/setup
+   Use setup password: ${SETUP_PASSWORD}
+
+================================================================================
+END OF INSTANCE INFORMATION
+================================================================================
+EOF
+
+echo -e "${GREEN}  ✓ Instance info saved to INSTANCE_INFO.txt${NC}"
+echo ""
+
 # Summary
 echo -e "${GREEN}=====================================${NC}"
 echo -e "${GREEN}✅ Setup completed successfully!${NC}"
@@ -408,19 +555,23 @@ echo ""
 echo -e "${BLUE}Setup Password:${NC}"
 echo "  ${SETUP_PASSWORD}"
 echo ""
-echo -e "${YELLOW}⚠️  IMPORTANT: Save your setup password!${NC}"
+echo -e "${YELLOW}⚠️  IMPORTANT:${NC}"
+echo -e "${YELLOW}  • All credentials saved to INSTANCE_INFO.txt${NC}"
+echo -e "${YELLOW}  • Keep this file secure - do NOT commit to git!${NC}"
+echo -e "${YELLOW}  • Review with: cat INSTANCE_INFO.txt${NC}"
 echo ""
 echo -e "${BLUE}Next Steps:${NC}"
 echo ""
-echo "  1. Review .env file: nano .env"
-echo "  2. Build and start services:"
+echo "  1. Review instance info: cat INSTANCE_INFO.txt"
+echo "  2. Review .env file: nano .env"
+echo "  3. Build and start services:"
 echo "     docker compose build"
 echo "     docker compose up -d"
 echo ""
-echo "  3. Apply database schema:"
+echo "  4. Apply database schema:"
 echo "     ./docker/scripts/apply-schema.sh"
 echo ""
-echo "  4. Access setup page:"
+echo "  5. Access setup page:"
 echo "     ${SITE_URL}/setup"
 echo "     Use setup password: ${SETUP_PASSWORD}"
 echo ""

@@ -86,7 +86,9 @@ export function QuickUploadImagesModal({
           });
 
         if (uploadError) {
-          throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
+          throw new Error(
+            `Upload failed for ${file.name}: ${uploadError.message}`,
+          );
         }
 
         // Save attachment record to database
@@ -111,7 +113,9 @@ export function QuickUploadImagesModal({
       router.refresh();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error(error instanceof Error ? error.message : "Lỗi khi tải ảnh lên");
+      toast.error(
+        error instanceof Error ? error.message : "Lỗi khi tải ảnh lên",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -128,7 +132,7 @@ export function QuickUploadImagesModal({
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
   return (
@@ -233,7 +237,9 @@ export function QuickUploadImagesModal({
             disabled={isUploading || selectedFiles.length === 0}
           >
             <IconUpload className="h-4 w-4" />
-            {isUploading ? "Đang tải lên..." : `Tải lên (${selectedFiles.length})`}
+            {isUploading
+              ? "Đang tải lên..."
+              : `Tải lên (${selectedFiles.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>

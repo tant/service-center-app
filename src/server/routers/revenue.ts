@@ -14,7 +14,7 @@ export const revenueRouter = router({
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Get start and end dates for current and previous months
     const currentMonthStart = new Date(currentYear, currentMonth, 1);
     const currentMonthEnd = new Date(currentYear, currentMonth + 1, 0);
@@ -23,34 +23,46 @@ export const revenueRouter = router({
 
     // Query current month revenue
     const currentMonthRes = await ctx.supabaseAdmin
-      .from('service_tickets')
-      .select('total_cost')
-      .gte('updated_at', currentMonthStart.toISOString())
-      .lte('updated_at', currentMonthEnd.toISOString())
-      .eq('status', 'completed');
+      .from("service_tickets")
+      .select("total_cost")
+      .gte("updated_at", currentMonthStart.toISOString())
+      .lte("updated_at", currentMonthEnd.toISOString())
+      .eq("status", "completed");
 
-    const parsedCurrentData = z.array(revenueTicketSchema).safeParse(currentMonthRes.data);
-    const currentMonthRevenue = parsedCurrentData.success 
-      ? parsedCurrentData.data.reduce((sum, ticket) => sum + (ticket.total_cost || 0), 0)
+    const parsedCurrentData = z
+      .array(revenueTicketSchema)
+      .safeParse(currentMonthRes.data);
+    const currentMonthRevenue = parsedCurrentData.success
+      ? parsedCurrentData.data.reduce(
+          (sum, ticket) => sum + (ticket.total_cost || 0),
+          0,
+        )
       : 0;
 
-    // Query previous month revenue  
+    // Query previous month revenue
     const previousMonthRes = await ctx.supabaseAdmin
-      .from('service_tickets')
-      .select('actual_total')
-      .gte('updated_at', previousMonthStart.toISOString())
-      .lte('updated_at', previousMonthEnd.toISOString())
-      .eq('status', 'completed');
+      .from("service_tickets")
+      .select("actual_total")
+      .gte("updated_at", previousMonthStart.toISOString())
+      .lte("updated_at", previousMonthEnd.toISOString())
+      .eq("status", "completed");
 
-    const parsedPreviousData = z.array(revenueTicketSchema).safeParse(previousMonthRes.data);
+    const parsedPreviousData = z
+      .array(revenueTicketSchema)
+      .safeParse(previousMonthRes.data);
     const previousMonthRevenue = parsedPreviousData.success
-      ? parsedPreviousData.data.reduce((sum, ticket) => sum + (ticket.total_cost || 0), 0)
+      ? parsedPreviousData.data.reduce(
+          (sum, ticket) => sum + (ticket.total_cost || 0),
+          0,
+        )
       : 0;
 
     // Calculate growth rate
     let growthRate = 0;
     if (previousMonthRevenue > 0) {
-      growthRate = ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+      growthRate =
+        ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) *
+        100;
     }
 
     return {
@@ -58,7 +70,7 @@ export const revenueRouter = router({
       previousMonthRevenue,
       growthRate,
       hasPreviousData: previousMonthRevenue > 0,
-      latestUpdate: now.toISOString()
+      latestUpdate: now.toISOString(),
     };
   }),
 });

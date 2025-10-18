@@ -14,7 +14,10 @@ export default async function AuthLayout({
   console.log("🛡️ [AUTH LAYOUT] Starting authentication check");
 
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   // Log authentication result
   if (user) {
@@ -37,7 +40,9 @@ export default async function AuthLayout({
     redirect("/login");
   }
 
-  console.log("🛡️ [AUTH LAYOUT] Authentication successful, rendering protected content");
+  console.log(
+    "🛡️ [AUTH LAYOUT] Authentication successful, rendering protected content",
+  );
   return (
     <SidebarProvider
       style={

@@ -59,20 +59,20 @@ export function MultiSelectCombobox({
 
   const selectedOptions = React.useMemo(
     () => options.filter((option) => selected.includes(option.value)),
-    [options, selected]
+    [options, selected],
   );
 
   const availableOptions = React.useMemo(
     () => options.filter((option) => !selected.includes(option.value)),
-    [options, selected]
+    [options, selected],
   );
 
   const filteredOptions = React.useMemo(
     () =>
       availableOptions.filter((option) =>
-        option.label.toLowerCase().includes(searchValue.toLowerCase())
+        option.label.toLowerCase().includes(searchValue.toLowerCase()),
       ),
-    [availableOptions, searchValue]
+    [availableOptions, searchValue],
   );
 
   const handleSelect = React.useCallback(
@@ -82,14 +82,14 @@ export function MultiSelectCombobox({
       onSelectionChange([...selected, option.value]);
       setSearchValue("");
     },
-    [selected, onSelectionChange]
+    [selected, onSelectionChange],
   );
 
   const handleRemove = React.useCallback(
     (value: string) => {
       onSelectionChange(selected.filter((item) => item !== value));
     },
-    [selected, onSelectionChange]
+    [selected, onSelectionChange],
   );
 
   const handleClear = React.useCallback(() => {
@@ -146,7 +146,7 @@ export function MultiSelectCombobox({
           className={cn(
             "w-full justify-between text-left font-normal min-h-10 h-auto py-2",
             !selectedOptions.length && "text-muted-foreground",
-            className
+            className,
           )}
           disabled={disabled}
         >
@@ -157,7 +157,9 @@ export function MultiSelectCombobox({
               <>
                 {displayItems.map((option) => (
                   <React.Fragment key={option.value}>
-                    {renderBadge ? renderBadge(option) : defaultRenderBadge(option)}
+                    {renderBadge
+                      ? renderBadge(option)
+                      : defaultRenderBadge(option)}
                   </React.Fragment>
                 ))}
                 {remainingCount > 0 && (
@@ -209,10 +211,12 @@ export function MultiSelectCombobox({
                           "mr-2 h-4 w-4",
                           selected.includes(option.value)
                             ? "opacity-100"
-                            : "opacity-0"
+                            : "opacity-0",
                         )}
                       />
-                      {renderOption ? renderOption(option) : defaultRenderOption(option)}
+                      {renderOption
+                        ? renderOption(option)
+                        : defaultRenderOption(option)}
                     </CommandItem>
                   ))}
                 </div>
@@ -229,7 +233,9 @@ export function MultiSelectCombobox({
                       className="cursor-pointer"
                     >
                       <X className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {renderOption ? renderOption(option) : defaultRenderOption(option)}
+                      {renderOption
+                        ? renderOption(option)
+                        : defaultRenderOption(option)}
                     </CommandItem>
                   ))}
                 </div>

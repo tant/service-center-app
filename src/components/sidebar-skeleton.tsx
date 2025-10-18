@@ -24,7 +24,7 @@ export function SidebarSkeleton() {
         <div className="px-2">
           <Skeleton className="h-3 w-16 rounded-sm bg-border" />
         </div>
-        
+
         {/* Document Items */}
         <div className="space-y-1">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -44,7 +44,10 @@ export function SidebarSkeleton() {
       {/* Secondary Navigation */}
       <div className="space-y-2 mt-auto">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={`nav-secondary-${i}`} className="flex items-center gap-3 p-2">
+          <div
+            key={`nav-secondary-${i}`}
+            className="flex items-center gap-3 p-2"
+          >
             <Skeleton className="w-4 h-4 rounded-sm bg-border" />
             <Skeleton className="h-4 w-20 rounded-sm bg-border" />
           </div>

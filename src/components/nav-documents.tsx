@@ -38,10 +38,7 @@ export function NavDocuments({
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a
-                href={item.url}
-                onClick={(e) => handleClick(e, item.url)}
-              >
+              <a href={item.url} onClick={(e) => handleClick(e, item.url)}>
                 <item.icon />
                 <span>{item.name}</span>
               </a>

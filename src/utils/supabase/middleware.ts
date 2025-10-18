@@ -217,9 +217,13 @@ export async function updateSession(request: NextRequest) {
     // If there's an auth error and cookies exist, clear invalid auth cookies
     // This provides better UX by cleaning up stale/invalid sessions automatically
     if (error && request.cookies.getAll().length > 0) {
-      const authCookies = request.cookies.getAll().filter(cookie =>
-        cookie.name.startsWith('sb-') && cookie.name.includes('-auth-token')
-      );
+      const authCookies = request.cookies
+        .getAll()
+        .filter(
+          (cookie) =>
+            cookie.name.startsWith("sb-") &&
+            cookie.name.includes("-auth-token"),
+        );
 
       if (authCookies.length > 0) {
         console.log(
@@ -230,14 +234,16 @@ export async function updateSession(request: NextRequest) {
         const clearResponse = NextResponse.next({ request });
 
         // Copy any cookies that Supabase set
-        supabaseResponse.cookies.getAll().forEach(cookie => {
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
           clearResponse.cookies.set(cookie.name, cookie.value, cookie);
         });
 
         // Clear the invalid auth cookies
-        authCookies.forEach(cookie => {
+        authCookies.forEach((cookie) => {
           clearResponse.cookies.delete(cookie.name);
-          console.log(`🔄 [MIDDLEWARE-${requestId}] Cleared cookie: ${cookie.name}`);
+          console.log(
+            `🔄 [MIDDLEWARE-${requestId}] Cleared cookie: ${cookie.name}`,
+          );
         });
 
         supabaseResponse = clearResponse;

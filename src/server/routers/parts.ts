@@ -42,18 +42,19 @@ export const partsRouter = router({
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
     // Get current month's new parts
-    const { data: currentMonthData, error: currentError } = await ctx.supabaseAdmin
-      .from("parts")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfMonth.toISOString())
-      .lt('created_at', now.toISOString());
+    const { data: currentMonthData, error: currentError } =
+      await ctx.supabaseAdmin
+        .from("parts")
+        .select("count", { count: "exact" })
+        .gte("created_at", startOfMonth.toISOString())
+        .lt("created_at", now.toISOString());
 
     // Get previous month's new parts
     const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
       .from("parts")
-      .select("count", { count: 'exact' })
-      .gte('created_at', startOfPrevMonth.toISOString())
-      .lt('created_at', startOfMonth.toISOString());
+      .select("count", { count: "exact" })
+      .gte("created_at", startOfPrevMonth.toISOString())
+      .lt("created_at", startOfMonth.toISOString());
 
     if (currentError || prevError) {
       throw new Error(currentError?.message || prevError?.message);
@@ -61,7 +62,8 @@ export const partsRouter = router({
 
     const currentCount = currentMonthData?.[0]?.count || 0;
     const prevCount = prevMonthData?.[0]?.count || 0;
-    const growthRate = prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
+    const growthRate =
+      prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
 
     return {
       currentMonthCount: currentCount,
@@ -195,7 +197,9 @@ export const partsRouter = router({
   getParts: publicProcedure.query(async ({ ctx }) => {
     const { data: parts, error } = await ctx.supabaseAdmin
       .from("parts")
-      .select("id, name, part_number, sku, price, cost_price, stock_quantity, description")
+      .select(
+        "id, name, part_number, sku, price, cost_price, stock_quantity, description",
+      )
       .order("name", { ascending: true });
 
     if (error) {

@@ -50,13 +50,14 @@ export async function uploadFile(
 /**
  * Upload avatar for the current authenticated user
  */
-export async function uploadAvatar(
-  file: File,
-): Promise<UploadResult> {
+export async function uploadAvatar(file: File): Promise<UploadResult> {
   const supabase = createClient();
 
   // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
   if (userError || !user) {
     throw new Error("User not authenticated");
   }

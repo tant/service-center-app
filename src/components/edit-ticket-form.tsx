@@ -2,16 +2,46 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconTrash, IconPlus, IconEdit, IconPhoto, IconX, IconDownload, IconEye, IconUser, IconClipboardText, IconCurrencyDollar, IconTool, IconMinus } from "@tabler/icons-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  IconTrash,
+  IconPlus,
+  IconEdit,
+  IconPhoto,
+  IconX,
+  IconDownload,
+  IconEye,
+  IconUser,
+  IconClipboardText,
+  IconCurrencyDollar,
+  IconTool,
+  IconMinus,
+} from "@tabler/icons-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { NumberCounter } from "@/components/number-counter";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
@@ -47,11 +77,14 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.total_price,
-    })) || []
+    })) || [],
   );
 
   const [editingPartId, setEditingPartId] = useState<string | null>(null);
-  const [editingPartData, setEditingPartData] = useState<{ quantity: number; unit_price: number } | null>(null);
+  const [editingPartData, setEditingPartData] = useState<{
+    quantity: number;
+    unit_price: number;
+  } | null>(null);
 
   const { data: availableParts } = trpc.parts.getParts.useQuery();
   const [selectedNewPart, setSelectedNewPart] = useState<string>("");
@@ -60,10 +93,14 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   // Image upload state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const { data: attachments, refetch: refetchAttachments } = trpc.tickets.getAttachments.useQuery({ ticket_id: ticket.id });
+  const { data: attachments, refetch: refetchAttachments } =
+    trpc.tickets.getAttachments.useQuery({ ticket_id: ticket.id });
 
   // Image view modal state
-  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
+  const [viewingImage, setViewingImage] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
 
   // Track form changes to detect unsaved changes
   useEffect(() => {
@@ -81,18 +118,20 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
     if (hasUnsavedChanges) {
       // Only listen for browser back/forward and refresh
-      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.addEventListener("beforeunload", handleBeforeUnload);
     }
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
 
   // Helper function to check unsaved changes before navigation
   const checkUnsavedChanges = (): boolean => {
     if (hasUnsavedChanges) {
-      return confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang?');
+      return confirm(
+        "Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang?",
+      );
     }
     return true;
   };
@@ -159,16 +198,19 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
       });
 
       // Update local parts state immediately
-      const part = availableParts?.find(p => p.id === selectedNewPart);
+      const part = availableParts?.find((p) => p.id === selectedNewPart);
       if (part && data.part) {
-        setParts((prev: any[]) => [...prev, {
-          id: data.part.id,
-          part_id: selectedNewPart,
-          part_name: part.name,
-          quantity: newPartQuantity,
-          unit_price: part.price,
-          total_price: part.price * newPartQuantity,
-        }]);
+        setParts((prev: any[]) => [
+          ...prev,
+          {
+            id: data.part.id,
+            part_id: selectedNewPart,
+            part_name: part.name,
+            quantity: newPartQuantity,
+            unit_price: part.price,
+            total_price: part.price * newPartQuantity,
+          },
+        ]);
       }
 
       toast.success("Thêm linh kiện thành công");
@@ -199,16 +241,19 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
       // Update local parts state immediately
       if (editingPartId && editingPartData) {
-        setParts((prev: any[]) => prev.map(part =>
-          part.id === editingPartId
-            ? {
-                ...part,
-                quantity: editingPartData.quantity,
-                unit_price: editingPartData.unit_price,
-                total_price: editingPartData.quantity * editingPartData.unit_price,
-              }
-            : part
-        ));
+        setParts((prev: any[]) =>
+          prev.map((part) =>
+            part.id === editingPartId
+              ? {
+                  ...part,
+                  quantity: editingPartData.quantity,
+                  unit_price: editingPartData.unit_price,
+                  total_price:
+                    editingPartData.quantity * editingPartData.unit_price,
+                }
+              : part,
+          ),
+        );
       }
 
       toast.success("Cập nhật linh kiện thành công");
@@ -237,7 +282,9 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
       });
 
       // Update local parts state immediately
-      setParts((prev: any[]) => prev.filter(part => part.id !== variables.id));
+      setParts((prev: any[]) =>
+        prev.filter((part) => part.id !== variables.id),
+      );
 
       toast.success("Xóa linh kiện thành công");
       router.refresh();
@@ -301,9 +348,17 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     updateTicketDetailsMutation.mutate({
       id: ticket.id,
       issue_description: formData.issue_description,
-      priority_level: formData.priority_level as "low" | "normal" | "high" | "urgent",
+      priority_level: formData.priority_level as
+        | "low"
+        | "normal"
+        | "high"
+        | "urgent",
       warranty_type: formData.warranty_type as "warranty" | "paid" | "goodwill",
-      status: formData.status as "pending" | "in_progress" | "completed" | "cancelled",
+      status: formData.status as
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "cancelled",
       notes: formData.notes || null,
     });
   };
@@ -324,10 +379,13 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
 
   const handleAddPart = () => {
     if (!selectedNewPart) {
-      console.warn("[EditTicketForm] Add part validation failed: No part selected", {
-        ticketId: ticket.id,
-        timestamp: new Date().toISOString(),
-      });
+      console.warn(
+        "[EditTicketForm] Add part validation failed: No part selected",
+        {
+          ticketId: ticket.id,
+          timestamp: new Date().toISOString(),
+        },
+      );
       toast.error("Vui lòng chọn linh kiện");
       return;
     }
@@ -400,7 +458,11 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     console.log("[EditTicketForm] Starting image upload:", {
       ticketId: ticket.id,
       fileCount: selectedFiles.length,
-      files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+      files: selectedFiles.map((f) => ({
+        name: f.name,
+        size: f.size,
+        type: f.type,
+      })),
       timestamp: new Date().toISOString(),
     });
 
@@ -434,14 +496,19 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             error: uploadError.message,
             errorDetails: uploadError,
           });
-          throw new Error(`Upload failed for ${file.name}: ${uploadError.message}`);
+          throw new Error(
+            `Upload failed for ${file.name}: ${uploadError.message}`,
+          );
         }
 
-        console.log("[EditTicketForm] Storage upload success, saving attachment:", {
-          ticketId: ticket.id,
-          fileName: file.name,
-          storagePath: uploadData.path,
-        });
+        console.log(
+          "[EditTicketForm] Storage upload success, saving attachment:",
+          {
+            ticketId: ticket.id,
+            fileName: file.name,
+            storagePath: uploadData.path,
+          },
+        );
 
         await addAttachmentMutation.mutateAsync({
           ticket_id: ticket.id,
@@ -471,13 +538,18 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         errorStack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString(),
       });
-      toast.error(error instanceof Error ? error.message : "Lỗi khi tải ảnh lên");
+      toast.error(
+        error instanceof Error ? error.message : "Lỗi khi tải ảnh lên",
+      );
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDeleteAttachment = async (attachmentId: string, filePath: string) => {
+  const handleDeleteAttachment = async (
+    attachmentId: string,
+    filePath: string,
+  ) => {
     if (!confirm("Bạn có chắc chắn muốn xóa ảnh này?")) return;
 
     try {
@@ -509,11 +581,18 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const partsTotal = parts.reduce((sum: number, part: any) => sum + (part.total_price || 0), 0);
-  const totalCost = Number(formData.service_fee) + Number(formData.diagnosis_fee) + partsTotal - Number(formData.discount_amount);
+  const partsTotal = parts.reduce(
+    (sum: number, part: any) => sum + (part.total_price || 0),
+    0,
+  );
+  const totalCost =
+    Number(formData.service_fee) +
+    Number(formData.diagnosis_fee) +
+    partsTotal -
+    Number(formData.discount_amount);
 
   return (
     <form className="grid gap-6">
@@ -530,16 +609,28 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-sm font-medium text-muted-foreground">Khách hàng</div>
-              <div className="text-sm font-medium col-span-2">{ticket.customers?.name || ""}</div>
+              <div className="text-sm font-medium text-muted-foreground">
+                Khách hàng
+              </div>
+              <div className="text-sm font-medium col-span-2">
+                {ticket.customers?.name || ""}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-sm font-medium text-muted-foreground">Số điện thoại</div>
-              <div className="text-sm font-medium col-span-2">{ticket.customers?.phone || ""}</div>
+              <div className="text-sm font-medium text-muted-foreground">
+                Số điện thoại
+              </div>
+              <div className="text-sm font-medium col-span-2">
+                {ticket.customers?.phone || ""}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-sm font-medium text-muted-foreground">Sản phẩm</div>
-              <div className="text-sm font-medium col-span-2">{ticket.products?.name || ""}</div>
+              <div className="text-sm font-medium text-muted-foreground">
+                Sản phẩm
+              </div>
+              <div className="text-sm font-medium col-span-2">
+                {ticket.products?.name || ""}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -562,7 +653,12 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   min="0"
                   step="1000"
                   value={formData.service_fee}
-                  onChange={(e) => setFormData({ ...formData, service_fee: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      service_fee: Number(e.target.value),
+                    })
+                  }
                   required
                 />
               </div>
@@ -575,7 +671,12 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   min="0"
                   step="1000"
                   value={formData.diagnosis_fee}
-                  onChange={(e) => setFormData({ ...formData, diagnosis_fee: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      diagnosis_fee: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
 
@@ -587,7 +688,12 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   min="0"
                   step="1000"
                   value={formData.discount_amount}
-                  onChange={(e) => setFormData({ ...formData, discount_amount: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      discount_amount: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
 
@@ -595,11 +701,15 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
               <div className="mt-6 space-y-2 border-t pt-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Giá dịch vụ:</span>
-                  <span>{Number(formData.service_fee).toLocaleString("vi-VN")} ₫</span>
+                  <span>
+                    {Number(formData.service_fee).toLocaleString("vi-VN")} ₫
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Phí kiểm tra:</span>
-                  <span>{Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫</span>
+                  <span>
+                    {Number(formData.diagnosis_fee).toLocaleString("vi-VN")} ₫
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Linh kiện:</span>
@@ -608,27 +718,35 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                 {formData.discount_amount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Giảm giá:</span>
-                    <span className="text-red-600">-{Number(formData.discount_amount).toLocaleString("vi-VN")} ₫</span>
+                    <span className="text-red-600">
+                      -
+                      {Number(formData.discount_amount).toLocaleString("vi-VN")}{" "}
+                      ₫
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Tổng cộng:</span>
-                  <span className="text-primary">{totalCost.toLocaleString("vi-VN")} ₫</span>
+                  <span className="text-primary">
+                    {totalCost.toLocaleString("vi-VN")} ₫
+                  </span>
                 </div>
               </div>
-              </div>
-            </CardContent>
-            {/* Actions for Fees */}
-            <div className="flex justify-end gap-2 px-6">
-              <Button 
-                type="button" 
-                disabled={updateServiceFeesMutation.isPending}
-                onClick={handleSaveServiceFees}
-              >
-                {updateServiceFeesMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-              </Button>
             </div>
-          </Card>
+          </CardContent>
+          {/* Actions for Fees */}
+          <div className="flex justify-end gap-2 px-6">
+            <Button
+              type="button"
+              disabled={updateServiceFeesMutation.isPending}
+              onClick={handleSaveServiceFees}
+            >
+              {updateServiceFeesMutation.isPending
+                ? "Đang lưu..."
+                : "Lưu thay đổi"}
+            </Button>
+          </div>
+        </Card>
 
         {/* Ticket Details - dòng 2 và 3 */}
         <Card className="order-2 lg:order-3 lg:row-span-2">
@@ -639,104 +757,125 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             </CardTitle>
             {/* <CardDescription>Cập nhật thông tin phiếu dịch vụ {ticket.ticket_number}</CardDescription> */}
           </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Status and Priority */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="status">Trạng thái</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value })}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Current status - always shown */}
-                  <SelectItem value={ticket.status}>
-                    {STATUS_FLOW[ticket.status as keyof typeof STATUS_FLOW]?.label || ticket.status}
-                  </SelectItem>
-                  {/* Valid next statuses */}
-                  {STATUS_FLOW[ticket.status as keyof typeof STATUS_FLOW]?.next.map((nextStatus) => (
-                    <SelectItem key={nextStatus} value={nextStatus}>
-                      {STATUS_FLOW[nextStatus as keyof typeof STATUS_FLOW]?.label}
+          <CardContent className="space-y-6">
+            {/* Status and Priority */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="status">Trạng thái</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Current status - always shown */}
+                    <SelectItem value={ticket.status}>
+                      {STATUS_FLOW[ticket.status as keyof typeof STATUS_FLOW]
+                        ?.label || ticket.status}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {/* Valid next statuses */}
+                    {STATUS_FLOW[
+                      ticket.status as keyof typeof STATUS_FLOW
+                    ]?.next.map((nextStatus) => (
+                      <SelectItem key={nextStatus} value={nextStatus}>
+                        {
+                          STATUS_FLOW[nextStatus as keyof typeof STATUS_FLOW]
+                            ?.label
+                        }
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority">Độ ưu tiên</Label>
+                <Select
+                  value={formData.priority_level}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, priority_level: value })
+                  }
+                >
+                  <SelectTrigger id="priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Thấp</SelectItem>
+                    <SelectItem value="normal">Bình thường</SelectItem>
+                    <SelectItem value="high">Cao</SelectItem>
+                    <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="warranty">Loại bảo hành</Label>
+                <Select
+                  value={formData.warranty_type}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, warranty_type: value })
+                  }
+                >
+                  <SelectTrigger id="warranty">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="warranty">Bảo hành</SelectItem>
+                    <SelectItem value="paid">Trả phí</SelectItem>
+                    <SelectItem value="goodwill">Thiện chí</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
+            {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="priority">Độ ưu tiên</Label>
-              <Select
-                value={formData.priority_level}
-                onValueChange={(value) => setFormData({ ...formData, priority_level: value })}
-              >
-                <SelectTrigger id="priority">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Thấp</SelectItem>
-                  <SelectItem value="normal">Bình thường</SelectItem>
-                  <SelectItem value="high">Cao</SelectItem>
-                  <SelectItem value="urgent">Khẩn cấp</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="description">Mô tả vấn đề</Label>
+              <Textarea
+                id="description"
+                value={formData.issue_description}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    issue_description: e.target.value,
+                  })
+                }
+                rows={4}
+                required
+              />
             </div>
 
+            {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="warranty">Loại bảo hành</Label>
-              <Select
-                value={formData.warranty_type}
-                onValueChange={(value) => setFormData({ ...formData, warranty_type: value })}
-              >
-                <SelectTrigger id="warranty">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="warranty">Bảo hành</SelectItem>
-                  <SelectItem value="paid">Trả phí</SelectItem>
-                  <SelectItem value="goodwill">Thiện chí</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="notes">Ghi chú</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+                rows={3}
+                placeholder="Ghi chú thêm về phiếu dịch vụ..."
+              />
             </div>
+          </CardContent>
+          {/* Actions for Ticket Details */}
+          <div className="flex justify-end gap-2 px-6">
+            <Button
+              type="button"
+              disabled={updateTicketDetailsMutation.isPending}
+              onClick={handleSaveTicketDetails}
+            >
+              {updateTicketDetailsMutation.isPending
+                ? "Đang lưu..."
+                : "Lưu thay đổi"}
+            </Button>
           </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Mô tả vấn đề</Label>
-            <Textarea
-              id="description"
-              value={formData.issue_description}
-              onChange={(e) => setFormData({ ...formData, issue_description: e.target.value })}
-              rows={4}
-              required
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              placeholder="Ghi chú thêm về phiếu dịch vụ..."
-            />
-          </div>
-        </CardContent>
-        {/* Actions for Ticket Details */}
-        <div className="flex justify-end gap-2 px-6">
-          <Button 
-            type="button" 
-            disabled={updateTicketDetailsMutation.isPending}
-            onClick={handleSaveTicketDetails}
-          >
-            {updateTicketDetailsMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
-          </Button>
-        </div>
-      </Card>
+        </Card>
       </div>
 
       {/* Parts Management */}
@@ -756,8 +895,13 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             <h4 className="font-medium">Thêm linh kiện mới</h4>
             <div className="grid gap-3 md:grid-cols-4">
               <div className="md:col-span-2">
-                <Label htmlFor="new-part" className="mb-2">Linh kiện</Label>
-                <Select value={selectedNewPart} onValueChange={setSelectedNewPart}>
+                <Label htmlFor="new-part" className="mb-2">
+                  Linh kiện
+                </Label>
+                <Select
+                  value={selectedNewPart}
+                  onValueChange={setSelectedNewPart}
+                >
                   <SelectTrigger id="new-part">
                     <SelectValue placeholder="Chọn linh kiện" />
                   </SelectTrigger>
@@ -797,13 +941,18 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             <div className="space-y-2">
               <h4 className="font-medium">Linh kiện đã sử dụng</h4>
               {parts.map((part: any) => (
-                <div key={part.id} className="flex items-center gap-2 border-b pb-2">
+                <div
+                  key={part.id}
+                  className="flex items-center gap-2 border-b pb-2"
+                >
                   {editingPartId === part.id ? (
                     // Edit mode
                     <>
                       <div className="flex-1 grid grid-cols-5 gap-2 items-center">
                         <div className="col-span-3">
-                          <p className="text-sm font-medium">{part.part_name}</p>
+                          <p className="text-sm font-medium">
+                            {part.part_name}
+                          </p>
                         </div>
                         <div>
                           <NumberCounter
@@ -848,7 +997,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                       <div className="flex-1">
                         <p className="font-medium">{part.part_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Số lượng: {part.quantity} × {part.unit_price.toLocaleString("vi-VN")} ₫
+                          Số lượng: {part.quantity} ×{" "}
+                          {part.unit_price.toLocaleString("vi-VN")} ₫
                         </p>
                       </div>
                       <div className="text-right min-w-[100px]">
@@ -896,7 +1046,8 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
             Hình ảnh đính kèm
           </CardTitle>
           <CardDescription>
-            Tải lên hình ảnh liên quan đến phiếu dịch vụ (trước/sau sửa chữa, vấn đề phát hiện, v.v.)
+            Tải lên hình ảnh liên quan đến phiếu dịch vụ (trước/sau sửa chữa,
+            vấn đề phát hiện, v.v.)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -909,14 +1060,24 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                     src={getPublicUrl(attachment.file_path)}
                     alt={attachment.file_name}
                     className="w-full h-32 object-cover rounded-lg border cursor-pointer"
-                    onClick={() => setViewingImage({ url: getPublicUrl(attachment.file_path), name: attachment.file_name })}
+                    onClick={() =>
+                      setViewingImage({
+                        url: getPublicUrl(attachment.file_path),
+                        name: attachment.file_name,
+                      })
+                    }
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                     <Button
                       type="button"
                       size="icon"
                       variant="secondary"
-                      onClick={() => setViewingImage({ url: getPublicUrl(attachment.file_path), name: attachment.file_name })}
+                      onClick={() =>
+                        setViewingImage({
+                          url: getPublicUrl(attachment.file_path),
+                          name: attachment.file_name,
+                        })
+                      }
                     >
                       <IconEye className="h-4 w-4" />
                     </Button>
@@ -924,7 +1085,12 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                       type="button"
                       size="icon"
                       variant="secondary"
-                      onClick={() => window.open(getPublicUrl(attachment.file_path), "_blank")}
+                      onClick={() =>
+                        window.open(
+                          getPublicUrl(attachment.file_path),
+                          "_blank",
+                        )
+                      }
                     >
                       <IconDownload className="h-4 w-4" />
                     </Button>
@@ -932,13 +1098,21 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                       type="button"
                       size="icon"
                       variant="destructive"
-                      onClick={() => handleDeleteAttachment(attachment.id, attachment.file_path)}
+                      onClick={() =>
+                        handleDeleteAttachment(
+                          attachment.id,
+                          attachment.file_path,
+                        )
+                      }
                       disabled={deleteAttachmentMutation.isPending}
                     >
                       <IconTrash className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 truncate" title={attachment.file_name}>
+                  <p
+                    className="text-xs text-muted-foreground mt-1 truncate"
+                    title={attachment.file_name}
+                  >
                     {attachment.file_name}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -965,7 +1139,11 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                 variant="outline"
                 size="icon"
                 disabled={isUploading}
-                onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
+                onClick={() =>
+                  document
+                    .querySelector<HTMLInputElement>('input[type="file"]')
+                    ?.click()
+                }
               >
                 <IconPhoto className="h-4 w-4" />
               </Button>
@@ -1008,7 +1186,9 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                   className="w-full"
                 >
                   <IconPhoto className="h-4 w-4" />
-                  {isUploading ? "Đang tải lên..." : `Tải lên (${selectedFiles.length})`}
+                  {isUploading
+                    ? "Đang tải lên..."
+                    : `Tải lên (${selectedFiles.length})`}
                 </Button>
               </div>
             )}
@@ -1017,7 +1197,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
       </Card>
 
       {/* Image View Modal */}
-      <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
+      <Dialog
+        open={!!viewingImage}
+        onOpenChange={(open) => !open && setViewingImage(null)}
+      >
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{viewingImage?.name}</DialogTitle>

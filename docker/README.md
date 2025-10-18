@@ -60,14 +60,16 @@ To modify configuration:
   # 2. Run the script
   ./docker/scripts/setup-instance.sh
   ```
-- Configuration variables:
+- Configuration variables (only these need to be set):
   - `CENTER_NAME` - Service center name
   - `APP_PORT` - Application port (3025, 3026, 3027...)
-  - `STUDIO_PORT` - Supabase Studio port (3000, 3100, 3200...)
-  - `SITE_URL` - Public application URL
-  - `API_EXTERNAL_URL` - Public API URL
+  - `SITE_URL` - Domain (e.g., `sv.mydomain.com` or `localhost`)
   - `SMTP_*` - Email configuration
   - `SETUP_PASSWORD` - Setup page password (auto-generated if empty)
+- Auto-calculated values (derived from APP_PORT):
+  - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
+  - `KONG_PORT = 8000 + (APP_PORT - 3025)`
+  - URLs (api.domain, supabase.domain) auto-derived from SITE_URL
 
 **scripts/apply-schema.sh**
 - Applies database schema to running instance
@@ -107,16 +109,19 @@ To modify configuration:
    Configure these values:
    ```bash
    CENTER_NAME="Your Service Center"
-   APP_PORT=3025
-   STUDIO_PORT=3000
-   KONG_PORT=8000
-   SITE_URL="https://yourdomain.com"
-   API_EXTERNAL_URL="https://yourdomain.com"
-   SUPABASE_API_URL="https://api.yourdomain.com"
+   APP_PORT=3025              # Only port you need to configure!
+   SITE_URL="sv.yourdomain.com"
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT=587
    # ... etc
    ```
+
+   **Note:** Script automatically calculates and derives:
+   - `STUDIO_PORT = 3000` (from APP_PORT 3025)
+   - `KONG_PORT = 8000` (from APP_PORT 3025)
+   - App URL: `https://sv.yourdomain.com`
+   - API URL: `https://api.sv.yourdomain.com`
+   - Studio URL: `https://supabase.sv.yourdomain.com`
 
 2. **Run setup script:**
    ```bash
@@ -261,13 +266,13 @@ Internet
 ```
 
 **Port Configuration:**
-- `APP_PORT` - Application port (default: 3025)
-- `KONG_PORT` - Kong API Gateway port (default: 8000) - **Required for browser access**
-- `STUDIO_PORT` - Studio port (default: 3000)
-- Multi-instance: Use different ports
-  - Instance 1: APP_PORT=3025, KONG_PORT=8000, STUDIO_PORT=3000
-  - Instance 2: APP_PORT=3026, KONG_PORT=8001, STUDIO_PORT=3100
-  - Instance 3: APP_PORT=3027, KONG_PORT=8002, STUDIO_PORT=3200
+- `APP_PORT` - Application port (you configure this)
+- `STUDIO_PORT` - Auto-calculated: `3000 + (APP_PORT - 3025) × 100`
+- `KONG_PORT` - Auto-calculated: `8000 + (APP_PORT - 3025)` - **Required for browser access**
+- Multi-instance: Just change APP_PORT, everything else auto-calculates
+  - Instance 1: APP_PORT=3025 → STUDIO_PORT=3000, KONG_PORT=8000
+  - Instance 2: APP_PORT=3026 → STUDIO_PORT=3100, KONG_PORT=8001
+  - Instance 3: APP_PORT=3027 → STUDIO_PORT=3200, KONG_PORT=8002
 
 **Benefits:**
 - ✅ No exposed ports (80/443)

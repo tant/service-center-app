@@ -134,6 +134,7 @@ To modify configuration:
    - ✅ Copy configuration files from `docs/references/volumes/`
    - ✅ Create `.env` file with all settings
    - ✅ Generate Supabase API keys
+   - ✅ Create `INSTANCE_INFO.txt` with all configuration details
    - ✅ Display setup password
 
 3. **Build and deploy:**

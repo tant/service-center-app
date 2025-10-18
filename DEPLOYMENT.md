@@ -152,6 +152,7 @@ Script sẽ tự động:
 - ✅ Copy configuration files từ `docs/references/volumes`
 - ✅ Tạo .env file với tất cả cấu hình
 - ✅ Generate Supabase API keys
+- ✅ Tạo INSTANCE_INFO.txt với tất cả thông tin (URLs, secrets, credentials)
 - ✅ Hiển thị setup password
 
 **Output mẫu:**
@@ -199,10 +200,36 @@ SMTP:
 🔧 Step 1.6: Installing dependencies & generating API keys...
   ✓ API keys generated
 
+📝 Step 1.7: Generating instance info file...
+  ✓ Instance info saved to INSTANCE_INFO.txt
+
 ✅ Setup completed successfully!
 
+📋 Summary:
+
+Instance Configuration:
+  Center Name: SSTC Service Center
+  App Port: 3025
+  Studio Port: 3000 (auto-calculated)
+  Kong Port: 8000 (auto-calculated)
+  Site URL: https://dichvu.sstc.cloud
+
 Setup Password: a1b2c3d4e5f6...
+
+⚠️  IMPORTANT:
+  • All credentials saved to INSTANCE_INFO.txt
+  • Keep this file secure - do NOT commit to git!
+  • Review with: cat INSTANCE_INFO.txt
 ```
+
+**INSTANCE_INFO.txt** chứa:
+- ✅ Tất cả URLs và domains
+- ✅ Tất cả secrets và passwords
+- ✅ Supabase API keys
+- ✅ Database credentials
+- ✅ SMTP configuration
+- ✅ Cloudflare Tunnel config (nếu production)
+- ✅ Access information
 
 ---
 

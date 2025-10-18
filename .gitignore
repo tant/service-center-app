@@ -47,3 +47,7 @@ next-env.d.ts
 /.vscode/
 CLAUDE.md
 QWEN.md
+
+# Docker runtime data
+volumes/db/data/
+volumes/storage/

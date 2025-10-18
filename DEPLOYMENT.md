@@ -97,179 +97,96 @@ git clone https://github.com/tant/service-center-app.git
 cd service-center-app
 ```
 
-### 1.2 Generate Secrets
+### 1.2 Setup Configuration
 
-**QUAN TRỌNG:** Tất cả secrets được generate dưới dạng URL-friendly (hex) để tránh vấn đề với special characters.
-
+**1. Edit configuration trong script:**
 ```bash
-# JWT Secret (64 characters hex = 32 bytes)
-openssl rand -hex 32
-
-# Postgres Password (64 characters hex = 32 bytes)
-openssl rand -hex 32
-
-# PG Meta Crypto Key (64 characters hex = 32 bytes)
-openssl rand -hex 32
-
-# VAULT_ENC_KEY (64 characters hex = 32 bytes)
-openssl rand -hex 32
-
-# SECRET_KEY_BASE (128 characters hex = 64 bytes)
-openssl rand -hex 64
-
-# Setup Password (32 characters hex = 16 bytes)
-openssl rand -hex 16
-
-# LOGFLARE tokens (64 characters hex = 32 bytes)
-openssl rand -hex 32  # Public token
-openssl rand -hex 32  # Private token
-
-# Dashboard password (32 characters hex = 16 bytes)
-openssl rand -hex 16
+nano docker/scripts/setup-instance.sh
 ```
 
-**Lưu ý:**
-- Sử dụng `-hex` thay vì `-base64` để tạo chuỗi chỉ gồm `0-9a-f` (URL-safe)
-- Base64 có thể chứa `+`, `/`, `=` gây lỗi khi dùng trong URLs hoặc connection strings
-
-### 1.3 Configure Public URL
-
-**QUAN TRỌNG:** Cấu hình SITE_URL với public domain của bạn.
-
+Chỉnh sửa các giá trị trong phần `CONFIGURATION`:
 ```bash
-nano .env
-```
-
-**Tìm và update:**
-```env
-# Change from:
-SITE_URL=http://localhost:3025
-API_EXTERNAL_URL=http://localhost:8000
-
-# To your public domain:
-SITE_URL=https://dichvu.sstc.cloud
-API_EXTERNAL_URL=https://dichvu.sstc.cloud
-```
-
-**Tại sao cần thiết:**
-- ✅ Supabase Auth sử dụng SITE_URL cho email verification links
-- ✅ Password reset links sẽ redirect về URL này
-- ✅ Magic link authentication cần URL này
-
-**Lưu ý:** Nếu deploy local để test, có thể tạm giữ `http://localhost:3025`
-
-### 1.4 Setup Volume Directories và Configuration Files
-
-**QUAN TRỌNG:** Bước này phải hoàn thành trước khi deployment.
-
-```bash
-# Copy tất cả configuration files từ reference directory
-cp -r docs/references/volumes/* volumes/
-
-# Verify các file quan trọng đã được copy
-ls -lh volumes/logs/vector.yml
-ls -lh volumes/api/kong.yml
-ls -lh volumes/db/*.sql
-
-# Tạo thêm các thư mục runtime (sẽ bị ignore bởi git)
-mkdir -p volumes/db/data
-mkdir -p volumes/storage
-```
-
-**Kiểm tra:**
-```bash
-# Check các file quan trọng tồn tại
-test -f volumes/logs/vector.yml && echo "✅ vector.yml OK" || echo "❌ vector.yml MISSING"
-test -f volumes/api/kong.yml && echo "✅ kong.yml OK" || echo "❌ kong.yml MISSING"
-
-# Check không rỗng
-[ -s volumes/logs/vector.yml ] && echo "✅ vector.yml có nội dung" || echo "❌ vector.yml rỗng"
-```
-
-⚠️ **KHÔNG tiếp tục Bước 2 nếu chưa hoàn thành bước này!**
-
-### 1.5 Cấu Hình .env
-```bash
-cp .env.docker.example .env
-nano .env
-```
-
-**Điền các giá trị:**
-
-```env
-############################################
-# Application Settings
-############################################
-APP_PORT=3025  # Main application port (thay đổi cho mỗi instance: 3025, 3026, 3027...)
-SETUP_PASSWORD=<your-generated-setup-password>
-
-# Public URLs - Domains đã config ở reverse proxy
-SITE_URL=https://dichvu.sstc.cloud
-API_EXTERNAL_URL=https://dichvu.sstc.cloud
-
-############################################
-# Supabase Configuration
-############################################
-
-# Internal Docker network (không thay đổi)
-NEXT_PUBLIC_SUPABASE_URL=http://kong:8000
-
-# Database
-POSTGRES_PASSWORD=<your-generated-postgres-password>
-
-# JWT Secret
-JWT_SECRET=<your-generated-jwt-secret>
-
-# PG Meta Crypto Key (for Supabase Studio)
-PG_META_CRYPTO_KEY=<your-generated-pg-meta-crypto-key>
-
-# API Keys (sẽ generate ở bước tiếp theo)
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-############################################
-# SMTP (Optional - có thể cấu hình sau)
-############################################
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_ADMIN_EMAIL=admin@yourdomain.com
-SMTP_SENDER_NAME=Service Center
-
-############################################
-# Studio
-############################################
-STUDIO_DEFAULT_ORGANIZATION=Service Center
-STUDIO_DEFAULT_PROJECT=Production
-
-# Studio port (thay đổi cho mỗi instance: 3000, 3100, 3200...)
+# Instance Information
+CENTER_NAME="SSTC Service Center"
+APP_PORT=3025
 STUDIO_PORT=3000
+SITE_URL="https://dichvu.sstc.cloud"
+API_EXTERNAL_URL="https://dichvu.sstc.cloud"
 
-############################################
-# Auth
-############################################
-DISABLE_SIGNUP=false
-ENABLE_EMAIL_SIGNUP=true
-ENABLE_EMAIL_AUTOCONFIRM=false
+# SMTP Configuration
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="noreply@sstc.cloud"
+SMTP_PASS="your-smtp-password"
+SMTP_ADMIN_EMAIL="admin@sstc.cloud"
+SMTP_SENDER_NAME="SSTC Service Center"
+
+# Setup Password (leave empty to auto-generate)
+SETUP_PASSWORD=""
 ```
 
-### 1.6 Install Dependencies & Generate API Keys
+**2. Chạy script:**
 ```bash
-# Install jsonwebtoken for key generation
-npm install jsonwebtoken
-
-# Generate Supabase keys
-node docker/scripts/generate-keys.js "$(grep JWT_SECRET .env | cut -d '=' -f2)"
-
-# Output sẽ hiển thị 2 keys:
-# SUPABASE_ANON_KEY=eyJhbG...
-# SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
-
-# Copy output vào .env
-nano .env
-# Paste SUPABASE_ANON_KEY và SUPABASE_SERVICE_ROLE_KEY
+chmod +x docker/scripts/setup-instance.sh
+./docker/scripts/setup-instance.sh
 ```
+
+Script sẽ tự động:
+- ✅ Generate tất cả secrets (hex format, URL-safe)
+- ✅ Copy configuration files từ `docs/references/volumes`
+- ✅ Tạo .env file với tất cả cấu hình
+- ✅ Generate Supabase API keys
+- ✅ Hiển thị setup password
+
+**Output mẫu:**
+```
+🚀 Service Center - Instance Setup
+=====================================
+
+📋 Using configuration:
+  Center Name: SSTC Service Center
+  App Port: 3025
+  Studio Port: 3000
+  Site URL: https://dichvu.sstc.cloud
+
+🔑 Step 1.2: Generating secrets...
+  ✓ Generated SETUP_PASSWORD
+  ✓ Generated POSTGRES_PASSWORD
+  ✓ Generated JWT_SECRET
+  ...
+
+📦 Step 1.4: Setting up volume directories...
+  ✓ Copied configuration files
+  ✓ vector.yml OK
+  ✓ kong.yml OK
+
+⚙️  Step 1.5: Creating .env file...
+  ✓ .env file created
+
+🔧 Step 1.6: Installing dependencies & generating API keys...
+  ✓ API keys generated
+
+✅ Setup completed successfully!
+
+Setup Password: a1b2c3d4e5f6...
+```
+
+---
+
+### 1.3 Review Configuration (Optional)
+
+Nếu cần, bạn có thể review lại .env file đã được tạo:
+
+```bash
+nano .env
+```
+
+File .env đã chứa:
+- ✅ Tất cả secrets (hex format, URL-safe)
+- ✅ APP_PORT và STUDIO_PORT
+- ✅ SITE_URL và API_EXTERNAL_URL
+- ✅ SMTP configuration
+- ✅ Supabase API keys (ANON và SERVICE_ROLE)
 
 ---
 
@@ -283,19 +200,7 @@ chmod +x docker/scripts/deploy.sh
 # Chọn option 1: Fresh deployment
 ```
 
-### 2.2 Hoặc Deploy Manual
-```bash
-# Build images
-docker compose build
-
-# Start all services
-docker compose up -d
-
-# Check status
-docker compose ps
-```
-
-### 2.3 Verify Services
+### 2.2 Verify Services
 ```bash
 # All containers should be running and healthy
 docker compose ps
@@ -674,35 +579,6 @@ docker compose restart
 
 ---
 
-## Migration từ Traditional Setup
-
-Nếu đang dùng Nginx trên VPS:
-
-1. **Backup everything:**
-   ```bash
-   pg_dump > backup.sql
-   tar czf uploads.tar.gz uploads/
-   cp .env .env.backup
-   ```
-
-2. **Stop old services:**
-   ```bash
-   pm2 stop all
-   sudo systemctl stop nginx
-   ```
-
-3. **Follow guide này từ Bước 2**
-
-4. **Restore data:**
-   ```bash
-   cat backup.sql | docker compose exec -T db psql -U postgres
-   tar xzf uploads.tar.gz
-   ```
-
-5. **Configure reverse proxy** để trỏ domains đến localhost ports
-
----
-
 ## FAQ
 
 **Q: Cần expose ports nào?**
@@ -728,6 +604,9 @@ A: Có! Dùng reverse proxy firewall rules hoặc Cloudflare Access.
 ## Commands Reference
 
 ```bash
+# Setup
+./docker/scripts/setup-instance.sh         # Setup new instance (automated)
+
 # Docker
 docker compose ps                          # Status
 docker compose logs -f app                 # Logs

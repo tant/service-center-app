@@ -108,18 +108,46 @@ Tất cả các bảng bao gồm:
 
 ## Triển Khai
 
-### Yêu Cầu
-- Tài khoản Supabase ([đăng ký](https://supabase.com))
-- Nền tảng hosting (Vercel, Railway, v.v.)
+Có hai phương pháp triển khai production:
 
-### Các Bước
-1. Tạo Supabase project và ghi nhận thông tin xác thực
-2. Liên kết local project: `pnpx supabase link --project-ref <ref>`
+### 🌟 Docker + Cloudflare Tunnel (Khuyến nghị nhất)
+
+**Ưu điểm:** Đơn giản nhất, không cần SSL, không cần mở port, DDoS protection miễn phí
+
+**Yêu cầu:**
+- Ubuntu VPS (không cần public IP)
+- Docker Engine + Docker Compose
+- Tài khoản Cloudflare (miễn phí)
+- Domain đã add vào Cloudflare
+
+**Quick Start:**
+```bash
+# Clone và cấu hình
+git clone https://github.com/tant/service-center-app
+cd service-center-app
+cp .env.docker.example .env
+nano .env
+
+# Generate keys và deploy
+node docker/scripts/generate-keys.js "<jwt-secret>"
+./docker/scripts/deploy.sh
+
+# Setup Cloudflare Tunnel
+cloudflared tunnel login
+cloudflared tunnel create service-center
+# ... configure và done!
+```
+
+**Xem chi tiết:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+### ☁️ Cloud Platforms (Managed Services)
+
+**Supabase Cloud + Vercel/Railway:**
+1. Tạo Supabase project tại [supabase.com](https://supabase.com)
+2. Liên kết: `pnpx supabase link --project-ref <ref>`
 3. Push schema: `pnpx supabase db push`
-4. Deploy frontend lên nền tảng hosting
+4. Deploy frontend lên Vercel/Railway
 5. Cấu hình environment variables
-
-Xem [DEVELOPMENT.md](./DEVELOPMENT.md#production-deployment) để biết hướng dẫn triển khai chi tiết.
 
 ## Hỗ Trợ & Đóng Góp
 

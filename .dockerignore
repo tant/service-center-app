@@ -1,0 +1,65 @@
+# Dependencies
+node_modules
+
+# Next.js build output
+.next
+out
+dist
+
+# Environment files
+.env
+.env.local
+.env*.local
+.env.production
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem
+
+# Local development
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+supabase/seed.sql
+
+# Uploads (will be volume-mounted)
+public/uploads/*
+
+# Backups
+backups
+
+# Logs and debug files
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker volumes (runtime data)
+volumes/db/data
+volumes/storage

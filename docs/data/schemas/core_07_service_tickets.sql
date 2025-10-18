@@ -43,36 +43,36 @@ create trigger "service_tickets_updated_at_trigger"
   execute function update_updated_at_column();
 
 -- Function to generate ticket number in SV-YYYY-NNN format
--- Security: SET search_path = '' and explicit schema qualification prevent schema hijacking
+-- Security: SET search_path prevents schema hijacking by limiting to pg_catalog and public
 create or replace function public.generate_ticket_number()
-returns text as $$
+returns text
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
 declare
   current_year text;
   next_number integer;
   new_ticket_number text;
 begin
-  current_year := pg_catalog.to_char(pg_catalog.now(), 'YYYY');
+  current_year := to_char(now(), 'YYYY');
 
-  -- Get the highest ticket number for current year
-  select pg_catalog.coalesce(
-    pg_catalog.max(
-      pg_catalog.cast(
-        pg_catalog.substring(ticket_number from 'SV-' || current_year || '-(\d+)') as pg_catalog.int4
-      )
+  -- Get the highest ticket number for current year using regexp
+  select coalesce(
+    max(
+      (regexp_match(ticket_number, 'SV-' || current_year || '-(\d+)'))[1]::integer
     ), 0
   ) + 1
   into next_number
   from public.service_tickets
-  where ticket_number like 'SV-' || current_year || '-%';
+  where ticket_number ~ ('SV-' || current_year || '-\d+');
 
   -- Format as SV-YYYY-NNN (zero-padded to 3 digits)
-  new_ticket_number := 'SV-' || current_year || '-' || pg_catalog.lpad(next_number::pg_catalog.text, 3, '0');
+  new_ticket_number := 'SV-' || current_year || '-' || lpad(next_number::text, 3, '0');
 
   return new_ticket_number;
 end;
-$$ language plpgsql
-security definer
-set search_path = '';
+$$;
 
 -- Trigger to automatically generate ticket number on insert
 -- Security: SET search_path = '' prevents schema hijacking

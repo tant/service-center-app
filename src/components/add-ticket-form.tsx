@@ -62,6 +62,7 @@ export function AddTicketForm() {
   const [errors, setErrors] = React.useState({
     phone: "",
     name: "",
+    email: "",
     description: "",
     product: "",
   });
@@ -257,6 +258,27 @@ export function AddTicketForm() {
       return false;
     }
     setErrors((prev) => ({ ...prev, name: "" }));
+    return true;
+  };
+
+  const validateEmail = () => {
+    // Email is optional, so empty is valid
+    if (!customerData.email || customerData.email.trim() === "") {
+      setErrors((prev) => ({ ...prev, email: "" }));
+      return true;
+    }
+
+    // If email is provided, validate format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerData.email)) {
+      setErrors((prev) => ({
+        ...prev,
+        email: "Email không hợp lệ. Vui lòng nhập đúng định dạng (ví dụ: example@domain.com)",
+      }));
+      return false;
+    }
+
+    setErrors((prev) => ({ ...prev, email: "" }));
     return true;
   };
 
@@ -529,12 +551,20 @@ export function AddTicketForm() {
                       ...prev,
                       email: e.target.value,
                     }));
+                    // Clear error when user starts typing
+                    if (errors.email) {
+                      setErrors((prev) => ({ ...prev, email: "" }));
+                    }
                   }
                 }}
+                onBlur={validateEmail}
                 placeholder="Nhập email"
                 readOnly={!!customerData.id} // Chế độ chỉ đọc khi là khách hàng đã tồn tại
-                className={customerData.id ? "bg-muted" : ""}
+                className={`${errors.email ? "border-red-500" : ""} ${customerData.id ? "bg-muted" : ""}`}
               />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -570,7 +600,8 @@ export function AddTicketForm() {
                 onClick={() => {
                   const phoneValid = validatePhone();
                   const nameValid = validateName();
-                  if (phoneValid && nameValid) {
+                  const emailValid = validateEmail();
+                  if (phoneValid && nameValid && emailValid) {
                     setStep(2);
                   }
                 }}

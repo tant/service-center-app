@@ -62,6 +62,49 @@ export function QuickUploadImagesModal({
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Sanitize filename to remove Vietnamese characters and special chars
+  const sanitizeFilename = (filename: string): string => {
+    // Get file extension
+    const lastDotIndex = filename.lastIndexOf(".");
+    const name = lastDotIndex !== -1 ? filename.slice(0, lastDotIndex) : filename;
+    const ext = lastDotIndex !== -1 ? filename.slice(lastDotIndex) : "";
+
+    // Vietnamese character mapping
+    const vietnameseMap: Record<string, string> = {
+      à: "a", á: "a", ả: "a", ã: "a", ạ: "a",
+      ă: "a", ằ: "a", ắ: "a", ẳ: "a", ẵ: "a", ặ: "a",
+      â: "a", ầ: "a", ấ: "a", ẩ: "a", ẫ: "a", ậ: "a",
+      đ: "d",
+      è: "e", é: "e", ẻ: "e", ẽ: "e", ẹ: "e",
+      ê: "e", ề: "e", ế: "e", ể: "e", ễ: "e", ệ: "e",
+      ì: "i", í: "i", ỉ: "i", ĩ: "i", ị: "i",
+      ò: "o", ó: "o", ỏ: "o", õ: "o", ọ: "o",
+      ô: "o", ồ: "o", ố: "o", ổ: "o", ỗ: "o", ộ: "o",
+      ơ: "o", ờ: "o", ớ: "o", ở: "o", ỡ: "o", ợ: "o",
+      ù: "u", ú: "u", ủ: "u", ũ: "u", ụ: "u",
+      ư: "u", ừ: "u", ứ: "u", ử: "u", ữ: "u", ự: "u",
+      ỳ: "y", ý: "y", ỷ: "y", ỹ: "y", ỵ: "y",
+    };
+
+    // Convert to lowercase and replace Vietnamese chars
+    let sanitized = name.toLowerCase();
+    for (const [viet, latin] of Object.entries(vietnameseMap)) {
+      sanitized = sanitized.replaceAll(viet, latin);
+      sanitized = sanitized.replaceAll(viet.toUpperCase(), latin.toUpperCase());
+    }
+
+    // Remove any remaining special characters except hyphens and underscores
+    sanitized = sanitized.replace(/[^a-z0-9_-]/g, "_");
+
+    // Remove multiple consecutive underscores
+    sanitized = sanitized.replace(/_+/g, "_");
+
+    // Remove leading/trailing underscores
+    sanitized = sanitized.replace(/^_+|_+$/g, "");
+
+    return sanitized + ext.toLowerCase();
+  };
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       toast.error("Vui lòng chọn ít nhất một ảnh");
@@ -72,10 +115,13 @@ export function QuickUploadImagesModal({
 
     try {
       const uploadPromises = selectedFiles.map(async (file) => {
-        // Generate unique file path
+        // Generate unique file path with sanitized filename
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(7);
-        const filePath = `${ticketId}/${timestamp}_${randomString}_${file.name}`;
+        const sanitizedFilename = sanitizeFilename(file.name);
+        const filePath = `${ticketId}/${timestamp}_${randomString}_${sanitizedFilename}`;
+
+        console.log(`[Upload] Original: ${file.name}, Sanitized: ${sanitizedFilename}, Path: ${filePath}`);
 
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -86,6 +132,7 @@ export function QuickUploadImagesModal({
           });
 
         if (uploadError) {
+          console.error(`[Upload] Error for ${file.name}:`, uploadError);
           throw new Error(
             `Upload failed for ${file.name}: ${uploadError.message}`,
           );

@@ -1,164 +1,363 @@
-# Hệ Thống Quản Lý Trung Tâm Bảo Hành
+# Service Center Management System
 
-Ứng dụng quản lý trung tâm bảo hành full-stack được xây dựng với Next.js, Supabase và tRPC để quản lý phiếu bảo hành, kho linh kiện, khách hàng và sản phẩm.
+A full-stack warranty and repair management application built with Next.js, Supabase, and tRPC for managing service tickets, inventory, customers, and products.
 
-## Tổng Quan
+## Overview
 
-Ứng dụng này giúp các trung tâm bảo hành quản lý hoạt động hàng ngày bao gồm theo dõi khách hàng, quản lý kho sản phẩm, quy trình xử lý phiếu bảo hành và quản lý linh kiện. Được xây dựng với các công nghệ web hiện đại để đảm bảo độ tin cậy và khả năng mở rộng.
+This application helps service centers manage daily operations including customer tracking, product inventory management, warranty service ticket workflows, and parts inventory management. Built with modern web technologies to ensure reliability and scalability.
 
-## Tính Năng Chính
+## Key Features
 
-- 🎫 **Quản Lý Phiếu Bảo Hành** - Quy trình hoàn chỉnh từ tiếp nhận đến hoàn thành với theo dõi trạng thái
-- 📦 **Quản Lý Kho Linh Kiện** - Theo dõi tồn kho thời gian thực với cập nhật số lượng tự động
-- 👥 **Quản Lý Khách Hàng** - Cơ sở dữ liệu khách hàng đầy đủ với lịch sử bảo hành
-- 🛠️ **Danh Mục Sản Phẩm** - Quản lý sản phẩm với quan hệ linh kiện tương thích
-- 👤 **Phân Quyền Theo Vai Trò** - Bốn loại vai trò: Quản trị viên, Quản lý, Kỹ thuật viên và Lễ tân
-- 💾 **Lưu Trữ File** - Upload bảo mật cho ảnh đại diện, hình ảnh sản phẩm và tài liệu bảo hành
-- 📊 **Cập Nhật Thời Gian Thực** - Đồng bộ dữ liệu trực tiếp được hỗ trợ bởi Supabase
-- 🔒 **Row-Level Security** - Kiểm soát truy cập cấp độ cơ sở dữ liệu để bảo vệ dữ liệu
+- 🎫 **Service Ticket Management** - Complete workflow from intake to completion with status tracking
+- 📦 **Parts Inventory Management** - Real-time stock tracking with automatic quantity updates
+- 👥 **Customer Management** - Comprehensive customer database with service history
+- 🛠️ **Product Catalog** - Product management with compatible parts relationships
+- 👤 **Role-Based Access Control** - Four user roles: Admin, Manager, Technician, and Reception
+- 💾 **File Storage** - Secure uploads for avatars, product images, and service ticket attachments
+- 📊 **Real-time Updates** - Live data synchronization powered by Supabase
+- 🔒 **Row-Level Security** - Database-level access control for data protection
+- 📈 **Analytics Dashboard** - Revenue tracking, customer growth, and performance metrics
+- 💬 **Comment System** - Internal notes and customer-facing communication threads
 
-## Công Nghệ Sử Dụng
+## Technology Stack
 
 ### Frontend
-- **Framework**: Next.js 15.5 với App Router và Turbopack
-- **UI Library**: React 19 với TypeScript
+- **Framework**: Next.js 15.5.4 with App Router and Turbopack
+- **UI Library**: React 19.1.0 with TypeScript
 - **Styling**: Tailwind CSS 4 + shadcn/ui components
 - **State Management**: TanStack Query (React Query)
-- **Type Safety**: Type-safe hoàn toàn với tRPC
+- **Type Safety**: End-to-end type safety with tRPC
+- **Icons**: Tabler Icons + Lucide React
+- **Charts**: Recharts for data visualization
 
 ### Backend
-- **API**: tRPC cho các API route type-safe
-- **Database**: PostgreSQL thông qua Supabase
-- **Authentication**: Supabase Auth với JWT
-- **Storage**: Supabase Storage cho upload file
+- **API**: tRPC 11.6.0 for type-safe API routes
+- **Database**: PostgreSQL via Supabase
+- **Authentication**: Supabase Auth with JWT
+- **Storage**: Supabase Storage for file uploads
 - **Real-time**: Supabase Realtime subscriptions
 
-### Công Cụ Phát Triển
+### Development Tools
 - **Build Tool**: Turbopack (Next.js 15)
 - **Package Manager**: pnpm
-- **Linting/Formatting**: Biome
-- **Database Migrations**: Supabase CLI với declarative schemas
+- **Linting/Formatting**: Biome 2.2.0
+- **Database Migrations**: Supabase CLI with declarative schemas
 - **Local Development**: Docker-based Supabase local stack
 
-## Bắt Đầu Nhanh
+## Quick Start
 
-Xem [DEVELOPMENT.md](./DEVELOPMENT.md) để biết hướng dẫn cài đặt chi tiết.
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed setup instructions.
 
 ```bash
-# Clone và cài đặt
-git clone https://github.com/tant/service-center-app
+# Clone and install
+git clone https://github.com/tantran/service-center-app
 cd service-center-app
 pnpm install
 
-# Thiết lập môi trường
+# Set up environment
 cp .env.example .env
 
-# Khởi động Supabase và thiết lập database
+# Start Supabase and set up database
 pnpx supabase start
 ./docs/data/schemas/setup_schema.sh
 
-# Khởi động development server
+# Start development server
 pnpm dev
 ```
 
-Truy cập `http://localhost:3025` và hoàn tất cài đặt tại endpoint `/setup`.
+Visit `http://localhost:3025` and complete setup at the `/setup` endpoint.
 
-## Cấu Trúc Dự Án
+## Project Structure
 
 ```
 service-center/
 ├── src/
 │   ├── app/                    # Next.js App Router pages
-│   │   ├── (auth)/            # Protected routes (yêu cầu đăng nhập)
-│   │   ├── (public)/          # Public routes (công khai)
+│   │   ├── (auth)/            # Protected routes (require authentication)
+│   │   ├── (public)/          # Public routes
 │   │   └── api/               # tRPC API routes
 │   ├── components/            # React components
-│   ├── lib/                   # Utilities và configurations
-│   └── hooks/                 # Custom React hooks
+│   │   ├── ui/               # shadcn/ui base components
+│   │   └── ...               # Business components
+│   ├── server/               # tRPC server
+│   │   └── routers/         # API route handlers
+│   ├── lib/                  # Utilities and configurations
+│   ├── utils/                # Helper functions
+│   └── hooks/                # Custom React hooks
 ├── docs/
 │   └── data/
-│       ├── schemas/           # Định nghĩa database schema
-│       └── seeds/             # Scripts seed data
-├── supabase/                  # Cấu hình Supabase
+│       ├── schemas/          # Database schema definitions
+│       └── seeds/            # Seed data scripts
+├── supabase/                 # Supabase configuration
 │   ├── config.toml
-│   └── migrations/           # Generated migrations
-└── .env                      # Environment variables (git-ignored)
+│   └── migrations/          # Generated migrations
+└── .env                     # Environment variables (git-ignored)
 ```
 
 ## Database Schema
 
-Các entity chính và quan hệ của chúng:
+Core entities and their relationships:
 
-- **Users & Auth**: Bảng `profiles` mở rộng từ Supabase Auth
-- **Dữ Liệu Kinh Doanh**: `customers`, `products`, `parts`
-- **Quy Trình Bảo Hành**: `service_tickets`, `service_ticket_parts`, `service_ticket_comments`
-- **Quan Hệ**: `product_parts` (many-to-many)
+### User Management
+- **profiles** - Extended user information with roles (Admin, Manager, Technician, Reception)
 
-Tất cả các bảng bao gồm:
-- Timestamps tự động (`created_at`, `updated_at`)
+### Business Data
+- **customers** - Customer information with phone-based lookup
+- **brands** - Product brand management
+- **products** - Service-able products with warranty periods
+- **parts** - Spare parts/components with stock tracking
+
+### Service Workflow
+- **service_tickets** - Core workflow entity with auto-numbering (SV-YYYY-NNN)
+- **service_ticket_parts** - Parts used in service tickets (junction table)
+- **service_ticket_comments** - Communication history and audit trail
+- **service_ticket_attachments** - Image attachments for tickets
+
+### Key Features
+- Automatic timestamps (`created_at`, `updated_at`)
 - Audit trails (`created_by`, `updated_by`)
 - Row-Level Security (RLS) policies
-- Indexes được tối ưu hóa cho hiệu suất
+- Optimized indexes for performance
+- Generated columns for automatic calculations
+- Database triggers for workflow automation
 
-## Tài Liệu
+## Service Ticket Workflow
 
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Hướng dẫn thiết lập môi trường phát triển và đóng góp
-- **[docs/data/schemas/README.md](./docs/data/schemas/README.md)** - Tài liệu database schema
-- **[CLAUDE.md](./CLAUDE.md)** - Hướng dẫn cho Claude Code AI assistant
+The system enforces a one-way status flow to ensure data integrity:
 
-## Triển Khai
+```
+pending → in_progress → completed
+   ↓            ↓
+ cancelled   cancelled
+```
 
-Có hai phương pháp triển khai production:
+**Key Features:**
+- Terminal state enforcement (completed/cancelled tickets cannot be modified)
+- Automatic ticket numbering (format: SV-YYYY-NNN)
+- Cost calculation: `total_cost = service_fee + diagnosis_fee + parts_total - discount_amount`
+- Automatic status change logging for audit trail
+- Technician assignment tracking
+- Warranty type support (warranty, paid, goodwill)
 
-### 🌟 Docker + Cloudflare Tunnel (Khuyến nghị nhất)
+## User Roles & Permissions
 
-**Ưu điểm:** Đơn giản nhất, không cần SSL, không cần mở port, DDoS protection miễn phí
+### Admin
+- Full system access
+- Manage all entities
+- Create/edit/delete users
+- System configuration
 
-**Yêu cầu:**
-- Ubuntu VPS (không cần public IP)
+### Manager
+- Create/edit/delete products, parts, brands
+- Manage customer data
+- Delete service tickets
+- Edit own profile
+
+### Technician
+- View assigned tickets
+- Add comments and attachments
+- Update ticket status
+- Read-only access to customer/product info
+
+### Reception
+- Create new service tickets
+- View/update customers
+- Read-only access to most data
+
+All permissions are enforced at the database level through Row-Level Security policies.
+
+## Development Commands
+
+```bash
+# Development
+pnpm dev          # Start dev server with hot reload (port 3025)
+pnpm build        # Build for production with Turbopack
+pnpm start        # Run production server (port 3025)
+
+# Code Quality
+pnpm lint         # Run Biome linter
+pnpm format       # Auto-format code with Biome
+
+# Database
+pnpx supabase start           # Start Supabase services
+pnpx supabase stop            # Stop Supabase services
+pnpx supabase status          # Check service status
+pnpx supabase db reset        # Reset database (deletes all data)
+pnpx supabase db diff         # Generate migration from schema changes
+pnpx supabase migration up    # Apply pending migrations
+```
+
+## API Architecture
+
+The application uses **tRPC** for type-safe API communication:
+
+### Available Routers
+- `admin` - Setup and initial configuration
+- `profile` - User profile management
+- `tickets` - Service ticket CRUD operations
+- `customers` - Customer management
+- `products` - Product catalog management
+- `parts` - Parts inventory management
+- `brands` - Brand management
+- `revenue` - Revenue analytics
+
+### Input Validation
+All inputs are validated using Zod schemas:
+- Phone format validation (10+ characters)
+- Email format validation
+- UUID validation for IDs
+- Enum validation for status transitions
+- Numeric range validation for prices and quantities
+
+## File Upload & Storage
+
+- **Vietnamese Character Support** - Filename sanitization for Vietnamese diacritics
+- **Supabase Storage** - Secure upload with isolated paths per entity type
+- **Image Attachments** - Linked to service tickets for documentation
+- **Sanitization** - Removes special characters for filesystem compatibility
+
+## Analytics & Reporting
+
+Dashboard provides comprehensive analytics:
+- **Revenue Metrics** - Current vs previous month comparison
+- **Customer Growth** - New customers with month-over-month percentage
+- **Ticket Statistics** - By status, priority, and assigned staff
+- **Parts Metrics** - New parts added and stock status
+- **Employee Performance** - Tickets handled and completion rates
+- **Interactive Charts** - Trend visualization with Recharts
+
+## Documentation
+
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development environment setup and contribution guide
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Production deployment guide (Vietnamese)
+- **[CLAUDE.md](./CLAUDE.md)** - Guide for Claude Code AI assistant
+- **[docs/data/schemas/](./docs/data/schemas/)** - Database schema documentation
+
+## Deployment
+
+Two deployment methods are available:
+
+### Docker + Cloudflare Tunnel (Recommended)
+
+**Advantages:**
+- Simple setup without requiring public IP
+- No SSL certificate management needed
+- Built-in DDoS protection via Cloudflare
+- Multi-instance support on a single server
+
+**Requirements:**
+- Ubuntu VPS (public IP not required)
 - Docker Engine + Docker Compose
-- Tài khoản Cloudflare (miễn phí)
-- Domain đã add vào Cloudflare
+- Cloudflare account (free tier)
+- Domain added to Cloudflare
 
 **Quick Start:**
 ```bash
-# Clone và cấu hình
-git clone https://github.com/tant/service-center-app
+# Clone and configure
+git clone https://github.com/tantran/service-center-app
 cd service-center-app
-cp .env.docker.example .env
+cp .env.example .env
 nano .env
 
-# Generate keys và deploy
-node docker/scripts/generate-keys.js "<jwt-secret>"
+# Deploy
+./docker/scripts/setup-instance.sh
 ./docker/scripts/deploy.sh
 
 # Setup Cloudflare Tunnel
 cloudflared tunnel login
 cloudflared tunnel create service-center
-# ... configure và done!
+# Configure and you're done!
 ```
 
-**Xem chi tiết:** [DEPLOYMENT.md](./DEPLOYMENT.md)
+**See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions (Vietnamese).**
 
-### ☁️ Cloud Platforms (Managed Services)
+### Cloud Platforms (Managed Services)
 
 **Supabase Cloud + Vercel/Railway:**
-1. Tạo Supabase project tại [supabase.com](https://supabase.com)
-2. Liên kết: `pnpx supabase link --project-ref <ref>`
+1. Create Supabase project at [supabase.com](https://supabase.com)
+2. Link project: `pnpx supabase link --project-ref <ref>`
 3. Push schema: `pnpx supabase db push`
-4. Deploy frontend lên Vercel/Railway
-5. Cấu hình environment variables
+4. Deploy frontend to Vercel/Railway
+5. Configure environment variables
 
-## Hỗ Trợ & Đóng Góp
+## Environment Variables
 
-- **Issues**: Báo cáo lỗi hoặc yêu cầu tính năng qua GitHub Issues
-- **Đóng góp**: Xem [DEVELOPMENT.md](./DEVELOPMENT.md) để biết hướng dẫn đóng góp
-- **Câu hỏi**: Liên hệ với đội ngũ phát triển
+Required environment variables:
+
+```bash
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=         # Your Supabase URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=    # Supabase anonymous key
+SUPABASE_SERVICE_ROLE_KEY=        # Supabase service role key (server-side only)
+
+# Application Setup
+SETUP_PASSWORD=                    # Password for initial setup
+ADMIN_EMAIL=                       # Initial admin email
+ADMIN_PASSWORD=                    # Initial admin password
+ADMIN_NAME=                        # Initial admin name
+```
+
+## Multi-Instance Deployment
+
+The system supports multiple isolated instances on a single server:
+
+- Each instance has its own isolated database
+- Unique port configuration per instance
+- Separate Docker networks for isolation
+- Independent Cloudflare Tunnel domains
+
+**Resource Requirements per Instance:**
+- RAM: 2-3 GB
+- Disk: 500 MB + data growth
+- CPU: Moderate
+
+**Recommended Server Specs:**
+- 8 GB RAM → 1-2 instances
+- 16 GB RAM → 4-6 instances
+- 32 GB RAM → 10-12 instances
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for multi-instance setup guide.
+
+## Security Features
+
+- **JWT Authentication** - Secure token-based authentication via Supabase Auth
+- **Row-Level Security** - Database-level access control policies
+- **Role-Based Access** - Four distinct user roles with granular permissions
+- **Input Validation** - Zod schema validation on all inputs
+- **SQL Injection Prevention** - Supabase client abstraction
+- **Secure File Upload** - Filename sanitization and path isolation
+- **HTTP-Only Cookies** - Secure session token storage
+
+## Contributing
+
+Before submitting a pull request:
+
+1. Code follows style guidelines (run `pnpm lint`)
+2. Build passes locally (`pnpm build`)
+3. Database migrations tested
+4. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+5. Branch is up to date with `main`
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed contribution guidelines.
+
+## Support
+
+- **Issues**: Report bugs or request features via GitHub Issues
+- **Documentation**: Check the `docs/` folder for detailed documentation
+- **Questions**: Contact Tan Tran at [me@tantran.dev](mailto:me@tantran.dev)
+- **Website**: [www.tantran.dev](https://www.tantran.dev)
 
 ## License
 
-Dự án này được cấp phép theo MIT License - xem file [LICENSE](./LICENSE) để biết chi tiết.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ---
 
-**Được phát triển với ❤️ để quản lý trung tâm bảo hành hiệu quả**
+**Built with ❤️ by [Tan Tran](https://www.tantran.dev) for efficient service center management**
+
+## Acknowledgments
+
+- Built with [Next.js](https://nextjs.org/)
+- Powered by [Supabase](https://supabase.com/)
+- UI components from [shadcn/ui](https://ui.shadcn.com/)
+- Type-safe APIs with [tRPC](https://trpc.io/)

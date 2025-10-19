@@ -230,7 +230,6 @@ Dashboard provides comprehensive analytics:
 
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development environment setup and contribution guide
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Production deployment guide (Vietnamese)
-- **[CLAUDE.md](./CLAUDE.md)** - Guide for Claude Code AI assistant
 - **[docs/data/schemas/](./docs/data/schemas/)** - Database schema documentation
 
 ## Deployment

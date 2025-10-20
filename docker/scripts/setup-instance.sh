@@ -10,39 +10,42 @@
 set -e
 
 ############################################
-# CONFIGURATION - EDIT THESE VALUES
+# DEFAULT CONFIGURATION
+# You can either:
+# 1. Run this script with --interactive flag to configure via prompts
+# 2. Edit these values directly in the script
 ############################################
 
 # Instance Information
-CENTER_NAME="Tân test Service Center"
+CENTER_NAME="My Service Center"
 APP_PORT=3025          # App runs on http://localhost:3025
 
 # Deployment Mode
 # Choose between 'local' for local development or 'production' for public domain
 # - local: Uses http://localhost with port numbers (no Cloudflare Tunnel needed)
 # - production: Uses https:// with your domain (requires Cloudflare Tunnel setup)
-DEPLOYMENT_MODE=production  # Set to 'production' - Cloudflare Tunnel configured
+DEPLOYMENT_MODE=local  # Change to 'production' for public deployment
 
 # Production Domain (only used when DEPLOYMENT_MODE=production)
 # IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
 # URL Pattern: subdomain + port last digit + base domain
-#   Example: sv.tantran.dev generates:
-#     - App:    https://sv.tantran.dev      (main app)
-#     - API:    https://sv8.tantran.dev     (Kong on port 8000)
-#     - Studio: https://sv3.tantran.dev     (Studio on port 3000)
+#   Example: service.example.com generates:
+#     - App:    https://service.example.com      (main app)
+#     - API:    https://service8.example.com     (Kong on port 8000)
+#     - Studio: https://service3.example.com     (Studio on port 3000)
 # Cloudflare Tunnel Configuration Required:
-#   - sv.tantran.dev  → http://localhost:3025
-#   - sv8.tantran.dev → http://localhost:8000
-#   - sv3.tantran.dev → http://localhost:3000
-PRODUCTION_DOMAIN=sv.tantran.dev
+#   - service.example.com  → http://localhost:3025
+#   - service8.example.com → http://localhost:8000
+#   - service3.example.com → http://localhost:3000
+PRODUCTION_DOMAIN=service.example.com
 
 # Setup Password (leave empty to auto-generate)
-SETUP_PASSWORD=tantran
+SETUP_PASSWORD=""
 
 # Admin Account Configuration
 # These credentials will be used to create the first admin account
-ADMIN_EMAIL="admin@tantran.dev"
-ADMIN_PASSWORD="Admin123!@#"
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD="ChangeThisPassword123!"
 ADMIN_NAME="System Administrator"
 
 # Supabase Studio Authentication
@@ -61,9 +64,8 @@ SMTP_ADMIN_EMAIL="admin@example.com"
 SMTP_SENDER_NAME="${CENTER_NAME}"
 
 ############################################
-# END CONFIGURATION
+# END DEFAULT CONFIGURATION
 ############################################
-# Everything below is auto-calculated - do not edit
 
 # Colors
 RED='\033[0;31m'
@@ -81,6 +83,81 @@ if [ ! -f "docker-compose.yml" ]; then
     echo -e "${RED}❌ Error: docker-compose.yml not found${NC}"
     echo "Please run this script from the project root directory"
     exit 1
+fi
+
+############################################
+# INTERACTIVE CONFIGURATION (Optional)
+############################################
+
+# Check if --interactive flag is passed
+if [[ "$1" == "--interactive" ]] || [[ "$1" == "-i" ]]; then
+    echo -e "${BLUE}📝 Interactive Configuration Mode${NC}"
+    echo ""
+    echo "Press Enter to use default values shown in [brackets]"
+    echo ""
+
+    # Center Name
+    read -p "Center Name [${CENTER_NAME}]: " input
+    CENTER_NAME="${input:-$CENTER_NAME}"
+
+    # App Port
+    read -p "Application Port [${APP_PORT}]: " input
+    APP_PORT="${input:-$APP_PORT}"
+
+    # Deployment Mode
+    echo ""
+    echo "Deployment Mode:"
+    echo "  1) local - For local development (no Cloudflare Tunnel needed)"
+    echo "  2) production - For public deployment (requires Cloudflare Tunnel)"
+    read -p "Select mode [1-2]: " mode_choice
+    if [[ "$mode_choice" == "2" ]]; then
+        DEPLOYMENT_MODE="production"
+    else
+        DEPLOYMENT_MODE="local"
+    fi
+
+    # Production Domain
+    if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
+        echo ""
+        read -p "Production Domain (e.g., service.example.com) [${PRODUCTION_DOMAIN}]: " input
+        PRODUCTION_DOMAIN="${input:-$PRODUCTION_DOMAIN}"
+    fi
+
+    # Admin Account
+    echo ""
+    echo -e "${BLUE}Admin Account Configuration:${NC}"
+    read -p "Admin Email [${ADMIN_EMAIL}]: " input
+    ADMIN_EMAIL="${input:-$ADMIN_EMAIL}"
+
+    read -p "Admin Password [${ADMIN_PASSWORD}]: " input
+    ADMIN_PASSWORD="${input:-$ADMIN_PASSWORD}"
+
+    read -p "Admin Name [${ADMIN_NAME}]: " input
+    ADMIN_NAME="${input:-$ADMIN_NAME}"
+
+    # SMTP (only ask if production)
+    if [[ "$DEPLOYMENT_MODE" == "production" ]]; then
+        echo ""
+        echo -e "${BLUE}SMTP Configuration (for production):${NC}"
+        read -p "Use custom SMTP? [y/N]: " use_smtp
+        if [[ "$use_smtp" =~ ^[Yy]$ ]]; then
+            read -p "SMTP Host [${SMTP_HOST}]: " input
+            SMTP_HOST="${input:-$SMTP_HOST}"
+
+            read -p "SMTP Port [${SMTP_PORT}]: " input
+            SMTP_PORT="${input:-$SMTP_PORT}"
+
+            read -p "SMTP User [${SMTP_USER}]: " input
+            SMTP_USER="${input:-$SMTP_USER}"
+
+            read -p "SMTP Password [${SMTP_PASS}]: " input
+            SMTP_PASS="${input:-$SMTP_PASS}"
+        fi
+    fi
+
+    echo ""
+    echo -e "${GREEN}✓ Interactive configuration complete${NC}"
+    echo ""
 fi
 
 ############################################

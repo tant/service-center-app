@@ -21,7 +21,7 @@ echo ""
 
 # Ask for deployment action
 echo "Select deployment action:"
-echo "  1) 🆕 Complete fresh deployment (setup + build + deploy + schema)"
+echo "  1) 🆕 Complete fresh deployment (setup + pull + build + deploy + schema)"
 echo "  2) 🏗️  Build and deploy only (requires existing .env)"
 echo "  3) 🔄 Update application only (rebuild app container)"
 echo "  4) ♻️  Restart all services"
@@ -54,7 +54,7 @@ case $choice in
         fi
 
         echo ""
-        echo "✅ Step 1/4: Instance setup complete!"
+        echo "✅ Step 1/5: Instance setup complete!"
         echo ""
 
         # Verify critical environment variables in .env
@@ -83,14 +83,23 @@ case $choice in
         echo "✅ Configuration files verified"
         echo ""
 
-        # Step 2: Build Docker images
-        echo "🏗️  Step 2/4: Building Docker images..."
+        # Step 2: Pull Docker images
+        echo "📥 Step 2/5: Pulling Docker images..."
+        echo ""
+        echo "This may take a few minutes on first run..."
+        docker compose pull
+        echo ""
+        echo "✅ Step 2/5: Images pulled successfully!"
+        echo ""
+
+        # Step 3: Build Docker images
+        echo "🏗️  Step 3/5: Building Docker images..."
         echo ""
         # Note: --no-cache ensures fresh build, doesn't affect .env reading
         # Docker Compose will automatically read .env file when running any command
         docker compose build --no-cache
         echo ""
-        echo "✅ Step 2/4: Build complete!"
+        echo "✅ Step 3/5: Build complete!"
         echo ""
 
         # Verify configuration files still exist as files after build
@@ -104,8 +113,8 @@ case $choice in
         echo "✅ Configuration files still valid after build"
         echo ""
 
-        # Step 3: Start all services
-        echo "🚀 Step 3/4: Starting all services..."
+        # Step 4: Start all services
+        echo "🚀 Step 4/5: Starting all services..."
         echo ""
         docker compose up -d
 
@@ -131,11 +140,11 @@ case $choice in
         fi
 
         echo ""
-        echo "✅ Step 3/4: All services started!"
+        echo "✅ Step 4/5: All services started!"
         echo ""
 
-        # Step 4: Apply database schema
-        echo "📊 Step 4/4: Applying database schema..."
+        # Step 5: Apply database schema
+        echo "📊 Step 5/5: Applying database schema..."
         echo ""
         if [ ! -x "docker/scripts/apply-schema.sh" ]; then
             chmod +x docker/scripts/apply-schema.sh
@@ -143,7 +152,7 @@ case $choice in
         echo "y" | ./docker/scripts/apply-schema.sh
 
         echo ""
-        echo "✅ Step 4/4: Schema applied successfully!"
+        echo "✅ Step 5/5: Schema applied successfully!"
         echo ""
 
         # Display access information
@@ -232,11 +241,19 @@ case $choice in
             exit 1
         fi
 
-        echo "🏗️  Building Docker images..."
+        echo "🛑 Stopping existing services..."
         docker compose down
-        docker compose build --no-cache
-
         echo ""
+
+        echo "📥 Pulling Docker images..."
+        echo "This may take a few minutes..."
+        docker compose pull
+        echo ""
+
+        echo "🏗️  Building Docker images..."
+        docker compose build --no-cache
+        echo ""
+
         echo "🚀 Starting all services..."
         docker compose up -d
 

@@ -1,6 +1,6 @@
 # Hướng Dẫn Triển Khai Production
 
-Tài liệu này hướng dẫn triển khai Service Center Management lên production server.
+Tài liệu này hướng dẫn triển khai Service Center Management lên production server với **hai phương pháp**: tự động hoàn toàn hoặc thủ công từng bước.
 
 ## 🌟 Ưu Điểm
 
@@ -9,62 +9,90 @@ Tài liệu này hướng dẫn triển khai Service Center Management lên prod
 ✅ **Multi-tenant ready**: Chạy nhiều instances trên 1 server
 ✅ **Self-contained**: Tất cả services trong Docker
 ✅ **Easy backup**: Database và files dễ dàng backup
+✅ **Automated deployment**: Script tự động hóa toàn bộ quá trình
 
 ---
 
-## Mục Lục
+## 📋 Mục Lục
 
-- [Yêu Cầu](#yêu-cầu)
-- [Bước 1: Clone và Cấu Hình](#bước-1-clone-và-cấu-hình)
-- [Bước 2: Deploy Docker Stack](#bước-2-deploy-docker-stack)
-- [Bước 3: Deploy Database Schema](#bước-3-deploy-database-schema)
-- [Bước 4: Initial Setup](#bước-4-initial-setup)
-- [Bước 5: Bảo Mật Supabase Studio](#bước-5-bảo-mật-supabase-studio)
+### Phần I: Chuẩn Bị
+- [Yêu Cầu Hệ Thống](#yêu-cầu-hệ-thống)
+- [Cài Đặt Phần Mềm](#cài-đặt-phần-mềm)
+- [Hiểu Về URL Architecture](#url-architecture--deployment-modes)
+
+### Phần II: Triển Khai
+- [🚀 Phương Pháp A: Tự Động Hoàn Toàn (Khuyến Nghị)](#phương-pháp-a-tự-động-hoàn-toàn-khuyến-nghị)
+- [🔧 Phương Pháp B: Thủ Công Từng Bước](#phương-pháp-b-thủ-công-từng-bước)
+
+### Phần III: Quản Lý & Vận Hành
+- [Initial Setup](#initial-setup)
+- [Bảo Mật Supabase Studio](#bảo-mật-supabase-studio)
+- [Quản Lý Services](#quản-lý-services)
 - [Multi-Instance Deployment](#multi-instance-deployment)
-- [Quản Lý](#quản-lý)
 - [Backup & Monitoring](#backup--monitoring)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## Yêu Cầu
+## Yêu Cầu Hệ Thống
 
 ### Server Specifications
-- **OS**: Ubuntu 22.04 LTS hoặc mới hơn
-- **CPU**: 2+ cores (khuyến nghị 4+)
-- **RAM**: 4GB minimum (khuyến nghị 8GB+)
-- **Disk**: 40GB+ SSD
-- **Network**: Internet connection
-- **Access**: SSH access với sudo privileges
 
-### Phần Mềm Cần Cài Đặt Trước
+| Thành Phần | Yêu Cầu Tối Thiểu | Khuyến Nghị |
+|------------|-------------------|-------------|
+| **OS** | Ubuntu 22.04 LTS | Ubuntu 22.04 LTS trở lên |
+| **CPU** | 2 cores | 4+ cores |
+| **RAM** | 4GB | 8GB+ |
+| **Disk** | 40GB SSD | 80GB+ SSD |
+| **Network** | Internet connection | Stable connection |
+| **Access** | SSH với sudo | SSH key authentication |
 
-**QUAN TRỌNG:** Các phần mềm sau phải được cài đặt trên server trước khi bắt đầu deployment:
+### Cài Đặt Phần Mềm
+
+Các phần mềm sau **BẮT BUỘC** phải được cài đặt trước:
 
 #### 1. Docker & Docker Compose
-```bash
 
-# Verify installation
+```bash
+# Cài đặt Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Add user vào docker group
+sudo usermod -aG docker $USER
+
+# Verify
 docker --version
 docker compose version
 ```
 
 #### 2. Git
+
 ```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y git
+
 # Verify
 git --version
 ```
 
 #### 3. Node.js 18+ (để generate API keys)
+
 ```bash
+# Install Node.js 22.x
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
 # Verify
 node --version  # Should show v22.x.x
 npm --version
 ```
 
 #### 4. User Setup (Recommended)
+
 ```bash
-# Tạo deploy user (optional nhưng recommended)
+# Tạo deploy user (recommended cho production)
 sudo adduser deploy
 sudo usermod -aG sudo deploy
 sudo usermod -aG docker deploy
@@ -73,302 +101,175 @@ sudo usermod -aG docker deploy
 su - deploy
 ```
 
-### URL Architecture & Access Modes
+---
+
+## URL Architecture & Deployment Modes
 
 Hệ thống hỗ trợ **2 deployment modes** với URL architecture khác nhau:
 
-#### 🏠 Local Development Mode
-**Dùng khi:** Test local trên máy development, không cần public domain
+### 🏠 Local Development Mode
+
+**Khi nào dùng:** Test local trên máy development, không cần public domain
 
 **URLs:**
 - App: `http://localhost:3025`
 - Supabase API: `http://localhost:8000` (Kong Gateway)
 - Supabase Studio: `http://localhost:3000`
 
-**Không cần:** Cloudflare Tunnel
+**Đặc điểm:**
+- ✅ Không cần Cloudflare Tunnel
+- ✅ Access trực tiếp qua localhost
+- ✅ Setup đơn giản, nhanh chóng
 
 **Server-side (internal Docker):** `http://kong:8000`
 
 ---
 
-#### 🌐 Production Mode
-**Dùng khi:** Deploy lên server production với public domain
+### 🌐 Production Mode
+
+**Khi nào dùng:** Deploy lên server production với public domain
 
 **YÊU CẦU:** Phải setup Cloudflare Tunnel trước khi deploy
 
-**URLs (Numbered Pattern):**
-URL pattern: `subdomain` + `port last digit` + `base domain`
+**URL Pattern:** `subdomain` + `port last digit` + `base domain`
 
-1. **Main Application Domain**
-   - Ví dụ: `https://sv.tantran.dev`
-   - Tunnel: `sv.tantran.dev` → `localhost:3025`
+**Ví dụ với domain `service.example.com`:**
 
-2. **Supabase API Domain** ⚠️ **BẮT BUỘC**
-   - Ví dụ: `https://sv8.tantran.dev` (sv + 8 from port 8000)
-   - Tunnel: `sv8.tantran.dev` → `localhost:8000`
-   - Browser cần access Kong để sử dụng auth, storage, realtime, REST API
+1. **Main Application**
+   - URL: `https://service.example.com`
+   - Tunnel: `service.example.com` → `localhost:3025`
 
-3. **Supabase Studio Domain**
-   - Ví dụ: `https://sv3.tantran.dev` (sv + 3 from port 3000)
-   - Tunnel: `sv3.tantran.dev` → `localhost:3000`
+2. **Supabase API** ⚠️ **BẮT BUỘC**
+   - URL: `https://service8.example.com` (sv + 8 từ port 8000)
+   - Tunnel: `service8.example.com` → `localhost:8000`
+   - Browser cần access Kong để auth, storage, realtime, REST API
 
-**Server-side (internal Docker):** `http://kong:8000` (unchanged)
+3. **Supabase Studio**
+   - URL: `https://service3.example.com` (sv + 3 từ port 3000)
+   - Tunnel: `service3.example.com` → `localhost:3000`
 
 **Port Auto-calculation:**
 - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100`
 - `KONG_PORT = 8000 + (APP_PORT - 3025)`
 
+**Ví dụ:**
+```
+APP_PORT=3025 → STUDIO_PORT=3000, KONG_PORT=8000
+APP_PORT=3026 → STUDIO_PORT=3100, KONG_PORT=8001
+APP_PORT=3027 → STUDIO_PORT=3200, KONG_PORT=8002
+```
+
 ---
 
-## Bước 1: Clone và Cấu Hình
+# PHẦN II: TRIỂN KHAI
 
-### 1.1 Clone Repository
+## Phương Pháp A: Tự Động Hoàn Toàn (Khuyến Nghị)
+
+Phương pháp này sử dụng script tự động hóa để thực hiện **TẤT CẢ CÁC BƯỚC** chỉ với **MỘT LỆNH DUY NHẤT**.
+
+### ⏱️ Thời gian ước tính: 10-15 phút
+
+### 📝 Bước 1: Clone Repository
+
 ```bash
 cd ~
 git clone https://github.com/tant/service-center-app.git
 cd service-center-app
 ```
 
-### 1.2 Setup Configuration
+### 🎯 Bước 2: Cấu Hình Instance
 
-**1. Edit configuration trong script:**
+Bạn có **HAI CÁCH** để cấu hình:
+
+#### **Cách 2.1: Cấu Hình Tự Động (Interactive) - ⭐ KHUYẾN NGHỊ**
+
+Chạy script với flag `--interactive` để được hỏi từng bước:
+
+```bash
+chmod +x docker/scripts/setup-instance.sh
+./docker/scripts/setup-instance.sh --interactive
+```
+
+Script sẽ hỏi bạn:
+- Center Name
+- Application Port (mặc định: 3025)
+- Deployment Mode (local hoặc production)
+- Production Domain (nếu chọn production)
+- Admin Account (email, password, name)
+- SMTP Configuration (nếu chọn production)
+
+**Ví dụ tương tác:**
+```
+📝 Interactive Configuration Mode
+
+Press Enter to use default values shown in [brackets]
+
+Center Name [My Service Center]: Trung Tâm Sửa Chữa ABC
+Application Port [3025]: 3025
+
+Deployment Mode:
+  1) local - For local development (no Cloudflare Tunnel needed)
+  2) production - For public deployment (requires Cloudflare Tunnel)
+Select mode [1-2]: 2
+
+Production Domain (e.g., service.example.com) [service.example.com]: abc.tantran.dev
+
+Admin Account Configuration:
+Admin Email [admin@example.com]: admin@abc.com
+Admin Password [ChangeThisPassword123!]: MySecurePass2024!
+Admin Name [System Administrator]: Nguyen Van A
+
+SMTP Configuration (for production):
+Use custom SMTP? [y/N]: n
+```
+
+#### **Cách 2.2: Cấu Hình Thủ Công (Edit Script)**
+
+Mở và chỉnh sửa file script:
+
 ```bash
 nano docker/scripts/setup-instance.sh
 ```
 
-Chỉnh sửa các giá trị trong phần `CONFIGURATION`:
-
-**⚠️ QUAN TRỌNG: Chọn Deployment Mode**
+Tìm section `DEFAULT CONFIGURATION` và chỉnh sửa các giá trị:
 
 ```bash
-# Deployment Mode
-# Choose between 'local' for local development or 'production' for public domain
-# - local: Uses http://localhost with port numbers (no Cloudflare Tunnel needed)
-# - production: Uses https:// with your domain (requires Cloudflare Tunnel setup)
-DEPLOYMENT_MODE=production  # Change to 'local' for local testing
-
 # Instance Information
-CENTER_NAME="SSTC Service Center"
-APP_PORT=3025          # App runs on http://localhost:3025
+CENTER_NAME="Trung Tâm Sửa Chữa ABC"
+APP_PORT=3025
 
-# Production Domain (only used when DEPLOYMENT_MODE=production)
-# IMPORTANT: Enter DOMAIN ONLY - do NOT include http:// or https://
-# Examples:
-#   ✓ Correct: dichvu.sstc.cloud
-#   ✗ Wrong: https://dichvu.sstc.cloud
-PRODUCTION_DOMAIN="dichvu.sstc.cloud"
+# Deployment Mode
+DEPLOYMENT_MODE=production  # Đổi thành 'local' nếu test local
 
-# Setup Password (leave empty to auto-generate)
-SETUP_PASSWORD=""
+# Production Domain (chỉ dùng khi DEPLOYMENT_MODE=production)
+PRODUCTION_DOMAIN=abc.tantran.dev  # KHÔNG bao gồm http:// hay https://
 
 # Admin Account Configuration
-# These credentials will be used to create the first admin account via /setup endpoint
-ADMIN_EMAIL="admin@sstc.cloud"
-ADMIN_PASSWORD="YourSecurePassword123!"
-ADMIN_NAME="System Administrator"
+ADMIN_EMAIL="admin@abc.com"
+ADMIN_PASSWORD="MySecurePass2024!"
+ADMIN_NAME="Nguyen Van A"
 
-# Supabase Studio Authentication (leave password empty to auto-generate)
-STUDIO_USERNAME="supabase"
-STUDIO_PASSWORD=""  # Auto-generated if empty
-
-# SMTP Configuration
+# SMTP Configuration (để mặc định nếu dùng local mode)
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
-SMTP_USER="noreply@sstc.cloud"
-SMTP_PASS="your-smtp-password"
-SMTP_ADMIN_EMAIL="admin@sstc.cloud"
-SMTP_SENDER_NAME="SSTC Service Center"
+SMTP_USER="noreply@abc.com"
+SMTP_PASS="your-smtp-app-password"
 ```
 
-**Lưu ý về Deployment Modes:**
+**Lưu file** (Ctrl+X, Y, Enter nếu dùng nano)
 
-**🏠 Local Mode (`DEPLOYMENT_MODE=local`)**
-- ✅ Dùng để test local, không cần Cloudflare Tunnel
-- ✅ Access qua `http://localhost` với port numbers
-- URLs generated:
-  - App: `http://localhost:3025`
-  - API: `http://localhost:8000`
-  - Studio: `http://localhost:3000`
-
-**🌐 Production Mode (`DEPLOYMENT_MODE=production`)**
-- ✅ Dùng cho production với public domain
-- ⚠️ **YÊU CẦU** Cloudflare Tunnel đã được setup
-- URLs generated:
-  - App: `https://dichvu.sstc.cloud`
-  - API: `https://api.dichvu.sstc.cloud`
-  - Studio: `https://supabase.dichvu.sstc.cloud`
-
-**Auto-calculated Ports:**
-- Chỉ cần config `APP_PORT` duy nhất - tất cả ports khác tự động tính!
-- Script tự động tạo:
-  - `STUDIO_PORT = 3000 + (APP_PORT - 3025) × 100` (3025→3000, 3026→3100, 3027→3200...)
-  - `KONG_PORT = 8000 + (APP_PORT - 3025)` (3025→8000, 3026→8001, 3027→8002...)
-
-**2. Chạy script:**
-```bash
-chmod +x docker/scripts/setup-instance.sh
-./docker/scripts/setup-instance.sh
-```
-
-Script sẽ tự động:
-- ✅ Generate tất cả secrets (hex format, URL-safe)
-- ✅ Copy configuration files từ `docs/references/volumes`
-- ✅ Tạo .env file với tất cả cấu hình (bao gồm admin credentials)
-- ✅ Generate Supabase API keys
-- ✅ Tạo INSTANCE_INFO.txt với tất cả thông tin (URLs, secrets, admin credentials)
-- ✅ Hiển thị setup password
-
-**Output mẫu (Production Mode):**
-```
-🚀 Service Center - Instance Setup
-=====================================
-
-📋 Configuration Summary:
-
-Deployment Mode:
-  Production (requires Cloudflare Tunnel)
-
-Instance:
-  Center Name: SSTC Service Center
-  App Port: 3025
-  Studio Port: 3000 (auto-calculated)
-  Kong Port: 8000 (auto-calculated)
-
-URLs:
-  Site: https://dichvu.sstc.cloud
-  API: https://api.dichvu.sstc.cloud
-  Studio: https://supabase.dichvu.sstc.cloud
-
-SMTP:
-  Host: smtp.gmail.com:587
-  Admin: admin@sstc.cloud
-
-⚠️  Cloudflare Tunnel Required:
-  Configure these tunnels pointing to localhost:
-    dichvu.sstc.cloud → localhost:3025
-    api.dichvu.sstc.cloud → localhost:8000
-    supabase.dichvu.sstc.cloud → localhost:3000
-
-🔑 Step 1.2: Generating secrets...
-  ✓ Generated SETUP_PASSWORD
-  ✓ Generated POSTGRES_PASSWORD
-  ✓ Generated JWT_SECRET
-  ...
-
-📦 Step 1.4: Setting up volume directories...
-  ✓ Copied configuration files
-  ✓ vector.yml OK
-```
-
-**Output mẫu (Local Mode):**
-```
-🚀 Service Center - Instance Setup
-=====================================
-
-📋 Configuration Summary:
-
-Deployment Mode:
-  Local Development (no Cloudflare Tunnel needed)
-
-Instance:
-  Center Name: SSTC Service Center
-  App Port: 3025
-  Studio Port: 3000 (auto-calculated)
-  Kong Port: 8000 (auto-calculated)
-
-URLs:
-  Site: http://localhost:3025
-  API: http://localhost:8000
-  Studio: http://localhost:3000
-
-SMTP:
-  Host: supabase-mail:2500
-  Admin: admin@example.com
-  ✓ kong.yml OK
-
-⚙️  Step 1.5: Creating .env file...
-  ✓ .env file created
-
-🔧 Step 1.6: Installing dependencies & generating API keys...
-  ✓ API keys generated
-
-📝 Step 1.7: Generating instance info file...
-  ✓ Instance info saved to INSTANCE_INFO.txt
-
-✅ Setup completed successfully!
-
-📋 Summary:
-
-Instance Configuration:
-  Center Name: SSTC Service Center
-  App Port: 3025
-  Studio Port: 3000 (auto-calculated)
-  Kong Port: 8000 (auto-calculated)
-  Site URL: https://dichvu.sstc.cloud
-
-Setup Password: a1b2c3d4e5f6...
-
-⚠️  IMPORTANT:
-  • All credentials saved to INSTANCE_INFO.txt
-  • Keep this file secure - do NOT commit to git!
-  • Review with: cat INSTANCE_INFO.txt
-```
-
-**INSTANCE_INFO.txt** chứa:
-- ✅ Tất cả URLs và domains
-- ✅ Tất cả secrets và passwords
-- ✅ Supabase API keys
-- ✅ Database credentials
-- ✅ SMTP configuration
-- ✅ Cloudflare Tunnel config (nếu production)
-- ✅ Access information
-
----
-
-### 1.3 Review Configuration (Optional)
-
-Nếu cần, bạn có thể review lại .env file đã được tạo:
-
-```bash
-nano .env
-```
-
-File .env đã chứa:
-- ✅ Tất cả secrets (hex format, URL-safe)
-- ✅ APP_PORT và STUDIO_PORT
-- ✅ SITE_URL và API_EXTERNAL_URL
-- ✅ SMTP configuration
-- ✅ Supabase API keys (ANON và SERVICE_ROLE)
-
----
-
-## Bước 2: Deploy Docker Stack
-
-### 2.1 Deploy với Script (Automated)
-
-**Cách dễ nhất** - Chạy 1 script tự động cho toàn bộ quá trình:
+### 🚀 Bước 3: Chạy Deployment Script (MỘT LỆNH DUY NHẤT!)
 
 ```bash
 chmod +x docker/scripts/deploy.sh
 ./docker/scripts/deploy.sh
-
-# Chọn option 1: Complete fresh deployment
 ```
 
-Script này sẽ tự động:
-- ✅ **Step 1/4**: Run setup-instance.sh để tạo .env và INSTANCE_INFO.txt
-- ✅ **Step 2/4**: Build Docker images
-- ✅ **Step 3/4**: Start all services và đợi database ready
-- ✅ **Step 4/4**: Apply database schema automatically
-- ✅ Display access information và next steps
+Chọn option **1** (Complete fresh deployment):
 
-**Output mẫu:**
 ```
-🚀 Service Center Management - Docker Deployment
-==================================================
-
 Select deployment action:
-  1) 🆕 Complete fresh deployment (setup + build + deploy + schema)
+  1) 🆕 Complete fresh deployment (setup + pull + build + deploy + schema)
   2) 🏗️  Build and deploy only (requires existing .env)
   3) 🔄 Update application only (rebuild app container)
   4) ♻️  Restart all services
@@ -377,28 +278,38 @@ Select deployment action:
   7) 🧹 Clean up (remove containers and volumes)
 
 Enter choice [1-7]: 1
+```
 
-==========================================
-🆕 COMPLETE FRESH DEPLOYMENT
-==========================================
+### ✨ Script Sẽ Tự Động Thực Hiện:
 
-📝 Step 1/4: Running instance setup...
-[setup-instance.sh output...]
-✅ Step 1/4: Instance setup complete!
+**Step 1/5: Instance Setup**
+- ✅ Generate tất cả secrets (passwords, keys, tokens)
+- ✅ Copy configuration files (kong.yml, vector.yml)
+- ✅ Tạo file .env với đầy đủ cấu hình
+- ✅ Generate Supabase API keys (anon + service_role)
+- ✅ Tạo file INSTANCE_INFO.txt chứa tất cả thông tin
 
-🏗️  Step 2/4: Building Docker images...
-[docker build output...]
-✅ Step 2/4: Build complete!
+**Step 2/5: Pull Docker Images**
+- ✅ Download tất cả Docker images từ registry
+- ✅ Tránh phải chờ lâu khi start services
 
-🚀 Step 3/4: Starting all services...
-⏳ Waiting for database to be ready...
-✅ Database is ready!
-✅ Step 3/4: All services started!
+**Step 3/5: Build Docker Images**
+- ✅ Build custom application image
+- ✅ Verify configuration files
 
-📊 Step 4/4: Applying database schema...
-[apply-schema.sh output...]
-✅ Step 4/4: Schema applied successfully!
+**Step 4/5: Start All Services**
+- ✅ Start tất cả containers
+- ✅ Wait for database ready
+- ✅ Health checks
 
+**Step 5/5: Apply Database Schema**
+- ✅ Apply tất cả schema files theo đúng thứ tự
+- ✅ Create storage buckets
+- ✅ Setup RLS policies
+
+### 🎉 Kết Quả Output
+
+```
 ==========================================
 🎉 DEPLOYMENT COMPLETE!
 ==========================================
@@ -406,28 +317,28 @@ Enter choice [1-7]: 1
 📋 Access Information:
 
   🌐 Application:
-     https://dichvu.sstc.cloud
+     https://abc.tantran.dev
 
   🔧 Supabase API:
-     https://api.dichvu.sstc.cloud
+     https://abc8.tantran.dev
 
   📊 Supabase Studio (with authentication):
-     https://supabase.dichvu.sstc.cloud
+     https://abc3.tantran.dev
 
 ==========================================
 📝 Next Steps:
 ==========================================
 
 1️⃣  Access the setup page:
-   https://dichvu.sstc.cloud/setup
-   Password: [from INSTANCE_INFO.txt]
+   https://abc.tantran.dev/setup
+   Password: a1b2c3d4e5f6...
 
 2️⃣  This will create your admin account with:
-   Email: admin@sstc.cloud
-   Password: [from INSTANCE_INFO.txt]
+   Email: admin@abc.com
+   Password: MySecurePass2024!
 
 3️⃣  Login to the application:
-   https://dichvu.sstc.cloud/login
+   https://abc.tantran.dev/login
 
 📄 For more details, see: INSTANCE_INFO.txt
 
@@ -435,78 +346,238 @@ Enter choice [1-7]: 1
 📋 View logs:    docker compose logs -f
 ```
 
-**Các options khác:**
-- **Option 2**: Build and deploy only (khi đã có .env)
-- **Option 3**: Update application only (rebuild app container)
-- **Option 4**: Restart all services
-- **Option 5**: View logs
-- **Option 6**: Stop all services
-- **Option 7**: Clean up (xóa containers, volumes, .env, INSTANCE_INFO.txt)
+### 📄 Review Credentials
 
-### 2.2 Verify Services
+Tất cả thông tin quan trọng được lưu trong file `INSTANCE_INFO.txt`:
+
 ```bash
-# All containers should be running and healthy
-docker compose ps
-
-# Test locally
-curl http://localhost:3025/api/health   # ✅ App health check
-curl http://localhost:3000              # ✅ Supabase Studio (nếu đã expose port)
+cat INSTANCE_INFO.txt
 ```
 
-**Expected Ports:**
+File này chứa:
+- ✅ URLs và domains
+- ✅ Setup password
+- ✅ Admin credentials
+- ✅ Database password
+- ✅ Supabase API keys
+- ✅ Studio credentials
+- ✅ Cloudflare Tunnel configuration (nếu production)
 
-| Service | Internal Port | Host Port | Status |
-|---------|--------------|-----------|---------|
-| App | 3025 | ✅ 3025 | Exposed to host |
-| Supabase Studio | 3000 | ✅ 3000 | Exposed to host |
-| Kong (Supabase API) | 8000 | ✅ 8000 | Exposed to host (required for browser) |
-| PostgreSQL | 5432 | ❌ Internal | App connects internally |
+⚠️ **LƯU Ý:** Backup file này và **KHÔNG commit** lên git!
 
-**Cloudflare Tunnel Setup:**
-- `dichvu.sstc.cloud` → `localhost:3025` (Main App)
-- `api.dichvu.sstc.cloud` → `localhost:8000` (Supabase API - Kong)
-- `supabase.dichvu.sstc.cloud` → `localhost:3000` (Supabase Studio)
+### ✅ Verify Deployment
 
-**Common Issues:**
+```bash
+# Check services status
+docker compose ps
 
-1. **realtime-dev hiển thị "unhealthy"**
-   - Có thể mất 1-2 phút để healthy
-   - Check logs: `docker logs realtime-dev.supabase-realtime --tail 20`
-   - Miễn là app responding, không critical
+# Tất cả containers phải là "Up" hoặc "Up (healthy)"
+# Nếu có container nào "Exited" hoặc "Unhealthy", xem phần Troubleshooting
 
-**Lưu ý về Supavisor Pooler:**
-- Supavisor pooler đã được **disabled** trong docker-compose.yml
-- Lý do: Encryption key compatibility issues với Supabase version hiện tại
-- App kết nối trực tiếp đến PostgreSQL qua `postgresql://db:5432`
-- Connection pooling không cần thiết cho deployment này
+# Test application
+curl http://localhost:3025/api/health
+
+# Xem logs nếu có vấn đề
+docker compose logs -f app
+```
+
+### ➡️ Bước Tiếp Theo
+
+Chuyển đến phần [Initial Setup](#initial-setup) để hoàn tất cấu hình ban đầu.
 
 ---
 
-## Bước 3: Deploy Database Schema
+## Phương Pháp B: Thủ Công Từng Bước
 
-**⚠️ IMPORTANT**: Database schema đã được apply tự động bởi `deploy.sh` option 1!
+Phương pháp này cho phép bạn **kiểm soát và kiểm tra** từng bước deployment.
 
-Nếu bạn đã chạy `./docker/scripts/deploy.sh` với option 1 (Complete fresh deployment), schema đã được apply và bạn có thể **skip bước này**.
+### ⏱️ Thời gian ước tính: 20-30 phút
 
-### Manual Schema Deployment (Optional)
-
-Nếu cần apply schema manually hoặc update schema:
+### 📝 Bước 1: Clone Repository
 
 ```bash
-# Make script executable (chỉ cần 1 lần)
-chmod +x docker/scripts/apply-schema.sh
+cd ~
+git clone https://github.com/tant/service-center-app.git
+cd service-center-app
+```
 
-# Run schema deployment script
+### 🔧 Bước 2: Generate Configuration
+
+#### Option 2A: Dùng Setup Script (Tự Động Tạo Config)
+
+**Khuyến nghị:** Dùng setup script nhưng KHÔNG deploy ngay
+
+```bash
+chmod +x docker/scripts/setup-instance.sh
+
+# Chạy với interactive mode
+./docker/scripts/setup-instance.sh --interactive
+
+# HOẶC edit script trước rồi chạy
+nano docker/scripts/setup-instance.sh  # Edit configuration
+./docker/scripts/setup-instance.sh
+```
+
+Script sẽ:
+- ✅ Generate secrets
+- ✅ Copy config files
+- ✅ Tạo .env file
+- ✅ Generate API keys
+- ✅ Tạo INSTANCE_INFO.txt
+
+**Output:**
+```
+✅ Setup completed successfully!
+
+Next Steps:
+  1. Review instance info: cat INSTANCE_INFO.txt
+  2. Review .env file: nano .env
+  3. Build and start services:
+     docker compose build
+     docker compose up -d
+  4. Apply database schema:
+     ./docker/scripts/apply-schema.sh
+```
+
+#### Option 2B: Manual Configuration (Hoàn Toàn Thủ Công)
+
+**Bước 2B.1: Copy và Edit .env**
+
+```bash
+cp .env.docker.example .env
+nano .env
+```
+
+**Các giá trị BẮT BUỘC phải thay đổi:**
+
+```bash
+# Generate secrets
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
+JWT_SECRET=$(openssl rand -hex 32)
+SETUP_PASSWORD=$(openssl rand -hex 16)
+DASHBOARD_PASSWORD=$(openssl rand -hex 16)
+SECRET_KEY_BASE=$(openssl rand -hex 64)
+VAULT_ENC_KEY=$(openssl rand -hex 32)
+PG_META_CRYPTO_KEY=$(openssl rand -hex 32)
+
+# Instance ports
+APP_PORT=3025
+KONG_PORT=8000  # Auto: 8000 + (APP_PORT - 3025)
+STUDIO_PORT=3000  # Auto: 3000 + (APP_PORT - 3025) * 100
+
+# URLs (tuỳ theo deployment mode)
+# Local mode:
+SITE_URL=http://localhost:3025
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
+
+# Production mode:
+SITE_URL=https://abc.tantran.dev
+NEXT_PUBLIC_SUPABASE_URL=https://abc8.tantran.dev
+
+# Admin account
+ADMIN_EMAIL=admin@abc.com
+ADMIN_PASSWORD=YourSecurePassword123!
+ADMIN_NAME=Administrator
+```
+
+**Bước 2B.2: Generate Supabase API Keys**
+
+```bash
+# Install jsonwebtoken if needed
+npm install jsonwebtoken
+
+# Generate keys
+node docker/scripts/generate-keys.js "$(grep ^JWT_SECRET .env | cut -d'=' -f2)"
+```
+
+Copy output và update .env:
+```bash
+SUPABASE_ANON_KEY=eyJhbGc...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...  # Same as SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
+```
+
+**Bước 2B.3: Setup Volume Directories**
+
+```bash
+# Create volumes structure
+mkdir -p volumes/db/data volumes/storage
+
+# Copy configuration files
+cp -r docs/references/volumes/* volumes/
+
+# Verify critical files
+ls -lh volumes/logs/vector.yml
+ls -lh volumes/api/kong.yml
+```
+
+### 📥 Bước 3: Pull Docker Images
+
+**MỚI:** Pull images trước để tránh chờ lâu khi start
+
+```bash
+docker compose pull
+```
+
+Output sẽ hiển thị download progress:
+```
+[+] Pulling 12/12
+ ✔ supabase/postgres:15.1.1.54    Pulled
+ ✔ supabase/studio:latest         Pulled
+ ✔ supabase/kong:latest           Pulled
+ ...
+```
+
+⏱️ Thời gian: 5-10 phút (tuỳ network speed)
+
+### 🏗️ Bước 4: Build Docker Images
+
+```bash
+# Build tất cả images
+docker compose build
+
+# Hoặc build riêng app image (nếu đã pull)
+docker compose build app
+```
+
+⏱️ Thời gian: 3-5 phút
+
+### 🚀 Bước 5: Start Services
+
+```bash
+# Start tất cả containers
+docker compose up -d
+
+# Xem logs realtime
+docker compose logs -f
+```
+
+### ⏳ Bước 6: Wait for Database Ready
+
+```bash
+# Wait for database
+echo "Waiting for database..."
+until docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; do
+  echo "  Waiting..."
+  sleep 2
+done
+echo "✅ Database is ready!"
+```
+
+### 📊 Bước 7: Apply Database Schema
+
+```bash
+chmod +x docker/scripts/apply-schema.sh
 ./docker/scripts/apply-schema.sh
 ```
 
-Script này sẽ:
-- ✅ Kiểm tra database đang chạy
-- ✅ Apply tất cả schema files theo đúng thứ tự
-- ✅ Tạo storage buckets
-- ✅ Verify deployment thành công
+Script sẽ:
+- ✅ Check database connection
+- ✅ Apply schema files theo thứ tự
+- ✅ Create storage buckets
+- ✅ Verify deployment
 
-**Output mẫu:**
+**Output:**
 ```
 🚀 Service Center - Schema Deployment
 ======================================
@@ -515,88 +586,116 @@ Script này sẽ:
 NAME             IMAGE                           STATUS
 supabase-db      supabase/postgres:15.1.1.54    Up (healthy)
 
-⚠️  This will apply schema files to the production database
-   Make sure you have a backup before proceeding!
-
 Continue? [y/N]: y
 
 📦 Applying schema files...
-
 → Applying 00_base_types.sql...
   ✓ 00_base_types.sql applied successfully
 → Applying 00_base_functions.sql...
   ✓ 00_base_functions.sql applied successfully
 ...
-
-🪣 Creating storage buckets...
-  ✓ Storage buckets created
-
-🔍 Verifying deployment...
-
-Tables created:
-  profiles, customers, products, parts, service_tickets...
-
-Storage policies:
-  Found 6 storage policies
-
 🎉 Schema deployment completed!
 ```
 
-### Manual Verification (Optional)
-
-Nếu muốn kiểm tra manual:
+### ✅ Bước 8: Verify Deployment
 
 ```bash
-# Check tables
-docker compose exec db psql -U postgres -c "\dt"
+# Check all containers
+docker compose ps
 
-# Check RLS policies
-docker compose exec db psql -U postgres -c "SELECT tablename, policyname FROM pg_policies;"
+# Expected: All containers "Up" or "Up (healthy)"
 
-# Connect to database
-docker compose exec db psql -U postgres
+# Test application
+curl http://localhost:3025/api/health
+
+# Check specific logs
+docker compose logs app
+docker compose logs db
+docker compose logs kong
 ```
+
+### ➡️ Bước Tiếp Theo
+
+Chuyển đến phần [Initial Setup](#initial-setup) để hoàn tất cấu hình ban đầu.
 
 ---
 
-## Bước 4: Initial Setup
+# PHẦN III: QUẢN LÝ & VẬN HÀNH
 
-### 4.1 Access Setup Page
-Mở browser và truy cập domain đã config:
+## Initial Setup
+
+Sau khi deployment hoàn tất, bạn cần tạo admin account đầu tiên.
+
+### 1. Access Setup Page
+
+Mở browser và truy cập:
+
+**Local mode:**
 ```
-https://dichvu.sstc.cloud/setup
+http://localhost:3025/setup
 ```
 
-### 4.2 Create Admin User
-1. Nhập `SETUP_PASSWORD` (từ INSTANCE_INFO.txt hoặc .env)
-2. Click "Complete Setup"
-3. Hệ thống sẽ tự động tạo admin account với credentials đã config trong `setup-instance.sh`:
-   - Email: `ADMIN_EMAIL` (vd: admin@sstc.cloud)
-   - Password: `ADMIN_PASSWORD` (vd: YourSecurePassword123!)
-   - Name: `ADMIN_NAME` (vd: System Administrator)
+**Production mode:**
+```
+https://abc.tantran.dev/setup
+```
 
-**Lưu ý:** Admin credentials được lấy từ file `.env` (đã được tạo bởi setup script)
+### 2. Enter Setup Password
 
-### 4.3 Login
+Nhập `SETUP_PASSWORD` từ:
+- File `INSTANCE_INFO.txt`, hoặc
+- File `.env` (dòng `SETUP_PASSWORD=...`)
+
+```bash
+# Xem setup password
+grep "^SETUP_PASSWORD=" .env | cut -d'=' -f2
+# hoặc
+grep "Setup Password:" INSTANCE_INFO.txt
+```
+
+### 3. Complete Setup
+
+Click **"Complete Setup"** button.
+
+Hệ thống sẽ tự động tạo admin account với credentials đã cấu hình:
+- Email: `ADMIN_EMAIL` (vd: admin@abc.com)
+- Password: `ADMIN_PASSWORD`
+- Name: `ADMIN_NAME`
+
+### 4. Login
+
 Truy cập trang login:
+
+**Local mode:**
 ```
-https://dichvu.sstc.cloud/login
+http://localhost:3025/login
 ```
 
-Đăng nhập với admin credentials:
-- Email: `admin@sstc.cloud` (hoặc email bạn đã config)
-- Password: Mật khẩu bạn đã config trong `ADMIN_PASSWORD`
+**Production mode:**
+```
+https://abc.tantran.dev/login
+```
 
-Test đầy đủ các chức năng:
-- ✅ Create service ticket
-- ✅ Upload images
-- ✅ Add customer
-- ✅ Add parts
-- ✅ Check dashboard
+Đăng nhập với:
+- **Email:** Email bạn đã config (vd: admin@abc.com)
+- **Password:** Password bạn đã config
+
+### 5. Test Chức Năng
+
+Sau khi login, test các chức năng chính:
+
+- ✅ **Dashboard** - Xem tổng quan
+- ✅ **Create Ticket** - Tạo phiếu sửa chữa mới
+- ✅ **Upload Images** - Upload hình ảnh cho ticket
+- ✅ **Add Customer** - Thêm khách hàng
+- ✅ **Add Parts** - Thêm linh kiện
+- ✅ **Manage Team** - Quản lý nhân viên
+
+Nếu tất cả hoạt động OK → **Deployment thành công!** 🎉
 
 ---
 
-## Bước 5: Bảo Mật Supabase Studio
+## Bảo Mật Supabase Studio
 
 ### Studio Authentication
 
@@ -604,601 +703,322 @@ Supabase Studio được bảo vệ bằng **HTTP Basic Authentication** khi tru
 
 **Credentials:**
 - Username: `DASHBOARD_USERNAME` (mặc định: `supabase`)
-- Password: `DASHBOARD_PASSWORD` (tự động generate bởi setup script)
-- Xem credentials trong file `INSTANCE_INFO.txt`
+- Password: `DASHBOARD_PASSWORD` (auto-generated)
+- Xem trong file `INSTANCE_INFO.txt`
 
 **URLs:**
-- ✅ **Production (có authentication):** `https://sv3.tantran.dev` (qua Kong Gateway)
-- ⚠️ **Direct access (không có authentication):** `http://localhost:3000` (chỉ dùng local)
+- ✅ **Production (có authentication):** `https://abc3.tantran.dev` (qua Kong)
+- ⚠️ **Direct access (KHÔNG có authentication):** `http://localhost:3000`
 
 ### Khuyến Nghị Bảo Mật Production
 
-1. **Chỉ truy cập Studio qua Kong Gateway URL**
-   - ✅ Có authentication (HTTP Basic Auth)
-   - ✅ Được bảo vệ bởi Cloudflare
-   - ✅ Có SSL/TLS
+#### 1. Chỉ Truy Cập Studio Qua Kong Gateway
 
-2. **Firewall direct port access (STUDIO_PORT)**
-   ```bash
-   # Chỉ cho phép localhost access STUDIO_PORT
-   sudo ufw deny 3000
-   sudo ufw allow from 127.0.0.1 to any port 3000
-   ```
+**Production:** Luôn dùng URL có authentication
+```
+https://abc3.tantran.dev  ✅ Secure
+http://localhost:3000     ❌ Insecure (chỉ dùng local)
+```
 
-3. **Thêm Cloudflare Access (Optional nhưng khuyến nghị)**
-   - Thêm layer authentication thứ 2
-   - Control ai được phép truy cập Studio
-   - Logs và monitoring
+#### 2. Firewall Direct Port Access
 
-4. **Rotate password định kỳ**
-   ```bash
-   # Generate password mới
-   NEW_PASSWORD=$(openssl rand -hex 16)
+Block direct access tới STUDIO_PORT từ bên ngoài:
 
-   # Update .env
-   sed -i "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=${NEW_PASSWORD}/" .env
+```bash
+# Chỉ cho phép localhost access STUDIO_PORT
+sudo ufw allow 22        # SSH
+sudo ufw allow 80        # HTTP (Cloudflare Tunnel)
+sudo ufw allow 443       # HTTPS (Cloudflare Tunnel)
+sudo ufw allow 3025      # App port (or your APP_PORT)
+sudo ufw allow 8000      # Kong port (or your KONG_PORT)
+sudo ufw deny 3000       # Block Studio port
+sudo ufw enable
+```
 
-   # Restart Kong để apply
-   docker compose restart kong
-   ```
+#### 3. Rotate Password Định Kỳ
 
-5. **Monitor Studio access**
-   ```bash
-   # Xem Kong logs để monitor Studio access
-   docker compose logs -f kong | grep dashboard
-   ```
+```bash
+# Generate password mới
+NEW_PASSWORD=$(openssl rand -hex 16)
+
+# Update .env
+sed -i "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=${NEW_PASSWORD}/" .env
+
+# Restart Kong để apply
+docker compose restart kong
+
+# Update INSTANCE_INFO.txt
+echo "New Studio Password: ${NEW_PASSWORD}" >> INSTANCE_INFO.txt
+```
+
+#### 4. Thêm Cloudflare Access (Optional - Khuyến Nghị)
+
+Thêm layer authentication thứ 2 cho Studio URL:
+
+1. Vào Cloudflare Dashboard → Access
+2. Tạo Application cho Studio domain (`abc3.tantran.dev`)
+3. Set policies (email domain, specific emails, etc.)
+4. User phải authenticate qua Cloudflare trước khi vào Studio
+
+#### 5. Monitor Studio Access
+
+```bash
+# Xem Kong logs để monitor Studio access
+docker compose logs -f kong | grep dashboard
+
+# Xem failed authentication attempts
+docker compose logs kong | grep "401"
+```
 
 ---
 
-## Quản Lý
+## Quản Lý Services
 
-### Docker Services
+### View Status & Logs
 
-**View Status:**
 ```bash
+# View status
 docker compose ps
+
+# View all logs
 docker compose logs -f
+
+# View specific service logs
+docker compose logs -f app
+docker compose logs -f db
+docker compose logs -f kong
+
+# View last 100 lines
+docker compose logs --tail=100 app
 ```
 
-**Restart:**
+### Restart Services
+
 ```bash
-# Restart all
+# Restart all services
 docker compose restart
 
 # Restart specific service
 docker compose restart app
+docker compose restart kong
+
+# Force recreate
+docker compose up -d --force-recreate app
 ```
 
-**Update Application:**
-```bash
-git pull
-docker compose build app
-docker compose up -d app
-```
+### Stop & Start
 
-**Stop/Start:**
 ```bash
-# Stop all
+# Stop all services (giữ lại volumes/data)
 docker compose stop
 
-# Start all
+# Start all services
+docker compose start
+
+# Stop và xóa containers (GIỮ volumes/data)
+docker compose down
+
+# Start lại từ đầu
 docker compose up -d
 ```
 
+### Update Application
 
----
+Khi có code mới:
 
-## Backup & Monitoring
+#### Option A: Dùng Deploy Script
 
-### Automated Backup
 ```bash
-# Run backup script
-./docker/scripts/backup.sh
-
-# Setup cron for daily backup
-crontab -e
-
-# Add line:
-0 2 * * * cd /home/deploy/service-center-app && ./docker/scripts/backup.sh >> logs/backup.log 2>&1
+git pull
+./docker/scripts/deploy.sh
+# Chọn option 3: Update application only
 ```
 
-### Manual Backup
+#### Option B: Manual
 
-**Database:**
 ```bash
-docker compose exec -T db pg_dump -U postgres postgres | gzip > backup_$(date +%Y%m%d).sql.gz
-```
+# Pull latest code
+git pull
 
-**Uploads:**
-```bash
-tar -czf uploads_backup_$(date +%Y%m%d).tar.gz ./uploads
-```
+# Rebuild app container
+docker compose build app
 
-**Config:**
-```bash
-cp .env .env.backup
-```
+# Restart app
+docker compose up -d app
 
-### Monitoring
-
-**Docker Stats:**
-```bash
-docker stats
-```
-
-**Disk Usage:**
-```bash
-df -h
-docker system df
-```
-
-**Application Logs:**
-```bash
+# Check logs
 docker compose logs -f app
-docker compose logs --tail=100 app
 ```
 
----
+### Clean Restart (Nếu Có Issues)
 
-## Troubleshooting
-
-### Application Errors
-
-**Check logs:**
 ```bash
-docker compose logs app
-docker compose logs db
-docker compose logs kong
-```
+# Stop and remove containers
+docker compose down
 
-**Database connection issues:**
-```bash
-# Verify database is running
-docker compose ps db
+# Optional: Clear volumes (⚠️ XÓA DATA!)
+docker compose down -v
 
-# Test connection
-docker compose exec db psql -U postgres -c "SELECT version();"
-```
+# Restart
+docker compose up -d
 
-**Kong/Supabase API errors:**
-```bash
-# Check Kong logs
-docker compose logs kong
-
-# Verify Kong config
-docker compose exec kong cat /var/lib/kong/kong.yml
-
-# Restart Kong
-docker compose restart kong
-```
-
-### Cannot Access Studio
-
-**Check if Studio is running:**
-```bash
-docker compose ps studio
-docker compose logs studio
-```
-
-**Verify port exposure:**
-```bash
-# Check if port 3000 is exposed
-docker compose ps studio
-
-# Test locally
-curl http://localhost:3000
-
-# If not accessible, verify docker-compose.yml has:
-# studio:
-#   ports:
-#     - "3000:3000"
-```
-
-**Verify Cloudflare Tunnel configuration:**
-- Check your Cloudflare Tunnel config đã setup đúng chưa
-- Example: `supabase.dichvu.sstc.cloud` → `http://localhost:3000`
-- Verify tunnel is running: `cloudflared tunnel info`
-
-### Vector Container Không Start
-
-**Symptom:**
-```bash
+# Verify
 docker compose ps
-# Shows: supabase-vector is unhealthy hoặc restarting
-```
-
-**Check logs:**
-```bash
-docker logs supabase-vector --tail 20
-# Error: Configuration error. error=Is a directory (os error 21)
-```
-
-**Nguyên nhân:** Thiếu hoặc sai file `volumes/logs/vector.yml`
-
-**Giải pháp:**
-```bash
-# Stop containers
-docker compose down
-
-# Verify vector.yml tồn tại và là FILE, không phải directory
-ls -lh volumes/logs/vector.yml
-
-# Nếu là directory hoặc không tồn tại:
-rm -rf volumes/logs/vector.yml  # Remove nếu là directory
-mkdir -p volumes/logs
-
-# Copy từ docs/references trong repository
-cp docs/references/volumes/logs/vector.yml volumes/logs/
-
-# Verify là file
-test -f volumes/logs/vector.yml && echo "OK" || echo "FAILED"
-
-# Start containers
-docker compose up -d
-
-# Check vector status
-docker compose ps vector
-docker logs supabase-vector --tail 10
-```
-
-### Pooler Container Issues
-
-**Lưu ý:** Supavisor pooler đã được **disabled** trong phiên bản hiện tại.
-
-**Root Cause:**
-- Supavisor 2.7.0 có encryption key compatibility issue
-- Error: `Unknown cipher or invalid key size` khi sử dụng VAULT_ENC_KEY
-- Pooler expects binary decoded key nhưng nhận base64 string
-
-**Impact:**
-- **KHÔNG ảnh hưởng** đến application functionality
-- App kết nối trực tiếp đến PostgreSQL: `postgresql://db:5432`
-- Connection pooling không cần thiết cho deployment scale hiện tại
-
-**Nếu muốn enable lại:**
-```bash
-# Uncomment supavisor service trong docker-compose.yml
-# Sau đó restart:
-docker compose up -d
-```
-
-### SSL/Certificate Errors
-
-**Nếu sử dụng Cloudflare Tunnel**, kiểm tra SSL configuration:
-
-1. **Verify Cloudflare Tunnel đang chạy**:
-   ```bash
-   ps aux | grep cloudflared
-   cloudflared tunnel list
-   ```
-2. **Check tunnel config** trong `~/.cloudflared/config.yml`
-3. **Verify DNS settings** trong Cloudflare dashboard
-4. **Check browser console for errors**
-
-### Out of Memory/Disk
-
-**Check resources:**
-```bash
-free -h
-df -h
-```
-
-**Clean up Docker:**
-```bash
-docker system prune -a
-docker volume prune
-```
-
-**Restart services:**
-```bash
-docker compose restart
-```
-
----
-
-## FAQ
-
-**Q: Cần expose ports nào?**
-A: Cần expose 3 ports: APP_PORT (3025, 3026...), KONG_PORT (8000, 8001...), và STUDIO_PORT (3000, 3100...). Kong port required để browser access Supabase.
-
-**Q: Có thể chạy nhiều instances không?**
-A: Có! Mỗi instance chỉ cần thay đổi APP_PORT, KONG_PORT, và STUDIO_PORT. Sử dụng setup script để tự động configure.
-
-**Q: Database có share giữa các instances không?**
-A: Không! Mỗi instance có database riêng, hoàn toàn isolated với Docker network riêng.
-
-**Q: Cần setup Cloudflare Tunnel như thế nào?**
-A: Mỗi instance cần 2 domains trong Cloudflare Tunnel config - một cho app, một cho studio. Xem section "Multi-Instance Deployment" để biết config example.
-
-**Q: Secrets có cần URL-safe không?**
-A: Có! Setup script tự động generate tất cả secrets ở hex format (only 0-9a-f), hoàn toàn URL-safe.
-
-**Q: Downtime khi update?**
-A: Minimal. Build image mới, sau đó restart container với `docker compose up -d`.
-
-**Q: Có thể restrict access không?**
-A: Có! Dùng Cloudflare Access hoặc firewall rules để restrict access theo IP/email.
-
----
-
-## Commands Reference
-
-```bash
-# ⭐ Main Deployment Script (Recommended)
-./docker/scripts/deploy.sh                 # Interactive deployment menu
-# Options:
-#   1) Complete fresh deployment (setup + build + deploy + schema)
-#   2) Build and deploy only (requires existing .env)
-#   3) Update application only (rebuild app container)
-#   4) Restart all services
-#   5) View logs
-#   6) Stop all services
-#   7) Clean up (remove containers and volumes)
-
-# Individual Scripts (Advanced)
-./docker/scripts/setup-instance.sh         # Setup new instance (automated)
-./docker/scripts/apply-schema.sh           # Apply database schema (manual)
-./docker/scripts/backup.sh                 # Backup script
-
-# Docker Management
-docker compose ps                          # Status
-docker compose logs -f app                 # Logs
-docker compose restart app                 # Restart
-
-# Troubleshooting specific services
-docker logs supabase-vector --tail 50      # Vector logs
-docker logs service-center-app --tail 100  # App logs
-docker logs supabase-auth --tail 50        # Auth logs
-
-# Database
-docker compose exec db psql -U postgres    # Connect to DB
-docker compose exec -T db pg_dump -U postgres postgres > backup.sql  # Backup
-cat backup.sql | docker compose exec -T db psql -U postgres  # Restore
-
-# Update application
-git pull && ./docker/scripts/deploy.sh     # Use deploy.sh option 3
-# Or manually:
-git pull && docker compose build app && docker compose up -d app
-
-# Clean restart (nếu có issues)
-./docker/scripts/deploy.sh                 # Use option 7 then option 1
-# Or manually:
-docker compose down
-docker compose up -d
-docker compose ps  # Verify all healthy
 ```
 
 ---
 
 ## Multi-Instance Deployment
 
-### Overview
-
-Bạn có thể chạy nhiều Service Center instances trên cùng 1 server để phục vụ nhiều khách hàng. Mỗi instance chỉ cần thay đổi **3 ports**: `APP_PORT`, `STUDIO_PORT`, và `KONG_PORT`.
-
-**Tất cả các services khác (database, API, auth, storage, etc.) đều internal và không xung đột!**
-
-### Ports Configuration
-
-**Cần configure 3 ports cho mỗi instance:**
-- ✅ `APP_PORT` - Port của Next.js application (3025, 3026, 3027, ...)
-- ✅ `STUDIO_PORT` - Port của Supabase Studio (3000, 3100, 3200, ...)
-- ✅ `KONG_PORT` - Port của Kong API Gateway (8000, 8001, 8002, ...)
-  - **Required** - Browser cần access Kong để sử dụng Supabase auth, realtime, storage
-
-**Các services internal (KHÔNG cần configure):**
-- ✅ PostgreSQL - Kết nối qua `postgresql://db:5432` (internal)
-- ✅ Analytics, Realtime, Auth - Tất cả đều internal, access qua Kong
+Bạn có thể chạy **nhiều instances** trên cùng 1 server để phục vụ nhiều khách hàng.
 
 ### Cách Deploy Multiple Instances
 
-#### Instance 1 - Customer A
+Mỗi instance cần:
+- ✅ Directory riêng
+- ✅ APP_PORT riêng (3025, 3026, 3027, ...)
+- ✅ Domains riêng (nếu production)
+
+### Ví Dụ: Deploy 3 Instances
+
+#### Instance 1 - Customer A (Port 3025)
 
 ```bash
-# 1. Clone repository
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-a
 cd customer-a
 
-# 2. Configure instance
+# Edit configuration
 nano docker/scripts/setup-instance.sh
+# Set: CENTER_NAME="Customer A"
+# Set: APP_PORT=3025 (auto: STUDIO_PORT=3000, KONG_PORT=8000)
+# Set: DEPLOYMENT_MODE=production
+# Set: PRODUCTION_DOMAIN=customer-a.example.com
+# Set: ADMIN_EMAIL=admin@customer-a.com
 
-# Edit configuration:
-CENTER_NAME="Customer A Service Center"
-APP_PORT=3025
-DEPLOYMENT_MODE=production
-PRODUCTION_DOMAIN="customer-a.yourdomain.com"
+# Deploy
+./docker/scripts/deploy.sh
+# Select option 1
 
-# Admin credentials for first admin account
-ADMIN_EMAIL="admin@customer-a.com"
-ADMIN_PASSWORD="SecurePassword123!"
-ADMIN_NAME="Customer A Admin"
-
-# SMTP
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_USER="noreply@yourdomain.com"
-SMTP_PASS="your-smtp-password"
-SMTP_ADMIN_EMAIL="admin@yourdomain.com"
-SMTP_SENDER_NAME="Customer A Service Center"
-
-# URLs auto-derived (numbered pattern):
-# - App: https://customer-a.yourdomain.com
-# - API: https://customer-a8.yourdomain.com  (subdomain + 8 from port 8000)
-# - Studio: https://customer-a3.yourdomain.com  (subdomain + 3 from port 3000)
-
-# 3. Deploy with automated script (ONE COMMAND!)
-chmod +x docker/scripts/deploy.sh
-docker compose -p customer-a exec bash -c './docker/scripts/deploy.sh'
-# Or run deploy.sh and select option 1
-
-# This will automatically:
-# - Run setup-instance.sh (generate secrets, create .env, INSTANCE_INFO.txt)
-# - Build Docker images
-# - Start all services with project name
-# - Wait for database to be ready
-# - Apply database schema
-# - Display access information and next steps
-
-# Alternatively (manual steps):
-./docker/scripts/setup-instance.sh         # Step 1: Setup
-docker compose -p customer-a build          # Step 2: Build
-docker compose -p customer-a up -d          # Step 3: Start
-./docker/scripts/apply-schema.sh            # Step 4: Schema
-
-# 4. Setup application
-# Visit: https://customer-a.yourdomain.com/setup
-# Enter setup password (from INSTANCE_INFO.txt)
-# This will create admin account with credentials from step 2
-
-# 5. Login
-# Visit: https://customer-a.yourdomain.com/login
-# Email: admin@customer-a.com
-# Password: SecurePassword123!
+# URLs:
+# - App:    https://customer-a.example.com
+# - API:    https://customer-a8.example.com
+# - Studio: https://customer-a3.example.com
 ```
 
-#### Instance 2 - Customer B
+#### Instance 2 - Customer B (Port 3026)
 
 ```bash
-# Tương tự, nhưng dùng ports và domains khác
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-b
 cd customer-b
 
-# Configure với ports và admin credentials khác
+# Edit configuration
 nano docker/scripts/setup-instance.sh
-# Set: CENTER_NAME="Customer B Service Center"
-# Set: APP_PORT=3026 (auto-derives STUDIO_PORT=3100, KONG_PORT=8001)
+# Set: CENTER_NAME="Customer B"
+# Set: APP_PORT=3026 (auto: STUDIO_PORT=3100, KONG_PORT=8001)
 # Set: DEPLOYMENT_MODE=production
-# Set: PRODUCTION_DOMAIN="customer-b.yourdomain.com"
-# Set: ADMIN_EMAIL="admin@customer-b.com"
-# Set: ADMIN_PASSWORD="AnotherSecurePassword!"
-# Set: ADMIN_NAME="Customer B Admin"
-# URLs auto-derived (numbered): customer-b8.yourdomain.com, customer-b3.yourdomain.com
+# Set: PRODUCTION_DOMAIN=customer-b.example.com
+# Set: ADMIN_EMAIL=admin@customer-b.com
 
-# Deploy (automated - ONE COMMAND!)
-chmod +x docker/scripts/deploy.sh
-./docker/scripts/deploy.sh  # Select option 1
+# Deploy
+./docker/scripts/deploy.sh
+# Select option 1
 
-# Or manual:
-./docker/scripts/setup-instance.sh
-docker compose -p customer-b build
-docker compose -p customer-b up -d
-./docker/scripts/apply-schema.sh
-
-# Setup and login with admin@customer-b.com
+# URLs:
+# - App:    https://customer-b.example.com
+# - API:    https://customer-b8.example.com
+# - Studio: https://customer-b3.example.com
 ```
 
-#### Instance 3 - Customer C
+#### Instance 3 - Customer C (Port 3027)
 
 ```bash
 cd /home/deploy
 git clone https://github.com/your-org/service-center.git customer-c
 cd customer-c
 
-# Configure
+# Edit configuration
 nano docker/scripts/setup-instance.sh
-# Set: CENTER_NAME="Customer C Service Center"
-# Set: APP_PORT=3027 (auto-derives STUDIO_PORT=3200, KONG_PORT=8002)
+# Set: CENTER_NAME="Customer C"
+# Set: APP_PORT=3027 (auto: STUDIO_PORT=3200, KONG_PORT=8002)
 # Set: DEPLOYMENT_MODE=production
-# Set: PRODUCTION_DOMAIN="customer-c.yourdomain.com"
-# Set: ADMIN_EMAIL="admin@customer-c.com"
-# Set: ADMIN_PASSWORD="YetAnotherPassword!"
-# Set: ADMIN_NAME="Customer C Admin"
-# URLs auto-derived (numbered): customer-c8.yourdomain.com, customer-c3.yourdomain.com
+# Set: PRODUCTION_DOMAIN=customer-c.example.com
+# Set: ADMIN_EMAIL=admin@customer-c.com
 
-# Deploy (automated - ONE COMMAND!)
-chmod +x docker/scripts/deploy.sh
-./docker/scripts/deploy.sh  # Select option 1
+# Deploy
+./docker/scripts/deploy.sh
+# Select option 1
 
-# Or manual:
-./docker/scripts/setup-instance.sh
-docker compose -p customer-c build
-docker compose -p customer-c up -d
-./docker/scripts/apply-schema.sh
-
-# Setup and login with admin@customer-c.com
+# URLs:
+# - App:    https://customer-c.example.com
+# - API:    https://customer-c8.example.com
+# - Studio: https://customer-c3.example.com
 ```
 
 ### Cloudflare Tunnel Configuration
 
-Mỗi instance cần **2 domains** (app + studio) được configure trong Cloudflare Tunnel:
+Mỗi instance cần **3 tunnels** trong config:
 
-**Ví dụ Cloudflare Tunnel config (`config.yml`):**
+**File:** `~/.cloudflared/config.yml`
+
 ```yaml
 tunnel: your-tunnel-id
 credentials-file: /path/to/credentials.json
 
 ingress:
-  # Customer A - Main App
-  - hostname: customer-a.yourdomain.com
+  # Customer A - Ports 3025, 8000, 3000
+  - hostname: customer-a.example.com
     service: http://localhost:3025
-
-  # Customer A - Supabase API (Kong)
-  - hostname: api-a.yourdomain.com
+  - hostname: customer-a8.example.com
     service: http://localhost:8000
-
-  # Customer A - Supabase Studio
-  - hostname: supabase-a.yourdomain.com
+  - hostname: customer-a3.example.com
     service: http://localhost:3000
 
-  # Customer B - Main App
-  - hostname: customer-b.yourdomain.com
+  # Customer B - Ports 3026, 8001, 3100
+  - hostname: customer-b.example.com
     service: http://localhost:3026
-
-  # Customer B - Supabase API (Kong)
-  - hostname: api-b.yourdomain.com
+  - hostname: customer-b8.example.com
     service: http://localhost:8001
-
-  # Customer B - Supabase Studio
-  - hostname: supabase-b.yourdomain.com
+  - hostname: customer-b3.example.com
     service: http://localhost:3100
 
-  # Customer C - Main App
-  - hostname: customer-c.yourdomain.com
+  # Customer C - Ports 3027, 8002, 3200
+  - hostname: customer-c.example.com
     service: http://localhost:3027
-
-  # Customer C - Supabase API (Kong)
-  - hostname: api-c.yourdomain.com
+  - hostname: customer-c8.example.com
     service: http://localhost:8002
-
-  # Customer C - Supabase Studio
-  - hostname: supabase-c.yourdomain.com
+  - hostname: customer-c3.example.com
     service: http://localhost:3200
 
   # Catch-all
   - service: http_status:404
 ```
 
-**Lưu ý:**
-- Mỗi instance cần unique **APP_PORT**, **STUDIO_PORT**, và **KONG_PORT**
-- Mỗi instance cần **3 domains** trong Cloudflare Tunnel:
-  - App domain (customer-a.yourdomain.com)
-  - API domain (api-a.yourdomain.com) - **Required for browser access**
-  - Studio domain (supabase-a.yourdomain.com)
-- Setup script tự động generate tất cả secrets ở hex format (URL-safe)
-- Tất cả configuration được set trong script, không cần manual editing .env
-
 ### Quản Lý Instances
 
 ```bash
 # Start/Stop/Restart instance
-docker compose -p customer-a up -d
-docker compose -p customer-a down
-docker compose -p customer-a restart
+cd /home/deploy/customer-a
+docker compose up -d
+docker compose down
+docker compose restart
 
 # View status
-docker compose -p customer-a ps
-docker compose -p customer-b ps
+cd /home/deploy/customer-a
+docker compose ps
 
 # View logs
-docker compose -p customer-a logs -f app
+cd /home/deploy/customer-a
+docker compose logs -f app
 
 # Access database
-docker compose -p customer-a exec db psql -U postgres
+cd /home/deploy/customer-a
+docker compose exec db psql -U postgres
 
 # Backup database
-docker compose -p customer-a exec db pg_dump -U postgres postgres > backup-customer-a.sql
+cd /home/deploy/customer-a
+docker compose exec -T db pg_dump -U postgres postgres > backup-customer-a-$(date +%Y%m%d).sql
 ```
 
 ### Network Isolation
@@ -1218,54 +1038,643 @@ Mỗi instance sử dụng khoảng:
 - **CPU**: Moderate
 
 **Khuyến nghị:**
-- 8 GB RAM → 1-2 instances
-- 16 GB RAM → 4-6 instances
-- 32 GB RAM → 10-12 instances
-- 64 GB RAM → 20-25 instances
 
-### Port Allocation Pattern
-
-```
-Customer A:
-  - APP_PORT=3025     → https://customer-a.yourdomain.com
-  - KONG_PORT=8000    → https://api-a.yourdomain.com
-  - STUDIO_PORT=3000  → https://supabase-a.yourdomain.com
-
-Customer B:
-  - APP_PORT=3026     → https://customer-b.yourdomain.com
-  - KONG_PORT=8001    → https://api-b.yourdomain.com
-  - STUDIO_PORT=3100  → https://supabase-b.yourdomain.com
-
-Customer C:
-  - APP_PORT=3027     → https://customer-c.yourdomain.com
-  - KONG_PORT=8002    → https://api-c.yourdomain.com
-  - STUDIO_PORT=3200  → https://supabase-c.yourdomain.com
-...
-```
-
-**Lưu ý:**
-- Kong port **REQUIRED** - Browser phải access được để dùng Supabase features
-- Tất cả ports đã được configure trong docker-compose.yml với environment variables
+| RAM Server | Số Instances Khuyến Nghị |
+|------------|-------------------------|
+| 8 GB       | 1-2 instances           |
+| 16 GB      | 4-6 instances           |
+| 32 GB      | 10-12 instances         |
+| 64 GB      | 20-25 instances         |
 
 ---
 
-## Support
+## Backup & Monitoring
 
-**Application:**
-- Issues: Report issues to your development team
+### Automated Backup Script
+
+```bash
+# Run backup script
+./docker/scripts/backup.sh
+
+# Setup cron for daily backup at 2 AM
+crontab -e
+
+# Add line:
+0 2 * * * cd /home/deploy/service-center-app && ./docker/scripts/backup.sh >> logs/backup.log 2>&1
+```
+
+### Manual Backup
+
+#### Database Backup
+
+```bash
+# Full database backup
+docker compose exec -T db pg_dump -U postgres postgres | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+
+# Schema only
+docker compose exec -T db pg_dump -U postgres --schema-only postgres > schema_backup.sql
+
+# Data only
+docker compose exec -T db pg_dump -U postgres --data-only postgres > data_backup.sql
+```
+
+#### Restore Database
+
+```bash
+# Stop application first
+docker compose stop app
+
+# Restore from backup
+gunzip -c backup_20241020_020000.sql.gz | docker compose exec -T db psql -U postgres postgres
+
+# Or without gzip
+docker compose exec -T db psql -U postgres postgres < backup.sql
+
+# Restart application
+docker compose start app
+```
+
+#### Uploads/Storage Backup
+
+```bash
+# Backup storage volumes
+tar -czf storage_backup_$(date +%Y%m%d).tar.gz volumes/storage
+
+# Backup entire volumes directory
+tar -czf volumes_backup_$(date +%Y%m%d).tar.gz volumes/
+```
+
+#### Configuration Backup
+
+```bash
+# Backup .env and INSTANCE_INFO.txt
+cp .env .env.backup.$(date +%Y%m%d)
+cp INSTANCE_INFO.txt INSTANCE_INFO.backup.$(date +%Y%m%d).txt
+
+# Or create full config backup
+tar -czf config_backup_$(date +%Y%m%d).tar.gz .env INSTANCE_INFO.txt volumes/api/ volumes/logs/
+```
+
+### Monitoring
+
+#### Docker Stats
+
+```bash
+# Real-time resource usage
+docker stats
+
+# Specific container
+docker stats service-center-app
+```
+
+#### Disk Usage
+
+```bash
+# System disk usage
+df -h
+
+# Docker disk usage
+docker system df
+
+# Detailed breakdown
+docker system df -v
+
+# Volume sizes
+du -sh volumes/*
+```
+
+#### Application Logs
+
+```bash
+# Follow all logs
+docker compose logs -f
+
+# Application logs only
+docker compose logs -f app
+
+# Last 100 lines
+docker compose logs --tail=100 app
+
+# Filter by time
+docker compose logs --since 30m app
+docker compose logs --since 2024-10-20T10:00:00 app
+
+# Search in logs
+docker compose logs app | grep ERROR
+docker compose logs app | grep "500"
+```
+
+#### Health Checks
+
+```bash
+# Check service health
+docker compose ps
+
+# Application health endpoint
+curl http://localhost:3025/api/health
+
+# Database health
+docker compose exec db pg_isready -U postgres
+
+# Kong health
+curl http://localhost:8000/status
+```
+
+---
+
+## Troubleshooting
+
+### Application Not Starting
+
+#### Check Logs
+
+```bash
+# View application logs
+docker compose logs app
+
+# Common issues:
+# - Database connection error
+# - Missing environment variables
+# - Port already in use
+```
+
+#### Database Connection Issues
+
+```bash
+# Verify database is running
+docker compose ps db
+
+# Test connection
+docker compose exec db psql -U postgres -c "SELECT version();"
+
+# Check .env file
+grep "POSTGRES_" .env
+
+# Verify internal hostname (should be "db" not "localhost")
+grep "POSTGRES_HOST" .env  # Should be: POSTGRES_HOST=db
+```
+
+#### Port Already in Use
+
+```bash
+# Check what's using the port
+sudo lsof -i :3025
+sudo lsof -i :8000
+sudo lsof -i :3000
+
+# Kill process or change APP_PORT in configuration
+```
+
+### Kong/Supabase API Errors
+
+```bash
+# Check Kong logs
+docker compose logs kong
+
+# Verify Kong config
+docker compose exec kong cat /var/lib/kong/kong.yml
+
+# Test Kong endpoint
+curl http://localhost:8000/status
+
+# Restart Kong
+docker compose restart kong
+```
+
+### Cannot Access Studio
+
+#### Check Studio Container
+
+```bash
+# Verify Studio is running
+docker compose ps studio
+
+# View logs
+docker compose logs studio
+
+# Test direct access
+curl http://localhost:3000
+```
+
+#### Verify Port Exposure
+
+```bash
+# Check docker-compose.yml
+grep -A 5 "studio:" docker-compose.yml
+
+# Should have:
+# studio:
+#   ports:
+#     - "${STUDIO_PORT}:3000"
+
+# Check .env
+grep "STUDIO_PORT" .env
+```
+
+#### Verify Cloudflare Tunnel (Production)
+
+```bash
+# Check tunnel status
+cloudflared tunnel list
+cloudflared tunnel info your-tunnel-name
+
+# Test tunnel
+curl https://abc3.tantran.dev
+
+# Check tunnel config
+cat ~/.cloudflared/config.yml
+```
+
+### Vector Container Issues
+
+**Symptom:**
+```bash
+docker compose ps
+# Shows: supabase-vector is unhealthy or restarting
+```
+
+**Check logs:**
+```bash
+docker logs supabase-vector --tail 20
+# Error: Configuration error. error=Is a directory (os error 21)
+```
+
+**Solution:**
+
+```bash
+# Stop containers
+docker compose down
+
+# Verify vector.yml is a FILE, not directory
+ls -lh volumes/logs/vector.yml
+
+# If it's a directory or missing:
+rm -rf volumes/logs/vector.yml
+mkdir -p volumes/logs
+
+# Copy from docs/references
+cp docs/references/volumes/logs/vector.yml volumes/logs/
+
+# Verify it's a file
+test -f volumes/logs/vector.yml && echo "OK" || echo "FAILED"
+
+# Start containers
+docker compose up -d
+
+# Check vector status
+docker compose ps vector
+docker logs supabase-vector --tail 10
+```
+
+### Realtime Container Unhealthy
+
+**Issue:** `realtime-dev` container shows "unhealthy"
+
+**Normal behavior:**
+- May take 1-2 minutes to become healthy
+- Not critical if application is responding
+
+**Check:**
+```bash
+docker compose logs realtime
+
+# If persistent unhealthy:
+docker compose restart realtime
+
+# Monitor
+docker compose logs -f realtime
+```
+
+### Pooler Issues (Supavisor)
+
+**Note:** Supavisor pooler is **disabled** by default.
+
+**Root cause:**
+- Encryption key compatibility issue
+- Not critical for deployment
+
+**Impact:**
+- No impact on application
+- App connects directly to PostgreSQL
+
+**If you want to enable:**
+```bash
+# Uncomment supavisor in docker-compose.yml
+nano docker-compose.yml
+
+# Restart
+docker compose up -d
+```
+
+### Out of Memory
+
+**Symptoms:**
+- Containers keep restarting
+- OOM (Out of Memory) errors in logs
+
+**Check:**
+```bash
+# System memory
+free -h
+
+# Docker stats
+docker stats
+
+# Check if swap is enabled
+swapon --show
+```
+
+**Solutions:**
+
+1. **Enable swap:**
+```bash
+# Create 4GB swap file
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Make permanent
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+2. **Reduce memory usage:**
+```bash
+# Stop unused instances
+cd /home/deploy/customer-b
+docker compose down
+
+# Adjust worker processes (edit docker-compose.yml)
+# Reduce POOLER_DEFAULT_POOL_SIZE in .env
+```
+
+3. **Upgrade server:**
+- Consider upgrading to more RAM
+
+### Out of Disk Space
+
+**Check:**
+```bash
+# System disk
+df -h
+
+# Docker disk usage
+docker system df
+```
+
+**Clean up:**
+
+```bash
+# Remove unused Docker resources
+docker system prune -a -f
+
+# Remove unused volumes (⚠️ Careful!)
+docker volume prune -f
+
+# Clean old backups
+rm -f backup_*.sql.gz
+rm -f *_backup_*.tar.gz
+
+# Clean logs
+docker compose exec db psql -U postgres -c "SELECT pg_rotate_logfile();"
+```
+
+### SSL/Certificate Errors (Production)
+
+**Verify Cloudflare Tunnel:**
+
+```bash
+# Check tunnel is running
+ps aux | grep cloudflared
+
+# Check tunnel status
+cloudflared tunnel list
+
+# View tunnel logs
+journalctl -u cloudflared -f  # If running as service
+
+# Test DNS resolution
+nslookup abc.tantran.dev
+dig abc.tantran.dev
+```
+
+**Verify SSL Settings:**
+
+1. Cloudflare Dashboard → SSL/TLS
+2. Set to "Full" or "Full (strict)"
+3. Check DNS records are proxied (orange cloud)
+
+**Test endpoints:**
+
+```bash
+# Test from external
+curl -I https://abc.tantran.dev
+curl -I https://abc8.tantran.dev
+
+# Should return 200 OK or 302 redirect
+```
+
+### Schema Apply Errors
+
+**Issue:** Schema script fails
+
+**Common causes:**
+
+1. **Wrong order:**
+```bash
+# Schema files must be applied in order
+# Fix: Check apply-schema.sh applies files in correct sequence
+```
+
+2. **Database not ready:**
+```bash
+# Wait for database
+docker compose exec db pg_isready -U postgres
+```
+
+3. **Permission issues:**
+```bash
+# Make sure using postgres user
+docker compose exec -T db psql -U postgres
+```
+
+**Re-apply schema:**
+
+```bash
+# Drop and recreate (⚠️ LOSES DATA!)
+docker compose exec db psql -U postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# Apply schema again
+./docker/scripts/apply-schema.sh
+```
+
+---
+
+## FAQ
+
+**Q: Cần expose ports nào?**
+A: Cần expose 3 ports: `APP_PORT` (3025), `KONG_PORT` (8000), và `STUDIO_PORT` (3000). Kong port cần thiết để browser access Supabase.
+
+**Q: Có thể chạy nhiều instances không?**
+A: Có! Mỗi instance chỉ cần thay đổi `APP_PORT`. Ports khác tự động calculate. Xem [Multi-Instance Deployment](#multi-instance-deployment).
+
+**Q: Database có share giữa các instances không?**
+A: Không! Mỗi instance có database riêng, hoàn toàn isolated.
+
+**Q: Cần setup Cloudflare Tunnel như thế nào?**
+A: Xem [URL Architecture](#url-architecture--deployment-modes) và [Multi-Instance Deployment](#multi-instance-deployment). Mỗi instance cần 3 tunnels (app, api, studio).
+
+**Q: Secrets có cần URL-safe không?**
+A: Có! Setup script tự động generate tất cả secrets ở hex format, hoàn toàn URL-safe.
+
+**Q: Downtime khi update application?**
+A: Minimal. Build image mới, restart container với `docker compose up -d app`. Khoảng 10-30 giây.
+
+**Q: Có thể restrict access không?**
+A: Có! Dùng Cloudflare Access, firewall rules, hoặc IP whitelist.
+
+**Q: Làm sao để backup tự động?**
+A: Dùng backup script với cron job. Xem [Backup & Monitoring](#backup--monitoring).
+
+**Q: RAM/CPU cần bao nhiêu?**
+A: Minimum 4GB RAM, 2 CPU cores. Khuyến nghị 8GB+ RAM, 4+ cores. Xem [Resource Planning](#resource-planning).
+
+**Q: Làm sao migrate từ local sang production?**
+A:
+1. Backup database local: `docker compose exec -T db pg_dump -U postgres postgres > local_backup.sql`
+2. Setup production instance với DEPLOYMENT_MODE=production
+3. Restore database: `cat local_backup.sql | docker compose exec -T db psql -U postgres postgres`
+4. Copy uploads: `rsync -avz volumes/storage/ user@production:/path/volumes/storage/`
+
+---
+
+## Commands Reference
+
+### 🚀 Main Deployment (Khuyến Nghị)
+
+```bash
+# Deploy script - Interactive menu
+./docker/scripts/deploy.sh
+
+# Options:
+#   1) Complete fresh deployment (setup + pull + build + deploy + schema)
+#   2) Build and deploy only (requires existing .env)
+#   3) Update application only
+#   4) Restart all services
+#   5) View logs
+#   6) Stop all services
+#   7) Clean up (remove containers and volumes)
+```
+
+### 🔧 Individual Scripts
+
+```bash
+# Setup instance with interactive prompts
+./docker/scripts/setup-instance.sh --interactive
+
+# Setup instance with script defaults
+./docker/scripts/setup-instance.sh
+
+# Apply database schema
+./docker/scripts/apply-schema.sh
+
+# Backup script
+./docker/scripts/backup.sh
+```
+
+### 🐳 Docker Management
+
+```bash
+# Status
+docker compose ps
+
+# Logs
+docker compose logs -f
+docker compose logs -f app
+docker compose logs --tail=100 app
+
+# Restart
+docker compose restart
+docker compose restart app
+
+# Stop/Start
+docker compose stop
+docker compose start
+docker compose up -d
+
+# Clean restart
+docker compose down
+docker compose up -d
+```
+
+### 🗄️ Database Operations
+
+```bash
+# Connect to database
+docker compose exec db psql -U postgres
+
+# Backup database
+docker compose exec -T db pg_dump -U postgres postgres > backup.sql
+docker compose exec -T db pg_dump -U postgres postgres | gzip > backup.sql.gz
+
+# Restore database
+docker compose exec -T db psql -U postgres postgres < backup.sql
+gunzip -c backup.sql.gz | docker compose exec -T db psql -U postgres postgres
+
+# Check database size
+docker compose exec db psql -U postgres -c "SELECT pg_database_size('postgres');"
+```
+
+### 🔄 Update Application
+
+```bash
+# Method 1: Use deploy script (recommended)
+git pull
+./docker/scripts/deploy.sh  # Select option 3
+
+# Method 2: Manual
+git pull
+docker compose build app
+docker compose up -d app
+```
+
+### 🧹 Cleanup
+
+```bash
+# Remove unused Docker resources
+docker system prune -a -f
+
+# Remove unused volumes
+docker volume prune -f
+
+# Full cleanup (⚠️ removes everything)
+./docker/scripts/deploy.sh  # Select option 7
+```
+
+---
+
+## Support & Resources
+
+**Documentation:**
+- Project README: [README.md](README.md)
+- Database Schema: [docs/data/schemas/](docs/data/schemas/)
+- Docker Setup: [docker/README.md](docker/README.md)
+
+**Getting Help:**
+- Report issues: [GitHub Issues](https://github.com/your-org/service-center/issues)
 - Logs: `docker compose logs`
 
 ---
 
 **Chúc mừng! 🎉**
 
-Bạn đã triển khai thành công Service Center Management lên production!
+Bạn đã hoàn tất việc triển khai Service Center Management!
 
-**Benefits:**
-- ✅ Docker-based deployment
-- ✅ Multi-instance ready
-- ✅ Isolated databases per customer
-- ✅ Easy to scale và manage
-- ✅ Simple port configuration
+**Key Takeaways:**
+- ✅ **Phương pháp A (Tự động)** - 1 lệnh, 10-15 phút, khuyến nghị cho mọi người
+- ✅ **Phương pháp B (Thủ công)** - Kiểm soát từng bước, 20-30 phút, cho advanced users
+- ✅ **Docker-based** - Dễ scale và maintain
+- ✅ **Multi-instance ready** - Phục vụ nhiều customers trên 1 server
+- ✅ **Complete isolation** - Mỗi instance hoàn toàn độc lập
 
-Enjoy! 🚀
+**Enjoy! 🚀**

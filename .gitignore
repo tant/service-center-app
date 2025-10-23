@@ -57,3 +57,8 @@ QWEN.md
 # Docker runtime data
 volumes/db/data/
 volumes/storage/
+
+# linh tinh AI
+.bmad-core
+.claude
+.vscode

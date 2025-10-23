@@ -385,11 +385,32 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 ### 4.2 Integration Approach
 
 **Database Integration Strategy:**
+
+**Database-First Design Workflow (ARCHITECTURAL CONSTRAINT):**
+1. Create schema files in `docs/data/schemas/` (source of truth)
+2. Run `./docs/data/schemas/setup_schema.sh` to copy to `supabase/schemas/`
+3. Generate migration: `pnpx supabase db diff -f migration_name`
+4. Review migration in `supabase/migrations/`
+5. Apply migration: `pnpx supabase migration up`
+6. Generate TypeScript types: `pnpx supabase gen types typescript`
+
+**Schema Dependency Order (CRITICAL):**
+- **MUST** create ENUMs first: `00_base_types.sql` or `11_phase2_types.sql`
+- **MUST** create helper functions second: `00_base_functions.sql` or `12_phase2_functions.sql`
+- **THEN** create tables in foreign key dependency order
+- Triggers and views created after tables exist
+
+**Tables and Extensions:**
 - Add 12+ new tables (task_templates, task_types, task_templates_tasks, service_ticket_tasks, task_history, physical_warehouses, virtual_warehouses, physical_products, stock_movements, product_stock_thresholds, service_requests, email_notifications)
 - Link via foreign keys to existing tables: service_tickets, products, customers, profiles, parts
-- Extend service_tickets table with new columns: template_id, request_id, delivery_method, delivery_address
+- Extend service_tickets table with new nullable columns: template_id, request_id, delivery_method, delivery_address
 - Create database views for complex queries (warehouse stock levels, task analytics)
 - Implement triggers for auto-generation (tracking tokens, task instantiation, ticket status transitions)
+
+**RLS Policy Pattern:**
+- Use existing `auth.check_role(required_role user_role)` helper function
+- Apply same pattern as existing tables (role-based visibility)
+- Public portal endpoints use anon key with limited RLS policies
 
 **API Integration Strategy:**
 - Create 4 new tRPC routers:
@@ -646,7 +667,17 @@ src/
    - Mitigation: Create separate policies for new tables, avoid modifying existing policies
    - Testing: Manual RLS testing via direct SQL queries
 
-3. **Public Portal Security** (Medium)
+3. **Service Role Bypasses RLS** (High) - **ARCHITECTURAL CONSTRAINT**
+   - Risk: tRPC uses `supabaseAdmin` (service role client) which bypasses ALL RLS policies
+   - Impact: Developer must manually verify authorization in every tRPC procedure
+   - Mitigation:
+     * Use existing `ctx.user` to verify authentication in all procedures
+     * Call `auth.check_role()` helper function for role-based access
+     * Code review checklist: Every tRPC procedure has auth check
+     * Never trust client-provided user_id, always use `ctx.user.id`
+   - Reference: `docs/architecture/10-security.md` section 10.3
+
+4. **Public Portal Security** (Medium)
    - Risk: Unauthenticated access to serial verification may enable data scraping
    - Mitigation: Implement rate limiting (NFR14), log all verification attempts, limit response data
 
@@ -723,13 +754,20 @@ Transform Service Center from basic ticket tracking to comprehensive service man
 
 **Acceptance Criteria - Database:**
 1. Create 12 new tables with proper foreign keys, indexes, and constraints
-2. Add 4 new ENUM types (task status, warehouse types, request status, product condition)
-3. Extend service_tickets table with new nullable columns (template_id, request_id, delivery_method)
+2. Add 4 new ENUM types (task_status, warehouse_type, request_status, product_condition) + extend existing ticket_status ENUM if needed
+3. Extend service_tickets table with new nullable columns (template_id, request_id, delivery_method, delivery_address)
 4. Create helper functions for auto-generation (tracking tokens, ticket numbers already exists)
-5. Implement RLS policies for all new tables following existing security model
+5. Implement RLS policies for all new tables following existing security model (use existing `auth.check_role()` helper)
 6. Create database views for stock levels and task analytics
 7. All migrations are idempotent and include DOWN migrations for rollback
 8. Create 3 new Supabase Storage buckets: `warehouse-photos`, `serial-photos`, `csv-imports`
+9. **CRITICAL**: Follow schema dependency order:
+   - Create new ENUMs in `00_base_types.sql` (or separate file loaded first)
+   - Create helper functions in `00_base_functions.sql` (or separate file loaded second)
+   - Create tables in numbered sequence (respect foreign key dependencies)
+10. Schema files created in `docs/data/schemas/` (source of truth), then copied to `supabase/schemas/` via `./docs/data/schemas/setup_schema.sh`
+11. Generate TypeScript types via `pnpx supabase gen types typescript` after schema changes
+12. Generate migration via `pnpx supabase db diff -f phase2_foundation`
 
 **Acceptance Criteria - Frontend Structure:**
 9. Create new directory structure per `docs/architecture/frontend-architecture-roadmap.md`:

@@ -1,9 +1,13 @@
 # Project Brief: Service Center Phase 2 - Workflow, Warranty & Warehouse
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2025-10-23
 **Project Code:** SC-PHASE2
 **Status:** Draft for Review
+
+**Changelog:**
+- v1.1 (2025-10-23): Updated Technical Considerations to reflect full Supabase infrastructure stack (13 services), resolved email service decision (GoTrue SMTP), added frontend architecture improvement, clarified rate limiting approach
+- v1.0 (2025-10-23): Initial draft
 
 ---
 
@@ -485,9 +489,11 @@ The product transforms service centers from reactive ticket processors into proa
 
 **Backend:**
 - **API Layer**: tRPC 11.6.0 - **KEEP** existing
-- **Database**: Supabase (PostgreSQL 15) - **KEEP** existing
-- **Authentication**: Supabase Auth - **KEEP** existing
-- **Storage**: Supabase Storage - **KEEP** existing
+- **Database**: Supabase Local Stack (13 services via Docker Compose) - **KEEP** existing
+  - PostgreSQL 15.8, Kong API Gateway, GoTrue Auth, PostgREST, Realtime, Storage API, imgproxy, Postgres-Meta, Edge Functions, Logflare, Studio, Vector
+- **Authentication**: Supabase Auth (GoTrue) with JWT - **KEEP** existing
+- **Storage**: Supabase Storage API with imgproxy for image optimization - **KEEP** existing
+- **Email**: GoTrue SMTP integration (already configured in production) - **LEVERAGE** existing
 
 **Database:**
 - **Primary**: PostgreSQL 15 via Supabase - **KEEP** existing
@@ -497,6 +503,7 @@ The product transforms service centers from reactive ticket processors into proa
   - `physical_warehouses`, `virtual_warehouses`
   - `physical_products`, `stock_movements`
   - `service_requests` (public portal)
+- **New Storage Buckets**: `warehouse-photos`, `serial-photos`, `csv-imports`
 
 **Hosting/Infrastructure:**
 - **Development**: Supabase local (Docker) - **KEEP** existing
@@ -507,6 +514,7 @@ The product transforms service centers from reactive ticket processors into proa
 
 **Repository Structure:**
 - **Monorepo**: Single repository - **KEEP** existing brownfield codebase
+- **Frontend Architecture**: Establish organized directory structure (types/, hooks/, constants/, components/forms/tables/modals/shared/) - **NEW** for Phase 2, enables gradual migration of existing components
 - **New Routes**:
   - `/workflows` - Template management (Admin)
   - `/tasks` - Task execution (Technician)
@@ -525,8 +533,9 @@ The product transforms service centers from reactive ticket processors into proa
 
 **Integration Requirements:**
 - **Existing System**: Integrate with current `service_tickets` table
-- **Barcode Scanning**: HTML5 camera API for mobile barcode reading (future)
-- **Email**: Optional SMTP integration for notifications (post-MVP)
+- **File Storage**: Leverage existing Supabase Storage for photos and CSV imports
+- **Email Notifications**: Use existing GoTrue SMTP configuration (6 notification types: request confirmation, product received, diagnosis complete, service complete, ready for pickup/delivery, deadline reminders)
+- **Barcode Scanning**: HTML5 camera API for mobile barcode reading (post-MVP enhancement)
 
 **Security/Compliance:**
 - **RLS Policies**: Extend existing Row Level Security for new tables
@@ -658,19 +667,24 @@ The product transforms service centers from reactive ticket processors into proa
    - Decision by: Before warehouse module implementation
 
 **Technical:**
-5. **Q: Public serial verification: how to prevent abuse (brute force serial guessing)?**
-   - Options: Rate limiting vs CAPTCHA vs require partial customer info
+5. **Q: Email notification service for customer communications?**
+   - **✅ RESOLVED**: Use existing GoTrue SMTP configuration (already set up in production)
+   - **Decision**: Leverage existing infrastructure, no additional service needed
+
+6. **Q: Public serial verification: how to prevent abuse (brute force serial guessing)?**
+   - Options: Rate limiting (Kong API Gateway) vs CAPTCHA vs require partial customer info
+   - **Decision**: Rate limiting (100 requests/min per IP) - leverages existing Kong infrastructure
    - Decision by: Before public portal development
 
-6. **Q: Task dependencies: support complex DAGs (Directed Acyclic Graphs) or simple linear sequences?**
+7. **Q: Task dependencies: support complex DAGs (Directed Acyclic Graphs) or simple linear sequences?**
    - Options: Linear (MVP) → Complex dependencies (Phase 2)
    - Decision by: Week 3 (before task template schema finalization)
 
-7. **Q: Barcode format: QR Code vs traditional barcodes?**
+8. **Q: Barcode format: QR Code vs traditional barcodes?**
    - Impact: Mobile camera API support varies
-   - Decision by: Before Phase 2 planning
+   - Decision by: Post-MVP (Phase 2 enhancement)
 
-8. **Q: Multi-currency support for international product imports?**
+9. **Q: Multi-currency support for international product imports?**
    - Scope: Out for MVP, confirm for Phase 2
    - Decision by: Before Phase 2 roadmap
 

@@ -3,7 +3,7 @@
  * React hooks for email notification management
  */
 
-import { trpc } from "@/utils/trpc";
+import { trpc } from "@/components/providers/trpc-provider";
 
 /**
  * Hook to fetch email log with filters
@@ -16,9 +16,7 @@ export function useEmailLog(params: {
   status?: 'pending' | 'sent' | 'failed' | 'bounced';
   recipientEmail?: string;
 }) {
-  return trpc.notifications.getLog.useQuery(params, {
-    keepPreviousData: true,
-  });
+  return trpc.notifications.getLog.useQuery(params);
 }
 
 /**

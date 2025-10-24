@@ -1073,4 +1073,108 @@ export const workflowRouter = router({
         ).length ?? 0,
       };
     }),
+
+  // =====================================================
+  // STORY 1.16: TASK PROGRESS DASHBOARD
+  // =====================================================
+
+  /**
+   * Get overall task progress summary
+   * AC 2: workflow.getTaskProgressSummary - Overall metrics
+   */
+  getTaskProgressSummary: publicProcedure
+    .query(async ({ ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from('v_task_progress_summary')
+        .select('*')
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch task progress summary',
+          cause: error,
+        });
+      }
+
+      return data;
+    }),
+
+  /**
+   * Get tickets with blocked tasks
+   * AC 2: workflow.getTicketsWithBlockedTasks - Tickets with blocked tasks
+   */
+  getTicketsWithBlockedTasks: publicProcedure
+    .query(async ({ ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from('v_tickets_with_blocked_tasks')
+        .select('*')
+        .order('blocked_tasks_count', { ascending: false });
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch tickets with blocked tasks',
+          cause: error,
+        });
+      }
+
+      return data || [];
+    }),
+
+  /**
+   * Get technician workload metrics
+   * AC 2: workflow.getTechnicianWorkload - Tasks per technician
+   */
+  getTechnicianWorkload: publicProcedure
+    .input(z.object({
+      technicianId: z.string().uuid().optional(),
+    }).optional())
+    .query(async ({ input, ctx }) => {
+      let query = ctx.supabaseAdmin
+        .from('v_technician_workload')
+        .select('*');
+
+      // Filter by specific technician if provided
+      if (input?.technicianId) {
+        query = query.eq('technician_id', input.technicianId);
+      }
+
+      const { data, error } = await query.order('tasks_in_progress', { ascending: false });
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch technician workload',
+          cause: error,
+        });
+      }
+
+      return data || [];
+    }),
+
+  /**
+   * Get task completion timeline
+   * AC 7: Task completion timeline (last 7/30 days)
+   */
+  getTaskCompletionTimeline: publicProcedure
+    .input(z.object({
+      daysBack: z.number().int().min(1).max(90).default(7),
+    }).optional())
+    .query(async ({ input, ctx }) => {
+      const daysBack = input?.daysBack || 7;
+
+      const { data, error } = await ctx.supabaseAdmin
+        .rpc('get_task_completion_timeline', { days_back: daysBack });
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch task completion timeline',
+          cause: error,
+        });
+      }
+
+      return data || [];
+    }),
 });

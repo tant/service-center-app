@@ -162,6 +162,49 @@ export const customersRouter = router({
         success: true,
       };
     }),
+
+  /**
+   * Story 1.15: Get customer by email (public, for unsubscribe page)
+   */
+  getByEmail: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .query(async ({ input, ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("customers")
+        .select("id, email, name, email_preferences")
+        .eq("email", input.email)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data;
+    }),
+
+  /**
+   * Story 1.15: Update customer email preferences (public, for unsubscribe page)
+   * AC 7: Allow customers to manage email preferences
+   */
+  updateEmailPreferences: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        preferences: z.record(z.string(), z.boolean()),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { error } = await ctx.supabaseAdmin
+        .from("customers")
+        .update({ email_preferences: input.preferences })
+        .eq("email", input.email);
+
+      if (error) {
+        throw new Error(`Failed to update email preferences: ${error.message}`);
+      }
+
+      return { success: true };
+    }),
 });
 
 export type CustomersRouter = typeof customersRouter;

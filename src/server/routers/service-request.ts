@@ -7,6 +7,41 @@ import { router, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
+import type { TRPCContext } from "../trpc";
+
+/**
+ * Helper function to get authenticated user with role
+ * Used for staff-only procedures (Story 1.13)
+ */
+async function getAuthenticatedUserWithRole(ctx: TRPCContext) {
+  const {
+    data: { user },
+    error: authError,
+  } = await ctx.supabaseClient.auth.getUser();
+
+  if (authError || !user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "You must be logged in to access this resource",
+    });
+  }
+
+  // Get user profile with role
+  const { data: profile, error: profileError } = await ctx.supabaseClient
+    .from("profiles")
+    .select("role, id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to fetch user profile",
+    });
+  }
+
+  return { user, profile };
+}
 
 /**
  * AC 11: Validation schemas for service requests
@@ -27,10 +62,13 @@ const submitRequestSchema = z.object({
 });
 
 /**
- * Public service request router
- * No authentication required for these endpoints
+ * Service request router
+ * Public endpoints (no authentication) and staff endpoints (authenticated)
  */
 export const serviceRequestRouter = router({
+  // ========================================
+  // PUBLIC ENDPOINTS (Story 1.11, 1.12)
+  // ========================================
   /**
    * AC 2: Verify warranty status by serial number (public, read-only)
    * AC 8: Show warranty status and days remaining
@@ -311,4 +349,372 @@ export const serviceRequestRouter = router({
         },
       };
     }),
+
+  // ========================================
+  // STAFF ENDPOINTS (Story 1.13) - Authenticated
+  // ========================================
+
+  /**
+   * Story 1.13: List pending service requests
+   * AC 1: Staff procedure with pagination, filters, and search
+   */
+  listPending: publicProcedure
+    .input(
+      z.object({
+        status: z.enum(["submitted", "received", "processing"]).optional(),
+        search: z.string().optional(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Role-based access control
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      let query = ctx.supabaseAdmin
+        .from("service_requests")
+        .select(
+          `
+          *,
+          linked_ticket:service_tickets(id, ticket_number, status)
+        `,
+          { count: "exact" }
+        );
+
+      // Status filter
+      if (input.status) {
+        query = query.eq("status", input.status);
+      } else {
+        // By default, show active requests (not completed/rejected)
+        query = query.in("status", ["submitted", "received", "processing"]);
+      }
+
+      // Search across tracking token, customer name, and serial number
+      if (input.search) {
+        const searchPattern = `%${input.search}%`;
+        query = query.or(
+          `tracking_token.ilike.${searchPattern},customer_name.ilike.${searchPattern},serial_number.ilike.${searchPattern}`
+        );
+      }
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(input.offset, input.offset + input.limit - 1);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch requests: ${error.message}`,
+        });
+      }
+
+      return {
+        requests: data || [],
+        total: count || 0,
+      };
+    }),
+
+  /**
+   * Story 1.13: Get full request details
+   * AC 1: Staff procedure for viewing complete request information
+   */
+  getDetails: publicProcedure
+    .input(z.object({ request_id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      // Role-based access control
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select(
+          `
+          *,
+          linked_ticket:service_tickets(id, ticket_number, status)
+        `
+        )
+        .eq("id", input.request_id)
+        .single();
+
+      if (error || !data) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service request not found",
+        });
+      }
+
+      return data;
+    }),
+
+  /**
+   * Story 1.13: Update request status
+   * AC 3: Staff procedure to update status (received/processing)
+   */
+  updateStatus: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        status: z.enum(["received", "processing"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Role-based access control
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      const updateData: Record<string, unknown> = {
+        status: input.status,
+      };
+
+      // Set timestamp based on status
+      if (input.status === "received") {
+        updateData.reviewed_at = new Date().toISOString();
+      } else if (input.status === "processing") {
+        updateData.converted_at = new Date().toISOString();
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update(updateData)
+        .eq("id", input.request_id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update status: ${error.message}`,
+        });
+      }
+
+      return data;
+    }),
+
+  /**
+   * Story 1.13: Convert service request to service ticket
+   * AC 4, 6, 7: Create ticket from request, pre-populate data, auto-link
+   */
+  convertToTicket: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        customer_id: z.string().uuid().optional(), // Allow staff to override
+        service_type: z.enum(["warranty", "paid"]),
+        priority: z.enum(["low", "normal", "high"]).default("normal"),
+        additional_notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Role-based access control
+      const { user, profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Get request details
+      const { data: request, error: requestError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("*")
+        .eq("id", input.request_id)
+        .single();
+
+      if (requestError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service request not found",
+        });
+      }
+
+      // Get physical product to find product_id
+      const { data: physicalProduct } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select("product_id")
+        .eq("serial_number", request.serial_number)
+        .single();
+
+      if (!physicalProduct) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Physical product not found for serial number",
+        });
+      }
+
+      // Find or create customer
+      let customerId = input.customer_id;
+
+      if (!customerId) {
+        // Try to find existing customer by email
+        const { data: existingCustomer } = await ctx.supabaseAdmin
+          .from("customers")
+          .select("id")
+          .eq("email", request.customer_email)
+          .single();
+
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+        } else {
+          // Create new customer
+          const { data: newCustomer, error: customerError } = await ctx.supabaseAdmin
+            .from("customers")
+            .insert({
+              name: request.customer_name,
+              email: request.customer_email,
+              phone: request.customer_phone,
+              created_by_id: profile.id,
+            })
+            .select()
+            .single();
+
+          if (customerError || !newCustomer) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to create customer: ${customerError?.message}`,
+            });
+          }
+
+          customerId = newCustomer.id;
+        }
+      }
+
+      // Create service ticket
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .insert({
+          customer_id: customerId,
+          product_id: physicalProduct.product_id,
+          serial_number: request.serial_number,
+          service_type: input.service_type,
+          priority: input.priority,
+          status: "pending",
+          problem_description: request.issue_description,
+          preferred_delivery_method: request.delivery_method,
+          delivery_address: request.delivery_address,
+          created_by_id: profile.id,
+        })
+        .select("*")
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create service ticket: ${ticketError?.message}`,
+        });
+      }
+
+      // Add initial comment with request details
+      const commentText = `Converted from service request ${request.tracking_token}\n\nCustomer's problem description:\n${request.issue_description}${input.additional_notes ? `\n\nStaff notes:\n${input.additional_notes}` : ""}`;
+
+      await ctx.supabaseAdmin.from("service_ticket_comments").insert({
+        ticket_id: ticket.id,
+        comment: commentText,
+        created_by_id: profile.id,
+      });
+
+      // Update request with ticket link and status
+      await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          ticket_id: ticket.id,
+          status: "processing",
+          converted_at: new Date().toISOString(),
+        })
+        .eq("id", input.request_id);
+
+      return {
+        success: true,
+        ticket,
+      };
+    }),
+
+  /**
+   * Story 1.13: Reject service request
+   * AC 5, 8: Reject request with reason
+   */
+  reject: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        rejection_reason: z.string().min(10, "Rejection reason must be at least 10 characters"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Role-based access control
+      const { user, profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          status: "rejected",
+          rejection_reason: input.rejection_reason,
+          rejected_at: new Date().toISOString(),
+          rejected_by_id: profile.id,
+        })
+        .eq("id", input.request_id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to reject request: ${error.message}`,
+        });
+      }
+
+      // Email notification will be handled by Story 1.15
+
+      return data;
+    }),
+
+  /**
+   * Story 1.13: Get count of pending requests
+   * AC 11: Badge counter for navigation
+   */
+  getPendingCount: publicProcedure.query(async ({ ctx }) => {
+    // Require authentication but allow all authenticated users
+    await getAuthenticatedUserWithRole(ctx);
+
+    const { count, error } = await ctx.supabaseAdmin
+      .from("service_requests")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["submitted", "received"]);
+
+    if (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to get pending count: ${error.message}`,
+      });
+    }
+
+    return count || 0;
+  }),
 });

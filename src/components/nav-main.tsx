@@ -2,6 +2,7 @@
 
 import { type Icon, IconCirclePlusFilled } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 import {
   SidebarGroup,
@@ -18,6 +19,7 @@ export function NavMain({
     title: string;
     url: string;
     icon?: Icon;
+    badge?: number | string;
   }[];
 }) {
   const pathname = usePathname();
@@ -53,9 +55,14 @@ export function NavMain({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <a href={item.url} onClick={(e) => handleClick(e, item.url)}>
+                <a href={item.url} onClick={(e) => handleClick(e, item.url)} className="flex items-center gap-2">
                   {item.icon && <item.icon />}
-                  <span>{item.title}</span>
+                  <span className="flex-1">{item.title}</span>
+                  {item.badge !== undefined && item.badge !== 0 && (
+                    <Badge variant="default" className="ml-auto">
+                      {item.badge}
+                    </Badge>
+                  )}
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

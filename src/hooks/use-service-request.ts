@@ -75,77 +75,141 @@ export function useTrackServiceRequest(
   };
 }
 
+// ========================================
+// STAFF HOOKS (Story 1.13) - Authenticated
+// ========================================
+
 /**
- * Hook for managing service requests (internal)
- * TODO: Implement for staff review and management
+ * Story 1.13: List pending service requests
+ * Staff query with pagination, filters, and search
  */
-export function useServiceRequests(filters?: {
-  status?: string;
-  service_type?: string;
+export function usePendingRequests(params?: {
+  status?: "submitted" | "received" | "processing";
   search?: string;
+  limit?: number;
+  offset?: number;
 }) {
-  // TODO: Implement with tRPC
-  const requests: ServiceRequestSummary[] = [];
-  const isLoading = false;
-  const error = null;
+  const query = trpc.serviceRequest.listPending.useQuery({
+    status: params?.status,
+    search: params?.search,
+    limit: params?.limit || 50,
+    offset: params?.offset || 0,
+  });
 
   return {
-    requests,
-    isLoading,
-    error,
-    // TODO: Add mutations (review, approve, reject)
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 }
 
 /**
- * Hook for reviewing a service request
- * TODO: Implement review workflow
+ * Story 1.13: Get full request details
+ * Staff query for viewing complete request information
  */
-export function useReviewServiceRequest() {
-  const [isReviewing, setIsReviewing] = useState(false);
-
-  const reviewRequest = useCallback(async (
-    requestId: string,
-    status: 'approved' | 'rejected',
-    reason?: string
-  ) => {
-    // TODO: Implement tRPC mutation
-    setIsReviewing(true);
-    try {
-      console.log('Reviewing request:', requestId, status, reason);
-    } finally {
-      setIsReviewing(false);
+export function useRequestDetails(requestId: string | null) {
+  const query = trpc.serviceRequest.getDetails.useQuery(
+    { request_id: requestId! },
+    {
+      enabled: !!requestId,
     }
-  }, []);
+  );
 
   return {
-    reviewRequest,
-    isReviewing,
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 }
 
 /**
- * Hook for converting service request to ticket
- * TODO: Implement conversion logic
+ * Story 1.13: Update request status
+ * Staff mutation to update status (received/processing)
+ */
+export function useUpdateRequestStatus() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.serviceRequest.updateStatus.useMutation({
+    onSuccess: () => {
+      // Invalidate pending requests query
+      utils.serviceRequest.listPending.invalidate();
+      utils.serviceRequest.getPendingCount.invalidate();
+    },
+  });
+
+  return {
+    updateStatus: mutation.mutate,
+    updateStatusAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Story 1.13: Convert service request to service ticket
+ * Staff mutation to create ticket from request
  */
 export function useConvertToTicket() {
-  const [isConverting, setIsConverting] = useState(false);
-
-  const convertToTicket = useCallback(async (requestId: string) => {
-    // TODO: Implement tRPC mutation
-    setIsConverting(true);
-    try {
-      console.log('Converting request to ticket:', requestId);
-      // Returns created ticket ID
-      return 'ticket-id-placeholder';
-    } finally {
-      setIsConverting(false);
-    }
-  }, []);
+  const utils = trpc.useUtils();
+  const mutation = trpc.serviceRequest.convertToTicket.useMutation({
+    onSuccess: () => {
+      // Invalidate pending requests queries
+      utils.serviceRequest.listPending.invalidate();
+      utils.serviceRequest.getPendingCount.invalidate();
+      // Note: Ticket list will be refreshed when user navigates to tickets page
+    },
+  });
 
   return {
-    convertToTicket,
-    isConverting,
+    convertToTicket: mutation.mutate,
+    convertToTicketAsync: mutation.mutateAsync,
+    isConverting: mutation.isPending,
+    data: mutation.data,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Story 1.13: Reject service request
+ * Staff mutation to reject request with reason
+ */
+export function useRejectRequest() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.serviceRequest.reject.useMutation({
+    onSuccess: () => {
+      // Invalidate pending requests query
+      utils.serviceRequest.listPending.invalidate();
+      utils.serviceRequest.getPendingCount.invalidate();
+    },
+  });
+
+  return {
+    rejectRequest: mutation.mutate,
+    rejectRequestAsync: mutation.mutateAsync,
+    isRejecting: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Story 1.13: Get count of pending requests
+ * Staff query for badge counter
+ */
+export function usePendingCount() {
+  const query = trpc.serviceRequest.getPendingCount.useQuery(undefined, {
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchIntervalInBackground: false,
+  });
+
+  return {
+    count: query.data || 0,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 }
 

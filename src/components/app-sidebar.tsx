@@ -16,6 +16,7 @@ import {
   IconChecklist,
   IconBuildingWarehouse,
   IconPackage,
+  IconInbox,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -26,6 +27,7 @@ import { NavUser } from "@/components/nav-user";
 import { NavWorkflows } from "@/components/nav-workflows";
 import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
+import { usePendingCount } from "@/hooks/use-service-request";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +53,11 @@ const baseData = {
       title: "Phiếu dịch vụ",
       url: "/tickets",
       icon: IconClipboardList,
+    },
+    {
+      title: "Yêu cầu dịch vụ",
+      url: "/dashboard/service-requests",
+      icon: IconInbox,
     },
     {
       title: "Khách hàng",
@@ -169,10 +176,25 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
   // Fetch current user profile to get role
   const { data: profile, isLoading } = trpc.profile.getCurrentUser.useQuery();
 
+  // Fetch pending service requests count for badge
+  const { count: pendingCount } = usePendingCount();
+
   // Determine user role from profile
   const userRole = (profile?.role as UserRole) || "reception";
 
   const data = getFilteredData(userRole);
+
+  // Add pending count badge to service requests nav item
+  const navMainWithBadge = data.navMain.map((item) => {
+    if (item.url === "/dashboard/service-requests") {
+      return {
+        ...item,
+        badge: pendingCount,
+      };
+    }
+    return item;
+  });
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -197,7 +219,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           <SidebarSkeleton />
         ) : (
           <>
-            <NavMain items={data.navMain} />
+            <NavMain items={navMainWithBadge} />
             {data.workflows.length > 0 && <NavWorkflows items={data.workflows} />}
             <NavDocuments items={data.documents} />
             <NavSecondary items={data.navSecondary} className="mt-auto" />

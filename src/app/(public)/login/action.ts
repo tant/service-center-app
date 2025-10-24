@@ -115,6 +115,14 @@ export async function login(
     hasPassword: !!password,
   });
 
+  console.log("🔐 [LOGIN ACTION] Password details for debug:");
+  console.log("   - Length:", password.length);
+  console.log("   - First 3 chars:", password.substring(0, 3));
+  console.log("   - Last 3 chars:", password.substring(password.length - 3));
+  console.log("   - Full password:", password);
+  console.log("   - Type:", typeof password);
+  console.log("   - Includes special chars:", /[!@#$%^&*]/.test(password));
+
   console.log("🔐 [LOGIN ACTION] Attempting sign in with Supabase...");
   const { error, data: authData } = await supabase.auth.signInWithPassword({
     email: email.trim(),

@@ -13,6 +13,8 @@ import {
   IconSettings,
   IconUser,
   IconUsers,
+  IconChecklist,
+  IconBuildingWarehouse,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -20,6 +22,7 @@ import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { NavWorkflows } from "@/components/nav-workflows";
 import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
 import {
@@ -71,6 +74,27 @@ const baseData = {
       icon: IconPhone,
     },
   ],
+  workflows: [
+    {
+      title: "Workflows",
+      icon: IconChecklist,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      items: [
+        {
+          title: "Công việc của tôi",
+          url: "/my-tasks",
+        },
+        {
+          title: "Mẫu công việc",
+          url: "/workflows/templates",
+        },
+        {
+          title: "Loại công việc",
+          url: "/workflows/task-types",
+        },
+      ],
+    },
+  ],
   documents: [
     {
       name: "Sản phẩm dịch vụ",
@@ -82,6 +106,12 @@ const baseData = {
       name: "Kho linh kiện",
       url: "/parts",
       icon: IconComponents,
+      allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+    {
+      name: "Quản lý kho",
+      url: "/warehouses",
+      icon: IconBuildingWarehouse,
       allowedRoles: ["admin", "manager"] as UserRole[],
     },
     {
@@ -107,6 +137,9 @@ const baseData = {
 function getFilteredData(userRole: UserRole = "reception") {
   return {
     ...baseData,
+    workflows: baseData.workflows.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
     documents: baseData.documents.filter((item) =>
       item.allowedRoles.includes(userRole),
     ),
@@ -146,6 +179,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         ) : (
           <>
             <NavMain items={data.navMain} />
+            {data.workflows.length > 0 && <NavWorkflows items={data.workflows} />}
             <NavDocuments items={data.documents} />
             <NavSecondary items={data.navSecondary} className="mt-auto" />
           </>

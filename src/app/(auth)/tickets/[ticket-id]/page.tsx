@@ -24,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
+import { TaskListAccordion } from "@/components/shared/task-list-accordion";
 
 interface PageProps {
   params: Promise<{ "ticket-id": string }>;
@@ -166,7 +167,25 @@ async function getTicketData(ticketId: string) {
   );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
-  return ticket;
+  // Fetch tasks for this ticket
+  console.log("[TicketDetailPage] Fetching tasks for ticket:", ticketId);
+  const { data: tasks } = await supabase
+    .from("service_ticket_tasks")
+    .select(`
+      *,
+      task_type:task_types(*),
+      assigned_to:profiles!assigned_to_id(
+        id,
+        full_name,
+        role
+      )
+    `)
+    .eq("ticket_id", ticketId)
+    .order("sequence_order", { ascending: true });
+
+  console.log("[TicketDetailPage] Tasks fetched:", tasks?.length || 0);
+
+  return { ...ticket, tasks: tasks || [] };
 }
 
 function getStatusBadge(status: string) {
@@ -399,6 +418,22 @@ export default async function Page({ params }: PageProps) {
               </p>
               <p className="mt-1">{ticket?.notes || "—"}</p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Workflow Tasks */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconClipboardText className="h-5 w-5" />
+              Workflow Tasks
+            </CardTitle>
+            <CardDescription>
+              Task progress for this service ticket
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TaskListAccordion tasks={ticket.tasks || []} />
           </CardContent>
         </Card>
 

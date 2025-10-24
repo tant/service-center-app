@@ -132,7 +132,11 @@ export function AddTicketForm() {
         productId: data.ticket.product_id,
         timestamp: new Date().toISOString(),
       });
-      toast.success("Phiếu dịch vụ đã được tạo thành công!");
+      const taskCount = data.tasks?.length || 0;
+      const message = taskCount > 0
+        ? `Phiếu dịch vụ đã được tạo thành công với ${taskCount} tasks!`
+        : "Phiếu dịch vụ đã được tạo thành công!";
+      toast.success(message);
       router.push(`/tickets/${data.ticket.id}`);
     },
     onError: (error) => {

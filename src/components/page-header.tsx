@@ -59,8 +59,12 @@ export function PageHeader({ title, children }: PageHeaderProps) {
             <>
               <div className="hidden items-center gap-1.5 text-sm text-muted-foreground md:flex">
                 <IconClock className="size-4" />
-                <span className="font-mono">{formatDate(currentTime)}</span>
-                <span className="font-mono">{formatTime(currentTime)}</span>
+                <span className="font-mono" suppressHydrationWarning>
+                  {formatDate(currentTime)}
+                </span>
+                <span className="font-mono" suppressHydrationWarning>
+                  {formatTime(currentTime)}
+                </span>
               </div>
               <Separator
                 orientation="vertical"

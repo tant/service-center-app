@@ -54,6 +54,16 @@ SCHEMA_FILES=(
     "core_10_service_ticket_attachments.sql"
     "functions_inventory.sql"
     "storage_policies.sql"
+    # Phase 2 schemas (must be after Phase 1)
+    "11_phase2_types.sql"
+    "12_phase2_functions.sql"
+    "13_task_tables.sql"
+    "14_warehouse_tables.sql"
+    "15_service_request_tables.sql"
+    "16_extend_service_tickets.sql"
+    "17_phase2_rls_policies.sql"
+    "18_phase2_views.sql"
+    "19_phase2_storage.sql"
 )
 
 # Copy each file in order

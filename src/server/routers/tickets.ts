@@ -335,9 +335,20 @@ export const ticketsRouter = router({
         supabaseAdmin: ctx.supabaseAdmin,
       });
 
+      // Fetch generated tasks (created by database trigger)
+      const { data: tasks } = await ctx.supabaseAdmin
+        .from("service_ticket_tasks")
+        .select(`
+          *,
+          task_type:task_types(*)
+        `)
+        .eq("ticket_id", ticketData.id)
+        .order("sequence_order", { ascending: true });
+
       return {
         success: true,
         ticket: ticketData,
+        tasks: tasks || [],
       };
     }),
 
@@ -450,6 +461,30 @@ export const ticketsRouter = router({
         parts: ticketParts || [],
         comments: comments || [],
       };
+    }),
+
+  getTasks: publicProcedure
+    .input(z.object({ ticketId: z.string().uuid("Ticket ID must be a valid UUID") }))
+    .query(async ({ input, ctx }) => {
+      const { data: tasks, error } = await ctx.supabaseAdmin
+        .from("service_ticket_tasks")
+        .select(`
+          *,
+          task_type:task_types(*),
+          assigned_to:profiles!assigned_to_id(
+            id,
+            full_name,
+            role
+          )
+        `)
+        .eq("ticket_id", input.ticketId)
+        .order("sequence_order", { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch tasks: ${error.message}`);
+      }
+
+      return tasks || [];
     }),
 
   updateTicketStatus: publicProcedure

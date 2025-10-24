@@ -82,6 +82,7 @@ export const adminRouter = router({
           !!adminPassword,
           adminPassword ? `(${adminPassword.length} chars)` : "(missing)",
         );
+        console.log("   - ADMIN_PASSWORD raw value:", `"${adminPassword}"`);
         console.log(
           "   - ADMIN_NAME:",
           !!adminName,
@@ -207,6 +208,10 @@ export const adminRouter = router({
           );
           console.log("   - User ID:", existingAuthUserRecord.id);
           console.log("   - Email:", adminEmail);
+          console.log("🔐 RESET: Password length:", adminPassword.length);
+          console.log("🔐 RESET: Password (first 3 chars):", adminPassword.substring(0, 3));
+          console.log("🔐 RESET: Password (last 3 chars):", adminPassword.substring(adminPassword.length - 3));
+          console.log("🔐 RESET: Full password for debug:", adminPassword);
 
           const { error: updateError } =
             await supabaseAdmin.auth.admin.updateUserById(
@@ -324,6 +329,11 @@ export const adminRouter = router({
         console.log("👤 AUTH: Creating admin user account...");
         console.log("📧 AUTH: Email:", adminEmail);
         console.log("🔐 AUTH: Password length:", adminPassword.length);
+        console.log("🔐 AUTH: Password (first 3 chars):", adminPassword.substring(0, 3));
+        console.log("🔐 AUTH: Password (last 3 chars):", adminPassword.substring(adminPassword.length - 3));
+        console.log("🔐 AUTH: Full password for debug:", adminPassword);
+        console.log("🔐 AUTH: Password type:", typeof adminPassword);
+        console.log("🔐 AUTH: Password includes special chars:", /[!@#$%^&*]/.test(adminPassword));
 
         const { data: signUpData, error: signUpError } =
           await supabaseAdmin.auth.signUp({

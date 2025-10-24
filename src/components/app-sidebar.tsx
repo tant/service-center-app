@@ -15,6 +15,7 @@ import {
   IconUsers,
   IconChecklist,
   IconBuildingWarehouse,
+  IconPackage,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -113,6 +114,12 @@ const baseData = {
       url: "/warehouses",
       icon: IconBuildingWarehouse,
       allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+    {
+      name: "Kho sản phẩm",
+      url: "/dashboard/inventory/products",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
     },
     {
       name: "Quản lý nhãn hàng",

@@ -88,9 +88,11 @@ export interface PhysicalProductFormData {
   warranty_start_date?: string;
   warranty_months?: number;
   supplier_id?: string;
+  supplier_name?: string;
   purchase_date?: string;
   purchase_price?: number;
   notes?: string;
+  photo_urls?: string[];
 }
 
 export interface StockMovementFormData {
@@ -131,8 +133,10 @@ export interface BulkProductImportRow {
   physical_warehouse_code?: string;
   warranty_start_date?: string;
   warranty_months?: number;
+  supplier_name?: string;
   purchase_date?: string;
   purchase_price?: number;
+  notes?: string;
 }
 
 export interface BulkProductImportResult {

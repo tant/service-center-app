@@ -115,24 +115,87 @@ export function useVirtualWarehouses() {
 }
 
 /**
- * Hook for managing physical products
- * TODO: Implement tRPC queries and mutations
+ * Story 1.7: Physical Product Master Data with Serial Tracking
+ * Hook for listing physical products with filters
  */
 export function usePhysicalProducts(filters?: {
-  warehouse_type?: string;
-  condition?: string;
+  physical_warehouse_id?: string;
+  virtual_warehouse_type?: 'warranty_stock' | 'rma_staging' | 'dead_stock' | 'in_service' | 'parts';
+  condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
+  warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
   search?: string;
+  limit?: number;
+  offset?: number;
 }) {
-  // TODO: Implement with tRPC
-  const products: PhysicalProduct[] = [];
-  const isLoading = false;
-  const error = null;
+  const { data, isLoading, error } = trpc.inventory.listProducts.useQuery(filters ?? {});
 
   return {
-    products,
+    products: data?.products ?? [],
+    total: data?.total ?? 0,
     isLoading,
     error,
-    // TODO: Add mutations (receive, move, dispose)
+  };
+}
+
+/**
+ * Hook for getting a single physical product by ID or serial
+ */
+export function usePhysicalProduct(params: { id?: string; serial_number?: string }) {
+  const { data: product, isLoading, error } = trpc.inventory.getProduct.useQuery(params, {
+    enabled: !!(params.id || params.serial_number),
+  });
+
+  return {
+    product,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook for creating new physical product
+ * Admin/Manager/Technician only
+ */
+export function useCreatePhysicalProduct() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.createProduct.useMutation({
+    onSuccess: () => {
+      utils.inventory.listProducts.invalidate();
+      toast.success('Sản phẩm đã được đăng ký thành công');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi đăng ký sản phẩm');
+    },
+  });
+
+  return {
+    createProduct: mutation.mutate,
+    createProductAsync: mutation.mutateAsync,
+    isCreating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for updating physical product
+ * Admin/Manager/Technician only
+ */
+export function useUpdatePhysicalProduct() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.updateProduct.useMutation({
+    onSuccess: () => {
+      utils.inventory.listProducts.invalidate();
+      utils.inventory.getProduct.invalidate();
+      toast.success('Thông tin sản phẩm đã được cập nhật');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi cập nhật sản phẩm');
+    },
+  });
+
+  return {
+    updateProduct: mutation.mutate,
+    updateProductAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
   };
 }
 
@@ -224,34 +287,30 @@ export function useLowStockAlerts() {
 }
 
 /**
- * Hook for bulk product import
- * TODO: Implement CSV import with validation
+ * Hook for bulk product import from CSV
+ * Admin/Manager only
  */
-export function useBulkImport() {
-  const [isImporting, setIsImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  const importProducts = useCallback(async (file: File) => {
-    // TODO: Implement tRPC mutation with file upload
-    setIsImporting(true);
-    setProgress(0);
-    try {
-      console.log('Importing file:', file.name);
-      // Placeholder progress simulation
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        setProgress(i);
+export function useBulkProductImport() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.bulkImport.useMutation({
+    onSuccess: (result) => {
+      utils.inventory.listProducts.invalidate();
+      if (result.error_count === 0) {
+        toast.success(`Đã nhập thành công ${result.success_count} sản phẩm`);
+      } else {
+        toast.warning(`Đã nhập ${result.success_count} sản phẩm, ${result.error_count} lỗi`);
       }
-    } finally {
-      setIsImporting(false);
-      setProgress(0);
-    }
-  }, []);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi nhập sản phẩm hàng loạt');
+    },
+  });
 
   return {
-    importProducts,
-    isImporting,
-    progress,
+    bulkImport: mutation.mutate,
+    bulkImportAsync: mutation.mutateAsync,
+    isImporting: mutation.isPending,
+    result: mutation.data,
   };
 }
 

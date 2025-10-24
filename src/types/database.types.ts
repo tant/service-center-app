@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       brands: {
@@ -268,9 +293,11 @@ export type Database = {
         Row: {
           condition: Database["public"]["Enums"]["product_condition"]
           created_at: string
+          created_by_id: string | null
           current_ticket_id: string | null
           id: string
           notes: string | null
+          photo_urls: string[] | null
           physical_warehouse_id: string | null
           product_id: string
           purchase_date: string | null
@@ -280,6 +307,7 @@ export type Database = {
           rma_reason: string | null
           serial_number: string
           supplier_id: string | null
+          supplier_name: string | null
           updated_at: string
           virtual_warehouse_type: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date: string | null
@@ -289,9 +317,11 @@ export type Database = {
         Insert: {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
+          created_by_id?: string | null
           current_ticket_id?: string | null
           id?: string
           notes?: string | null
+          photo_urls?: string[] | null
           physical_warehouse_id?: string | null
           product_id: string
           purchase_date?: string | null
@@ -301,6 +331,7 @@ export type Database = {
           rma_reason?: string | null
           serial_number: string
           supplier_id?: string | null
+          supplier_name?: string | null
           updated_at?: string
           virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date?: string | null
@@ -310,9 +341,11 @@ export type Database = {
         Update: {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
+          created_by_id?: string | null
           current_ticket_id?: string | null
           id?: string
           notes?: string | null
+          photo_urls?: string[] | null
           physical_warehouse_id?: string | null
           product_id?: string
           purchase_date?: string | null
@@ -322,6 +355,7 @@ export type Database = {
           rma_reason?: string | null
           serial_number?: string
           supplier_id?: string | null
+          supplier_name?: string | null
           updated_at?: string
           virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date?: string | null
@@ -329,6 +363,13 @@ export type Database = {
           warranty_start_date?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "physical_products_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "physical_products_current_ticket_id_fkey"
             columns: ["current_ticket_id"]
@@ -1561,6 +1602,7 @@ export type Database = {
           created_at: string
           created_by_id: string
           description: string | null
+          enforce_sequence: boolean
           id: string
           is_active: boolean
           name: string
@@ -1573,6 +1615,7 @@ export type Database = {
           created_at?: string
           created_by_id: string
           description?: string | null
+          enforce_sequence?: boolean
           id?: string
           is_active?: boolean
           name: string
@@ -1585,6 +1628,7 @@ export type Database = {
           created_at?: string
           created_by_id?: string
           description?: string | null
+          enforce_sequence?: boolean
           id?: string
           is_active?: boolean
           name?: string
@@ -2301,6 +2345,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       comment_type: ["note", "status_change", "assignment", "system"],

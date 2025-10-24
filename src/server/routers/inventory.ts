@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 
 /**
  * Story 1.7: Physical Product Master Data with Serial Tracking
@@ -418,5 +419,257 @@ export const inventoryRouter = router({
         success: results.success,
         errors: results.errors,
       };
+    }),
+
+  /**
+   * Story 1.8: Serial Number Verification and Stock Movements
+   * AC 1.1: Verify warranty status by serial number
+   */
+  verifySerial: publicProcedure
+    .input(z.object({ serial_number: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { data: product, error } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(
+          `
+          *,
+          product:products(*),
+          physical_warehouse:physical_warehouses(*),
+          current_ticket:service_tickets(id, ticket_number, status)
+        `
+        )
+        .eq("serial_number", input.serial_number.toUpperCase())
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return {
+            found: false,
+            message: "Serial number not found in inventory",
+          };
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      // Calculate warranty status
+      const warrantyStatus = getWarrantyStatus(product.warranty_end_date);
+      const daysRemaining = product.warranty_end_date
+        ? getRemainingDays(product.warranty_end_date)
+        : null;
+
+      // Get virtual warehouse info by type
+      const { data: virtualWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("*")
+        .eq("warehouse_type", product.virtual_warehouse_type)
+        .single();
+
+      return {
+        found: true,
+        product,
+        warranty: {
+          status: warrantyStatus,
+          daysRemaining,
+          startDate: product.warranty_start_date,
+          endDate: product.warranty_end_date,
+        },
+        location: {
+          physical: product.physical_warehouse,
+          virtual: virtualWarehouse,
+        },
+        inService: product.current_ticket
+          ? ["pending", "in_progress"].includes(product.current_ticket.status)
+          : false,
+      };
+    }),
+
+  /**
+   * AC 1.2: Record product movement between warehouses
+   */
+  recordMovement: publicProcedure
+    .input(
+      z.object({
+        product_id: z.string().uuid(),
+        movement_type: z.enum(["receipt", "transfer", "assignment", "return", "disposal"]),
+        from_physical_warehouse_id: z.string().uuid().optional(),
+        to_physical_warehouse_id: z.string().uuid().optional(),
+        from_virtual_warehouse_type: z
+          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .optional(),
+        to_virtual_warehouse_type: z
+          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .optional(),
+        reference_ticket_id: z.string().uuid().optional(),
+        notes: z.string().optional(),
+        force: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if product is in service
+      const { data: product } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(
+          `
+          *,
+          current_ticket:service_tickets(id, ticket_number, status)
+        `
+        )
+        .eq("id", input.product_id)
+        .single();
+
+      if (!product) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Product not found",
+        });
+      }
+
+      // Validation: prevent movement if in service (unless force flag)
+      const inService = product.current_ticket
+        ? ["pending", "in_progress"].includes(product.current_ticket.status)
+        : false;
+
+      if (inService && !input.force) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `Product is currently assigned to ticket ${product.current_ticket.ticket_number}. Cannot move while in service.`,
+        });
+      }
+
+      // Record movement
+      const { error: movementError } = await ctx.supabaseAdmin
+        .from("stock_movements")
+        .insert({
+          physical_product_id: input.product_id,
+          movement_type: input.movement_type,
+          from_physical_warehouse_id: input.from_physical_warehouse_id,
+          to_physical_warehouse_id: input.to_physical_warehouse_id,
+          from_virtual_warehouse: input.from_virtual_warehouse_type,
+          to_virtual_warehouse: input.to_virtual_warehouse_type,
+          ticket_id: input.reference_ticket_id,
+          notes: input.notes,
+        });
+
+      if (movementError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: movementError.message,
+        });
+      }
+
+      // Update product location
+      const updateData: any = {};
+      if (input.to_physical_warehouse_id !== undefined) {
+        updateData.physical_warehouse_id = input.to_physical_warehouse_id;
+      }
+      if (input.to_virtual_warehouse_type) {
+        updateData.virtual_warehouse_type = input.to_virtual_warehouse_type;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .update(updateData)
+          .eq("id", input.product_id);
+
+        if (updateError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: updateError.message,
+          });
+        }
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * AC 1.3: Get movement history for product
+   */
+  getMovementHistory: publicProcedure
+    .input(
+      z.object({
+        product_id: z.string().uuid(),
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { data, error, count } = await ctx.supabaseAdmin
+        .from("stock_movements")
+        .select(
+          `
+          *,
+          from_physical:physical_warehouses!from_physical_warehouse_id(*),
+          to_physical:physical_warehouses!to_physical_warehouse_id(*),
+          ticket:service_tickets(ticket_number),
+          moved_by:profiles(id, full_name)
+        `,
+          { count: "exact" }
+        )
+        .eq("physical_product_id", input.product_id)
+        .order("created_at", { ascending: false })
+        .range(input.offset, input.offset + input.limit - 1);
+
+      if (error)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+
+      return {
+        movements: data || [],
+        total: count || 0,
+      };
+    }),
+
+  /**
+   * AC 1.4: Assign product to ticket (move to In Service)
+   */
+  assignToTicket: publicProcedure
+    .input(
+      z.object({
+        serial_number: z.string(),
+        ticket_id: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Find product
+      const { data: product } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select("*")
+        .eq("serial_number", input.serial_number.toUpperCase())
+        .single();
+
+      if (!product) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Serial number not found",
+        });
+      }
+
+      // Record movement
+      await ctx.supabaseAdmin.from("stock_movements").insert({
+        physical_product_id: product.id,
+        movement_type: "assignment",
+        from_virtual_warehouse: product.virtual_warehouse_type,
+        to_virtual_warehouse: "in_service",
+        ticket_id: input.ticket_id,
+        notes: "Product assigned to service ticket",
+      });
+
+      // Update product
+      await ctx.supabaseAdmin
+        .from("physical_products")
+        .update({
+          virtual_warehouse_type: "in_service",
+          current_ticket_id: input.ticket_id,
+        })
+        .eq("id", product.id);
+
+      return { success: true };
     }),
 });

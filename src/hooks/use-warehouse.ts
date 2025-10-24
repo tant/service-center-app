@@ -217,37 +217,85 @@ export function useStockLevels(warehouseType?: string) {
 }
 
 /**
+ * Story 1.8: Serial Number Verification and Stock Movements
  * Hook for serial number verification
- * TODO: Implement real-time verification
  */
 export function useSerialVerification() {
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verification, setVerification] = useState<SerialVerification | null>(null);
-
-  const verifySerial = useCallback(async (serialNumber: string) => {
-    // TODO: Implement tRPC query
-    setIsVerifying(true);
-    try {
-      console.log('Verifying serial:', serialNumber);
-      // Placeholder
-      setVerification({
-        serial_number: serialNumber,
-        exists: false,
-      });
-    } finally {
-      setIsVerifying(false);
-    }
-  }, []);
-
-  const resetVerification = useCallback(() => {
-    setVerification(null);
-  }, []);
+  const mutation = trpc.inventory.verifySerial.useMutation();
 
   return {
-    verifySerial,
-    resetVerification,
-    verification,
-    isVerifying,
+    verifySerial: mutation.mutate,
+    verifySerialAsync: mutation.mutateAsync,
+    isVerifying: mutation.isPending,
+    data: mutation.data,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for recording product movement
+ * Admin/Manager/Technician only
+ */
+export function useRecordMovement() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.recordMovement.useMutation({
+    onSuccess: () => {
+      utils.inventory.listProducts.invalidate();
+      utils.inventory.getProduct.invalidate();
+      utils.inventory.getMovementHistory.invalidate();
+      toast.success('Đã ghi nhận di chuyển sản phẩm');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi ghi nhận di chuyển');
+    },
+  });
+
+  return {
+    recordMovement: mutation.mutate,
+    recordMovementAsync: mutation.mutateAsync,
+    isRecording: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for getting product movement history
+ */
+export function useMovementHistory(params: { product_id: string; limit?: number; offset?: number }) {
+  const { data, isLoading, error } = trpc.inventory.getMovementHistory.useQuery(params, {
+    enabled: !!params.product_id,
+  });
+
+  return {
+    movements: data?.movements ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook for assigning product to ticket
+ * Admin/Manager/Technician/Reception
+ */
+export function useAssignToTicket() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.assignToTicket.useMutation({
+    onSuccess: () => {
+      utils.inventory.listProducts.invalidate();
+      utils.inventory.getProduct.invalidate();
+      utils.inventory.getMovementHistory.invalidate();
+      toast.success('Đã gán sản phẩm vào phiếu');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi gán sản phẩm');
+    },
+  });
+
+  return {
+    assignToTicket: mutation.mutate,
+    assignToTicketAsync: mutation.mutateAsync,
+    isAssigning: mutation.isPending,
   };
 }
 

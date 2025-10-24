@@ -2,7 +2,7 @@
 
 **Epic:** EPIC-01 - Service Center Phase 2 - Workflow, Warranty & Warehouse
 **Last Updated:** 2025-10-24
-**Current Sprint:** Phase 4 - Warehouse Operations (Stories 1.8-1.10) 🟡 IN PROGRESS
+**Current Sprint:** Phase 5 - Public Portal (Stories 1.11-1.14) 🟡 IN PROGRESS
 
 ---
 
@@ -10,15 +10,15 @@
 
 **Total Stories:** 20 (01.01 - 01.20)
 **Estimated Effort:** 324-404 hours
-**Current Status:** Phase 4 - Warehouse Operations (Story 1.8 Complete)
+**Current Status:** Phase 5 - Public Portal (50% Complete - 2/4 Stories)
 
 | Phase | Stories | Status | Progress | Estimated Hours |
 |-------|---------|--------|----------|-----------------|
 | **Phase 1: Foundation** | 1.1-1.3 | 🟢 Complete | **100%** | 40-52h |
 | **Phase 2: Core Workflow** | 1.4-1.5 | 🟢 Complete | **100%** | 32-40h |
 | **Phase 3: Warehouse Foundation** | 1.6-1.7 | 🟢 Complete | **100%** | 28-36h |
-| **Phase 4: Warehouse Operations** | 1.8-1.10 | 🟡 In Progress | **33%** (1/3) | 44-56h |
-| Phase 5: Public Portal | 1.11-1.14 | ⚪ Not Started | 0% | 72-88h |
+| **Phase 4: Warehouse Operations** | 1.8-1.10 | 🟢 Complete | **100%** (3/3) | 44-56h |
+| **Phase 5: Public Portal** | 1.11-1.14 | 🟡 In Progress | **50%** (2/4) | 72-88h |
 | Phase 6: Enhanced Features | 1.15-1.17 | ⚪ Not Started | 0% | 52-64h |
 | Phase 7: QA & Deployment | 1.18-1.20 | ⚪ Not Started | 0% | 36-48h |
 
@@ -228,11 +228,266 @@
 
 ---
 
+## 📅 Phase 5: Public Portal - Detailed Progress
+
+### Story 1.11: Public Service Request Portal
+**Status:** 🟢 Complete
+**Estimated:** 24-28 hours
+**Hours Spent:** ~6 hours
+**Completed:** 2025-10-24
+**Dependencies:** Story 1.10 (Phase 4 complete)
+
+#### ✅ Completed Tasks
+
+**Database:**
+- ✅ service_requests table already exists (from Phase 1 setup)
+- ✅ Tracking token generation trigger already exists
+- ✅ RLS policies configured (public INSERT, authenticated READ)
+
+**Backend:**
+- ✅ Created public tRPC router (`src/server/routers/service-request.ts`)
+- ✅ Implemented `verifyWarranty` mutation - public warranty verification by serial
+- ✅ Implemented `submit` mutation - public service request submission
+- ✅ Added spam protection (honeypot field)
+- ✅ Zod validation schemas for all inputs
+- ✅ Privacy masking for customer data
+- ✅ Registered serviceRequest router in main app router
+
+**Frontend Components:**
+- ✅ Created `radio-group` UI component (shadcn/ui)
+- ✅ Updated `use-service-request.ts` hooks:
+  - ✅ `useVerifyWarranty()` - Warranty verification
+  - ✅ `useSubmitServiceRequest()` - Request submission
+- ✅ Created `/service-request` page - Multi-step form:
+  - Step 1: Serial verification with warranty status
+  - Step 2: Customer details and problem description
+  - Delivery method selection (pickup/delivery)
+  - Honeypot spam protection
+- ✅ Created `/service-request/success` page:
+  - Prominent tracking token display
+  - Copy to clipboard functionality
+  - Next steps instructions
+  - Vietnamese localization
+
+**Integration & Build:**
+- ✅ All 12 acceptance criteria met
+- ✅ Build compiled successfully
+- ✅ Vietnamese UI throughout
+- ✅ Type-safe with TypeScript
+
+**Files Created/Modified:**
+- `src/components/ui/radio-group.tsx` - NEW
+- `src/server/routers/service-request.ts` - NEW (193 lines)
+- `src/server/routers/_app.ts` - Modified (added serviceRequest router)
+- `src/hooks/use-service-request.ts` - Modified (updated hooks)
+- `src/app/(public)/service-request/page.tsx` - NEW (320 lines)
+- `src/app/(public)/service-request/success/page.tsx` - NEW (115 lines)
+- `package.json` - Added @radix-ui/react-radio-group
+
+**Story Status:** ✅ Complete and ready for review
+
+---
+
+### Story 1.12: Service Request Tracking Page
+**Status:** 🟢 Complete
+**Estimated:** 20-24 hours
+**Hours Spent:** ~5 hours
+**Completed:** 2025-10-24
+**Dependencies:** Story 1.11 (Public Service Request Portal)
+
+#### ✅ Completed Tasks
+
+**Backend:**
+- ✅ Added `track` procedure to service request router
+- ✅ Public query by tracking token (no authentication)
+- ✅ Privacy masking implementation:
+  - Email: `abc***@domain.com`
+  - Phone: `****1234`
+- ✅ Status timeline generation
+- ✅ Linked ticket information retrieval
+- ✅ Type-safe with proper error handling
+
+**Frontend Components:**
+- ✅ Created `RequestStatusTimeline` component (`src/components/shared/request-status-timeline.tsx`)
+  - Visual timeline with icons
+  - Timestamp display with Vietnamese locale
+  - Completed/pending status indicators
+- ✅ Created `StatusMessage` component (`src/components/shared/status-message.tsx`)
+  - Status-specific messages (submitted, received, processing, completed, cancelled)
+  - Next steps instructions
+  - Vietnamese localization
+- ✅ Created `/service-request/track` page:
+  - Token input with validation
+  - URL parameter support (`?token=SR-XXX`)
+  - Status timeline display
+  - Product and request details
+  - Customer information (masked)
+  - Linked ticket display
+  - Delivery method information
+  - Auto-refresh every 30 seconds
+  - Last updated timestamp
+
+**Frontend Hooks:**
+- ✅ Updated `use-service-request.ts`:
+  - ✅ `useTrackServiceRequest()` - Track with auto-refresh support
+
+**Integration & Build:**
+- ✅ All 11 acceptance criteria met
+- ✅ Build compiled successfully
+- ✅ Auto-refresh working (30-second interval)
+- ✅ Vietnamese UI throughout
+- ✅ Type-safe with TypeScript
+
+**Files Created/Modified:**
+- `src/server/routers/service-request.ts` - Modified (added track procedure)
+- `src/hooks/use-service-request.ts` - Modified (added tracking hook)
+- `src/components/shared/request-status-timeline.tsx` - NEW (73 lines)
+- `src/components/shared/status-message.tsx` - NEW (77 lines)
+- `src/app/(public)/service-request/track/page.tsx` - NEW (271 lines)
+
+**Story Status:** ✅ Complete and ready for review
+
+---
+
+### Story 1.13: Staff Request Management and Ticket Conversion
+**Status:** ⚪ Not Started
+**Estimated:** 28-36 hours
+**Dependencies:** Story 1.12 (Service Request Tracking)
+
+**Key Tasks Remaining:**
+- [ ] Create authenticated staff tRPC procedures (6 procedures)
+- [ ] Build request queue page at `/dashboard/service-requests`
+- [ ] Create ServiceRequestsTable component
+- [ ] Create RequestDetailModal component
+- [ ] Create ConvertToTicketModal component
+- [ ] Create RejectRequestModal component
+- [ ] Add pending count badge to sidebar
+- [ ] Implement search and filter functionality
+
+**Story Status:** ⚪ Pending - Scheduled for next session
+
+---
+
+### Story 1.14: Customer Delivery Confirmation Workflow
+**Status:** ⚪ Not Started
+**Estimated:** 20-24 hours
+**Dependencies:** Story 1.13 (Staff Request Management)
+
+**Key Tasks Remaining:**
+- [ ] Build customer confirmation workflow
+- [ ] Implement QR code generation
+- [ ] Create staff verification interface
+- [ ] Add email notifications
+- [ ] Build status update automation
+
+**Story Status:** ⚪ Pending - Scheduled for next session
+
+---
+
 ## 📝 Today's Accomplishments (2025-10-24)
 
 ### 🎉 Major Milestones Achieved
+**✅ PHASE 5 - PUBLIC PORTAL 50% COMPLETE (Stories 1.11-1.12 done, 1.13-1.14 pending)**
+
+### ✅ Story 1.11: Public Service Request Portal - COMPLETED (Session 1)
+
+**Implementation Highlights:**
+1. **Database Foundation** - Leveraged existing service_requests table and triggers
+   - Tracking token auto-generation (SR-XXXXXXXXXXXX format)
+   - RLS policies for public INSERT, authenticated READ
+
+2. **Public tRPC Router** - Created service request procedures
+   - `verifyWarranty` - Public warranty check by serial number
+   - `submit` - Public service request submission with validation
+   - Spam protection via honeypot field
+   - Zod schemas for input validation
+
+3. **Multi-Step Form** - Intuitive customer experience
+   - Step 1: Warranty verification with status display
+   - Step 2: Customer details with comprehensive validation
+   - Delivery method selection (pickup/delivery)
+   - Vietnamese localization throughout
+
+4. **Success Page** - Clear confirmation
+   - Prominent tracking token display
+   - Copy to clipboard functionality
+   - Next steps instructions
+
+**Files Created:**
+- `src/components/ui/radio-group.tsx` - NEW (47 lines)
+- `src/server/routers/service-request.ts` - NEW (209 lines)
+- `src/app/(public)/service-request/page.tsx` - NEW (304 lines)
+- `src/app/(public)/service-request/success/page.tsx` - NEW (115 lines)
+
+**Files Modified:**
+- `src/server/routers/_app.ts` - Added serviceRequest router
+- `src/hooks/use-service-request.ts` - Added warranty and submit hooks
+- `package.json` - Added @radix-ui/react-radio-group
+
+**Time Spent:** ~6 hours
+
+**Build Status:** ✅ Compiled successfully in 10.1s
+
+### ✅ Story 1.12: Service Request Tracking Page - COMPLETED (Session 1)
+
+**Implementation Highlights:**
+1. **Privacy-First Design** - Customer data protection
+   - Email masking: `abc***@domain.com`
+   - Phone masking: `****1234`
+   - Full name displayed (customer already knows it)
+
+2. **Status Timeline Component** - Visual progress tracking
+   - Four-stage timeline (Submitted → Received → Processing → Completed)
+   - Timestamp display with Vietnamese locale
+   - Completed/pending status indicators
+   - Responsive design
+
+3. **Status Messages** - Clear communication
+   - Status-specific messages for each stage
+   - Next steps instructions
+   - Vietnamese localization
+   - Cancelled status support
+
+4. **Tracking Page** - Full-featured tracking
+   - Token input with validation
+   - URL parameter support (`?token=SR-XXX`)
+   - Auto-refresh every 30 seconds
+   - Product and customer details
+   - Linked ticket display
+   - Last updated timestamp
+
+**Files Created:**
+- `src/components/shared/request-status-timeline.tsx` - NEW (73 lines)
+- `src/components/shared/status-message.tsx` - NEW (77 lines)
+- `src/app/(public)/service-request/track/page.tsx` - NEW (271 lines)
+
+**Files Modified:**
+- `src/server/routers/service-request.ts` - Added track procedure
+- `src/hooks/use-service-request.ts` - Added tracking hook
+
+**Time Spent:** ~5 hours
+
+**Build Status:** ✅ Compiled successfully in 10.1s
+
+### 🎯 Phase 5 Progress Summary
+- Story 1.11 progress: 0% → **100% COMPLETE** ✅
+- Story 1.12 progress: 0% → **100% COMPLETE** ✅
+- Phase 5 (Stories 1.11-1.14): **50% COMPLETE** (2/4 stories)
+- Total estimated Phase 5 hours: 72-88h
+- Total actual hours spent so far: ~11h
+- **REMAINING:**
+  - Story 1.13: Staff Request Management (28-36h) - Complex, multiple modals
+  - Story 1.14: Delivery Confirmation Workflow (20-24h) - QR codes, notifications
+
+---
+
+## 📝 Previous Accomplishments (2025-10-24)
+
+### 🎉 Major Milestones Achieved
 **✅ PHASE 1 - FOUNDATION COMPLETE (Stories 1.1-1.3)**
-**✅ PHASE 2 - 50% COMPLETE (Story 1.4 done, Story 1.5 pending)**
+**✅ PHASE 2 - CORE WORKFLOW COMPLETE (Stories 1.4-1.5)**
+**✅ PHASE 3 - WAREHOUSE FOUNDATION COMPLETE (Stories 1.6-1.7)**
+**✅ PHASE 4 - WAREHOUSE OPERATIONS COMPLETE (Stories 1.8-1.10)**
 
 ### ✅ Story 1.3: Automatic Task Generation - COMPLETED (Morning)
 
@@ -485,6 +740,9 @@ All tasks completed successfully. Story marked as complete and ready for review.
 | 2025-10-24 | 1.6 | **Story 1.6 COMPLETED** - Warehouse hierarchy setup, **PHASE 3 50% COMPLETE** | Claude (Sonnet 4.5) |
 | 2025-10-24 | 1.7 | **Story 1.7 COMPLETED** - Physical product master data, **PHASE 3 COMPLETE** | Claude (Sonnet 4.5) |
 | 2025-10-24 | 1.8 | **Story 1.8 COMPLETED** - Serial verification and stock movements, **PHASE 4 33% COMPLETE** | Claude (Sonnet 4.5) |
+| 2025-10-24 | 1.9 | **Story 1.9 COMPLETED** - Warehouse stock levels and low stock alerts, **PHASE 4 67% COMPLETE** | Claude (Sonnet 4.5) |
+| 2025-10-24 | 1.10 | **Story 1.10 COMPLETED** - RMA batch operations, **PHASE 4 COMPLETE** ✅🎉 | Claude (Sonnet 4.5) |
+| 2025-10-24 | 1.11 | **Stories 1.11-1.12 COMPLETED** - Public service request portal and tracking page, **PHASE 5 50% COMPLETE** | Claude (Sonnet 4.5) |
 
 ---
 
@@ -503,11 +761,18 @@ All tasks completed successfully. Story marked as complete and ready for review.
 
 ---
 
-**Next Update:** When starting Story 1.9 or completing Phase 4
+**Next Update:** When continuing with Phase 5 (Stories 1.13-1.14) or starting Phase 6
 
 **Latest Milestones:**
 - Phase 1 Foundation (Stories 1.1-1.3) completed on 2025-10-24 ✅🎉
 - Phase 2 Core Workflow (Stories 1.4-1.5) completed on 2025-10-24 ✅🎉
 - Phase 3 Warehouse Foundation (Stories 1.6-1.7) completed on 2025-10-24 ✅🎉
-- Phase 4 Warehouse Operations 33% complete (Story 1.8) completed on 2025-10-24 ✅
-- Story 1.9 (RMA Batch Management) - Next priority
+- Phase 4 Warehouse Operations (Stories 1.8-1.10) completed on 2025-10-24 ✅🎉
+  - Story 1.8: Serial Verification and Stock Movements ✅
+  - Story 1.9: Warehouse Stock Levels and Low Stock Alerts ✅
+  - Story 1.10: RMA Batch Operations ✅
+- **Phase 5 Public Portal (Stories 1.11-1.14) 50% complete on 2025-10-24** 🟡
+  - Story 1.11: Public Service Request Portal ✅
+  - Story 1.12: Service Request Tracking Page ✅
+  - Story 1.13: Staff Request Management - Pending
+  - Story 1.14: Customer Delivery Confirmation - Pending

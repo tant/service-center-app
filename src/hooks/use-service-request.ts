@@ -1,10 +1,10 @@
 // Service Request Hooks
 // Custom hooks for public service request portal
-// TODO: Implement in Story 1.4 (Service Request Portal)
 
 'use client';
 
 import { useState, useCallback } from 'react';
+import { trpc } from '@/components/providers/trpc-provider';
 import type {
   ServiceRequest,
   ServiceRequestSummary,
@@ -13,69 +13,65 @@ import type {
 } from '@/types/service-request';
 
 /**
- * Hook for submitting a public service request
- * TODO: Implement public submission with photo upload
+ * Story 1.11: Hook for verifying warranty status by serial number (public)
+ * AC 2, 8: Verify warranty and show status before submission
  */
-export function useSubmitServiceRequest() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [trackingToken, setTrackingToken] = useState<string | null>(null);
-
-  const submitRequest = useCallback(async (data: ServiceRequestFormData) => {
-    // TODO: Implement tRPC mutation
-    setIsSubmitting(true);
-    try {
-      console.log('Submitting service request:', data);
-      // Placeholder
-      setTrackingToken('SR-ABC123XYZ789');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, []);
-
-  const resetSubmission = useCallback(() => {
-    setTrackingToken(null);
-  }, []);
+export function useVerifyWarranty() {
+  const mutation = trpc.serviceRequest.verifyWarranty.useMutation();
 
   return {
-    submitRequest,
-    resetSubmission,
-    trackingToken,
-    isSubmitting,
+    verifyWarranty: mutation.mutate,
+    verifyWarrantyAsync: mutation.mutateAsync,
+    isVerifying: mutation.isPending,
+    data: mutation.data,
+    error: mutation.error,
+    reset: mutation.reset,
   };
 }
 
 /**
- * Hook for tracking token lookup (public)
- * TODO: Implement public tracking lookup without authentication
+ * Story 1.11: Hook for submitting a public service request
+ * AC 2, 3: Submit service request with customer details
  */
-export function useTrackingLookup() {
-  const [isLooking, setIsLooking] = useState(false);
-  const [lookup, setLookup] = useState<TrackingTokenLookup | null>(null);
-
-  const lookupToken = useCallback(async (trackingToken: string) => {
-    // TODO: Implement tRPC query
-    setIsLooking(true);
-    try {
-      console.log('Looking up tracking token:', trackingToken);
-      // Placeholder
-      setLookup({
-        tracking_token: trackingToken,
-        found: false,
-      });
-    } finally {
-      setIsLooking(false);
-    }
-  }, []);
-
-  const resetLookup = useCallback(() => {
-    setLookup(null);
-  }, []);
+export function useSubmitServiceRequest() {
+  const mutation = trpc.serviceRequest.submit.useMutation();
 
   return {
-    lookupToken,
-    resetLookup,
-    lookup,
-    isLooking,
+    submitRequest: mutation.mutate,
+    submitRequestAsync: mutation.mutateAsync,
+    isSubmitting: mutation.isPending,
+    data: mutation.data,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Story 1.12: Hook for tracking token lookup (public)
+ * AC 1, 9: Track service request with auto-refresh
+ */
+export function useTrackServiceRequest(
+  params: { tracking_token: string },
+  options?: {
+    enabled?: boolean;
+    refetchInterval?: number;
+    refetchIntervalInBackground?: boolean;
+  }
+) {
+  const query = trpc.serviceRequest.track.useQuery(
+    { tracking_token: params.tracking_token },
+    {
+      enabled: options?.enabled,
+      refetchInterval: options?.refetchInterval,
+      refetchIntervalInBackground: options?.refetchIntervalInBackground,
+    }
+  );
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   };
 }
 

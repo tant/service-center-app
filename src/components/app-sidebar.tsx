@@ -122,6 +122,18 @@ const baseData = {
       allowedRoles: ["admin", "manager", "technician"] as UserRole[],
     },
     {
+      name: "Mức tồn kho",
+      url: "/dashboard/inventory/stock-levels",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+    {
+      name: "Quản lý RMA",
+      url: "/dashboard/inventory/rma",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+    {
       name: "Quản lý nhãn hàng",
       url: "/brands",
       icon: IconComponents,

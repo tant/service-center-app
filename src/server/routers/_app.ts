@@ -10,6 +10,7 @@ import { brandsRouter } from "./brands";
 import { workflowRouter } from "./workflow";
 import { warehouseRouter } from "./warehouse";
 import { inventoryRouter } from "./inventory";
+import { serviceRequestRouter } from "./service-request";
 
 export const appRouter = router({
   admin: adminRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   workflow: workflowRouter,
   warehouse: warehouseRouter,
   inventory: inventoryRouter,
+  serviceRequest: serviceRequestRouter,
 });
 
 export type AppRouter = typeof appRouter;

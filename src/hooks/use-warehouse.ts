@@ -200,19 +200,46 @@ export function useUpdatePhysicalProduct() {
 }
 
 /**
+ * Story 1.9: Warehouse Stock Levels and Low Stock Alerts
  * Hook for warehouse stock levels
- * TODO: Implement stock analytics
  */
-export function useStockLevels(warehouseType?: string) {
-  // TODO: Implement with tRPC view query
-  const stockLevels: WarehouseStockLevel[] = [];
-  const isLoading = false;
-  const error = null;
+export function useStockLevels(filters?: {
+  warehouse_type?: 'warranty_stock' | 'rma_staging' | 'dead_stock' | 'in_service' | 'parts';
+  status?: 'ok' | 'warning' | 'critical';
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const { data, isLoading, error } = trpc.inventory.getStockLevels.useQuery(filters ?? {});
 
   return {
-    stockLevels,
+    stockLevels: data?.stockLevels ?? [],
+    total: data?.total ?? 0,
     isLoading,
     error,
+  };
+}
+
+/**
+ * Hook for setting stock thresholds
+ */
+export function useSetThreshold() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.setThreshold.useMutation({
+    onSuccess: () => {
+      utils.inventory.getStockLevels.invalidate();
+      utils.inventory.getLowStockAlerts.invalidate();
+      toast.success('Đã cập nhật ngưỡng tồn kho');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi cập nhật ngưỡng tồn kho');
+    },
+  });
+
+  return {
+    setThreshold: mutation.mutate,
+    setThresholdAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
   };
 }
 
@@ -318,19 +345,47 @@ export function useStockMovements(productId?: string) {
 }
 
 /**
- * Hook for low stock alerts
- * TODO: Implement alert monitoring
+ * Story 1.9: Hook for low stock alerts
  */
 export function useLowStockAlerts() {
-  // TODO: Implement with tRPC view query
-  const alerts: any[] = [];
-  const isLoading = false;
-  const error = null;
+  const { data, isLoading, error } = trpc.inventory.getLowStockAlerts.useQuery();
 
   return {
-    alerts,
+    alerts: data?.alerts ?? [],
+    criticalCount: data?.criticalCount ?? 0,
+    warningCount: data?.warningCount ?? 0,
     isLoading,
     error,
+  };
+}
+
+/**
+ * Hook for exporting stock report
+ */
+export function useExportStockReport() {
+  const mutation = trpc.inventory.exportStockReport.useMutation({
+    onSuccess: (result) => {
+      // Trigger download
+      const blob = new Blob([result.csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('Đã xuất báo cáo tồn kho');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi xuất báo cáo');
+    },
+  });
+
+  return {
+    exportReport: mutation.mutate,
+    exportReportAsync: mutation.mutateAsync,
+    isExporting: mutation.isPending,
   };
 }
 
@@ -376,5 +431,122 @@ export function useWarehouseAnalytics(period: string = '30d') {
     analytics,
     isLoading,
     error,
+  };
+}
+
+/**
+ * Story 1.10: RMA Batch Operations
+ * Hooks for managing RMA batches
+ */
+
+/**
+ * Hook for listing RMA batches with pagination
+ */
+export function useRMABatches(filters?: {
+  status?: 'draft' | 'submitted' | 'shipped' | 'completed';
+  limit?: number;
+  offset?: number;
+}) {
+  const { data, isLoading, error } = trpc.inventory.getRMABatches.useQuery(filters ?? {});
+
+  return {
+    batches: data?.batches ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook for getting RMA batch details
+ */
+export function useRMABatchDetails(batchId: string) {
+  const { data, isLoading, error } = trpc.inventory.getRMABatchDetails.useQuery(
+    { batch_id: batchId },
+    { enabled: !!batchId }
+  );
+
+  return {
+    batch: data?.batch,
+    products: data?.products ?? [],
+    isLoading,
+    error,
+  };
+}
+
+/**
+ * Hook for creating new RMA batch
+ * Admin/Manager only
+ */
+export function useCreateRMABatch() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.createRMABatch.useMutation({
+    onSuccess: () => {
+      utils.inventory.getRMABatches.invalidate();
+      toast.success('Đã tạo lô RMA mới');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi tạo lô RMA');
+    },
+  });
+
+  return {
+    createBatch: mutation.mutate,
+    createBatchAsync: mutation.mutateAsync,
+    isCreating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for adding products to RMA batch
+ * Admin/Manager only
+ */
+export function useAddProductsToRMA() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.addProductsToRMA.useMutation({
+    onSuccess: (result) => {
+      utils.inventory.getRMABatches.invalidate();
+      utils.inventory.getRMABatchDetails.invalidate();
+      utils.inventory.listProducts.invalidate();
+
+      if (result.errors && result.errors.length > 0) {
+        toast.warning(`Đã thêm ${result.added} sản phẩm, ${result.errors.length} lỗi`);
+      } else {
+        toast.success(`Đã thêm ${result.added} sản phẩm vào lô RMA`);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi thêm sản phẩm vào lô RMA');
+    },
+  });
+
+  return {
+    addProducts: mutation.mutate,
+    addProductsAsync: mutation.mutateAsync,
+    isAdding: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for finalizing RMA batch
+ * Admin/Manager only
+ */
+export function useFinalizeRMABatch() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.finalizeRMABatch.useMutation({
+    onSuccess: () => {
+      utils.inventory.getRMABatches.invalidate();
+      utils.inventory.getRMABatchDetails.invalidate();
+      toast.success('Đã hoàn tất lô RMA');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi hoàn tất lô RMA');
+    },
+  });
+
+  return {
+    finalizeBatch: mutation.mutate,
+    finalizeBatchAsync: mutation.mutateAsync,
+    isFinalizing: mutation.isPending,
   };
 }

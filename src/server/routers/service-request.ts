@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
+import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
 
 /**
  * Helper function to get authenticated user with role
@@ -41,6 +42,123 @@ async function getAuthenticatedUserWithRole(ctx: TRPCContext) {
   }
 
   return { user, profile };
+}
+
+/**
+ * Helper function to send email notifications (Story 1.15)
+ * Non-blocking - logs errors but doesn't throw
+ */
+async function sendEmailNotification(
+  ctx: TRPCContext,
+  emailType: EmailType,
+  recipientEmail: string,
+  recipientName: string,
+  context: {
+    trackingToken?: string;
+    ticketNumber?: string;
+    productName?: string;
+    serialNumber?: string;
+    rejectionReason?: string;
+    completedDate?: string;
+    deliveryDate?: string;
+  },
+  serviceRequestId?: string,
+  serviceTicketId?: string
+) {
+  try {
+    // Check rate limiting (100 emails/day per customer)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await ctx.supabaseAdmin
+      .from('email_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_email', recipientEmail)
+      .gte('created_at', oneDayAgo);
+
+    if (count && count >= 100) {
+      console.log(`[EMAIL SKIPPED] Rate limit exceeded for ${recipientEmail}`);
+      return { success: false, reason: 'rate_limit' };
+    }
+
+    // Check email preferences
+    const { data: customer } = await ctx.supabaseAdmin
+      .from('customers')
+      .select('email_preferences')
+      .eq('email', recipientEmail)
+      .single();
+
+    if (customer?.email_preferences) {
+      const preferences = customer.email_preferences as Record<string, boolean>;
+      if (preferences[emailType] === false) {
+        console.log(`[EMAIL SKIPPED] User unsubscribed from ${emailType}`);
+        return { success: true, skipped: true };
+      }
+    }
+
+    // Generate unsubscribe URL
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
+
+    // Generate email content
+    const { html, text, subject } = getEmailTemplate(emailType, {
+      customerName: recipientName,
+      ...context,
+      unsubscribeUrl,
+    });
+
+    // Log email to database
+    const { data: emailLog, error: logError } = await ctx.supabaseAdmin
+      .from('email_notifications')
+      .insert({
+        email_type: emailType,
+        recipient_email: recipientEmail,
+        recipient_name: recipientName,
+        subject,
+        html_body: html,
+        text_body: text,
+        context,
+        status: 'pending',
+        service_request_id: serviceRequestId,
+        service_ticket_id: serviceTicketId,
+      })
+      .select()
+      .single();
+
+    if (logError) {
+      console.error('[EMAIL ERROR] Failed to log email:', logError);
+      return { success: false, error: logError.message };
+    }
+
+    // Mock email sending (TODO: integrate with actual email service)
+    try {
+      // Simulate sending
+      await ctx.supabaseAdmin
+        .from('email_notifications')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', emailLog.id);
+
+      console.log(`[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`);
+      return { success: true, emailId: emailLog.id };
+    } catch (error) {
+      // Mark as failed
+      await ctx.supabaseAdmin
+        .from('email_notifications')
+        .update({
+          status: 'failed',
+          failed_at: new Date().toISOString(),
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          retry_count: 1,
+        })
+        .eq('id', emailLog.id);
+
+      console.error(`[EMAIL FAILED] ${emailType}:`, error);
+      return { success: false, willRetry: true };
+    }
+  } catch (error) {
+    console.error('[EMAIL ERROR] Unexpected error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 /**
@@ -239,6 +357,23 @@ export const serviceRequestRouter = router({
       }
 
       // AC 9: Return tracking token
+
+      // Story 1.15: Send email notification (async, non-blocking)
+      sendEmailNotification(
+        ctx,
+        'request_submitted',
+        input.customer_email,
+        input.customer_name,
+        {
+          trackingToken: request.tracking_token,
+          productName: submitProductData?.name,
+          serialNumber: input.serial_number,
+        },
+        request.id
+      ).catch((err) => {
+        console.error('[EMAIL ERROR] request_submitted failed:', err);
+      });
+
       return {
         success: true,
         tracking_token: request.tracking_token,
@@ -506,6 +641,24 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Story 1.15: Send email notification when status changes to 'received'
+      if (input.status === 'received') {
+        sendEmailNotification(
+          ctx,
+          'request_received',
+          data.customer_email,
+          data.customer_name,
+          {
+            trackingToken: data.tracking_token,
+            productName: data.product_model,
+            serialNumber: data.serial_number,
+          },
+          data.id
+        ).catch((err) => {
+          console.error('[EMAIL ERROR] request_received failed:', err);
+        });
+      }
+
       return data;
     }),
 
@@ -643,6 +796,24 @@ export const serviceRequestRouter = router({
         })
         .eq("id", input.request_id);
 
+      // Story 1.15: Send ticket_created email notification
+      sendEmailNotification(
+        ctx,
+        'ticket_created',
+        request.customer_email,
+        request.customer_name,
+        {
+          trackingToken: request.tracking_token,
+          ticketNumber: ticket.ticket_number,
+          productName: request.product_model,
+          serialNumber: request.serial_number,
+        },
+        request.id,
+        ticket.id
+      ).catch((err) => {
+        console.error('[EMAIL ERROR] ticket_created failed:', err);
+      });
+
       return {
         success: true,
         ticket,
@@ -690,7 +861,22 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Email notification will be handled by Story 1.15
+      // Story 1.15: Send rejection email notification
+      sendEmailNotification(
+        ctx,
+        'request_rejected',
+        data.customer_email,
+        data.customer_name,
+        {
+          trackingToken: data.tracking_token,
+          productName: data.product_model,
+          serialNumber: data.serial_number,
+          rejectionReason: input.rejection_reason,
+        },
+        data.id
+      ).catch((err) => {
+        console.error('[EMAIL ERROR] request_rejected failed:', err);
+      });
 
       return data;
     }),

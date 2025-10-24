@@ -7,6 +7,125 @@ import {
   STATUS_FLOW,
   VALID_STATUS_TRANSITIONS,
 } from "@/lib/constants/ticket-status";
+import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
+import type { TRPCContext } from "../trpc";
+
+/**
+ * Helper function to send email notifications (Story 1.15)
+ * Non-blocking - logs errors but doesn't throw
+ */
+async function sendEmailNotification(
+  ctx: TRPCContext,
+  emailType: EmailType,
+  recipientEmail: string,
+  recipientName: string,
+  context: {
+    trackingToken?: string;
+    ticketNumber?: string;
+    productName?: string;
+    serialNumber?: string;
+    rejectionReason?: string;
+    completedDate?: string;
+    deliveryDate?: string;
+  },
+  serviceRequestId?: string,
+  serviceTicketId?: string
+) {
+  try {
+    // Check rate limiting (100 emails/day per customer)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await ctx.supabaseAdmin
+      .from('email_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_email', recipientEmail)
+      .gte('created_at', oneDayAgo);
+
+    if (count && count >= 100) {
+      console.log(`[EMAIL SKIPPED] Rate limit exceeded for ${recipientEmail}`);
+      return { success: false, reason: 'rate_limit' };
+    }
+
+    // Check email preferences
+    const { data: customer } = await ctx.supabaseAdmin
+      .from('customers')
+      .select('email_preferences')
+      .eq('email', recipientEmail)
+      .single();
+
+    if (customer?.email_preferences) {
+      const preferences = customer.email_preferences as Record<string, boolean>;
+      if (preferences[emailType] === false) {
+        console.log(`[EMAIL SKIPPED] User unsubscribed from ${emailType}`);
+        return { success: true, skipped: true };
+      }
+    }
+
+    // Generate unsubscribe URL
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
+
+    // Generate email content
+    const { html, text, subject } = getEmailTemplate(emailType, {
+      customerName: recipientName,
+      ...context,
+      unsubscribeUrl,
+    });
+
+    // Log email to database
+    const { data: emailLog, error: logError } = await ctx.supabaseAdmin
+      .from('email_notifications')
+      .insert({
+        email_type: emailType,
+        recipient_email: recipientEmail,
+        recipient_name: recipientName,
+        subject,
+        html_body: html,
+        text_body: text,
+        context,
+        status: 'pending',
+        service_request_id: serviceRequestId,
+        service_ticket_id: serviceTicketId,
+      })
+      .select()
+      .single();
+
+    if (logError) {
+      console.error('[EMAIL ERROR] Failed to log email:', logError);
+      return { success: false, error: logError.message };
+    }
+
+    // Mock email sending (TODO: integrate with actual email service)
+    try {
+      // Simulate sending
+      await ctx.supabaseAdmin
+        .from('email_notifications')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', emailLog.id);
+
+      console.log(`[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`);
+      return { success: true, emailId: emailLog.id };
+    } catch (error) {
+      // Mark as failed
+      await ctx.supabaseAdmin
+        .from('email_notifications')
+        .update({
+          status: 'failed',
+          failed_at: new Date().toISOString(),
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          retry_count: 1,
+        })
+        .eq('id', emailLog.id);
+
+      console.error(`[EMAIL FAILED] ${emailType}:`, error);
+      return { success: false, willRetry: true };
+    }
+  } catch (error) {
+    console.error('[EMAIL ERROR] Unexpected error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
 
 function validateStatusTransition(
   currentStatus: string,
@@ -545,6 +664,44 @@ export const ticketsRouter = router({
 
       // Note: Status change comments are now automatically created by database trigger
       // No need to create manual comment here
+
+      // Story 1.15: Send email notification when service is completed
+      if (input.status === 'completed') {
+        // Fetch customer and product info for email
+        const { data: fullTicket } = await ctx.supabaseAdmin
+          .from('service_tickets')
+          .select(`
+            ticket_number,
+            serial_number,
+            completed_at,
+            customer:customers(email, name),
+            product:products(name)
+          `)
+          .eq('id', input.id)
+          .single();
+
+        if (fullTicket && fullTicket.customer && fullTicket.product) {
+          const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
+          const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
+
+          sendEmailNotification(
+            ctx,
+            'service_completed',
+            customer.email,
+            customer.name,
+            {
+              ticketNumber: fullTicket.ticket_number,
+              productName: product.name,
+              serialNumber: fullTicket.serial_number,
+              completedDate: fullTicket.completed_at || new Date().toISOString(),
+            },
+            undefined,
+            input.id
+          ).catch((err) => {
+            console.error('[EMAIL ERROR] service_completed failed:', err);
+          });
+        }
+      }
 
       return {
         success: true,
@@ -1374,6 +1531,216 @@ ${changes.join("\n")}
         success: true,
       };
     }),
+
+  // ========================================
+  // DELIVERY TRACKING (Story 1.14)
+  // ========================================
+
+  /**
+   * Story 1.14: Confirm delivery with signature and notes
+   * AC 1, 2, 3: Staff marks ticket as delivered, captures signature and notes
+   */
+  confirmDelivery: publicProcedure
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        signature_url: z.string().url("Signature URL must be valid"),
+        notes: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Get authenticated user
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error(
+          "Unauthorized: You must be logged in to confirm delivery",
+        );
+      }
+
+      // Get user profile
+      const { data: profile, error: profileError } = await ctx.supabaseClient
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      // Verify ticket exists and is completed
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("id, ticket_number, status")
+        .eq("id", input.ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Ticket not found");
+      }
+
+      if (ticket.status !== "completed") {
+        throw new Error(
+          "Only completed tickets can be marked as delivered. Current status: " +
+            ticket.status,
+        );
+      }
+
+      // Update ticket with delivery confirmation
+      const { data: updatedTicket, error: updateError } =
+        await ctx.supabaseAdmin
+          .from("service_tickets")
+          .update({
+            delivery_confirmed_at: new Date().toISOString(),
+            delivery_confirmed_by_id: profile.id,
+            delivery_signature_url: input.signature_url,
+            delivery_notes: input.notes || null,
+          })
+          .eq("id", input.ticket_id)
+          .select()
+          .single();
+
+      if (updateError) {
+        throw new Error(
+          `Failed to confirm delivery: ${updateError.message}`,
+        );
+      }
+
+      // Add comment about delivery confirmation
+      await ctx.supabaseAdmin.from("service_ticket_comments").insert({
+        ticket_id: input.ticket_id,
+        comment:
+          "Đã xác nhận giao hàng cho khách hàng" +
+          (input.notes ? `\nGhi chú: ${input.notes}` : ""),
+        comment_type: "note",
+        is_internal: false,
+        created_by: user.id,
+      });
+
+      // Story 1.15: Send delivery confirmation email
+      const { data: fullTicket } = await ctx.supabaseAdmin
+        .from('service_tickets')
+        .select(`
+          ticket_number,
+          serial_number,
+          delivery_confirmed_at,
+          customer:customers(email, name),
+          product:products(name)
+        `)
+        .eq('id', input.ticket_id)
+        .single();
+
+      if (fullTicket && fullTicket.customer && fullTicket.product) {
+        const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
+        const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
+
+        sendEmailNotification(
+          ctx,
+          'delivery_confirmed',
+          customer.email,
+          customer.name,
+          {
+            ticketNumber: fullTicket.ticket_number,
+            productName: product.name,
+            serialNumber: fullTicket.serial_number,
+            deliveryDate: fullTicket.delivery_confirmed_at || new Date().toISOString(),
+          },
+          undefined,
+          input.ticket_id
+        ).catch((err) => {
+          console.error('[EMAIL ERROR] delivery_confirmed failed:', err);
+        });
+      }
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+      };
+    }),
+
+  /**
+   * Story 1.14: Get list of completed tickets pending delivery confirmation
+   * AC 4, 5: List view of tickets awaiting delivery confirmation
+   */
+  getPendingDeliveries: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      // Get authenticated user
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error(
+          "Unauthorized: You must be logged in to view pending deliveries",
+        );
+      }
+
+      // Query completed tickets without delivery confirmation
+      const { data: tickets, error: ticketsError, count } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(
+          `
+          *,
+          customer:customers(id, name, phone, email),
+          product:products(id, name, sku),
+          assigned:profiles!service_tickets_assigned_to_fkey(id, full_name)
+        `,
+          { count: "exact" },
+        )
+        .eq("status", "completed")
+        .is("delivery_confirmed_at", null)
+        .order("completed_at", { ascending: false })
+        .range(input.offset, input.offset + input.limit - 1);
+
+      if (ticketsError) {
+        throw new Error(
+          `Failed to fetch pending deliveries: ${ticketsError.message}`,
+        );
+      }
+
+      return {
+        tickets: tickets || [],
+        total: count || 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    }),
+
+  /**
+   * Story 1.14: Get count of pending deliveries for badge
+   */
+  getPendingDeliveriesCount: publicProcedure.query(async ({ ctx }) => {
+    // Get authenticated user
+    const {
+      data: { user },
+      error: authError,
+    } = await ctx.supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return 0;
+    }
+
+    const { count, error } = await ctx.supabaseAdmin
+      .from("service_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "completed")
+      .is("delivery_confirmed_at", null);
+
+    if (error) {
+      console.error("Failed to get pending deliveries count:", error);
+      return 0;
+    }
+
+    return count || 0;
+  }),
 });
 
 export type TicketsRouter = typeof ticketsRouter;

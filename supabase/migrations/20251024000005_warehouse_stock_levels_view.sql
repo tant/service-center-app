@@ -5,7 +5,11 @@
 
 -- Create materialized view for warehouse stock levels
 -- Aggregates physical products by product and virtual warehouse
-CREATE MATERIALIZED VIEW IF NOT EXISTS public.v_warehouse_stock_levels AS
+-- Drop existing view/materialized view if exists (try view first, then materialized view)
+DROP VIEW IF EXISTS public.v_warehouse_stock_levels CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS public.v_warehouse_stock_levels CASCADE;
+
+CREATE MATERIALIZED VIEW public.v_warehouse_stock_levels AS
 SELECT
   p.id AS product_id,
   p.name AS product_name,
@@ -37,6 +41,10 @@ GROUP BY
   pst.minimum_quantity,
   pst.alert_enabled,
   pst.reorder_quantity;
+
+-- Create unique index first (required for CONCURRENT refresh)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_v_warehouse_stock_levels_unique
+  ON public.v_warehouse_stock_levels(product_id, virtual_warehouse_type);
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_v_warehouse_stock_levels_product

@@ -17,6 +17,7 @@ import {
   IconBuildingWarehouse,
   IconPackage,
   IconInbox,
+  IconTruckDelivery,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -28,6 +29,7 @@ import { NavWorkflows } from "@/components/nav-workflows";
 import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
 import { usePendingCount } from "@/hooks/use-service-request";
+import { usePendingDeliveriesCount } from "@/hooks/use-delivery";
 import {
   Sidebar,
   SidebarContent,
@@ -58,6 +60,11 @@ const baseData = {
       title: "Yêu cầu dịch vụ",
       url: "/dashboard/service-requests",
       icon: IconInbox,
+    },
+    {
+      title: "Chờ giao hàng",
+      url: "/dashboard/deliveries",
+      icon: IconTruckDelivery,
     },
     {
       title: "Khách hàng",
@@ -179,17 +186,26 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
   // Fetch pending service requests count for badge
   const { count: pendingCount } = usePendingCount();
 
+  // Fetch pending deliveries count for badge
+  const { count: deliveriesCount } = usePendingDeliveriesCount();
+
   // Determine user role from profile
   const userRole = (profile?.role as UserRole) || "reception";
 
   const data = getFilteredData(userRole);
 
-  // Add pending count badge to service requests nav item
+  // Add badge counters to nav items
   const navMainWithBadge = data.navMain.map((item) => {
     if (item.url === "/dashboard/service-requests") {
       return {
         ...item,
         badge: pendingCount,
+      };
+    }
+    if (item.url === "/dashboard/deliveries") {
+      return {
+        ...item,
+        badge: deliveriesCount,
       };
     }
     return item;

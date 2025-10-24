@@ -11,6 +11,7 @@ import { workflowRouter } from "./workflow";
 import { warehouseRouter } from "./warehouse";
 import { inventoryRouter } from "./inventory";
 import { serviceRequestRouter } from "./service-request";
+import { notificationsRouter } from "./notifications";
 
 export const appRouter = router({
   admin: adminRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   warehouse: warehouseRouter,
   inventory: inventoryRouter,
   serviceRequest: serviceRequestRouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

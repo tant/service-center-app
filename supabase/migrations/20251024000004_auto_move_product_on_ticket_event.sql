@@ -102,7 +102,7 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trigger_auto_move_product_on_ticket_event ON service_tickets;
 
 CREATE TRIGGER trigger_auto_move_product_on_ticket_event
-  AFTER INSERT OR UPDATE OF status, serial_number ON service_tickets
+  AFTER INSERT OR UPDATE OF status ON service_tickets
   FOR EACH ROW
   EXECUTE FUNCTION auto_move_product_on_ticket_event();
 

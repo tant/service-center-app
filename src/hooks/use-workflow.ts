@@ -348,3 +348,33 @@ export function useTaskDependencies(taskId: string | undefined) {
     error,
   };
 }
+
+/**
+ * Hook for switching task template during service
+ * Story 1.17: Dynamic Template Switching
+ * Allows technician to change template mid-service while preserving completed tasks
+ */
+export function useSwitchTemplate() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.workflow.switchTemplate.useMutation({
+    onSuccess: (data) => {
+      // Invalidate all ticket and workflow queries to refresh data
+      utils.tickets.invalidate();
+      utils.workflow.invalidate();
+
+      // Show success toast with summary
+      toast.success(
+        `Đã chuyển template thành công! ${data.summary.tasks_preserved} công việc giữ lại, ${data.summary.tasks_added} công việc mới được thêm.`
+      );
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Không thể chuyển template');
+    },
+  });
+
+  return {
+    switchTemplate: mutation.mutate,
+    isSwitching: mutation.isPending,
+    error: mutation.error,
+  };
+}

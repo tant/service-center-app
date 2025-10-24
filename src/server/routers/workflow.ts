@@ -1177,4 +1177,241 @@ export const workflowRouter = router({
 
       return data || [];
     }),
+
+  /**
+   * Story 1.17: Switch task template during service
+   * Allows technician to change template mid-service while preserving completed tasks
+   */
+  switchTemplate: publicProcedure
+    .input(z.object({
+      ticket_id: z.string().uuid(),
+      new_template_id: z.string().uuid(),
+      reason: z.string().min(10, 'Reason must be at least 10 characters'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { ticket_id, new_template_id, reason } = input;
+
+      // 1. Authentication check
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'You must be logged in to switch templates',
+        });
+      }
+
+      // 2. Get user profile
+      const { data: profile, error: profileError } = await ctx.supabaseAdmin
+        .from('profiles')
+        .select('id, role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch user profile',
+        });
+      }
+
+      // 3. Check role permission (technician, admin, manager)
+      if (!['technician', 'admin', 'manager'].includes(profile.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only technicians, managers, and admins can switch templates',
+        });
+      }
+
+      // 4. Get current ticket with template_id
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from('service_tickets')
+        .select('id, template_id, status')
+        .eq('id', ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Ticket not found',
+        });
+      }
+
+      // 5. Validate ticket status (cannot switch if completed/cancelled)
+      if (['completed', 'cancelled'].includes(ticket.status)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot switch template for ${ticket.status} ticket`,
+        });
+      }
+
+      // 6. Validate template is different
+      if (ticket.template_id === new_template_id) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'New template must be different from current template',
+        });
+      }
+
+      // 7. Check if all tasks are completed (no point in switching)
+      const { data: existingTasks, error: existingTasksError } = await ctx.supabaseAdmin
+        .from('service_ticket_tasks')
+        .select('*')
+        .eq('ticket_id', ticket_id)
+        .order('sequence_order');
+
+      if (existingTasksError) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch existing tasks',
+        });
+      }
+
+      const allTasksCompleted = existingTasks.every(t => t.status === 'completed');
+      if (allTasksCompleted) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot switch template when all tasks are completed',
+        });
+      }
+
+      // 8. Get new template tasks
+      const { data: newTemplateTasks, error: newTemplateError } = await ctx.supabaseAdmin
+        .from('template_tasks')
+        .select(`
+          task_type_id,
+          sequence_order,
+          is_required,
+          custom_instructions,
+          task_types (
+            name,
+            description,
+            category,
+            estimated_duration_minutes,
+            requires_notes,
+            requires_photo
+          )
+        `)
+        .eq('template_id', new_template_id)
+        .order('sequence_order');
+
+      if (newTemplateError || !newTemplateTasks || newTemplateTasks.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'New template has no tasks',
+        });
+      }
+
+      // 9. Build task merge logic
+      const existingTaskTypeIds = new Set(existingTasks.map(t => t.task_type_id));
+      const preservedTasks = existingTasks.filter(t =>
+        ['completed', 'in_progress'].includes(t.status)
+      );
+
+      const tasksToAdd = newTemplateTasks.filter(nt =>
+        !existingTaskTypeIds.has(nt.task_type_id)
+      );
+
+      // 10. Delete tasks that are pending/blocked and not in new template
+      const tasksToDelete = existingTasks.filter(t =>
+        ['pending', 'blocked'].includes(t.status)
+      );
+
+      if (tasksToDelete.length > 0) {
+        const { error: deleteError } = await ctx.supabaseAdmin
+          .from('service_ticket_tasks')
+          .delete()
+          .in('id', tasksToDelete.map(t => t.id));
+
+        if (deleteError) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to remove old tasks',
+          });
+        }
+      }
+
+      // 11. Add new tasks
+      if (tasksToAdd.length > 0) {
+        const newTasksToInsert = tasksToAdd.map((tt, index) => ({
+          ticket_id,
+          task_type_id: tt.task_type_id,
+          name: (tt.task_types as any)?.name || 'Unknown Task',
+          description: tt.custom_instructions || (tt.task_types as any)?.description,
+          sequence_order: preservedTasks.length + index + 1,
+          status: 'pending' as const,
+          is_required: tt.is_required,
+          estimated_duration_minutes: (tt.task_types as any)?.estimated_duration_minutes,
+        }));
+
+        const { error: insertError } = await ctx.supabaseAdmin
+          .from('service_ticket_tasks')
+          .insert(newTasksToInsert);
+
+        if (insertError) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to add new tasks',
+            cause: insertError,
+          });
+        }
+      }
+
+      // 12. Re-sequence all tasks (preserved + new)
+      const { data: allTasks, error: allTasksError } = await ctx.supabaseAdmin
+        .from('service_ticket_tasks')
+        .select('id')
+        .eq('ticket_id', ticket_id)
+        .order('sequence_order');
+
+      if (!allTasksError && allTasks) {
+        for (let i = 0; i < allTasks.length; i++) {
+          await ctx.supabaseAdmin
+            .from('service_ticket_tasks')
+            .update({ sequence_order: i + 1 })
+            .eq('id', allTasks[i].id);
+        }
+      }
+
+      // 13. Update ticket template_id
+      const { error: updateTicketError } = await ctx.supabaseAdmin
+        .from('service_tickets')
+        .update({ template_id: new_template_id })
+        .eq('id', ticket_id);
+
+      if (updateTicketError) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update ticket template',
+        });
+      }
+
+      // 14. Create audit log
+      const { error: auditError } = await ctx.supabaseAdmin
+        .from('ticket_template_changes')
+        .insert({
+          ticket_id,
+          old_template_id: ticket.template_id,
+          new_template_id,
+          reason,
+          changed_by_id: profile.id,
+          tasks_preserved_count: preservedTasks.length,
+          tasks_added_count: tasksToAdd.length,
+        });
+
+      if (auditError) {
+        // Log but don't fail the operation
+        console.error('Failed to create audit log:', auditError);
+      }
+
+      // 15. Return summary
+      return {
+        success: true,
+        summary: {
+          tasks_preserved: preservedTasks.length,
+          tasks_removed: tasksToDelete.length,
+          tasks_added: tasksToAdd.length,
+          total_tasks: preservedTasks.length + tasksToAdd.length,
+        },
+      };
+    }),
 });

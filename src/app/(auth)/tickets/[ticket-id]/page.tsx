@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
 import { TaskListAccordion } from "@/components/shared/task-list-accordion";
+import { TicketActions } from "@/components/ticket-actions";
 
 interface PageProps {
   params: Promise<{ "ticket-id": string }>;
@@ -72,6 +73,10 @@ async function getTicketData(ticketId: string) {
           id,
           name
         )
+      ),
+      task_templates (
+        id,
+        name
       ),
       service_ticket_parts (
         id,
@@ -280,12 +285,16 @@ export default async function Page({ params }: PageProps) {
   return (
     <>
       <PageHeader title={`Phiếu Dịch Vụ ${ticket.ticket_number}`}>
-        <Link href={`/tickets/${ticketId}/edit`}>
-          <Button variant="outline" size="sm">
-            <IconEdit className="h-4 w-4" />
-            Chỉnh sửa
-          </Button>
-        </Link>
+        <TicketActions
+          ticketId={ticketId}
+          ticketStatus={ticket.status}
+          currentTemplateId={ticket.template_id || undefined}
+          currentTemplateName={
+            Array.isArray(ticket.task_templates)
+              ? ticket.task_templates[0]?.name
+              : ticket.task_templates?.name
+          }
+        />
       </PageHeader>
 
       <div className="flex flex-1 flex-col gap-6 p-4 lg:p-6">

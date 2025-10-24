@@ -10,7 +10,7 @@
 
 **Total Stories:** 20 (01.01 - 01.20)
 **Estimated Effort:** 324-404 hours
-**Current Status:** Phase 6 - Enhanced Features (33% Complete - 1/3 Stories Complete)
+**Current Status:** Phase 6 - Enhanced Features (67% Complete - 2/3 Stories Complete)
 
 | Phase | Stories | Status | Progress | Estimated Hours |
 |-------|---------|--------|----------|-----------------|
@@ -19,7 +19,7 @@
 | **Phase 3: Warehouse Foundation** | 1.6-1.7 | 🟢 Complete | **100%** | 28-36h |
 | **Phase 4: Warehouse Operations** | 1.8-1.10 | 🟢 Complete | **100%** (3/3) | 44-56h |
 | **Phase 5: Public Portal** | 1.11-1.14 | 🟢 Complete | **100%** (4/4) | 72-88h |
-| **Phase 6: Enhanced Features** | 1.15-1.17 | 🟡 In Progress | **33%** (1/3 Complete) | 52-64h |
+| **Phase 6: Enhanced Features** | 1.15-1.17 | 🟡 In Progress | **67%** (2/3 Complete) | 52-64h |
 | Phase 7: QA & Deployment | 1.18-1.20 | ⚪ Not Started | 0% | 36-48h |
 
 **Legend:**
@@ -799,6 +799,7 @@ All tasks completed successfully. Story marked as complete and ready for review.
 | 2025-10-24 | 1.11 | **Stories 1.11-1.12 COMPLETED** - Public service request portal and tracking page, **PHASE 5 50% COMPLETE** | Claude (Sonnet 4.5) |
 | 2025-10-24 | 1.13-1.14 | **Stories 1.13-1.14 COMPLETED** - Staff request management and customer delivery confirmation, **PHASE 5 COMPLETE** ✅🎉 | Claude (Sonnet 4.5) |
 | 2025-10-24 | 1.15 | **Story 1.15 COMPLETE** ✅ - Email notification system with admin log page and unsubscribe functionality, **PHASE 6 33% COMPLETE** | Claude (Sonnet 4.5) |
+| 2025-10-24 | 1.16 | **Story 1.16 COMPLETE** ✅ - Manager task progress dashboard with metrics and workload views, **PHASE 6 67% COMPLETE** | Claude (Sonnet 4.5) |
 
 ---
 
@@ -938,6 +939,79 @@ All tasks completed successfully. Story marked as complete and ready for review.
 
 ---
 
+### Story 1.16: Manager Task Progress Dashboard
+**Status:** 🟢 Complete
+**Estimated:** 16-20 hours
+**Hours Spent:** ~8 hours
+**Completed:** 2025-10-24
+**Dependencies:** Story 1.5 (Task Dependencies)
+
+#### ✅ Completed Tasks (100%)
+
+**Database Views & Functions:**
+- ✅ Created `v_task_progress_summary` view - Aggregates task metrics across all active tickets
+- ✅ Created `v_technician_workload` view - Task distribution and completion rates per technician
+- ✅ Created `v_tickets_with_blocked_tasks` view - Tickets with blocked tasks requiring attention
+- ✅ Created `get_task_completion_timeline()` function - Timeline data for charts (configurable 1-90 days)
+- ✅ Added performance indexes for dashboard queries
+- ✅ Applied migration: `supabase/migrations/20251024120000_task_progress_dashboard.sql`
+
+**tRPC Dashboard Procedures:**
+- ✅ `workflow.getTaskProgressSummary` - Overall metrics query
+- ✅ `workflow.getTicketsWithBlockedTasks` - Blocked tasks list
+- ✅ `workflow.getTechnicianWorkload` - Workload metrics with optional technician filtering
+- ✅ `workflow.getTaskCompletionTimeline` - Timeline data (1-90 days configurable)
+
+**React Hooks:**
+- ✅ Created `src/hooks/use-task-progress.ts` (48 lines)
+- ✅ `useTaskProgressSummary()` - Overall metrics with 30s auto-refresh
+- ✅ `useTicketsWithBlockedTasks()` - Blocked tasks with 30s auto-refresh
+- ✅ `useTechnicianWorkload()` - Workload metrics with optional filtering
+- ✅ `useTaskCompletionTimeline()` - Timeline data with configurable days
+
+**Dashboard UI:**
+- ✅ Created `/dashboard/task-progress` page (6.63 kB)
+- ✅ 4 Metrics Cards:
+  - Active Tickets with icon
+  - Tasks In Progress (with pending count)
+  - Blocked Tasks (with alert styling when > 0)
+  - Average Completion Time (with completed count)
+- ✅ Blocked Tasks Alert Section:
+  - Green "All Clear" message when no blockers
+  - Red alert with ticket list when blockers exist
+  - Direct links to blocked tickets
+- ✅ Technician Workload Table:
+  - All technicians with task counts
+  - Badges for In Progress, Pending, Completed, Blocked
+  - Completion rate percentage
+  - Sorted by activity level
+
+**Build Verification:**
+- ✅ Build completed successfully (pnpm build)
+- ✅ All TypeScript types validated
+- ✅ Route compiled: /dashboard/task-progress (6.63 kB)
+
+#### 📝 Implementation Notes
+
+**File Changes:**
+- `supabase/migrations/20251024120000_task_progress_dashboard.sql` - NEW (170 lines)
+- `src/server/routers/workflow.ts` - MODIFIED (+105 lines, 4 new procedures)
+- `src/hooks/use-task-progress.ts` - NEW (48 lines)
+- `src/app/(auth)/dashboard/task-progress/page.tsx` - NEW (265 lines)
+
+**Current Implementation Status:**
+- ✅ Database views complete (3/3)
+- ✅ Database function complete (timeline)
+- ✅ tRPC procedures complete (4/4)
+- ✅ React hooks complete (4/4)
+- ✅ Dashboard UI complete (metrics cards, alerts, workload table)
+- ✅ Build verified successfully
+- ✅ Auto-refresh enabled (30s for metrics, 60s for timeline)
+
+**Blockers:** None
+
+---
+
 ## 📌 Notes
 
 - **Development Server:** Running on http://localhost:3025
@@ -968,5 +1042,6 @@ All tasks completed successfully. Story marked as complete and ready for review.
   - Story 1.12: Service Request Tracking Page ✅
   - Story 1.13: Staff Request Management ✅
   - Story 1.14: Customer Delivery Confirmation ✅
-- **Phase 6 Enhanced Features (Stories 1.15-1.17) 33% complete on 2025-10-24** 🟡
+- **Phase 6 Enhanced Features (Stories 1.15-1.17) 67% complete on 2025-10-24** 🟡
   - Story 1.15: Email Notification System ✅ (Complete - Full-stack implementation with admin UI and unsubscribe page)
+  - Story 1.16: Manager Task Progress Dashboard ✅ (Complete - Real-time metrics, workload tracking, and blocked task alerts)

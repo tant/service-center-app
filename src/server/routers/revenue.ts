@@ -1,5 +1,6 @@
 import { router, publicProcedure } from "@/server/trpc";
 import { z } from "zod";
+import { requireManagerOrAbove } from "../middleware/requireRole";
 
 // Define schema for revenue calculation
 const revenueTicketSchema = z.object({
@@ -10,7 +11,9 @@ export const revenueRouter = router({
   /**
    * Get monthly revenue data including current month's total and comparison with previous month
    */
-  getMonthlyRevenue: publicProcedure.query(async ({ ctx }) => {
+  getMonthlyRevenue: publicProcedure
+    .use(requireManagerOrAbove)
+    .query(async ({ ctx }) => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();

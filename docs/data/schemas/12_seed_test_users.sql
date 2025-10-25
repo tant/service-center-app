@@ -1,0 +1,281 @@
+-- =====================================================
+-- 12_seed_test_users.sql
+-- =====================================================
+-- OPTIONAL: Seed data for test users across all 4 roles.
+--
+-- ⚠️ WARNING: FOR DEVELOPMENT/TESTING ONLY ⚠️
+-- DO NOT RUN THIS IN PRODUCTION!
+--
+-- This script creates test users for each role:
+-- - admin@tantran.dev (created via /setup endpoint - see below)
+-- - manager@example.com
+-- - technician@example.com
+-- - reception@example.com
+--
+-- IMPORTANT NOTES:
+-- 1. Admin user MUST be created via /setup endpoint (not here)
+-- 2. Supabase Auth signup requires admin privileges
+-- 3. For local development, manually create these users via Supabase Studio
+-- 4. Passwords should be changed on first login in production
+--
+-- Alternative: Use Supabase CLI for seeding:
+-- pnpx supabase db seed
+-- =====================================================
+
+-- =====================================================
+-- ADMIN USER CREATION
+-- =====================================================
+--
+-- ❌ DO NOT CREATE ADMIN HERE
+-- ✅ Use the /setup endpoint instead:
+--
+-- POST /api/setup
+-- {
+--   "password": "tantran"  // from SETUP_PASSWORD env var
+-- }
+--
+-- This will create:
+-- - Email: admin@tantran.dev (from ADMIN_EMAIL)
+-- - Password: tantran (from ADMIN_PASSWORD)
+-- - Name: System Administrator (from ADMIN_NAME)
+-- - Role: admin (automatically set)
+--
+-- =====================================================
+
+-- =====================================================
+-- TEST USER DATA FOR PROFILES
+-- =====================================================
+--
+-- Since we cannot create auth.users directly via SQL (requires admin API),
+-- this section documents the test users that should be created.
+--
+-- MANUAL STEPS (via Supabase Studio):
+-- 1. Go to Authentication → Users
+-- 2. Create users with these credentials
+-- 3. Run the profile inserts below using the generated user IDs
+--
+-- OR use the Supabase Admin API (see script at end of file)
+--
+-- =====================================================
+
+-- Test user credentials for documentation
+-- Copy these to your password manager or .env.test file
+
+-- MANAGER
+-- Email: manager@example.com
+-- Password: manager123
+-- Role: manager
+
+-- TECHNICIAN
+-- Email: technician@example.com
+-- Password: tech123
+-- Role: technician
+
+-- RECEPTION
+-- Email: reception@example.com
+-- Password: reception123
+-- Role: reception
+
+-- =====================================================
+-- PROFILE INSERTS (Run AFTER creating auth users)
+-- =====================================================
+
+-- NOTE: Replace the UUIDs with actual auth.users IDs after user creation
+-- You can get the IDs from Supabase Studio or by querying:
+-- SELECT id, email FROM auth.users WHERE email IN ('manager@example.com', 'technician@example.com', 'reception@example.com');
+
+-- Example profile inserts (adjust UUIDs accordingly):
+
+-- INSERT INTO public.profiles (user_id, full_name, email, role, is_active)
+-- VALUES
+--   -- Manager
+--   (
+--     '00000000-0000-0000-0000-000000000002'::uuid,  -- Replace with actual UUID
+--     'John Manager',
+--     'manager@example.com',
+--     'manager',
+--     true
+--   ),
+--   -- Technician
+--   (
+--     '00000000-0000-0000-0000-000000000003'::uuid,  -- Replace with actual UUID
+--     'Jane Tech',
+--     'technician@example.com',
+--     'technician',
+--     true
+--   ),
+--   -- Reception
+--   (
+--     '00000000-0000-0000-0000-000000000004'::uuid,  -- Replace with actual UUID
+--     'Mike Reception',
+--     'reception@example.com',
+--     'reception',
+--     true
+--   )
+-- ON CONFLICT (user_id) DO NOTHING;
+
+-- =====================================================
+-- AUTOMATED SCRIPT FOR LOCAL DEVELOPMENT
+-- =====================================================
+--
+-- For local Supabase setup, you can use this Node.js script
+-- to create users via the Admin API:
+--
+-- File: scripts/seed-test-users.ts
+--
+-- ```typescript
+-- import { createClient } from '@supabase/supabase-js';
+--
+-- const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+-- const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+--
+-- const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+--   auth: {
+--     autoRefreshToken: false,
+--     persistSession: false
+--   }
+-- });
+--
+-- const testUsers = [
+--   {
+--     email: 'manager@example.com',
+--     password: 'manager123',
+--     full_name: 'John Manager',
+--     role: 'manager'
+--   },
+--   {
+--     email: 'technician@example.com',
+--     password: 'tech123',
+--     full_name: 'Jane Tech',
+--     role: 'technician'
+--   },
+--   {
+--     email: 'reception@example.com',
+--     password: 'reception123',
+--     full_name: 'Mike Reception',
+--     role: 'reception'
+--   }
+-- ];
+--
+-- async function seedTestUsers() {
+--   console.log('🌱 Seeding test users...');
+--
+--   for (const user of testUsers) {
+--     // Create auth user
+--     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+--       email: user.email,
+--       password: user.password,
+--       email_confirm: true
+--     });
+--
+--     if (authError) {
+--       console.error(`❌ Failed to create ${user.email}:`, authError.message);
+--       continue;
+--     }
+--
+--     console.log(`✅ Created auth user: ${user.email}`);
+--
+--     // Create profile
+--     const { error: profileError } = await supabase
+--       .from('profiles')
+--       .insert({
+--         user_id: authData.user.id,
+--         full_name: user.full_name,
+--         email: user.email,
+--         role: user.role,
+--         is_active: true
+--       });
+--
+--     if (profileError) {
+--       console.error(`❌ Failed to create profile for ${user.email}:`, profileError.message);
+--     } else {
+--       console.log(`✅ Created profile: ${user.full_name} (${user.role})`);
+--     }
+--   }
+--
+--   console.log('🎉 Test user seeding complete!');
+-- }
+--
+-- seedTestUsers().catch(console.error);
+-- ```
+--
+-- Run with:
+-- ```bash
+-- pnpm tsx scripts/seed-test-users.ts
+-- ```
+--
+-- =====================================================
+
+-- =====================================================
+-- VERIFICATION QUERIES
+-- =====================================================
+
+-- Check all test users were created correctly:
+-- SELECT
+--   u.id,
+--   u.email,
+--   p.full_name,
+--   p.role,
+--   p.is_active
+-- FROM auth.users u
+-- LEFT JOIN public.profiles p ON p.user_id = u.id
+-- WHERE u.email IN (
+--   'admin@tantran.dev',
+--   'manager@example.com',
+--   'technician@example.com',
+--   'reception@example.com'
+-- )
+-- ORDER BY
+--   CASE p.role
+--     WHEN 'admin' THEN 1
+--     WHEN 'manager' THEN 2
+--     WHEN 'technician' THEN 3
+--     WHEN 'reception' THEN 4
+--   END;
+
+-- Verify role distribution:
+-- SELECT
+--   role,
+--   COUNT(*) as user_count
+-- FROM public.profiles
+-- GROUP BY role
+-- ORDER BY
+--   CASE role
+--     WHEN 'admin' THEN 1
+--     WHEN 'manager' THEN 2
+--     WHEN 'technician' THEN 3
+--     WHEN 'reception' THEN 4
+--   END;
+
+-- =====================================================
+-- CLEANUP (if needed)
+-- =====================================================
+
+-- ⚠️ USE WITH CAUTION ⚠️
+-- Delete all test users (except admin):
+--
+-- DELETE FROM auth.users
+-- WHERE email IN (
+--   'manager@example.com',
+--   'technician@example.com',
+--   'reception@example.com'
+-- );
+--
+-- Profiles will be cascade deleted automatically.
+
+-- =====================================================
+-- PLAYWRIGHT TEST USERS
+-- =====================================================
+--
+-- The Playwright test suite (tests/auth.setup.ts) expects these users:
+--
+-- | Role       | Email                   | Password    | Storage File                  |
+-- |------------|-------------------------|-------------|-------------------------------|
+-- | admin      | admin@tantran.dev       | tantran     | playwright/.auth/admin.json   |
+-- | manager    | manager@example.com     | manager123  | playwright/.auth/manager.json |
+-- | technician | technician@example.com  | tech123     | playwright/.auth/technician.json |
+-- | reception  | reception@example.com   | reception123| playwright/.auth/reception.json |
+--
+-- Ensure these users exist before running E2E tests!
+--
+-- =====================================================

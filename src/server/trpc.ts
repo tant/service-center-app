@@ -118,7 +118,7 @@ function createSupabaseClients(req: Request) {
 /**
  * Create context for tRPC
  */
-export function createTRPCContext(opts: { req: Request }) {
+export async function createTRPCContext(opts: { req: Request }) {
   contextCreationCount++;
   const requestId =
     opts.req.headers.get("x-request-id") ||
@@ -134,6 +134,10 @@ export function createTRPCContext(opts: { req: Request }) {
 
   const contextStartTime = performance.now();
   const { supabaseClient, supabaseAdmin } = createSupabaseClients(opts.req);
+
+  // Get user session for auth context
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
   const contextEndTime = performance.now();
 
   console.log(
@@ -142,15 +146,19 @@ export function createTRPCContext(opts: { req: Request }) {
   console.log(
     `📊 [TRPC-CTX-${requestId}] Global stats - Contexts: ${contextCreationCount}, Clients: ${clientCreationCount}`,
   );
+  console.log(
+    `👤 [TRPC-CTX-${requestId}] User: ${user?.email || "anonymous"}`,
+  );
 
   return {
     supabaseClient,
     supabaseAdmin,
+    user: user || null,
     requestId,
   };
 }
 
-export type TRPCContext = ReturnType<typeof createTRPCContext>;
+export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 /**
  * Initialize tRPC with context and superjson transformer

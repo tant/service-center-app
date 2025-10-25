@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+  requireAdmin,
+} from "../middleware/requireRole";
 
 // Part schemas for validation
 const createPartSchema = z.object({
@@ -36,7 +41,9 @@ const updatePartSchema = z.object({
 
 export const partsRouter = router({
   // Get new parts count and growth rate for the current month
-  getNewParts: publicProcedure.query(async ({ ctx }) => {
+  getNewParts: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -74,6 +81,7 @@ export const partsRouter = router({
     };
   }),
   createPart: publicProcedure
+    .use(requireManagerOrAbove)
     .input(createPartSchema)
     .mutation(async ({ input, ctx }) => {
       // First, create the part
@@ -123,6 +131,7 @@ export const partsRouter = router({
     }),
 
   updatePart: publicProcedure
+    .use(requireManagerOrAbove)
     .input(updatePartSchema)
     .mutation(async ({ input, ctx }) => {
       // Prepare update data (only include defined fields)
@@ -194,7 +203,9 @@ export const partsRouter = router({
       };
     }),
 
-  getParts: publicProcedure.query(async ({ ctx }) => {
+  getParts: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const { data: parts, error } = await ctx.supabaseAdmin
       .from("parts")
       .select(
@@ -210,6 +221,7 @@ export const partsRouter = router({
   }),
 
   deletePart: publicProcedure
+    .use(requireAdmin)
     .input(z.object({ id: z.string().uuid("Part ID must be a valid UUID") }))
     .mutation(async ({ input, ctx }) => {
       // First, delete any product-part relationships
@@ -246,7 +258,9 @@ export const partsRouter = router({
       };
     }),
 
-  getProducts: publicProcedure.query(async ({ ctx }) => {
+  getProducts: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const { data: products, error } = await ctx.supabaseAdmin
       .from("products")
       .select(`

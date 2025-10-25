@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+} from "../middleware/requireRole";
 
 // Product schemas for validation
 const productTypeEnum = z.enum([
@@ -44,7 +48,9 @@ const updateProductSchema = z.object({
 
 export const productsRouter = router({
   // Get new products count and growth rate for the current month
-  getNewProducts: publicProcedure.query(async ({ ctx }) => {
+  getNewProducts: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -82,6 +88,7 @@ export const productsRouter = router({
     };
   }),
   createProduct: publicProcedure
+    .use(requireManagerOrAbove)
     .input(createProductSchema)
     .mutation(async ({ input, ctx }) => {
       // First, create the product
@@ -133,6 +140,7 @@ export const productsRouter = router({
     }),
 
   updateProduct: publicProcedure
+    .use(requireManagerOrAbove)
     .input(updateProductSchema)
     .mutation(async ({ input, ctx }) => {
       // Prepare update data (only include defined fields)
@@ -202,6 +210,7 @@ export const productsRouter = router({
     }),
 
   getProduct: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(z.object({ id: z.string().uuid("Product ID must be a valid UUID") }))
     .query(async ({ input, ctx }) => {
       // Get product details
@@ -255,7 +264,9 @@ export const productsRouter = router({
       };
     }),
 
-  getProducts: publicProcedure.query(async ({ ctx }) => {
+  getProducts: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const { data: products, error } = await ctx.supabaseAdmin
       .from("products")
       .select(`

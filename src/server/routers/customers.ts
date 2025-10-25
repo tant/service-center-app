@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
+import {
+  requireAnyAuthenticated,
+  requireOperationsStaff,
+  requireAdmin,
+} from "../middleware/requireRole";
 
 // Customer schemas for validation
 const createCustomerSchema = z.object({
@@ -32,7 +37,9 @@ const updateCustomerSchema = z.object({
 
 export const customersRouter = router({
   // Get new customers count and growth rate for the current month
-  getNewCustomers: publicProcedure.query(async ({ ctx }) => {
+  getNewCustomers: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -72,7 +79,9 @@ export const customersRouter = router({
     };
   }),
 
-  getCustomers: publicProcedure.query(async ({ ctx }) => {
+  getCustomers: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const { data: customers, error } = await ctx.supabaseAdmin
       .from("customers")
       .select("*")
@@ -86,6 +95,7 @@ export const customersRouter = router({
   }),
 
   createCustomer: publicProcedure
+    .use(requireOperationsStaff)
     .input(createCustomerSchema)
     .mutation(async ({ input, ctx }) => {
       const { data: customerData, error: customerError } =
@@ -111,6 +121,7 @@ export const customersRouter = router({
     }),
 
   updateCustomer: publicProcedure
+    .use(requireOperationsStaff)
     .input(updateCustomerSchema)
     .mutation(async ({ input, ctx }) => {
       // Prepare update data (only include defined fields)
@@ -143,6 +154,7 @@ export const customersRouter = router({
     }),
 
   deleteCustomer: publicProcedure
+    .use(requireAdmin)
     .input(
       z.object({
         id: z.string().uuid("Customer ID must be a valid UUID"),

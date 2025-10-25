@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+} from "../middleware/requireRole";
 
 /**
  * Story 1.6: Warehouse Hierarchy Setup
@@ -37,6 +41,7 @@ export const warehouseRouter = router({
    * AC 3.1: List all physical warehouses with optional filters
    */
   listPhysicalWarehouses: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(listPhysicalWarehousesSchema)
     .query(async ({ ctx, input }) => {
       let query = ctx.supabaseAdmin
@@ -64,6 +69,7 @@ export const warehouseRouter = router({
    * AC 3.2: Create a new physical warehouse location
    */
   createPhysicalWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
     .input(createPhysicalWarehouseSchema)
     .mutation(async ({ ctx, input }) => {
       const { data: warehouse, error } = await ctx.supabaseAdmin
@@ -88,6 +94,7 @@ export const warehouseRouter = router({
    * AC 3.3: Update physical warehouse details
    */
   updatePhysicalWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
     .input(updatePhysicalWarehouseSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...updateData } = input;
@@ -110,6 +117,7 @@ export const warehouseRouter = router({
    * AC 3.4: Delete a physical warehouse (soft delete via is_active)
    */
   deletePhysicalWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
     .input(deletePhysicalWarehouseSchema)
     .mutation(async ({ ctx, input }) => {
       // Soft delete by setting is_active to false
@@ -130,7 +138,9 @@ export const warehouseRouter = router({
   /**
    * AC 3.5: List all virtual warehouses (these are fixed/seeded)
    */
-  listVirtualWarehouses: publicProcedure.query(async ({ ctx }) => {
+  listVirtualWarehouses: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
     const { data: warehouses, error } = await ctx.supabaseAdmin
       .from("virtual_warehouses")
       .select("*")

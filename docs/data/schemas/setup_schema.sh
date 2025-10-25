@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Service Center Database Schema Setup Script
-# This script helps copy schema files to Supabase folder and generate migrations
+# This script helps copy schema files and seed data to Supabase folder and generate migrations
 #
 # Updated: 2025-10-25
 # Changes:
 # - Added support for files 09-12 (RBAC and audit logging)
+# - Added seed.sql copy from docs/data/schemas/ (source of truth)
+# - Automatic seed data loading (REQUIRED for workflow system)
 # - Improved error handling for seed files
 # - Added validation for generated migrations
 # - Enhanced cleanup process
@@ -74,9 +76,18 @@ done
 
 echo -e "${GREEN}✅ Schema files copied${NC}"
 
+# Copy seed data file
+echo -e "${BLUE}📦 Copying seed data file...${NC}"
+if [ -f "docs/data/schemas/seed.sql" ]; then
+    cp "docs/data/schemas/seed.sql" "supabase/"
+    echo -e "  ✓ Copied seed.sql"
+else
+    echo -e "${YELLOW}  ⚠️  Warning: seed.sql not found in docs/data/schemas/${NC}"
+fi
+
 # Get database connection URL
 echo -e "${BLUE}🔌 Getting database connection...${NC}"
-DB_URL=$(pnpx supabase status 2>/dev/null | grep "DB URL" | awk '{print $3}')
+DB_URL=$(pnpx supabase status 2>/dev/null | grep "Database URL" | awk '{print $3}')
 if [ -z "$DB_URL" ]; then
     echo -e "${RED}❌ Error: Could not get database URL. Is Supabase running?${NC}"
     echo -e "${YELLOW}   Run: pnpx supabase start${NC}"
@@ -216,11 +227,29 @@ fi
 echo
 echo -e "${GREEN}🎉 Schema setup completed successfully!${NC}"
 echo
+
+# Load seed data (REQUIRED for workflow system)
+echo -e "${BLUE}🌱 Loading seed data...${NC}"
+echo -e "   Seed data creates 27+ task types required for the workflow system."
+if psql "$DB_URL" -f supabase/seed.sql > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Seed data loaded successfully${NC}"
+
+    # Count inserted task types
+    TASK_TYPE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.task_types" 2>/dev/null || echo "0")
+    if [ "$TASK_TYPE_COUNT" -gt 0 ]; then
+        echo -e "${GREEN}   ✓ $TASK_TYPE_COUNT task types created${NC}"
+    fi
+else
+    echo -e "${RED}❌ Failed to load seed data${NC}"
+    echo -e "${RED}   This is REQUIRED for the workflow system to function!${NC}"
+    exit 1
+fi
+
+echo
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Create admin user via /setup endpoint"
 echo -e "  2. Create test users (see docs/data/schemas/12_seed_test_users.sql)"
-echo -e "  3. Load seed data: psql \"$DB_URL\" -f supabase/seed.sql"
-echo -e "  4. Start development: pnpm dev"
+echo -e "  3. Start development: pnpm dev"
 echo
 echo -e "📚 For more information, see docs/DATABASE_SETUP.md"
 echo

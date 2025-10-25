@@ -35,11 +35,13 @@ The simplest way to set up the database is using the automated setup script:
 
 This script will:
 1. ✅ Copy all 13 schema files to `supabase/schemas/`
-2. ✅ Create storage buckets
-3. ✅ Generate migration via `db diff`
-4. ✅ Apply migration
-5. ✅ Apply storage policies
-6. ✅ Clean up temporary files
+2. ✅ Copy seed.sql to `supabase/` folder
+3. ✅ Create storage buckets
+4. ✅ Generate migration via `db diff`
+5. ✅ Apply migration
+6. ✅ Apply storage policies
+7. ✅ Load seed data automatically (27+ task types)
+8. ✅ Clean up temporary files
 
 **Note:** The script uses `db diff` to generate a single migration from all schemas, avoiding circular dependency issues.
 
@@ -303,14 +305,19 @@ psql "$DB_URL" -c "SELECT COUNT(*) FROM pg_constraint WHERE conname LIKE 'servic
 
 ## Source of Truth
 
-**Schema files in `docs/data/schemas/` are the single source of truth.**
+**All database files in `docs/data/schemas/` are the single source of truth.**
 
-- ✅ Always edit schemas there
-- ✅ Copy to `supabase/schemas/` for deployment
-- ✅ Never edit `supabase/schemas/` directly
+This includes:
+- ✅ 13 schema files (00-12)
+- ✅ seed.sql (task types and workflow data)
+
+**Best Practices:**
+- ✅ Always edit schemas in `docs/data/schemas/`
+- ✅ Setup script copies to `supabase/` for deployment
+- ✅ Never edit `supabase/schemas/` or `supabase/seed.sql` directly
 - ✅ Never manually edit generated migrations
 
-To update schemas:
+To update schemas or seed data:
 1. Edit files in `docs/data/schemas/`
 2. Run `./docs/data/schemas/setup_schema.sh`
 3. Test in local environment
@@ -320,11 +327,35 @@ To update schemas:
 
 ## Next Steps After Setup
 
+> **Note:** If you used the automated setup script (`setup_schema.sh`), seed data is already loaded. Skip to step 1.
+
+**Manual Setup Only - Load Seed Data:**
+If you performed manual setup, you must load seed data:
+```bash
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/seed.sql
+```
+This creates 27+ default task types required for the workflow system.
+
+**All Setups:**
+
 1. **Create admin user** via `/setup` endpoint
+
 2. **Create test users** (manager, technician, reception)
-3. **Load seed data** from `supabase/seed.sql`
-4. **Run tests** to verify setup
-5. **Start development server** (`pnpm dev`)
+
+3. **Run tests** to verify setup
+
+4. **Start development server** (`pnpm dev`)
+
+### Why Seed Data is Required
+
+The `supabase/seed.sql` file is **required** for the workflow system to function:
+- ✅ Creates 27+ task types (Intake, Diagnosis, Repair, QA, etc.)
+- ✅ Required by Story 01.02 acceptance criteria
+- ✅ Task templates cannot be created without task types
+- ✅ Workflow system is non-functional without templates
+- ✅ Automated setup script loads this automatically
+
+**Note:** While admins CAN manually create task types via the API (`taskType.create`), this is tedious. The seed file provides industry-standard task types for service center operations.
 
 ---
 

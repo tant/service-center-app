@@ -2,11 +2,18 @@
 
 # Service Center Database Cleanup Script
 # This script stops Supabase, removes Docker volumes and containers related to service-center, and restarts Supabase
+#
+# Version: 2.0
+# Updated: 2025-10-25
+# Changes:
+# - Added guidance for schema setup after cleanup
+# - Updated to reflect 13 schema files (was 9)
+# - Added reference to new documentation
 
 set -euo pipefail
 IFS=$'\n\t'
 
-echo "🧹 Service Center Database Cleanup"
+echo "🧹 Service Center Database Cleanup (v2.0)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -105,8 +112,44 @@ if [ ${#CREATED[@]} -gt 0 ]; then
 fi
 info "   • ${EXISTED} directories already existed"
 
-# Start Supabase in the foreground (this will block until Supabase exits)
-info "🚀 Starting Supabase (foreground) — this will block until Supabase exits or is stopped..."
-pnpx supabase start
+# Temporarily move seed file to avoid errors on empty database
+SEED_FILE="supabase/seed.sql"
+SEED_BACKUP="supabase/seed.sql.cleanup_backup"
+if [ -f "$SEED_FILE" ]; then
+    info "📦 Temporarily moving seed file (will restore after schemas are applied)..."
+    mv "$SEED_FILE" "$SEED_BACKUP"
+    success "   ✓ Seed file backed up"
+fi
+
+# Start Supabase
+info "🚀 Starting Supabase..."
+if pnpx supabase start --debug; then
+    success "✅ Supabase started successfully"
+
+    # Restore seed file
+    if [ -f "$SEED_BACKUP" ]; then
+        mv "$SEED_BACKUP" "$SEED_FILE"
+        success "   ✓ Seed file restored"
+    fi
+else
+    error "❌ Failed to start Supabase"
+
+    # Restore seed file even on failure
+    if [ -f "$SEED_BACKUP" ]; then
+        mv "$SEED_BACKUP" "$SEED_FILE"
+        warn "   ⚠️  Seed file restored after failure"
+    fi
+    exit 1
+fi
+
+# Post-cleanup instructions
+echo ""
+success "🎉 Cleanup completed successfully!"
+echo ""
+info "📋 Next Step:"
+echo "   Run the setup script to apply schemas and seed data:"
+echo ""
+echo "   ./docs/data/schemas/setup_schema.sh"
+echo ""
 
 exit 0

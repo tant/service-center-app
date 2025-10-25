@@ -3,17 +3,18 @@
 # Service Center Database Cleanup Script
 # This script stops Supabase, removes Docker volumes and containers related to service-center, and restarts Supabase
 #
-# Version: 2.0
+# Version: 2.1
 # Updated: 2025-10-25
 # Changes:
+# - Now deletes seed.sql (setup script copies fresh one from source of truth)
 # - Added guidance for schema setup after cleanup
-# - Updated to reflect 13 schema files (was 9)
+# - Updated to reflect 13 schema files + seed.sql
 # - Added reference to new documentation
 
 set -euo pipefail
 IFS=$'\n\t'
 
-echo "🧹 Service Center Database Cleanup (v2.0)"
+echo "🧹 Service Center Database Cleanup (v2.1)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -112,13 +113,13 @@ if [ ${#CREATED[@]} -gt 0 ]; then
 fi
 info "   • ${EXISTED} directories already existed"
 
-# Temporarily move seed file to avoid errors on empty database
+# Remove seed file (setup script will copy fresh one from source of truth)
 SEED_FILE="supabase/seed.sql"
 SEED_BACKUP="supabase/seed.sql.cleanup_backup"
 if [ -f "$SEED_FILE" ]; then
-    info "📦 Temporarily moving seed file (will restore after schemas are applied)..."
+    info "🗑️  Removing seed file (setup script will copy fresh one)..."
     mv "$SEED_FILE" "$SEED_BACKUP"
-    success "   ✓ Seed file backed up"
+    success "   ✓ Seed file removed"
 fi
 
 # Start Supabase
@@ -126,18 +127,18 @@ info "🚀 Starting Supabase..."
 if pnpx supabase start --debug; then
     success "✅ Supabase started successfully"
 
-    # Restore seed file
+    # Delete backup (setup script will copy fresh seed.sql from docs/data/schemas/)
     if [ -f "$SEED_BACKUP" ]; then
-        mv "$SEED_BACKUP" "$SEED_FILE"
-        success "   ✓ Seed file restored"
+        rm -f "$SEED_BACKUP"
+        success "   ✓ Old seed file deleted"
     fi
 else
     error "❌ Failed to start Supabase"
 
-    # Restore seed file even on failure
+    # Delete backup even on failure
     if [ -f "$SEED_BACKUP" ]; then
-        mv "$SEED_BACKUP" "$SEED_FILE"
-        warn "   ⚠️  Seed file restored after failure"
+        rm -f "$SEED_BACKUP"
+        warn "   ⚠️  Old seed file deleted after failure"
     fi
     exit 1
 fi

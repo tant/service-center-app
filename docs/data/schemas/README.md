@@ -1,517 +1,455 @@
 # Service Center Database Schema
 
-This directory contains the complete database schema for the Service Center application, designed for use with Supabase. The schemas are structured to follow Supabase's declarative schema approach for easy migration management.
+**Version:** 2.0 (Phase 2 Complete)
+**Last Updated:** 2025-10-25
+**Total Schema Files:** 13 (00-12) + seed.sql
+**Total Tables:** 25
 
-## Schema Management Strategy
+This directory contains the **complete source of truth** for the Service Center database schema, designed for use with Supabase PostgreSQL.
 
-**This project uses Supabase's Declarative Schema approach (Option 2):**
+---
 
-- **Source of Truth**: Schema files in `docs/data/schemas/` serve as documentation and master templates
-- **Working Directory**: Schema files are copied to `supabase/schemas/` for declarative schema management
-- **Migration Generation**: Supabase CLI automatically generates migrations by comparing declared schemas with database state
-- **Benefits**: Single source of truth, automatic migration generation, better schema organization
-- **Workflow**: Edit schemas in `docs/` → Copy to `supabase/schemas/` → Generate migrations → Apply changes
+## 📁 Schema Files Overview
 
-This hybrid approach gives us the best of both worlds: well-documented schemas in our docs directory and the power of Supabase's declarative schema management.
+All schema files are numbered to ensure proper execution order due to dependencies:
 
-## Schema Files Overview
+### Core Schema Files (00-12)
 
-The schema files are organized by type and numbered to ensure proper creation order due to foreign key dependencies:
+| File | Purpose | Key Objects | Size |
+|------|---------|-------------|------|
+| **00_base_schema.sql** | ENUMs, domains, base functions | 12 ENUMs, `is_admin()`, `is_admin_or_manager()` | 9.9KB |
+| **01_users_and_customers.sql** | User profiles and customers | `profiles`, `customers` tables | 3.6KB |
+| **02_products_and_inventory.sql** | Products and parts | `products`, `brands`, `parts` tables | 6.8KB |
+| **03_service_tickets.sql** | Core ticket workflow | `service_tickets` + related tables | 13KB |
+| **04_task_and_warehouse.sql** | Tasks & warehouses | `task_templates`, `warehouses`, RMA | 12KB |
+| **05_service_requests.sql** | Public portal + FK constraints | `service_requests`, FK constraints | 3.5KB |
+| **06_policies_and_views.sql** | RLS policies and views | Base RLS policies, helper views | 20KB |
+| **07_storage.sql** | File upload storage | Storage buckets and policies | 6.2KB |
+| **08_inventory_functions.sql** | Inventory helpers | Stock movement functions | 1.9KB |
+| **09_role_helpers.sql** | RBAC functions | `get_my_role()`, `has_role()`, etc. | 5.2KB |
+| **10_audit_logs.sql** | Audit logging system | `audit_logs` table + functions | 11KB |
+| **11_rls_policy_updates.sql** | Updated RBAC policies | Role-based RLS policies | 13KB |
+| **12_seed_test_users.sql** | Test user documentation | Comments only (no SQL) | 8.2KB |
 
-### Base Functions
-- **00_base_functions.sql** - Common functions used across all tables (must run first)
+### Seed Data
 
-### Core Tables
-1. **core_01_profiles.sql** - User profiles and role management (with email validation)
-2. **core_02_customers.sql** - Customer information management
-3. **core_03_products.sql** - Product catalog
-4. **core_04_parts.sql** - Replacement parts inventory
-5. **core_05_product_parts.sql** - Product-to-parts mapping (junction table)
-6. **core_06_service_tickets.sql** - Main service ticket workflow (with auto-numbering and status tracking)
-7. **core_07_service_ticket_parts.sql** - Parts used in service tickets
-8. **core_08_service_ticket_comments.sql** - Comments and communication history (with comment types and author view)
-9. **core_09_service_ticket_attachments.sql** - File attachments for service tickets
+| File | Purpose | Records Created |
+|------|---------|----------------|
+| **seed.sql** | Default task types | 27+ task types (Intake, Diagnosis, Repair, QA, Closing) |
 
-### Functions
-- **functions_inventory.sql** - Inventory management functions (stock increase/decrease)
+**Total:** 115KB across 13 schema files + 6KB seed data
 
-### Storage
-- **storage_policies.sql** - Storage bucket RLS policies for file uploads (avatars, product images, service media with restricted delete)
+---
 
-## Entity Relationship Diagram
+## 🚀 Quick Setup (Automated)
 
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   auth.users│────│   profiles  │    │  customers  │
-│             │    │             │    │             │
-│ - id        │    │ - user_id   │    │ - id        │
-│ - email     │    │ - full_name │    │ - name      │
-│ - ...       │    │ - role      │    │ - phone     │
-└─────────────┘    │ - email ✓   │    │ - email     │
-     (Supabase)    │ - is_active │    │ - address   │
-                   └─────────────┘    └─────────────┘
-                           │                  │
-                           │                  │
-                           ▼                  │
-    ┌─────────────┐ ┌─────────────┐          │
-    │   brands    │─│  products   │          │
-    │             │ │             │          │
-    │ - id        │ │ - id        │          │
-    │ - name      │ │ - name      │          │
-    │ - desc      │ │ - sku       │          │
-    └─────────────┘ │ - brand_id→ │          │
-                    │ - model     │          │
-                    └─────────────┘          │
-                           │                  │
-                           ▼                  │
-                    ┌─────────────┐          │
-                    │    parts    │          │
-                    │             │          │
-                    │ - id        │          │
-                    │ - name      │          │
-                    │ - price     │          │
-                    │ - stock_qty │          │
-                    └─────────────┘          │
-                           │                  │
-                           │                  ▼
-    ┌─────────────┐       │           ┌──────────────┐
-    │   profiles  │───────┼──────────▶│service_tickets│
-    │   (refs)    │       │           │              │
-    └─────────────┘       │           │ - id         │
-           │               │           │ - ticket_# ⚡│
-           │               │           │ - customer_id│
-           │               │           │ - product_id │
-           │               │           │ - status 📝  │
-           │               │           │ - parts_total│
-           │               │           │ - total_cost │
-           │               │           └──────────────┘
-           │               │                  │
-           │               │        ┌─────────┼──────────┬───────────┐
-           │               │        │         │          │           │
-           ▼               ▼        ▼         ▼          ▼           ▼
-    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌──────────────────┐
-    │service_ticket│ │service_ticket│ │service_ticket│ │ service_ticket_  │
-    │  _comments   │ │    _parts    │ │ _attachments│ │ comments_with_   │
-    │              │ │              │ │              │ │     author (view)│
-    │ - ticket_id  │ │ - ticket_id  │ │ - ticket_id  │ │                  │
-    │ - created_by │ │ - part_id    │ │ - file_path  │ │ - comment        │
-    │ - comment    │ │ - quantity   │ │ - file_name  │ │ - comment_type   │
-    │ - comment_type│ │ - unit_price│ │ - file_type  │ │ - author_name    │
-    │ - is_internal│ │ - total_price│ │ - file_size  │ │ - author_email   │
-    └─────────────┘ └─────────────┘ └─────────────┘ └──────────────────┘
+The simplest way to set up the database:
 
-Legend:
-✓ = Email validation constraint
-⚡ = Auto-generated (SV-YYYY-NNN)
-📝 = Auto-logs changes to comments
-```
-
-## Key Features
-
-### 1. Authentication & Authorization
-- Integrates with Supabase Auth (`auth.users`)
-- Role-based access control via `profiles.role` (admin, manager, technician, reception)
-- Row Level Security (RLS) policies for data protection
-- Email validation on profiles with regex constraint
-
-### 2. Business Logic Automation
-- **Ticket numbering**: Auto-generated unique ticket numbers in SV-YYYY-NNN format
-  - Function: `generate_ticket_number()` creates sequential numbers per year
-  - Trigger: `set_ticket_number()` assigns number on insert
-  - Format: SV-2025-001, SV-2025-002, etc.
-- **Status tracking**: Automatic comment logging for status changes
-  - Function: `log_status_change()` creates audit trail
-  - Comments typed as `status_change` for filtering
-  - Format: "Status changed from 'pending' to 'in_progress'"
-- **Cost calculation**: Automatic total cost calculation from parts + service fees
-  - Generated column: `total_cost = service_fee + diagnosis_fee + parts_total - discount_amount`
-- **Parts inventory**: Real-time parts total calculation in service tickets
-  - Trigger: `update_service_ticket_parts_total()` syncs on parts changes
-
-### 3. Audit Trail
-- All tables include `created_at`, `updated_at` timestamps with auto-update triggers
-- Creator/modifier tracking with `created_by`, `updated_by` fields (nullable for flexibility)
-- Typed comment system for complete history (`note`, `status_change`, `assignment`, `system`)
-- Automatic status change logging with timestamp and user tracking
-- View `service_ticket_comments_with_author` joins comments with author details
-
-### 4. Data Integrity
-- Foreign key constraints with appropriate cascade/restrict rules
-- Check constraints for data validation:
-  - Email format (profiles and customers)
-  - Phone format and length (customers)
-  - Positive values (prices, quantities, stock)
-  - Date logic (completed_at >= started_at)
-  - Enum values (status, priority, warranty_type, comment_type)
-- Unique constraints where business rules require
-- Comprehensive indexing for performance including composite indexes
-
-## Declarative Schema Migration Workflow
-
-This project uses Supabase's **declarative schema** approach, where you define the desired end state of your database schema rather than writing individual migration steps. The CLI automatically generates the necessary migration files by comparing your declared schemas with the current database state.
-
-### 🚀 Quick Setup (Recommended)
 ```bash
-# Use the automated setup script
+# From project root
 ./docs/data/schemas/setup_schema.sh
 ```
 
-### 📋 Manual Workflow
+This script automatically:
+1. ✅ Copies all 13 schema files to `supabase/schemas/`
+2. ✅ Copies `seed.sql` to `supabase/` folder
+3. ✅ Creates storage buckets
+4. ✅ Generates migration via `db diff`
+5. ✅ Applies migration and storage policies
+6. ✅ **Loads seed data automatically** (27+ task types)
+7. ✅ Verifies database setup (25 tables, RBAC functions)
+8. ✅ Cleans up temporary files
 
-#### 1. Initial Setup
-```bash
-# Start local Supabase (if not running)
-supabase start
+**Time:** 2-3 minutes
+**Result:** Fully configured database ready for development
 
-# Copy schema files to supabase/schemas/
-cp docs/data/schemas/*.sql supabase/schemas/
+---
 
-# Generate initial migration from schemas
-supabase db diff -f initial_service_center_schema
+## 📋 Schema Execution Order
 
-# Review the generated migration
-cat supabase/migrations/*_initial_service_center_schema.sql
+**CRITICAL:** Schemas must be applied in numerical order (00 → 12) due to dependencies.
 
-# Apply migration to local database
-supabase migration up
+```
+00_base_schema.sql           # ENUMs and base functions FIRST
+  ↓
+01_users_and_customers.sql   # Users and customer tables
+  ↓
+02_products_and_inventory.sql # Products, brands, parts
+  ↓
+03_service_tickets.sql       # Service tickets (without FKs to 04, 05)
+  ↓
+04_task_and_warehouse.sql    # Creates task_templates and warehouses
+  ↓
+05_service_requests.sql      # Creates service_requests + adds FK constraints to 03
+  ↓
+06_policies_and_views.sql    # Base RLS policies and views
+  ↓
+07_storage.sql               # Storage buckets and policies
+  ↓
+08_inventory_functions.sql   # Inventory management functions
+  ↓
+09_role_helpers.sql          # RBAC helper functions
+  ↓
+10_audit_logs.sql            # Audit logging system
+  ↓
+11_rls_policy_updates.sql    # Updated RLS policies (uses functions from 09)
+  ↓
+12_seed_test_users.sql       # Documentation only
+  ↓
+seed.sql                     # Task types (REQUIRED for workflow system)
 ```
 
-#### 2. Making Schema Changes
-```bash
-# 1. Edit schema files in docs/data/schemas/ (source of truth)
-vim docs/data/schemas/05_service_tickets.sql
+### Why Order Matters
 
-# 2. Copy updated schemas to supabase/
-cp docs/data/schemas/*.sql supabase/schemas/
+- **ENUMs** must exist before tables use them (file 00)
+- **Tables** must exist before FK constraints reference them (files 01-05)
+- **Functions** must exist before policies use them (file 09 before 11)
+- **Policies** can only be updated after tables exist (file 11)
+- **Seed data** requires tables to exist (loaded last)
 
-# 3. Generate incremental migration
-supabase db diff -f add_new_ticket_field
+---
 
-# 4. Review generated migration
-cat supabase/migrations/*_add_new_ticket_field.sql
+## 🔄 Circular Dependency Resolution
 
-# 5. Apply migration locally
-supabase migration up
+**Problem:** File 03 (`service_tickets`) needed foreign keys to tables created in files 04 and 05.
 
-# 6. Test your changes in the local dashboard
-# Visit the URL shown by 'supabase status'
-```
+**Solution:** Deferred FK constraints using ALTER TABLE pattern.
 
-#### 3. Production Deployment
-```bash
-# 1. Login to Supabase CLI
-supabase login
+### Implementation
 
-# 2. Link your remote project
-supabase link --project-ref your-project-ref
-
-# 3. Push changes to production
-supabase db push
-
-# Alternative: Deploy specific migration
-# supabase migration up --db-url "your-production-url"
-```
-
-### 🔄 Development Best Practices
-
-#### Schema File Organization
-Our schemas are organized by prefix and numbered to ensure proper dependency order:
-
-**Base Functions** (prefix: `00_`)
-- `00_base_functions.sql` - Common functions (update_updated_at_column)
-
-**Core Tables** (prefix: `core_`)
-- `core_01_profiles.sql` - User management (depends on auth.users) with email validation
-- `core_02_customers.sql` - Customer data
-- `core_03_products.sql` - Product catalog
-- `core_04_parts.sql` - Parts inventory
-- `core_05_product_parts.sql` - Product-to-parts mapping (depends on products, parts)
-- `core_06_service_tickets.sql` - Service tickets (depends on customers, products, profiles) with auto-numbering and status logging
-- `core_07_service_ticket_parts.sql` - Junction table (depends on service_tickets, parts)
-- `core_08_service_ticket_comments.sql` - Comments (depends on service_tickets, profiles) with comment types and author view
-- `core_09_service_ticket_attachments.sql` - File attachments (depends on service_tickets, profiles)
-
-**Functions** (prefix: `functions_`)
-- `functions_inventory.sql` - Inventory management (depends on parts table)
-
-**Storage** (prefix: `storage_`)
-- `storage_policies.sql` - Storage bucket RLS policies for file uploads
-
-#### Schema Execution Order
-The `setup_schema.sh` script automatically copies files in the correct order:
-1. Base functions first (00_base_functions.sql)
-2. Core tables in dependency order (core_01 through core_09)
-3. Additional functions (functions_inventory.sql)
-4. Storage policies (storage_policies.sql)
-
-#### Column Addition Best Practices
-When adding new columns, always append to the end of tables to avoid messy diffs:
+**File 03 (service_tickets.sql):**
 ```sql
--- ✅ Good: Add new columns at the end
-create table "service_tickets" (
-  "id" uuid not null default gen_random_uuid(),
-  "customer_id" uuid not null,
-  -- ... existing columns ...
-  "created_at" timestamptz not null default now(),
-  "updated_at" timestamptz not null default now(),
-  -- ✅ New columns go here
-  "priority_score" integer default 0
-);
-
--- ❌ Avoid: Adding columns in the middle creates messy diffs
+-- Phase 2 columns (FK constraints added in 05_service_requests.sql)
+"template_id" uuid,  -- No FK constraint yet
+"request_id" uuid,   -- No FK constraint yet
 ```
 
-### 🛠️ Advanced Operations
+**File 05 (service_requests.sql):**
+```sql
+-- Add FK constraints after all tables exist
+ALTER TABLE public.service_tickets
+  ADD CONSTRAINT service_tickets_template_id_fkey
+  FOREIGN KEY (template_id)
+  REFERENCES public.task_templates(id)
+  ON DELETE SET NULL;
 
-#### Rolling Back During Development
-```bash
-# Reset to a specific migration version (local only)
-supabase db reset --version 20241005112233
-
-# After reset, edit schemas and regenerate migration
-supabase db diff -f updated_schema
-supabase migration up
+ALTER TABLE public.service_tickets
+  ADD CONSTRAINT service_tickets_request_id_fkey
+  FOREIGN KEY (request_id)
+  REFERENCES public.service_requests(id)
+  ON DELETE SET NULL;
 ```
 
-#### Pulling Production Schema
-```bash
-# Import existing production schema
-supabase db dump > supabase/schemas/production.sql
+This ensures sequential application works without errors while maintaining data integrity.
 
-# Break down into modular files as needed
-# Then generate migrations incrementally
+---
+
+## 🗄️ Database Structure
+
+### Complete Table List (25 Tables)
+
+**Users & Customers:**
+- `profiles` - Extended user info with roles (Admin, Manager, Technician, Reception)
+- `customers` - Customer information
+
+**Products & Inventory:**
+- `brands` - Product manufacturers
+- `products` - Product catalog with warranty info
+- `physical_products` - Serial-tracked physical product instances
+- `parts` - Replacement parts inventory
+- `product_parts` - Product-to-parts mapping
+
+**Service Management:**
+- `service_tickets` - Core workflow with auto-numbering (SV-YYYY-NNN)
+- `service_ticket_parts` - Parts used in tickets
+- `service_ticket_comments` - Comments and communication
+- `service_ticket_attachments` - File attachments
+- `service_requests` - Public portal requests
+- `service_request_tracking` - Request status tracking
+
+**Task Workflow:**
+- `task_types` - Task type definitions (seeded with 27+ types)
+- `task_templates` - Template workflows
+- `task_templates_tasks` - Template task configurations
+- `tasks` - Individual task instances
+- `task_dependencies` - Task dependency rules
+- `task_execution` - Task completion tracking
+
+**Warehouse Management:**
+- `warehouses` - Physical and virtual warehouse hierarchy
+- `warehouse_stock_levels` - Real-time stock tracking (view)
+- `rma_batches` - RMA batch processing
+- `rma_batch_items` - Items in RMA batches
+
+**Email & Notifications:**
+- `email_notifications` - Email queue and tracking
+
+**Audit & Logging:**
+- `audit_logs` - Complete audit trail
+
+---
+
+## 🔐 Security & RBAC
+
+### Role Hierarchy
+
+1. **Admin** - Full system access, setup via `/setup` endpoint
+2. **Manager** - Operations oversight, team management, approvals
+3. **Technician** - Task execution, limited to assigned work
+4. **Reception** - Customer intake, ticket creation
+
+### Security Implementation
+
+**Database Level:**
+- Row Level Security (RLS) enabled on all tables
+- Role-based policies filter data based on `get_my_role()` function
+- Audit logging tracks all permission-sensitive operations
+
+**Helper Functions (09_role_helpers.sql):**
+```sql
+get_my_role()           -- Returns current user's role
+has_role(role)          -- Check if user has specific role
+has_any_role(roles[])   -- Check if user has any of multiple roles
+is_admin()              -- Quick admin check
+is_admin_or_manager()   -- Manager+ access check
 ```
 
-#### Clean Development Cycle
-```bash
-# Reset database and reapply all schemas
-pnpx supabase db reset
+**Audit Trail (10_audit_logs.sql):**
+- All high-value operations logged
+- Immutable records (no UPDATE/DELETE allowed)
+- Tracks: user, timestamp, operation, reason, metadata
 
-# Setup from scratch
+---
+
+## 🌱 Seed Data (REQUIRED)
+
+**File:** `seed.sql`
+
+### Why Required?
+
+The workflow system **cannot function** without seed data:
+
+- ✅ Creates 27+ task types (Intake, Diagnosis, Repair, QA, Closing)
+- ✅ Required by Story 01.02 acceptance criteria
+- ✅ `task_templates_tasks` has NOT NULL FK to `task_types`
+- ✅ Templates cannot be created without task types
+
+### Task Categories
+
+| Category | Task Types | Examples |
+|----------|-----------|----------|
+| **Intake** | 4 | Product Receiving, Serial Verification |
+| **Diagnosis** | 4 | Run Diagnostic Tests, Identify Root Cause |
+| **Approval** | 3 | Manager Approval, Quote Creation |
+| **Repair** | 4 | Replace Component, Firmware Update |
+| **Warehouse** | 3 | Warehouse Out, RMA Processing |
+| **QA** | 4 | Quality Check, Burn-In Test |
+| **Closing** | 4 | Customer Notification, Package for Delivery |
+
+**Total:** 26-27 task types
+
+### Loading Seed Data
+
+**Automated:** Setup script loads automatically (recommended)
+
+**Manual:**
+```bash
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/seed.sql
+```
+
+---
+
+## 📚 Source of Truth
+
+**All database files in `docs/data/schemas/` are the single source of truth.**
+
+### Best Practices
+
+- ✅ Always edit schemas in `docs/data/schemas/`
+- ✅ Setup script copies to `supabase/` for deployment
+- ✅ Never edit `supabase/schemas/` or `supabase/seed.sql` directly
+- ✅ Never manually edit generated migrations
+- ✅ Commit only `docs/data/schemas/` files to git
+
+### Workflow for Schema Changes
+
+1. Edit files in `docs/data/schemas/`
+2. Run `./docs/data/schemas/setup_schema.sh`
+3. Test in local environment
+4. Verify with `pnpx supabase db diff` (should show "no changes")
+5. Commit schema files to git
+
+---
+
+## 🛠️ Manual Setup (Advanced)
+
+If you need manual control or troubleshooting:
+
+### Step 1: Copy Schema Files
+```bash
+mkdir -p supabase/schemas
+cp docs/data/schemas/00_base_schema.sql supabase/schemas/
+cp docs/data/schemas/01_users_and_customers.sql supabase/schemas/
+# ... (copy all 13 files)
+cp docs/data/schemas/seed.sql supabase/
+```
+
+### Step 2: Apply Schemas Directly
+```bash
+DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+
+# Apply all schemas in order
+psql "$DB_URL" -f supabase/schemas/00_base_schema.sql
+psql "$DB_URL" -f supabase/schemas/01_users_and_customers.sql
+# ... (apply all 13 files in order)
+```
+
+### Step 3: Load Seed Data
+```bash
+psql "$DB_URL" -f supabase/seed.sql
+```
+
+### Step 4: Verify Setup
+```bash
+# Count tables (expected: 25)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';"
+
+# Verify RBAC functions (expected: 5)
+psql "$DB_URL" -c "SELECT proname FROM pg_proc WHERE proname IN ('get_my_role', 'has_role', 'has_any_role', 'is_admin', 'is_admin_or_manager');"
+
+# Verify task types (expected: 26+)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM public.task_types;"
+```
+
+---
+
+## 🔍 Key Features
+
+### 1. Automatic Ticket Numbering
+- Format: `SV-YYYY-NNN` (SV-2025-001, SV-2025-002, etc.)
+- Function: `generate_ticket_number()` creates sequential numbers per year
+- Trigger: `set_ticket_number()` assigns number on insert
+
+### 2. Task Workflow System
+- Template-based task generation
+- Automatic task creation from templates
+- Dependency management (sequential/parallel)
+- Task execution tracking with photos and notes
+
+### 3. Warehouse Hierarchy
+- Virtual warehouses (Pending Diagnosis, Ready to Ship, etc.)
+- Physical warehouses with locations
+- Automatic product movement based on ticket events
+- Real-time stock level tracking
+
+### 4. RMA Batch Processing
+- Batch numbering: `RMA-YYYYMMDD-NNN`
+- Track multiple products sent to manufacturer
+- Integration with warehouse management
+
+### 5. Audit Trail
+- All tables include `created_at`, `updated_at` timestamps
+- Creator/modifier tracking with `created_by`, `updated_by` fields
+- Complete audit log for high-value operations
+- Immutable audit records
+
+### 6. Email Notifications
+- Queue-based email system
+- Track delivery status and attempts
+- Support for templates and priorities
+
+---
+
+## ⚠️ Common Issues & Solutions
+
+### Issue 1: "relation does not exist"
+**Cause:** Trying to apply schemas out of order
+**Solution:** Always apply in numerical order (00 → 12)
+
+### Issue 2: "type does not exist"
+**Cause:** ENUMs not created before tables use them
+**Solution:** Ensure `00_base_schema.sql` is applied first
+
+### Issue 3: "DROP POLICY fails on empty database"
+**Cause:** Migration has DROP statements for non-existent policies
+**Solution:** Setup script automatically adds `IF EXISTS` to generated migrations
+
+### Issue 4: Seed file errors on reset
+**Cause:** `seed.sql` has DELETE statements for non-existent tables
+**Solution:** Seed file now uses DO blocks with existence checks
+
+---
+
+## 📊 Verification Checklist
+
+After setup, verify:
+
+- [ ] **25 tables** created in public schema
+- [ ] **5 RBAC functions** exist (is_admin, get_my_role, etc.)
+- [ ] **2 FK constraints** on service_tickets (template_id, request_id)
+- [ ] **audit_logs table** exists and has proper indexes
+- [ ] **23+ storage policies** created for file uploads
+- [ ] **RLS enabled** on all sensitive tables
+- [ ] **26+ task types** loaded from seed data
+
+Quick verification:
+```bash
+DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+
+# Count tables (expected: 25)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public';"
+
+# Check RBAC functions (expected: 5)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM pg_proc WHERE proname IN ('get_my_role', 'has_role', 'has_any_role', 'is_admin', 'is_admin_or_manager');"
+
+# Check task types (expected: 26+)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM public.task_types;"
+
+# Verify FK constraints (expected: 2+)
+psql "$DB_URL" -c "SELECT COUNT(*) FROM pg_constraint WHERE conname LIKE 'service_tickets_%_fkey';"
+```
+
+---
+
+## 🧹 Clean Slate Setup
+
+To start completely fresh:
+
+```bash
+# Clean up and reset everything
+./docs/data/cleanup_supabase.sh
+
+# Setup from scratch (automatically loads seed data)
 ./docs/data/schemas/setup_schema.sh
 ```
 
-### 🔍 Migration Verification
+The cleanup script:
+- Stops Supabase
+- Removes Docker containers and volumes
+- Cleans migration and schema files
+- Temporarily moves seed file (to avoid errors on empty DB)
+- Restarts Supabase fresh
 
-#### Before Applying Migrations
-```bash
-# 1. Review generated SQL
-cat supabase/migrations/*_your_migration.sql
+---
 
-# 2. Check migration is incremental (single logical change)
-# 3. Verify no unexpected destructive operations
-# 4. Test on local database first
-supabase migration up
-```
+## 📖 Additional Documentation
 
-#### After Migration
-```bash
-# Verify schema state
-supabase db diff
+- **Database Setup Guide:** `docs/DATABASE_SETUP.md`
+- **RBAC Implementation:** `docs/detail-reqs/ROLES-AND-PERMISSIONS.md`
+- **Architecture Docs:** `docs/architecture/03-data-models.md`
+- **Schema Fix Report:** `docs/reports/SCHEMA-FIX-REPORT-2025-10-25.md`
 
-# Should show "No changes detected" if successful
-# Check local dashboard for expected changes
-supabase status
-```
+---
 
-### ⚠️ Important Limitations
+## 🎯 Next Steps After Setup
 
-The declarative schema approach works great for most changes, but has some limitations:
+1. **Create admin user** via `/setup` endpoint
+2. **Create test users** (see `12_seed_test_users.sql` for details)
+3. **Run tests** to verify setup
+4. **Start development:** `pnpm dev`
 
-#### Not Captured by Schema Diff
-- **Data changes** (INSERT, UPDATE, DELETE statements)
-- **View ownership** and complex grants
-- **RLS policies on system tables** (e.g., `storage.objects` - requires explicit execution)
-- **Comments** on tables/columns
-- **Partitioned tables**
+---
 
-**Note**: Storage policies in `storage_policies.sql` are applied via explicit `psql` command in the setup script because `supabase db diff` doesn't capture new policies on pre-existing system tables like `storage.objects`.
-
-#### For Complex Changes
-Use traditional migrations for:
-```bash
-# Create a manual migration file
-supabase migration new complex_data_migration
-
-# Edit the file with your custom SQL
-vim supabase/migrations/*_complex_data_migration.sql
-
-# Apply the migration
-supabase migration up
-```
-
-### 🚀 Production Deployment Checklist
-
-Before deploying to production:
-
-1. **Test Locally**
-   - [ ] All migrations apply successfully
-   - [ ] No data loss in test scenarios
-   - [ ] RLS policies work as expected
-   - [ ] Application still functions correctly
-
-2. **Review Changes**
-   - [ ] Migration files contain only expected changes
-   - [ ] No destructive operations without backup plan
-   - [ ] Performance impact assessed
-
-3. **Deploy Safely**
-   - [ ] Database backup taken
-   - [ ] Deploy during low-traffic window
-   - [ ] Monitor application after deployment
-   - [ ] Rollback plan prepared
-
-4. **Post-Deployment**
-   - [ ] Verify schema changes in production
-   - [ ] Test critical application flows
-   - [ ] Monitor for any issues
-
-### 🔧 Troubleshooting Common Issues
-
-#### "No changes detected" when expecting changes
-```bash
-# Ensure schemas are copied to supabase/schemas/
-ls -la supabase/schemas/
-
-# Check if local database matches schemas
-supabase db diff --schema-only
-
-# Reset and reapply if needed
-supabase db reset
-supabase migration up
-```
-
-####### Migration conflicts or errors
-```bash
-# Check current migration status
-pnpx supabase migration list
-
-# Reset to specific version
-pnpx supabase db reset --version <timestamp>
-
-# Or clean start
-pnpx supabase db reset
-./docs/data/schemas/setup_schema.sh
-```
-
-## Security & Access Control
-
-### Row Level Security (RLS) Implementation
-
-All tables have RLS enabled with role-based policies.
-
-#### Role-Based Access:
-- **Admins**: Full access to all data
-- **Managers**: Access to customers, products, and service tickets  
-- **Technicians**: Access to tickets assigned to them
-- **Reception**: Create/view tickets and customer information
-- **Service tickets**: Accessible only to assigned technicians or management
-
-#### RLS policies not working
-```bash
-# Check policy syntax in schema files
-# Test with different user contexts
-# Consider using supabase dashboard for RLS testing
-```
-
-#### Functions or triggers not updating
-```bash
-# Functions and triggers are recreated entirely
-# Make sure complete function definition is in schema file
-# Check for syntax errors in generated migration
-```
-
-### 📚 Additional Resources
-
-- [Supabase CLI Reference](https://supabase.com/docs/reference/cli)
-- [Database Migrations Guide](https://supabase.com/docs/guides/deployment/database-migrations)
-- [Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)
-- [Local Development](https://supabase.com/docs/guides/local-development)
-
-## Security Considerations
-
-### Row Level Security (RLS)
-All tables have RLS enabled with policies that ensure:
-- Users can only access data they're authorized to see
-- Role-based permissions (admin, manager, technician, reception)
-- Service tickets are accessible only to assigned technicians or management
-
-### Storage Bucket Security
-- **Avatars** - Users can only upload/update/delete their own files (folder-based)
-- **Product Images** - Users can only upload/update/delete their own files (folder-based)
-- **Service Media** - Public read/write access, but **delete restricted to admin/manager roles only**
-- All buckets have file size limits and MIME type restrictions
-- RLS policies on `storage.objects` table enforce access control
-
-### Data Validation
-- **Email format validation** (profiles and customers) - Regex pattern constraint
-- **Phone number format validation** (customers) - Regex pattern and minimum length
-- **Price and quantity constraints** - All monetary values and quantities must be non-negative
-- **Date logic validation** - completed_at must be >= started_at when both exist
-- **Enum value validation** - Status, priority, warranty_type, comment_type restricted to valid values
-- **Stock validation** - Parts stock_quantity and min_stock_level must be non-negative
-
-## Performance Optimizations
-
-### Indexing Strategy
-- **Primary keys and foreign keys** - Automatically indexed
-- **Business-critical search fields** - phone, email, ticket_number, part_number, sku
-- **Composite indexes** for common query patterns:
-  - `service_tickets(status, created_at)` - Optimizes ticket filtering and sorting by date within status
-- **Partial indexes** for filtered queries:
-  - Active records only (e.g., `is_active = true` on profiles, customers, products, parts)
-- **Btree indexes** for single-value columns:
-  - `profiles.role` for role-based access checks
-
-### Query Optimization
-- **Views for common joins**:
-  - `service_ticket_comments_with_author` - Joins comments with profile data for display
-  - Pre-sorted by created_at DESC for chronological display
-- **Generated columns** for automatic calculations:
-  - `service_tickets.total_cost` - Computed from fees and discounts
-  - `service_ticket_parts.total_price` - Computed from quantity × unit_price
-- **Triggers for dependent updates**:
-  - `update_service_ticket_parts_total()` - Maintains parts_total in real-time
-- **Proper cascade settings** to minimize orphaned records
-- Materialized views can be added for heavy reporting queries if needed
-
-## Migration Notes
-
-When moving these schemas to the `supabase/` folder for actual deployment:
-
-1. **Order matters**: Files are processed alphabetically, hence the numbering
-2. **Dependencies**: Foreign key relationships require parent tables to exist first
-3. **RLS policies**: Compatible with Supabase
-4. **Functions**: All functions are in SQL - no external dependencies
-5. **Triggers**: Automatic timestamp and calculation triggers included
-
-## Testing Recommendations
-
-Before production deployment:
-1. Test all RLS policies with different user roles
-2. Verify trigger behavior (cost calculations, auto-comments)  
-3. Performance test with realistic data volumes
-4. Validate all constraints and business rules
-5. Test migration rollback scenarios
-
-## Future Considerations
-
-Areas for potential expansion:
-- **Inventory management enhancements**: Low stock alerts, automatic reorder points, purchase orders
-- **Notifications system**: Email/SMS alerts for status changes and ticket updates
-- **Reporting tables**: Materialized views for analytics and performance dashboards
-- **Customer portal**: Public-facing views and APIs for ticket tracking
-- **Advanced audit logging**: Separate audit table for all data changes (currently tracked via created_by/updated_by)
-- **Multi-language support**: i18n for international deployments
-- **Advanced search**: Full-text search across tickets, products, and parts
-
-## Implemented Features
-
-✅ **File attachments** - Fully implemented with Supabase Storage integration
-✅ **Auto-numbering** - Ticket numbers auto-generated in SV-YYYY-NNN format
-✅ **Status tracking** - Automatic comment logging for all status changes
-✅ **Email validation** - Regex constraints on profiles and customers
-✅ **Comment types** - Typed comments for filtering (note, status_change, assignment, system)
-✅ **Date validation** - Logical constraints on date fields
-✅ **Storage security** - Role-based delete restrictions on service media
-✅ **Author view** - Pre-joined view for comments with author information
+**Version History:**
+- v2.0 (2025-10-25): Phase 2 complete - RBAC, audit logging, task workflow, warehouse management
+- v1.0 (2025-10-23): Initial schema - core service ticket management

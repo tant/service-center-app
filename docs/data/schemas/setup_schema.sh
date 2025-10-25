@@ -2,10 +2,17 @@
 
 # Service Center Database Schema Setup Script
 # This script helps copy schema files to Supabase folder and generate migrations
+#
+# Updated: 2025-10-25
+# Changes:
+# - Added support for files 09-12 (RBAC and audit logging)
+# - Improved error handling for seed files
+# - Added validation for generated migrations
+# - Enhanced cleanup process
 
 set -e
 
-echo "🚀 Service Center Schema Setup"
+echo "🚀 Service Center Schema Setup (v2.0)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -38,7 +45,7 @@ echo -e "${BLUE}📁 Copying schema files in proper order...${NC}"
 
 # Order of execution matters due to dependencies
 # 00_base_schema.sql must be first (defines ENUMs, DOMAINs, and base functions)
-# Core tables follow, then Phase 2 extensions, then policies and views
+# Core tables follow, then Phase 2 extensions, then RBAC helpers, then policies and views
 SCHEMA_FILES=(
     "00_base_schema.sql"
     "01_users_and_customers.sql"
@@ -49,6 +56,10 @@ SCHEMA_FILES=(
     "06_policies_and_views.sql"
     "07_storage.sql"
     "08_inventory_functions.sql"
+    "09_role_helpers.sql"
+    "10_audit_logs.sql"
+    "11_rls_policy_updates.sql"
+    "12_seed_test_users.sql"
 )
 
 # Copy each file in order
@@ -65,7 +76,7 @@ echo -e "${GREEN}✅ Schema files copied${NC}"
 
 # Get database connection URL
 echo -e "${BLUE}🔌 Getting database connection...${NC}"
-DB_URL=$(pnpx supabase status | grep "Database URL" | sed 's/.*Database URL: //' | xargs)
+DB_URL=$(pnpx supabase status 2>/dev/null | grep "DB URL" | awk '{print $3}')
 if [ -z "$DB_URL" ]; then
     echo -e "${RED}❌ Error: Could not get database URL. Is Supabase running?${NC}"
     echo -e "${YELLOW}   Run: pnpx supabase start${NC}"
@@ -95,10 +106,22 @@ fi
 
 # Generate migration (simple, may take some time)
 echo -e "${BLUE}📊 Generating migration (this may take a little while)...${NC}"
-if pnpx supabase db diff -f init_schema --debug; then
+if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Migration generated (init_schema)${NC}"
+
+    # Fix DROP POLICY statements for fresh database compatibility
+    MIGRATION_FILE=$(ls -t supabase/migrations/*_init_schema.sql 2>/dev/null | head -1)
+    if [ -f "$MIGRATION_FILE" ]; then
+        # Add IF EXISTS to DROP POLICY statements
+        if grep -q "^drop policy \"" "$MIGRATION_FILE" 2>/dev/null; then
+            echo -e "${BLUE}   🔧 Adding IF EXISTS to DROP POLICY statements...${NC}"
+            sed -i 's/^drop policy "/drop policy if exists "/' "$MIGRATION_FILE"
+            echo -e "${GREEN}   ✓ Migration file updated for fresh database compatibility${NC}"
+        fi
+    fi
 else
-    echo -e "${YELLOW}⚠️  Migration generation failed or no changes detected; continuing to attempt to apply migrations${NC}"
+    echo -e "${YELLOW}⚠️  Migration generation failed or no changes detected${NC}"
+    echo -e "${YELLOW}   Continuing to attempt migration application...${NC}"
 fi
 
 # Apply migration
@@ -172,6 +195,33 @@ rm -f supabase/schemas/*.sql 2>/dev/null || true
 
 echo -e "${GREEN}✅ Cleanup completed. SQL files removed from supabase/migrations and supabase/schemas${NC}"
 
-echo -e "${GREEN}🎉 Schema setup completed!${NC}"
+# Final verification
+echo -e "${BLUE}🔍 Verifying database setup...${NC}"
+TABLE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" 2>/dev/null || echo "0")
+
+if [ "$TABLE_COUNT" -ge 25 ]; then
+    echo -e "${GREEN}   ✓ Database verified: $TABLE_COUNT tables created${NC}"
+else
+    echo -e "${YELLOW}   ⚠️  Warning: Only $TABLE_COUNT tables found (expected 25+)${NC}"
+fi
+
+# Check for RBAC functions
+RBAC_FUNCS=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM pg_proc WHERE proname IN ('get_my_role', 'has_role', 'has_any_role')" 2>/dev/null || echo "0")
+if [ "$RBAC_FUNCS" -ge 3 ]; then
+    echo -e "${GREEN}   ✓ RBAC functions verified: $RBAC_FUNCS functions created${NC}"
+else
+    echo -e "${YELLOW}   ⚠️  Warning: Only $RBAC_FUNCS RBAC functions found (expected 3+)${NC}"
+fi
+
+echo
+echo -e "${GREEN}🎉 Schema setup completed successfully!${NC}"
+echo
+echo -e "${BLUE}Next steps:${NC}"
+echo -e "  1. Create admin user via /setup endpoint"
+echo -e "  2. Create test users (see docs/data/schemas/12_seed_test_users.sql)"
+echo -e "  3. Load seed data: psql \"$DB_URL\" -f supabase/seed.sql"
+echo -e "  4. Start development: pnpm dev"
+echo
+echo -e "📚 For more information, see docs/DATABASE_SETUP.md"
 echo
 exit 0

@@ -32,9 +32,9 @@ create table "service_tickets" (
   "created_by" uuid references "profiles"("user_id"),
   "updated_by" uuid references "profiles"("user_id"),
 
-  -- Phase 2 columns
-  "template_id" uuid references public.task_templates(id) on delete set null,
-  "request_id" uuid references public.service_requests(id) on delete set null,
+  -- Phase 2 columns (FK constraints added in 05_service_requests.sql after tables exist)
+  "template_id" uuid,
+  "request_id" uuid,
   "delivery_method" public.delivery_method,
   "delivery_address" text,
 

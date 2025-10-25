@@ -72,3 +72,26 @@ CREATE TABLE IF NOT EXISTS public.email_notifications (
 
 COMMENT ON TABLE public.email_notifications IS 'Audit trail and delivery tracking for all email notifications';
 CREATE TRIGGER trigger_email_notifications_updated_at BEFORE UPDATE ON public.email_notifications FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =====================================================
+-- ADD FOREIGN KEY CONSTRAINTS FROM 03_service_tickets.sql
+-- =====================================================
+-- These FK constraints reference tables created in 04 and 05,
+-- so they must be added after those tables exist.
+
+-- Add FK constraint for template_id (references task_templates from 04_task_and_warehouse.sql)
+ALTER TABLE public.service_tickets
+  ADD CONSTRAINT service_tickets_template_id_fkey
+  FOREIGN KEY (template_id)
+  REFERENCES public.task_templates(id)
+  ON DELETE SET NULL;
+
+-- Add FK constraint for request_id (references service_requests from this file)
+ALTER TABLE public.service_tickets
+  ADD CONSTRAINT service_tickets_request_id_fkey
+  FOREIGN KEY (request_id)
+  REFERENCES public.service_requests(id)
+  ON DELETE SET NULL;
+
+COMMENT ON CONSTRAINT service_tickets_template_id_fkey ON public.service_tickets IS 'Links ticket to task template used for workflow';
+COMMENT ON CONSTRAINT service_tickets_request_id_fkey ON public.service_tickets IS 'Links ticket to originating service request from public portal';

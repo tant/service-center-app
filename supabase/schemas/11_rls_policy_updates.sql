@@ -20,7 +20,7 @@
 -- SERVICE_TICKETS - Updated RLS Policies
 -- =====================================================
 
--- Drop existing overly permissive policies (IF EXISTS for migration compatibility)
+-- Drop existing overly permissive policies
 DROP POLICY IF EXISTS "service_tickets_select_policy" ON public.service_tickets;
 DROP POLICY IF EXISTS "service_tickets_insert_policy" ON public.service_tickets;
 DROP POLICY IF EXISTS "service_tickets_update_policy" ON public.service_tickets;

@@ -82,13 +82,33 @@ sevice-center/
 │   ├── app/                 # Next.js App Router
 │   │   ├── (auth)/          # Protected routes
 │   │   │   ├── dashboard/
-│   │   │   │   └── page.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── inventory/        # ✅ Phase 2 - Stories 01.07-01.10
+│   │   │   │   │   ├── products/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── stock-levels/
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── rma/
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── task-progress/    # ✅ Phase 2 - Story 01.16
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── service-requests/ # ✅ Phase 2 - Story 01.13
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── deliveries/       # ✅ Phase 2 - Story 01.14
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── notifications/    # ✅ Phase 2 - Story 01.15
+│   │   │   │       └── page.tsx
 │   │   │   ├── tickets/
 │   │   │   │   ├── page.tsx
 │   │   │   │   ├── [id]/
 │   │   │   │   │   └── page.tsx
 │   │   │   │   └── new/
 │   │   │   │       └── page.tsx
+│   │   │   ├── workflows/            # ✅ Phase 2 - Story 01.02
+│   │   │   │   └── templates/
+│   │   │   │       └── page.tsx
+│   │   │   ├── warehouses/           # ✅ Phase 2 - Story 01.06
+│   │   │   │   └── page.tsx
 │   │   │   ├── customers/
 │   │   │   │   ├── page.tsx
 │   │   │   │   └── [id]/
@@ -99,12 +119,20 @@ sevice-center/
 │   │   │   │   └── page.tsx
 │   │   │   ├── team/
 │   │   │   │   └── page.tsx
+│   │   │   ├── unauthorized/         # ✅ Phase 2 - Story 01.00 (RBAC)
+│   │   │   │   └── page.tsx
 │   │   │   └── layout.tsx   # Auth layout with sidebar
 │   │   ├── (public)/        # Public routes
 │   │   │   ├── login/
 │   │   │   │   └── page.tsx
-│   │   │   └── setup/
-│   │   │       └── page.tsx
+│   │   │   ├── setup/
+│   │   │   │   └── page.tsx
+│   │   │   └── service-request/      # ✅ Phase 2 - Stories 01.11-01.12
+│   │   │       ├── page.tsx          # Request creation form
+│   │   │       ├── track/
+│   │   │       │   └── page.tsx      # Tracking page
+│   │   │       └── success/
+│   │   │           └── page.tsx      # Confirmation
 │   │   ├── api/
 │   │   │   └── trpc/
 │   │   │       └── [...trpc]/
@@ -136,12 +164,15 @@ sevice-center/
 │   │   └── ticket-table.tsx
 │   ├── hooks/               # Custom React hooks
 │   │   ├── use-debounce.ts
-│   │   └── use-media-query.ts
+│   │   ├── use-media-query.ts
+│   │   └── use-role.ts       # ✅ Phase 2 - Role-based hooks (Story 01.00)
 │   ├── lib/                 # Third-party library configs
 │   │   └── utils.ts         # cn() for Tailwind merging
 │   ├── server/              # tRPC backend
+│   │   ├── middleware/      # ✅ Phase 2 - Story 01.00
+│   │   │   └── requireRole.ts  # RBAC middleware
 │   │   ├── routers/
-│   │   │   ├── _app.ts      # Main router
+│   │   │   ├── _app.ts      # Main router (13 routers total)
 │   │   │   ├── admin.ts     # Setup & config
 │   │   │   ├── brands.ts    # Brand management
 │   │   │   ├── customers.ts # Customer CRUD
@@ -149,10 +180,18 @@ sevice-center/
 │   │   │   ├── products.ts  # Product catalog
 │   │   │   ├── profile.ts   # User profiles
 │   │   │   ├── revenue.ts   # Analytics
-│   │   │   └── tickets.ts   # Service tickets (largest)
+│   │   │   ├── tickets.ts   # Service tickets
+│   │   │   ├── workflow.ts  # ✅ Phase 2 - Task templates & execution (43KB)
+│   │   │   ├── warehouse.ts # ✅ Phase 2 - Physical/virtual warehouses (4KB)
+│   │   │   ├── inventory.ts # ✅ Phase 2 - Physical products & RMA (40KB)
+│   │   │   ├── serviceRequest.ts # ✅ Phase 2 - Public portal (28KB)
+│   │   │   └── notifications.ts  # ✅ Phase 2 - Email system (11KB)
+│   │   ├── utils/
+│   │   │   └── auditLog.ts  # ✅ Phase 2 - Audit logging utility
 │   │   └── trpc.ts          # tRPC initialization
 │   ├── types/               # TypeScript type definitions
-│   │   └── database.types.ts  # Supabase generated types
+│   │   ├── database.types.ts   # Supabase generated types
+│   │   └── roles.ts            # ✅ Phase 2 - Role types & permissions
 │   └── utils/               # Utility functions
 │       ├── supabase/
 │       │   ├── admin.ts     # Service role client
@@ -169,6 +208,17 @@ sevice-center/
 │   │   └── ...
 │   ├── schemas/             # Copy of docs/data/schemas/
 │   └── seed.sql             # Seed data for development
+├── tests/                   # ✅ Phase 2 - Test suite (Story 01.18)
+│   └── e2e/                 # Playwright E2E tests
+│       ├── 01-authentication.spec.ts
+│       ├── 02-ticket-management.spec.ts
+│       ├── 03-customer-management.spec.ts
+│       ├── 04-product-management.spec.ts
+│       ├── 05-parts-inventory.spec.ts
+│       └── 06-role-permissions.spec.ts  # RBAC tests
+├── playwright/              # ✅ Playwright configuration
+│   └── config files         # Test artifacts and reports
+├── playwright.config.ts     # ✅ Playwright configuration
 ├── .env                     # Environment variables (gitignored)
 ├── .gitignore
 ├── biome.json               # Biome linter/formatter config

@@ -53,26 +53,48 @@ graph TB
 graph TB
     AppRouter[appRouter<br/>Main Router]
 
-    AppRouter --> Admin[admin<br/>Setup & Config]
-    AppRouter --> Profile[profile<br/>User Management]
-    AppRouter --> Tickets[tickets<br/>Service Tickets]
-    AppRouter --> Customers[customers<br/>Customer CRUD]
-    AppRouter --> Products[products<br/>Product Catalog]
-    AppRouter --> Parts[parts<br/>Parts Inventory]
-    AppRouter --> Brands[brands<br/>Brand Management]
-    AppRouter --> Revenue[revenue<br/>Analytics]
+    subgraph "Phase 1 Routers"
+        Admin[admin<br/>Setup & Config]
+        Profile[profile<br/>User Management]
+        Tickets[tickets<br/>Service Tickets]
+        Customers[customers<br/>Customer CRUD]
+        Products[products<br/>Product Catalog]
+        Parts[parts<br/>Parts Inventory]
+        Brands[brands<br/>Brand Management]
+        Revenue[revenue<br/>Analytics]
+    end
 
-    Tickets --> T1[list<br/>getById<br/>create]
-    Tickets --> T2[update<br/>delete<br/>updateStatus]
-    Tickets --> T3[addPart<br/>removePart<br/>addComment]
+    subgraph "Phase 2 Routers - ✅ Complete"
+        Workflow[workflow<br/>Task Templates & Execution]
+        Warehouse[warehouse<br/>Physical/Virtual Warehouses]
+        Inventory[inventory<br/>Physical Products & RMA]
+        ServiceRequest[serviceRequest<br/>Public Portal & Staff Mgmt]
+        Notifications[notifications<br/>Email System]
+    end
 
-    Revenue --> R1[getRevenueByPeriod<br/>getRevenueByTechnician]
-    Revenue --> R2[getRevenueByProduct<br/>getTopCustomers]
+    AppRouter --> Admin
+    AppRouter --> Profile
+    AppRouter --> Tickets
+    AppRouter --> Customers
+    AppRouter --> Products
+    AppRouter --> Parts
+    AppRouter --> Brands
+    AppRouter --> Revenue
+    AppRouter --> Workflow
+    AppRouter --> Warehouse
+    AppRouter --> Inventory
+    AppRouter --> ServiceRequest
+    AppRouter --> Notifications
+
+    Workflow --> W1[createTemplate<br/>updateTemplate<br/>switchTemplate]
+    Workflow --> W2[createTask<br/>updateTask<br/>completeTask]
+
+    ServiceRequest --> SR1[createRequest<br/>trackRequest<br/>convertToTicket]
 
     style AppRouter fill:#FFD700
     style Tickets fill:#4A90E2
-    style Revenue fill:#50C878
-    style Admin fill:#FF6B6B
+    style Workflow fill:#50C878
+    style ServiceRequest fill:#9370DB
 ```
 
 **Router Locations:**
@@ -81,13 +103,20 @@ src/server/routers/
 ├── _app.ts              # Main router combining all sub-routers
 ├── admin.ts             # Setup and initial configuration
 ├── profile.ts           # User profile management
-├── tickets.ts           # Service ticket operations (largest)
+├── tickets.ts           # Service ticket operations
 ├── customers.ts         # Customer CRUD
 ├── products.ts          # Product catalog
 ├── parts.ts             # Parts inventory
 ├── brands.ts            # Brand management
-└── revenue.ts           # Revenue analytics
+├── revenue.ts           # Revenue analytics
+├── workflow.ts          # ✅ Task templates & execution (43KB) - Stories 01.02-01.05, 01.17
+├── warehouse.ts         # ✅ Physical/virtual warehouses (4KB) - Story 01.06
+├── inventory.ts         # ✅ Physical products & RMA (40KB) - Stories 01.07-01.10
+├── serviceRequest.ts    # ✅ Public portal & staff mgmt (28KB) - Stories 01.11-01.13
+└── notifications.ts     # ✅ Email notification system (11KB) - Story 01.15
 ```
+
+**Total Routers:** 13 (8 Phase 1 + 5 Phase 2)
 
 ---
 
@@ -718,6 +747,8 @@ const updateStatus = trpc.tickets.updateStatus.useMutation({
 
 ## 5.11 API Summary
 
+**Phase 1 Routers (Original):**
+
 | Router | Procedures | Primary Use Case |
 |--------|-----------|------------------|
 | **admin** | 1 | Initial setup |
@@ -728,7 +759,27 @@ const updateStatus = trpc.tickets.updateStatus.useMutation({
 | **parts** | 6 | Inventory tracking |
 | **brands** | 5 | Brand management |
 | **revenue** | 4 | Analytics & reporting |
-| **Total** | **50+** | Full system coverage |
+| **Subtotal** | **~50** | Phase 1 coverage |
+
+**Phase 2 Routers (✅ Complete - Oct 2025):**
+
+| Router | Procedures | Primary Use Case | Stories |
+|--------|-----------|------------------|---------|
+| **workflow** | 12+ | Task templates & execution | 01.02-01.05, 01.17 |
+| **warehouse** | 5+ | Warehouse hierarchy | 01.06 |
+| **inventory** | 15+ | Physical products & RMA | 01.07-01.10 |
+| **serviceRequest** | 8+ | Public portal & staff mgmt | 01.11-01.13 |
+| **notifications** | 6+ | Email notification system | 01.15 |
+| **Subtotal** | **~45** | Phase 2 coverage |
+
+**Total API Surface:**
+
+| Metric | Count |
+|--------|-------|
+| **Total Routers** | 13 (8 + 5) |
+| **Total Procedures** | **~95** |
+| **Protected Endpoints** | 50+ (RBAC middleware) |
+| **Public Endpoints** | 3 (service request portal) |
 
 ---
 

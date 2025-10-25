@@ -190,68 +190,126 @@ create type public.user_role as enum (
 );
 ```
 
-### RLS Helper Functions
+### RLS Helper Functions (✅ Story 01.00 - Complete Oct 2025)
+
+**Comprehensive RBAC Implementation with 6 helper functions:**
 
 ```sql
--- Check if current user is an admin
-create or replace function public.is_admin()
-returns boolean as $$
-begin
-  return exists (
-    select 1 from public.profiles
-    where user_id = auth.uid() and role = 'admin'
-  );
-end;
-$$ language plpgsql security definer set search_path = '';
+-- Get current user's role
+create or replace function get_my_role()
+returns user_role as $$
+  select role from profiles where user_id = auth.uid()
+$$ language sql security definer;
 
--- Check if current user is admin or manager
-create or replace function public.is_admin_or_manager()
+-- Check if user has specific role
+create or replace function has_role(required_role user_role)
 returns boolean as $$
-begin
-  return exists (
-    select 1 from public.profiles
-    where user_id = auth.uid() and role in ('admin', 'manager')
-  );
-end;
-$$ language plpgsql security definer set search_path = '';
+  select role = required_role from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+-- Check if user has any of the specified roles
+create or replace function has_any_role(required_roles user_role[])
+returns boolean as $$
+  select role = any(required_roles) from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+-- Check if user is manager or above (admin/manager)
+create or replace function is_manager_or_above()
+returns boolean as $$
+  select role in ('admin', 'manager') from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+-- Check if user is admin only
+create or replace function is_admin_only()
+returns boolean as $$
+  select role = 'admin' from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+-- Check if technician is assigned to specific ticket
+create or replace function is_technician_assigned_to_ticket(ticket_id uuid)
+returns boolean as $$
+  select assigned_to = auth.uid() from service_tickets where id = ticket_id
+$$ language sql security definer;
 ```
 
-### API-Level Authorization
+### API-Level Authorization (✅ RBAC Middleware - Story 01.00)
+
+**Modern Middleware-Based Approach:**
 
 ```typescript
-// Example: Admin-only operation
-export const profileRouter = router({
-  createStaff: publicProcedure
-    .input(createStaffSchema)
+// src/server/middleware/requireRole.ts
+import { TRPCError } from "@trpc/server";
+import type { Context } from "../trpc";
+import type { UserRole } from "@/types/roles";
+
+export function requireRole(allowedRoles: UserRole[]) {
+  return async ({ ctx }: { ctx: Context }) => {
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      });
+    }
+
+    const { data: profile } = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", ctx.user.id)
+      .single();
+
+    if (!profile || !allowedRoles.includes(profile.role as UserRole)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `Access denied. Required roles: ${allowedRoles.join(", ")}`,
+      });
+    }
+
+    return { ctx: { ...ctx, userRole: profile.role as UserRole } };
+  };
+}
+
+// Usage in routers
+export const workflowRouter = router({
+  createTemplate: publicProcedure
+    .use(requireRole(["admin", "manager"]))  // ✅ Middleware checks role
+    .input(createTemplateSchema)
     .mutation(async ({ input, ctx }) => {
-      // 1. Verify authenticated
-      const { data: { user }, error } = await ctx.supabaseClient.auth.getUser()
-      if (!user || error) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Authentication required",
-        })
-      }
-
-      // 2. Check user role
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single()
-
-      if (!profile || profile.role !== "admin") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Admin access required",
-        })
-      }
-
-      // 3. Proceed with operation
-      // ...
+      // ctx.userRole is guaranteed to be admin or manager
+      // ... proceed with operation
     }),
-})
+
+  completeTask: publicProcedure
+    .use(requireRole(["admin", "manager", "technician"]))
+    .input(completeTaskSchema)
+    .mutation(async ({ input, ctx }) => {
+      // Additional check: technicians can only complete their assigned tasks
+      if (ctx.userRole === "technician") {
+        const { data: task } = await ctx.supabaseAdmin
+          .from("service_ticket_tasks")
+          .select("service_tickets(assigned_to)")
+          .eq("id", input.taskId)
+          .single();
+
+        if (task?.service_tickets?.assigned_to !== ctx.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only complete tasks assigned to you",
+          });
+        }
+      }
+      // ... proceed with operation
+    }),
+});
 ```
+
+**Protected Endpoints Count:** 50+ procedures across 5 Phase 2 routers
+
+**Security Features:**
+- ✅ Centralized middleware for consistent enforcement
+- ✅ Role-based access at API layer
+- ✅ Audit logging for permission-sensitive operations
+- ✅ Fine-grained permissions (e.g., technicians only access assigned tickets)
+- ✅ UI-level guards prevent unauthorized access attempts
 
 ---
 

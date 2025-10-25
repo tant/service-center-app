@@ -513,7 +513,105 @@ graph TB
 
 ---
 
-## 3.7 All Database Tables
+## 3.7 Phase 2 Schema Expansion (✅ Complete - Oct 2025)
+
+**Status:** All Phase 2 tables implemented (18/21 stories complete - 86%)
+
+### 3.7.1 New ENUMs Added
+
+```sql
+-- Task workflow management
+create type public.task_status as enum (
+  'pending', 'in_progress', 'completed', 'cancelled', 'blocked'
+);
+
+-- Warehouse management
+create type public.warehouse_type as enum (
+  'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'
+);
+
+create type public.product_condition as enum (
+  'new', 'refurbished', 'defective', 'parts_only'
+);
+
+create type public.stock_movement_type as enum (
+  'receiving', 'transfer', 'assignment', 'disposal', 'return'
+);
+
+-- Service request management
+create type public.request_status as enum (
+  'pending', 'verified', 'converted', 'rejected', 'expired'
+);
+
+create type public.delivery_method as enum (
+  'self_pickup', 'delivery_requested', 'delivered'
+);
+```
+
+### 3.7.2 RBAC Helper Functions (Story 01.00)
+
+```sql
+-- Role-based access control helpers
+create or replace function get_my_role()
+returns user_role as $$
+  select role from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+create or replace function has_role(required_role user_role)
+returns boolean as $$
+  select role = required_role from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+create or replace function has_any_role(required_roles user_role[])
+returns boolean as $$
+  select role = any(required_roles) from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+create or replace function is_manager_or_above()
+returns boolean as $$
+  select role in ('admin', 'manager') from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+create or replace function is_admin_only()
+returns boolean as $$
+  select role = 'admin' from profiles where user_id = auth.uid()
+$$ language sql security definer;
+
+create or replace function is_technician_assigned_to_ticket(ticket_id uuid)
+returns boolean as $$
+  select assigned_to = auth.uid() from service_tickets where id = ticket_id
+$$ language sql security definer;
+```
+
+### 3.7.3 Phase 2 Tables Added
+
+**Task Workflow System (Stories 01.02-01.05, 01.17):**
+- `task_templates` - Workflow templates for different service types
+- `task_types` - Library of pre-defined task types
+- `task_templates_tasks` - Junction table linking templates to tasks
+- `service_ticket_tasks` - Task instances for each ticket
+- `task_history` - Audit trail for task execution
+- `ticket_template_changes` - Log of dynamic template switches
+
+**Warehouse Management (Stories 01.06-01.10):**
+- `physical_warehouses` - Physical warehouse locations
+- `virtual_warehouses` - Virtual warehouse zones within physical warehouses
+- `physical_products` - Physical products with serial numbers
+- `stock_movements` - Product movement history
+- `product_stock_thresholds` - Low-stock alert thresholds
+
+**Service Requests (Stories 01.11-01.13):**
+- `service_requests` - Public service requests with tracking tokens
+- `email_notifications` - Email notification queue and log
+
+**Audit Logging (Story 01.00):**
+- `audit_logs` - Immutable audit trail for all permission-sensitive operations
+
+---
+
+## 3.8 All Database Tables
+
+**Phase 1 - Core System (10 tables):**
 
 | Table | Rows | Purpose | Key Features |
 |-------|------|---------|--------------|
@@ -527,6 +625,27 @@ graph TB
 | **service_ticket_parts** | ~10000+ | Parts used in tickets | Quantity, pricing |
 | **service_ticket_comments** | ~20000+ | Ticket comments/notes | Status changes, notes |
 | **service_ticket_attachments** | ~5000+ | Ticket file uploads | Images, documents |
+
+**Phase 2 - Enhanced Features (14 tables) - ✅ Complete:**
+
+| Table | Rows | Purpose | Story |
+|-------|------|---------|-------|
+| **task_templates** | ~20-50 | Workflow templates | 01.02 |
+| **task_types** | ~15-30 | Task library | 01.02 |
+| **task_templates_tasks** | ~200-500 | Template-task junction | 01.02 |
+| **service_ticket_tasks** | ~50000+ | Task instances | 01.03-01.05 |
+| **task_history** | ~100000+ | Task execution audit | 01.04 |
+| **ticket_template_changes** | ~1000+ | Template switch log | 01.17 |
+| **physical_warehouses** | ~5-20 | Warehouse locations | 01.06 |
+| **virtual_warehouses** | ~20-100 | Virtual zones | 01.06 |
+| **physical_products** | ~5000+ | Serial-tracked products | 01.07 |
+| **stock_movements** | ~50000+ | Movement history | 01.08 |
+| **product_stock_thresholds** | ~100-500 | Low-stock alerts | 01.09 |
+| **service_requests** | ~2000+ | Public service requests | 01.11-01.13 |
+| **email_notifications** | ~10000+ | Email queue/log | 01.15 |
+| **audit_logs** | ~50000+ | Security audit trail | 01.00 |
+
+**Total Tables:** 24 (10 Phase 1 + 14 Phase 2)
 
 ---
 

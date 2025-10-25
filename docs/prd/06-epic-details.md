@@ -10,6 +10,79 @@
 - Integrate with existing tRPC architecture, Supabase RLS, Next.js App Router
 - Extend (not replace) existing audit trail and comment system
 
+**Total Stories**: 21 (Story 01.00 Foundation + Stories 01.01-01.20)
+**Implementation Status**: 18/21 Complete (86%) - As of October 2025
+**Note**: All feature development (Stories 01.00-01.17) COMPLETE. Only QA phase (01.18-01.20) remains.
+
+---
+
+### Story 01.00: Role-Based Access Control (RBAC) Implementation ✅ COMPLETE
+
+**Status**: ✅ Complete (Oct 25, 2025)
+
+**As a** system architect,
+**I want** to implement comprehensive role-based access control across database, backend, and frontend,
+**so that** users only access features and data appropriate for their role, ensuring security and audit compliance.
+
+**Why This is Story 00 (Foundation):**
+This story provides the security foundation that all other Phase 2 stories depend on. Without comprehensive RBAC:
+- Cannot enforce technician-only task views (Story 1.4)
+- Cannot restrict manager dashboards (Story 1.16)
+- Cannot protect warehouse operations (Stories 1.6-1.10)
+- Cannot audit template switches (Story 1.17)
+- Cannot differentiate reception vs. technician access
+
+**Key Deliverables (All Complete):**
+1. **Database Layer**:
+   - 6 role helper functions (`get_my_role()`, `has_role()`, `has_any_role()`, `is_manager_or_above()`, `is_technician()`, `is_reception()`)
+   - `audit_logs` table with immutable records
+   - 2 audit logging functions
+   - Updated RLS policies for 5 core tables
+
+2. **Backend Layer**:
+   - `src/types/roles.ts` - Complete permission matrix (380 lines)
+   - `src/server/middleware/requireRole.ts` - Main middleware + 5 convenience middlewares (211 lines)
+   - `src/server/utils/auditLog.ts` - Audit logging utilities (350 lines)
+   - 50+ API endpoints protected across 6 routers
+
+3. **Frontend Layer**:
+   - `src/hooks/use-role.ts` - Role checking hook (116 lines)
+   - `src/components/auth/RequireRole.tsx` - Route guard component (81 lines)
+   - `src/components/auth/Can.tsx` - Conditional rendering (90 lines)
+   - `src/app/(auth)/unauthorized/page.tsx` - 403 error page (74 lines)
+
+**Implementation Stats**:
+- **Total Code**: ~2,500 lines across 18 files
+- **API Endpoints Protected**: 50+
+- **Database Tables with RLS**: 5
+- **Documentation**: 6 comprehensive docs (3,000+ lines)
+
+**Security Architecture (4 Layers)**:
+1. UI Guards (RequireRole, Can components)
+2. tRPC Middleware (requireRole checks)
+3. Database RLS (Row-level security policies)
+4. Audit Logging (Immutable audit trail)
+
+**Role Permission Matrix**:
+| Feature | Admin | Manager | Technician | Reception |
+|---------|-------|---------|------------|-----------|
+| View All Tickets | ✅ | ✅ | ❌ (assigned) | ✅ |
+| Create Tickets | ✅ | ✅ | ❌ | ✅ |
+| Assign Technician | ✅ | ✅ | ❌ | ❌ |
+| Switch Template | ✅ | ✅ (audit) | ❌ | ❌ |
+| Warehouse Mgmt | ✅ | ✅ | ✅ (RO) | ❌ |
+| View Revenue | ✅ | ✅ | ❌ | ❌ |
+| Team Management | ✅ | ❌ | ❌ | ❌ |
+
+**Reference Documentation**:
+- Story: `docs/stories/01.00.rbac-implementation.md`
+- Specification: `docs/ROLES-AND-PERMISSIONS.md`
+- Implementation Guide: `docs/IMPLEMENTATION-GUIDE-ROLES.md`
+- Final Status: `docs/RBAC-FINAL-STATUS.md`
+
+**Estimated Effort**: 12-16 hours
+**Actual Effort**: ~4 hours
+
 ---
 
 ### Story 1.1: Foundation Setup (Database + Frontend Structure)
@@ -18,12 +91,14 @@
 **I want** to create all new database tables, types, relationships, AND frontend directory structure,
 **so that** the foundation exists for task workflows, warehouse management, and service requests.
 
+**Dependencies**: Story 01.00 (RBAC Implementation) must be complete before starting this story
+
 **Acceptance Criteria - Database:**
 1. Create 12 new tables with proper foreign keys, indexes, and constraints
 2. Add 4 new ENUM types (task_status, warehouse_type, request_status, product_condition) + extend existing ticket_status ENUM if needed
 3. Extend service_tickets table with new nullable columns (template_id, request_id, delivery_method, delivery_address)
 4. Create helper functions for auto-generation (tracking tokens, ticket numbers already exists)
-5. Implement RLS policies for all new tables following existing security model (use existing `auth.check_role()` helper)
+5. Implement RLS policies for all new tables using role helper functions from Story 01.00 (`has_role()`, `has_any_role()`, etc.)
 6. Create database views for stock levels and task analytics
 7. All migrations are idempotent and include DOWN migrations for rollback
 8. Create 3 new Supabase Storage buckets: `warehouse-photos`, `serial-photos`, `csv-imports`

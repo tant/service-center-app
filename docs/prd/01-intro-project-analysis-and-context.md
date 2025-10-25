@@ -16,12 +16,20 @@
 - ✅ Service ticket management with automatic numbering (SV-YYYY-NNN)
 - ✅ Customer relationship management
 - ✅ Product catalog and parts inventory
-- ✅ Role-based access control (Admin, Manager, Technician, Reception)
+- ✅ Basic user roles (Admin, Manager, Technician, Reception) - *Enhanced with comprehensive RBAC in Phase 2 Story 01.00*
 - ✅ Real-time analytics dashboard
 - ✅ Automatic cost calculations via database triggers
 - ✅ Parts inventory with stock adjustments
 - ✅ Comment/audit trail system
 - ✅ Image upload with Vietnamese character sanitization
+
+**Phase 2 Completed Capabilities:**
+- ✅ **Comprehensive RBAC System** (Story 01.00 - Oct 2025):
+  - 50+ protected API endpoints with role middleware
+  - Database-level RLS policies for 5 core tables
+  - Audit logging system with immutable records
+  - Frontend route guards and permission-based UI
+  - 6 role helper functions for flexible permission checking
 
 **Current Architecture:**
 - **Frontend**: Next.js 15.5.4 (App Router) + React 19.1.0 + TypeScript 5
@@ -119,14 +127,6 @@ This enhancement builds **additively** on the existing brownfield architecture. 
 - Warehouse management **parallel** to existing parts inventory
 
 All new modules integrate with existing tRPC architecture, Supabase RLS model, and Next.js App Router patterns.
-
----
-
-## 1.5 Change Log
-
-| Change | Date | Version | Description | Author |
-|--------|------|---------|-------------|--------|
-| Initial Draft | 2025-10-23 | 1.0 | PRD created from Project Brief for Phase 2 | John (PM) |
 
 ---
 

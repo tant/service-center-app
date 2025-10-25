@@ -158,59 +158,75 @@ cancelled    cancelled
 ## API Endpoints
 
 ### Admin Router (`admin.*`)
-- `setup` - Initial system setup with password protection and intelligent user handling
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `setup` | Initial system setup with password protection | Public (password-protected) |
 
 ### Profile Router (`profile.*`)
-- `getCurrentUser` - Get authenticated user profile with role
-- `updateProfile` - Update user profile (name, email, avatar)
-- `getAllUsers` - Get list of all active users
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getCurrentUser` | Get authenticated user profile with role | All Roles |
+| `updateProfile` | Update user profile (name, email, avatar) | All Roles |
+| `getAllUsers` | Get list of all active users | Admin |
 
 ### Tickets Router (`tickets.*`)
-- `getTickets` - List all tickets with customer/product information
-- `getTicket` - Get single ticket with full details and relationships
-- `getPendingCount` - Count of non-completed tickets
-- `getDailyRevenue` - Revenue data grouped by date for charts
-- `createTicket` - Create new ticket with customer lookup/creation and initial parts
-- `updateTicket` - Update ticket fields (generates auto-comments for changes)
-- `updateTicketStatus` - Change ticket status with validation
-- `addTicketPart` - Add part to ticket (automatically decreases stock)
-- `updateTicketPart` - Update part quantity/price (adjusts stock automatically)
-- `deleteTicketPart` - Remove part from ticket (returns stock)
-- `addComment` - Add comment or note to ticket
-- `addAttachment` - Add file attachment metadata
-- `getAttachments` - Get all attachments for a ticket
-- `deleteAttachment` - Delete attachment (Manager+)
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getTickets` | List all tickets with customer/product information | All Roles |
+| `getTicket` | Get single ticket with full details and relationships | All Roles |
+| `getPendingCount` | Count of non-completed tickets | All Roles |
+| `getDailyRevenue` | Revenue data grouped by date for charts | Manager+ |
+| `createTicket` | Create new ticket with customer lookup/creation | Reception+ |
+| `updateTicket` | Update ticket fields (generates auto-comments) | Technician+ |
+| `updateTicketStatus` | Change ticket status with validation | Technician+ |
+| `addTicketPart` | Add part to ticket (decreases stock) | Technician+ |
+| `updateTicketPart` | Update part quantity/price (adjusts stock) | Technician+ |
+| `deleteTicketPart` | Remove part from ticket (returns stock) | Technician+ |
+| `addComment` | Add comment or note to ticket | Technician+ |
+| `addAttachment` | Add file attachment metadata | Technician+ |
+| `getAttachments` | Get all attachments for a ticket | All Roles |
+| `deleteAttachment` | Delete attachment | Manager+ |
 
 ### Customers Router (`customers.*`)
-- `getCustomers` - List all customers with contact information
-- `getNewCustomers` - Monthly customer count with growth rate
-- `createCustomer` - Add new customer with validation
-- `updateCustomer` - Edit customer details
-- `deleteCustomer` - Remove customer (cascade protection)
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getCustomers` | List all customers with contact information | All Roles |
+| `getNewCustomers` | Monthly customer count with growth rate | Manager+ |
+| `createCustomer` | Add new customer with validation | Reception+ |
+| `updateCustomer` | Edit customer details | Reception+ |
+| `deleteCustomer` | Remove customer (cascade protection) | Admin |
 
 ### Products Router (`products.*`)
-- `getProducts` - List all products with brand information
-- `getProduct` - Get single product with related parts
-- `getNewProducts` - Monthly product count with growth rate
-- `createProduct` - Create product with brand and part relationships
-- `updateProduct` - Update product details and part links
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getProducts` | List all products with brand information | All Roles |
+| `getProduct` | Get single product with related parts | All Roles |
+| `getNewProducts` | Monthly product count with growth rate | Manager+ |
+| `createProduct` | Create product with brand and part relationships | Manager+ |
+| `updateProduct` | Update product details and part links | Manager+ |
 
 ### Parts Router (`parts.*`)
-- `getParts` - List all parts with stock levels
-- `getNewParts` - Monthly parts count with growth rate
-- `createPart` - Add new part with initial stock and product links
-- `updatePart` - Update part details, pricing, and product relationships
-- `deletePart` - Remove part (cleans up product relationships)
-- `getProducts` - Get products for part linking
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getParts` | List all parts with stock levels | All Roles |
+| `getNewParts` | Monthly parts count with growth rate | Manager+ |
+| `createPart` | Add new part with initial stock and product links | Manager+ |
+| `updatePart` | Update part details, pricing, and relationships | Manager+ |
+| `deletePart` | Remove part (cleans up relationships) | Admin |
+| `getProducts` | Get products for part linking | Manager+ |
 
 ### Brands Router (`brands.*`)
-- `getBrands` - List all brands with active/inactive status
-- `createBrand` - Create new brand
-- `updateBrand` - Update brand (name, description, active status)
-- `deleteBrand` - Delete brand (validates no products are using it)
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getBrands` | List all brands with active/inactive status | All Roles |
+| `createBrand` | Create new brand | Manager+ |
+| `updateBrand` | Update brand (name, description, active status) | Manager+ |
+| `deleteBrand` | Delete brand (validates no products are using it) | Admin |
 
 ### Revenue Router (`revenue.*`)
-- `getMonthlyRevenue` - Current and previous month revenue with growth rate
+| Endpoint | Description | Required Role |
+|----------|-------------|---------------|
+| `getMonthlyRevenue` | Current and previous month revenue with growth rate | Manager+ |
 
 ---
 

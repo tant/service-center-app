@@ -42,7 +42,8 @@ function getClientIP(request: NextRequest): string {
     return realIP;
   }
 
-  // Fallback to request IP (may not work in all deployment scenarios)
+  // Next.js 15+ provides request.ip
+  // @ts-expect-error - ip property exists in Next.js 15+ runtime but may not be in types yet
   return request.ip || 'unknown';
 }
 

@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'Validation Error',
           message: 'Dữ liệu không hợp lệ',
-          details: error.errors,
+          errors: error.issues,
         },
         { status: 400 }
       );

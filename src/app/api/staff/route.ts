@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.issues },
+        { error: "Validation error", errors: error.issues },
         { status: 400 },
       );
     }
@@ -209,7 +209,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.issues },
+        { error: "Validation error", errors: error.issues },
         { status: 400 },
       );
     }

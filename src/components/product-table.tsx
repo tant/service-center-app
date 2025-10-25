@@ -216,6 +216,7 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
                 variant="ghost"
                 size="sm"
                 className="size-9 p-0 text-muted-foreground hover:text-foreground"
+                data-testid={`edit-product-${product.id}`}
               >
                 <IconEdit className="size-5" />
               </Button>
@@ -370,7 +371,7 @@ export function ProductTable({
               <ProductModal
                 mode="add"
                 trigger={
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" data-testid="add-product-button">
                     <IconPlus />
                     <span className="hidden lg:inline">Thêm sản phẩm</span>
                   </Button>

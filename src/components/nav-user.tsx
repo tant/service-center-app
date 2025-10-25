@@ -105,6 +105,7 @@ export function NavUser() {
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              data-testid="user-menu-trigger"
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
@@ -163,7 +164,7 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} data-testid="logout-button">
               <IconLogout />
               Đăng xuất
             </DropdownMenuItem>

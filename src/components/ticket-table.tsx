@@ -316,6 +316,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       <DropdownMenuItem
         key={option.value}
         onClick={() => onStatusChange(ticketId, option.value)}
+        data-role={`change-status-${option.value}`}
       >
         {getIcon(option.icon)}
         {option.label}
@@ -505,6 +506,8 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                 size="sm"
                 onClick={() => router.push(`/tickets/${ticket.id}`)}
                 className="h-8 w-8 p-0"
+                aria-label="Xem chi tiết"
+                data-testid={`view-ticket-${ticket.id}`}
               >
                 <IconEye className="h-5 w-5" />
                 <span className="sr-only">Xem chi tiết</span>
@@ -514,13 +517,21 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                 size="sm"
                 onClick={() => router.push(`/tickets/${ticket.id}/edit`)}
                 className="h-8 w-8 p-0"
+                aria-label="Chỉnh sửa"
+                data-testid={`edit-ticket-${ticket.id}`}
               >
                 <IconEdit className="h-5 w-5" />
                 <span className="sr-only">Chỉnh sửa</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    aria-label="Thao tác khác"
+                    data-testid={`more-actions-${ticket.id}`}
+                  >
                     <IconDotsVertical className="h-5 w-5" />
                     <span className="sr-only">Thao tác khác</span>
                   </Button>
@@ -556,6 +567,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                       !currentUser ||
                       ticket.assigned_to === currentUser?.user_id
                     }
+                    data-testid={`assign-to-me-${ticket.id}`}
                   >
                     <IconUserCheck className="h-4 w-4 mr-2" />
                     Phân công cho tôi
@@ -575,6 +587,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                                 handleAssignTo(ticket, user.user_id)
                               }
                               disabled={ticket.assigned_to === user.user_id}
+                              data-testid={`assign-to-${user.user_id}`}
                             >
                               {user.full_name}
                               {ticket.assigned_to === user.user_id && " ✓"}

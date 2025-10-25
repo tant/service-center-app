@@ -99,7 +99,7 @@ export function TaskCompletionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px]" data-testid="task-completion-dialog">
         <DialogHeader>
           <DialogTitle>Hoàn thành công việc</DialogTitle>
           <DialogDescription>

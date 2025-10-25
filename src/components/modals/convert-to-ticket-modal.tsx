@@ -66,7 +66,7 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="convert-to-ticket-dialog">
         <DialogHeader>
           <DialogTitle>Chuyển thành phiếu dịch vụ</DialogTitle>
           <DialogDescription>

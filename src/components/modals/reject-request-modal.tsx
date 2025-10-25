@@ -82,7 +82,7 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" data-testid="reject-request-dialog">
         <DialogHeader>
           <DialogTitle>Từ chối yêu cầu dịch vụ</DialogTitle>
           <DialogDescription>

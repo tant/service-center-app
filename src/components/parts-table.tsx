@@ -203,6 +203,7 @@ function QuickActions({ part }: { part: z.infer<typeof partSchema> }) {
                 variant="ghost"
                 size="sm"
                 className="size-9 p-0 text-muted-foreground hover:text-foreground"
+                data-testid={`edit-part-${part.id}`}
               >
                 <IconEdit className="size-5" />
               </Button>
@@ -346,7 +347,7 @@ export function PartsTable({
           <PartsModal
             mode="add"
             trigger={
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" data-testid="add-part-button">
                 <IconPlus />
                 <span className="hidden lg:inline">Thêm linh kiện</span>
               </Button>

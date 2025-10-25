@@ -610,6 +610,7 @@ export function AddTicketForm() {
                   }
                 }}
                 disabled={!canProceedToStep2}
+                data-testid="next-step-1-button"
               >
                 Tiếp theo
               </Button>
@@ -720,7 +721,7 @@ export function AddTicketForm() {
             </div>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(1)} data-testid="back-step-2-button">
                 Quay lại
               </Button>
               <Button
@@ -730,6 +731,7 @@ export function AddTicketForm() {
                   }
                 }}
                 disabled={!canProceedToStep3}
+                data-testid="next-step-2-button"
               >
                 Tiếp theo
               </Button>
@@ -917,7 +919,7 @@ export function AddTicketForm() {
             )}
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)}>
+              <Button variant="outline" onClick={() => setStep(2)} data-testid="back-step-3-button">
                 Quay lại
               </Button>
               <Button
@@ -927,6 +929,7 @@ export function AddTicketForm() {
                   }
                 }}
                 disabled={!canProceedToStep4}
+                data-testid="next-step-3-button"
               >
                 Tiếp theo
               </Button>
@@ -1063,10 +1066,10 @@ export function AddTicketForm() {
             </div>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(3)}>
+              <Button variant="outline" onClick={() => setStep(3)} data-testid="back-step-4-button">
                 Quay lại
               </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit || isLoading}>
+              <Button onClick={handleSubmit} disabled={!canSubmit || isLoading} data-testid="submit-ticket-button">
                 {isLoading ? "Đang tạo..." : "Tạo Phiếu Dịch Vụ"}
               </Button>
             </div>

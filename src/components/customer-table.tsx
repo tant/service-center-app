@@ -479,7 +479,13 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               customer={customer}
               mode="edit"
               trigger={
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  aria-label="Chỉnh sửa khách hàng"
+                  data-testid="edit-customer-button"
+                >
                   <IconEdit className="h-5 w-5" />
                   <span className="sr-only">Chỉnh sửa</span>
                 </Button>
@@ -492,6 +498,8 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               onClick={() => handleCall(customer)}
               className="h-8 w-8 p-0"
               disabled={!customer.phone}
+              aria-label="Gọi điện thoại"
+              data-testid="call-customer-button"
             >
               <IconPhone className="h-5 w-5" />
               <span className="sr-only">Gọi điện thoại</span>
@@ -502,10 +510,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               onClick={() => handleEmail(customer)}
               className="h-8 w-8 p-0"
               disabled={!customer.email}
+              aria-label="Gửi email"
+              data-testid="email-customer-button"
             >
-              <IconMail className="h-5 w-5" />
-              <span className="sr-only">Gửi email</span>
-            </Button>
           </div>
         );
       },

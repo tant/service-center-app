@@ -1,0 +1,103 @@
+{
+  "config": {
+    "configFile": "/home/tan/work/sevice-center/playwright.config.ts",
+    "rootDir": "/home/tan/work/sevice-center/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/tan/work/sevice-center/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/home/tan/work/sevice-center/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "/.*\\.setup\\.ts/"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/tan/work/sevice-center/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/tan/work/sevice-center/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 7,
+    "webServer": {
+      "command": "pnpm dev",
+      "url": "http://localhost:3025",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/home/tan/work/sevice-center/node_modules/.pnpm/playwright@1.56.1/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._createTest (/home/tan/work/sevice-center/node_modules/.pnpm/playwright@1.56.1/node_modules/playwright/lib/common/testType.js:87:24)\n    at /home/tan/work/sevice-center/node_modules/.pnpm/playwright@1.56.1/node_modules/playwright/lib/transform/transform.js:275:12\n    at Object.<anonymous> (/home/tan/work/sevice-center/tests/auth.setup.ts:22:6)",
+      "location": {
+        "file": "/home/tan/work/sevice-center/tests/auth.setup.ts",
+        "column": 6,
+        "line": 22
+      },
+      "snippet": "\u001b[90m   at \u001b[39mauth.setup.ts:22\n\n  20 |\n  21 | // Admin setup\n> 22 | setup('authenticate as admin', async ({ page }) => {\n     |      ^\n  23 |   await page.goto('/login');\n  24 |\n  25 |   // Fill in admin credentials"
+    },
+    {
+      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
+      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
+    }
+  ],
+  "stats": {
+    "startTime": "2025-10-25T06:47:58.142Z",
+    "duration": 269.6009999999999,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

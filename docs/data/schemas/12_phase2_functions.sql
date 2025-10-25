@@ -168,3 +168,49 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.generate_rma_batch_number() IS 'Auto-generates sequential RMA batch numbers (RMA-YYYY-MM-NNN)';
+
+-- =====================================================
+-- DISABLED TRIGGERS - DOCUMENTED FOR REFERENCE
+-- =====================================================
+-- The following triggers were created during Phase 2 development
+-- but have been DISABLED due to critical bugs found during QA testing
+-- Date: 2025-10-25
+-- See: docs/qa/BUG-FIX-TRIGGER-AUTO-MOVE-PRODUCT.md
+
+-- ⚠️ DISABLED: auto_move_product_on_ticket_event()
+-- Created by: supabase/migrations/20251024000004_auto_move_product_on_ticket_event.sql
+-- Bug: DI-CRITICAL-001 - References non-existent service_tickets.serial_number field
+-- Impact: Blocked ALL service ticket creation
+-- Status: DISABLED via migration 20251025000000_disable_broken_triggers.sql
+-- Workaround: Product warehouse movement handled by application layer
+-- Fix Options:
+--   A) Rewrite to use service_requests.serial_number via request_id FK
+--   B) Add physical_product_id column to service_tickets
+--   C) Remove permanently (feature not critical for MVP)
+--
+-- Original intended functionality:
+--   - Auto-move products to 'in_service' warehouse when ticket created
+--   - Auto-return products to original warehouse when ticket completed
+--   - Track movements in stock_movements table
+
+-- ⚠️ DISABLED: trigger_generate_ticket_tasks
+-- Created by: supabase/migrations/20251023070000_automatic_task_generation_trigger.sql
+-- Bug: DI-CRITICAL-002 - Compares incompatible ENUM types
+--       (task_templates.service_type vs service_tickets.warranty_type)
+-- Impact: Blocked service ticket creation
+-- Status: DISABLED via migration 20251025000000_disable_broken_triggers.sql
+-- Workaround: Task generation already handled by application layer (tRPC)
+-- Fix: Not needed - this trigger is redundant with existing app logic
+--
+-- Original intended functionality:
+--   - Auto-generate tasks from template when ticket created
+--   - Match template based on service_type
+--   - Already implemented in application layer, making trigger redundant
+
+-- Note: Both triggers remain in the database but are disabled
+-- To check status:
+-- SELECT tgname, tgenabled, obj_description(oid, 'pg_trigger') as comment
+-- FROM pg_trigger
+-- WHERE tgrelid = 'service_tickets'::regclass
+--   AND tgname LIKE 'trigger_%'
+-- ORDER BY tgname;

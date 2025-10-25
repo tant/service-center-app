@@ -37,33 +37,18 @@ fi
 echo -e "${BLUE}📁 Copying schema files in proper order...${NC}"
 
 # Order of execution matters due to dependencies
-# 00_base_types.sql must be first (defines ENUMs and DOMAINs)
-# 00_base_functions.sql must be second (defines helper functions)
+# 00_base_schema.sql must be first (defines ENUMs, DOMAINs, and base functions)
+# Core tables follow, then Phase 2 extensions, then policies and views
 SCHEMA_FILES=(
-    "00_base_types.sql"
-    "00_base_functions.sql"
-    "core_01_profiles.sql"
-    "core_02_customers.sql"
-    "core_03_brands.sql"
-    "core_04_products.sql"
-    "core_05_parts.sql"
-    "core_06_product_parts.sql"
-    "core_07_service_tickets.sql"
-    "core_08_service_ticket_parts.sql"
-    "core_09_service_ticket_comments.sql"
-    "core_10_service_ticket_attachments.sql"
-    "functions_inventory.sql"
-    "storage_policies.sql"
-    # Phase 2 schemas (must be after Phase 1)
-    "11_phase2_types.sql"
-    "12_phase2_functions.sql"
-    "13_task_tables.sql"
-    "14_warehouse_tables.sql"
-    "15_service_request_tables.sql"
-    "16_extend_service_tickets.sql"
-    "17_phase2_rls_policies.sql"
-    "18_phase2_views.sql"
-    "19_phase2_storage.sql"
+    "00_base_schema.sql"
+    "01_users_and_customers.sql"
+    "02_products_and_inventory.sql"
+    "03_service_tickets.sql"
+    "04_task_and_warehouse.sql"
+    "05_service_requests.sql"
+    "06_policies_and_views.sql"
+    "07_storage.sql"
+    "08_inventory_functions.sql"
 )
 
 # Copy each file in order
@@ -127,12 +112,12 @@ fi
 
 # Apply storage policies (db diff doesn't capture policies on system tables)
 echo -e "${BLUE}🔐 Applying storage policies...${NC}"
-if [ -f "docs/data/schemas/storage_policies.sql" ]; then
-    echo -e "${BLUE}   📄 File found: docs/data/schemas/storage_policies.sql${NC}"
+if [ -f "docs/data/schemas/07_storage.sql" ]; then
+    echo -e "${BLUE}   📄 File found: docs/data/schemas/07_storage.sql${NC}"
     echo -e "${BLUE}   🔧 Executing storage policies via psql...${NC}"
 
     # Capture both stdout and stderr for debugging
-    POLICY_OUTPUT=$(psql "$DB_URL" -f docs/data/schemas/storage_policies.sql 2>&1)
+    POLICY_OUTPUT=$(psql "$DB_URL" -f docs/data/schemas/07_storage.sql 2>&1)
     POLICY_EXIT_CODE=$?
 
     if [ $POLICY_EXIT_CODE -eq 0 ]; then
@@ -175,7 +160,7 @@ if [ -f "docs/data/schemas/storage_policies.sql" ]; then
         echo -e "${YELLOW}   ⚠️  Could not verify policy count: $POLICY_COUNT${NC}"
     fi
 else
-    echo -e "${RED}❌ Error: Storage policies file not found at docs/data/schemas/storage_policies.sql${NC}"
+    echo -e "${RED}❌ Error: Storage policies file not found at docs/data/schemas/07_storage.sql${NC}"
     exit 1
 fi
 

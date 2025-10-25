@@ -10,19 +10,19 @@ const testUsers = {
     email: "manager.test@example.com",
     password: "password123",
     name: "Test Manager",
-    role: "Manager",
+    role: "Quản lý", // Manager in Vietnamese
   },
   technician: {
     email: "technician.test@example.com",
     password: "password123",
     name: "Test Technician",
-    role: "Technician",
+    role: "Kỹ thuật viên", // Technician in Vietnamese
   },
   reception: {
     email: "reception.test@example.com",
     password: "password123",
     name: "Test Reception",
-    role: "Reception",
+    role: "Lễ tân", // Reception in Vietnamese
   },
 };
 
@@ -161,33 +161,46 @@ test.describe("RBAC Permissions End-to-End Test", () => {
       const addButton = page.getByRole("button", { name: /add user|thêm nhân viên/i });
       await addButton.click();
 
-      // Fill in user details
-      await page.fill('input[name="fullName"]', user.name);
-      await page.fill('input[name="email"]', user.email);
-      await page.fill('input[name="password"]', user.password);
+      // Wait for drawer title to appear (indicates drawer is open)
+      await page.getByText("Thêm Nhân Viên Mới").waitFor({ state: "visible", timeout: 5000 });
 
-      // Select role from dropdown
-      const roleSelect = page.locator('button[role="combobox"]');
+      // Wait a bit more for drawer animation to complete
+      await page.waitForTimeout(1000);
+
+      // Fill in form fields - use getByPlaceholder since inputs are definitely visible
+      await page.getByPlaceholder(/nhập họ và tên/i).fill(user.name);
+      await page.getByPlaceholder(/nhập địa chỉ email/i).fill(user.email);
+      await page.getByPlaceholder(/nhập mật khẩu/i).fill(user.password);
+
+      // Select role from dropdown - find the "Vai trò" select
+      const roleLabel = page.getByText("Vai trò");
+      const roleSelect = page.locator('button#roles');
       await roleSelect.click();
+
+      // Wait for dropdown to open and select option
+      await page.waitForTimeout(500);
       await page.getByRole("option", { name: user.role, exact: true }).click();
 
       // Submit the form
-      await page.getByRole("button", { name: /create user|tạo|lưu/i }).click();
+      const submitButton = page.getByRole("button", { name: /tạo nhân viên/i });
+      await submitButton.click();
 
-      // Wait for success message
-      await expect(
-        page.getByText(/user created successfully|tạo thành công/i)
-      ).toBeVisible({ timeout: 5000 });
+      // Wait for page to reload after successful creation
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(2000);
+
+      // Verify user was created by searching for them
+      const userCreated = await searchUser(page, user.email);
+      if (!userCreated) {
+        throw new Error(`Failed to create user: ${user.email}`);
+      }
 
       console.log(`✓ Successfully created user: ${user.email}`);
-
-      // Wait a bit before next iteration
-      await page.waitForTimeout(1000);
     }
 
     await logout(page);
     await page.close();
-  });
+  }, 120000); // Increase timeout to 120 seconds (2 minutes) for user creation
 
   // ========================================
   // ADMIN PERMISSIONS TESTS
@@ -206,7 +219,7 @@ test.describe("RBAC Permissions End-to-End Test", () => {
         { path: "/products", name: "Products" },
         { path: "/parts", name: "Parts" },
         { path: "/team", name: "Team Management" },
-        { path: "/warehouse", name: "Warehouse" },
+        { path: "/warehouses", name: "Warehouse" },
       ];
 
       for (const { path, name } of adminPages) {
@@ -405,18 +418,26 @@ test.describe("RBAC Permissions End-to-End Test", () => {
       await logout(page);
     });
 
-    test("Manager CANNOT access team management", async ({ page }) => {
+    test("Manager CAN access team management", async ({ page }) => {
       await login(page, testUsers.manager);
       await page.goto("/team");
       await page.waitForLoadState("networkidle");
 
-      // Should show unauthorized or redirect
-      const isUnauthorized =
-        (await page.getByText(/unauthorized|không có quyền|access denied/i).isVisible({ timeout: 2000 }).catch(() => false)) ||
-        !page.url().includes("/team");
+      // Should have access to team page
+      expect(page.url()).toContain("/team");
 
-      expect(isUnauthorized).toBe(true);
-      console.log("✓ Manager correctly blocked from team management");
+      // Verify no unauthorized message
+      await expect(
+        page.getByText(/unauthorized|không có quyền|access denied/i)
+      ).not.toBeVisible();
+
+      // Verify page content is accessible (e.g., can see "Add User" button)
+      const hasTeamContent =
+        (await page.getByRole("button", { name: /add user|thêm nhân viên/i }).isVisible({ timeout: 2000 }).catch(() => false)) ||
+        (await page.getByRole("main").isVisible({ timeout: 2000 }).catch(() => false));
+
+      expect(hasTeamContent).toBe(true);
+      console.log("✓ Manager has access to team management");
 
       await logout(page);
     });
@@ -509,12 +530,12 @@ test.describe("RBAC Permissions End-to-End Test", () => {
 
     test("Technician CANNOT access warehouse management", async ({ page }) => {
       await login(page, testUsers.technician);
-      await page.goto("/warehouse");
+      await page.goto("/warehouses");
       await page.waitForLoadState("networkidle");
 
       const isUnauthorized =
         (await page.getByText(/unauthorized|không có quyền/i).isVisible({ timeout: 2000 }).catch(() => false)) ||
-        !page.url().includes("/warehouse");
+        !page.url().includes("/warehouses");
 
       expect(isUnauthorized).toBe(true);
       console.log("✓ Technician correctly blocked from warehouse management");
@@ -630,12 +651,12 @@ test.describe("RBAC Permissions End-to-End Test", () => {
 
     test("Reception CANNOT access warehouse", async ({ page }) => {
       await login(page, testUsers.reception);
-      await page.goto("/warehouse");
+      await page.goto("/warehouses");
       await page.waitForLoadState("networkidle");
 
       const isUnauthorized =
         (await page.getByText(/unauthorized|không có quyền/i).isVisible({ timeout: 2000 }).catch(() => false)) ||
-        !page.url().includes("/warehouse");
+        !page.url().includes("/warehouses");
 
       expect(isUnauthorized).toBe(true);
       console.log("✓ Reception correctly blocked from warehouse");
@@ -671,6 +692,268 @@ test.describe("RBAC Permissions End-to-End Test", () => {
 
       expect(hasTaskButtons).toBe(false);
       console.log("✓ Reception correctly blocked from task execution");
+
+      await logout(page);
+    });
+  });
+
+  // ========================================
+  // TEAM MANAGEMENT OPERATIONS
+  // ========================================
+
+  test.describe("Team Management Operations", () => {
+    test("Admin can change user role (Technician → Reception)", async ({ page }) => {
+      await login(page, adminUser);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Use search to find the technician user (handles pagination)
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill(testUsers.technician.email);
+      await page.waitForTimeout(500);
+
+      // Find the technician user row with data-testid
+      const techRow = page.getByTestId(`team-member-row-${testUsers.technician.email}`);
+      await expect(techRow).toBeVisible({ timeout: 5000 });
+
+      // Click the role change button using aria-label (works better with nested components)
+      const roleButton = techRow.getByRole('button', { name: 'Thay đổi vai trò' });
+      await roleButton.click();
+
+      // Wait for dropdown menu to open using Radix's data-state attribute
+      await page.waitForTimeout(500);
+      const dropdownContent = page.locator('[role="menu"]').first();
+      await expect(dropdownContent).toBeVisible({ timeout: 3000 });
+
+      // Find menu items within the dropdown using role="menuitem" and data-role attribute
+      // This ensures we only click on actual dropdown menu items, not other text on the page
+      const receptionOption = page.locator('[role="menuitem"][data-role="reception"]');
+      const technicianOption = page.locator('[role="menuitem"][data-role="technician"]');
+
+      const isReceptionVisible = await receptionOption.isVisible({ timeout: 1000 }).catch(() => false);
+
+      if (isReceptionVisible) {
+        await receptionOption.click();
+        console.log("✓ Admin changed role to Reception");
+      } else {
+        // Already Reception, try to change to Technician
+        const isTechVisible = await technicianOption.isVisible({ timeout: 1000 }).catch(() => false);
+        if (isTechVisible) {
+          await technicianOption.click();
+          console.log("✓ Admin changed role to Technician");
+        } else {
+          throw new Error("Neither Reception nor Technician role option found in dropdown menu");
+        }
+      }
+
+      // Wait for success message with Vietnamese text
+      await expect(page.getByText(/vai trò đã được cập nhật/i)).toBeVisible({ timeout: 5000 });
+      console.log("✓ Admin successfully changed user role");
+
+      await logout(page);
+    });
+
+    test("Admin can reset password for Technician", async ({ page }) => {
+      await login(page, adminUser);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Use search to find the technician user
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill(testUsers.technician.email);
+      await page.waitForTimeout(500);
+
+      // Find the technician user row with data-testid
+      const techRow = page.getByTestId(`team-member-row-${testUsers.technician.email}`);
+      await expect(techRow).toBeVisible({ timeout: 5000 });
+
+      // Click the password reset button using data-testid
+      const passwordButton = techRow.getByTestId('password-reset-button');
+      await passwordButton.click();
+
+      // Wait for password reset dialog to appear
+      const dialog = page.getByTestId('password-reset-dialog');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+
+      // Fill in new password using data-testid
+      const passwordInput = page.getByTestId('new-password-input');
+      await passwordInput.fill("NewTechPass123!");
+
+      // Click confirm button using data-testid
+      await page.getByTestId('confirm-password-reset').click();
+
+      // Wait for success message
+      await expect(page.getByText(/đặt lại mật khẩu thành công/i)).toBeVisible({ timeout: 5000 });
+      console.log("✓ Admin successfully reset technician password");
+
+      await logout(page);
+    });
+
+    test("Admin can activate/deactivate user", async ({ page }) => {
+      await login(page, adminUser);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Use search to find the technician user
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill(testUsers.technician.email);
+      await page.waitForTimeout(500);
+
+      // Find the technician user row with data-testid
+      const techRow = page.getByTestId(`team-member-row-${testUsers.technician.email}`);
+      await expect(techRow).toBeVisible({ timeout: 5000 });
+
+      // Click toggle active button using data-testid
+      const toggleButton = techRow.getByTestId('toggle-active-button');
+      await toggleButton.click();
+
+      // Wait for success message (no confirmation dialog based on code)
+      await expect(page.getByText(/tài khoản đã được/i)).toBeVisible({ timeout: 5000 });
+      console.log("✓ Admin successfully toggled user active status");
+
+      // Toggle back to active
+      await page.waitForTimeout(1000);
+      const toggleButton2 = techRow.getByTestId('toggle-active-button');
+      await toggleButton2.click();
+      await expect(page.getByText(/tài khoản đã được/i)).toBeVisible({ timeout: 5000 });
+      console.log("✓ Admin toggled user back to active");
+
+      await logout(page);
+    });
+
+    test("Manager can ONLY change roles between Technician ↔ Reception", async ({ page }) => {
+      await login(page, testUsers.manager);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Use search to find the reception user (was changed from technician in earlier test)
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill(testUsers.technician.email);
+      await page.waitForTimeout(500);
+
+      // Find the user row with data-testid
+      const userRow = page.getByTestId(`team-member-row-${testUsers.technician.email}`);
+      await expect(userRow).toBeVisible({ timeout: 5000 });
+
+      // Click the role change button using aria-label (works better with nested components)
+      const roleButton = userRow.getByRole('button', { name: 'Thay đổi vai trò' });
+      await roleButton.click();
+
+      // Wait for dropdown menu to open using Radix's role attribute
+      await page.waitForTimeout(500);
+      const dropdownContent = page.locator('[role="menu"]').first();
+      await expect(dropdownContent).toBeVisible({ timeout: 3000 });
+
+      // Check that only Technician and Reception options are visible using role="menuitem" and data-role
+      // Note: The current role won't be shown as clickable, so at least one should be visible
+      const adminOption = await page.locator('[role="menuitem"][data-role="admin"]').isVisible({ timeout: 1000 }).catch(() => false);
+      const managerOption = await page.locator('[role="menuitem"][data-role="manager"]').isVisible({ timeout: 1000 }).catch(() => false);
+      const techOption = await page.locator('[role="menuitem"][data-role="technician"]').isVisible({ timeout: 1000 }).catch(() => false);
+      const receptionOption = await page.locator('[role="menuitem"][data-role="reception"]').isVisible({ timeout: 1000 }).catch(() => false);
+
+      expect(adminOption).toBe(false);
+      expect(managerOption).toBe(false);
+      // At least one of Tech or Reception should be visible (the one that's NOT the current role)
+      const hasTechOrReceptionOption = techOption || receptionOption;
+      expect(hasTechOrReceptionOption).toBe(true);
+      console.log(`✓ Manager correctly restricted to Technician/Reception role changes only (Tech visible: ${techOption}, Reception visible: ${receptionOption})`);
+
+      // Close dropdown by pressing Escape
+      await page.keyboard.press('Escape');
+
+      await logout(page);
+    });
+
+    test("Manager CANNOT reset Admin passwords", async ({ page }) => {
+      await login(page, testUsers.manager);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Wait for page to be fully loaded
+      await page.waitForTimeout(1000);
+
+      // Use search to find the admin user
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await expect(searchInput).toBeVisible({ timeout: 5000 });
+      await searchInput.clear();
+      await searchInput.fill(adminUser.email);
+      await page.waitForTimeout(500);
+
+      // Find the admin user row with data-testid
+      const adminRow = page.getByTestId(`team-member-row-${adminUser.email}`);
+
+      if (await adminRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+        // Check if password reset button exists using data-testid - should not be visible
+        const passwordButton = adminRow.getByTestId('password-reset-button');
+        const hasPasswordButton = await passwordButton.isVisible({ timeout: 1000 }).catch(() => false);
+
+        expect(hasPasswordButton).toBe(false);
+        console.log("✓ Manager correctly blocked from resetting Admin password (button not visible)");
+      } else {
+        console.log("✓ Admin user not visible to Manager (also acceptable)");
+      }
+
+      await logout(page);
+    });
+
+    test("Manager CAN reset Technician/Reception passwords", async ({ page }) => {
+      await login(page, testUsers.manager);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Use search to find the reception user (was changed from technician)
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill(testUsers.technician.email);
+      await page.waitForTimeout(500);
+
+      // Find the user row with data-testid
+      const userRow = page.getByTestId(`team-member-row-${testUsers.technician.email}`);
+      await expect(userRow).toBeVisible({ timeout: 5000 });
+
+      // Click the password reset button using data-testid
+      const passwordButton = userRow.getByTestId('password-reset-button');
+      await expect(passwordButton).toBeVisible({ timeout: 2000 });
+      await passwordButton.click();
+
+      // Wait for password reset dialog to appear
+      const dialog = page.getByTestId('password-reset-dialog');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+
+      // Fill in new password using data-testid
+      const passwordInput = page.getByTestId('new-password-input');
+      await passwordInput.fill("ManagerResetPass123!");
+
+      // Click confirm button using data-testid
+      await page.getByTestId('confirm-password-reset').click();
+
+      // Wait for success message
+      await expect(page.getByText(/đặt lại mật khẩu thành công/i)).toBeVisible({ timeout: 5000 });
+      console.log("✓ Manager successfully reset Reception user password");
+
+      await logout(page);
+    });
+
+    test("Search functionality filters users", async ({ page }) => {
+      await login(page, adminUser);
+      await page.goto("/team");
+      await page.waitForLoadState("networkidle");
+
+      // Find search input with exact Vietnamese placeholder
+      const searchInput = page.getByPlaceholder(/tìm theo tên hoặc email/i);
+      await searchInput.fill("tech");
+
+      // Wait for filtering (debounce)
+      await page.waitForTimeout(500);
+
+      // Check that technician email is visible
+      const techVisible = await page.getByText(testUsers.technician.email).isVisible().catch(() => false);
+
+      // Check that reception is NOT visible (search for "tech" shouldn't match reception)
+      const receptionVisible = await page.getByText(testUsers.reception.email).isVisible().catch(() => false);
+
+      expect(techVisible).toBe(true);
+      expect(receptionVisible).toBe(false);
+      console.log("✓ Search successfully filters user list");
 
       await logout(page);
     });

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { supabaseAdmin } from "@/utils/supabase/admin";
+import { createClient } from "@/utils/supabase/server";
 
 const createStaffSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
@@ -18,10 +20,63 @@ const updateStaffSchema = z.object({
   avatar_url: z.string().nullable().optional(),
 });
 
+// Helper function to get current user's role
+async function getCurrentUserRole(): Promise<{ role: string; userId: string } | null> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return null;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return null;
+    }
+
+    return { role: profile.role, userId: user.id };
+  } catch (error) {
+    console.error("Error getting current user role:", error);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = createStaffSchema.parse(body);
+
+    // Role-based permission check
+    const currentUser = await getCurrentUserRole();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 },
+      );
+    }
+
+    // Only Admin and Manager can create users
+    if (!['admin', 'manager'].includes(currentUser.role)) {
+      return NextResponse.json(
+        { error: "Không có quyền tạo tài khoản người dùng." },
+        { status: 403 },
+      );
+    }
+
+    // Manager can only create Technician and Reception roles
+    if (currentUser.role === 'manager' && !['technician', 'reception'].includes(validatedData.role)) {
+      return NextResponse.json(
+        { error: "Quản lý chỉ có thể tạo tài khoản Kỹ thuật viên và Lễ tân." },
+        { status: 403 },
+      );
+    }
 
     // Create user in Supabase Auth using admin privileges (consistent with setup pattern)
     const { data: authData, error: authError } =
@@ -109,6 +164,24 @@ export async function PATCH(request: NextRequest) {
 
     const { user_id, ...updateFields } = validatedData;
 
+    // Role-based permission check
+    const currentUser = await getCurrentUserRole();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 },
+      );
+    }
+
+    // Only Admin and Manager can update users
+    if (!['admin', 'manager'].includes(currentUser.role)) {
+      return NextResponse.json(
+        { error: "Không có quyền cập nhật tài khoản người dùng." },
+        { status: 403 },
+      );
+    }
+
     // Check if user exists
     const { data: existingProfile, error: fetchError } = await supabaseAdmin
       .from("profiles")
@@ -121,6 +194,29 @@ export async function PATCH(request: NextRequest) {
         { error: "User not found" },
         { status: 404 },
       );
+    }
+
+    // Role change validation for Managers
+    if (updateFields.role && currentUser.role === 'manager') {
+      const oldRole = existingProfile.role;
+      const newRole = updateFields.role;
+
+      // Manager can only change between technician ↔ reception
+      const allowedChanges = [
+        { from: 'technician', to: 'reception' },
+        { from: 'reception', to: 'technician' },
+      ];
+
+      const isAllowedChange = allowedChanges.some(
+        rule => rule.from === oldRole && rule.to === newRole
+      );
+
+      if (!isAllowedChange) {
+        return NextResponse.json(
+          { error: "Quản lý chỉ có thể thay đổi vai trò giữa Kỹ thuật viên và Lễ tân." },
+          { status: 403 },
+        );
+      }
     }
 
     // Prevent deactivating or changing role of last active admin

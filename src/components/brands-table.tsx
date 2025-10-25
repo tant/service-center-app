@@ -98,6 +98,7 @@ function QuickActions({ brand, onEdit }: { brand: Brand; onEdit: () => void }) {
             size="sm"
             className="size-9 p-0 text-muted-foreground hover:text-foreground"
             onClick={onEdit}
+            data-testid={`edit-brand-${brand.id}`}
           >
             <IconEdit className="size-5" />
           </Button>
@@ -201,7 +202,7 @@ function BrandFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px]" data-testid="brand-form-dialog">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
@@ -569,6 +570,7 @@ export function BrandsTable({ data: initialData }: { data: Brand[] }) {
               variant="outline"
               size="sm"
               onClick={() => setCreateDialogOpen(true)}
+              data-testid="add-brand-button"
             >
               <IconPlus />
               <span className="hidden lg:inline">Thêm thương hiệu</span>

@@ -53,7 +53,13 @@ This document defines the role-based access control (RBAC) system for the Servic
 
 #### Full Access To
 - ✅ **System Settings:** Email config, integrations, feature flags
-- ✅ **User Management:** Create/update/delete all users (Manager, Technician, Reception)
+- ✅ **User Management:**
+  - Create all user types (Manager, Technician, Reception)
+  - Update all user information
+  - Change any user's role
+  - Reset passwords for all users (Manager, Technician, Reception)
+  - Deactivate/activate any user account
+  - **Note:** Cannot delete users - only deactivate
 - ✅ **All Business Features:** Tickets, customers, products, parts, warehouse
 - ✅ **Task Templates:** Create and modify service workflows
 - ✅ **Analytics & Reports:** Access all metrics and export data
@@ -115,14 +121,24 @@ SETUP_PASSWORD=tantran
 - **Approve:** High-value stock movements (>10 units or high-value items)
 - **Cannot:** Delete stock records
 
-##### ✅ Partial Access - Team
-- **View:** All technicians and reception staff
-- **Update:** Workload balancing, task assignment
-- **Cannot:** Create/delete users (Admin only)
+##### ✅ Full Access - Team Management (/team page)
+- **Access:** Can access /team page for user management
+- **View:** All team members (Admin, Manager, Technician, Reception)
+- **Create:** Can create new Technician and Reception accounts
+- **Update:** Can update user information (name, email, avatar)
+- **Role Changes:** Can change role between Technician ↔ Reception only
+- **Password Reset:** Can reset passwords for Technician and Reception accounts
+- **Deactivate/Activate:** Can deactivate or activate Technician and Reception accounts
+- **Workload:** Can assign workload and tasks to team members
+- **Cannot:**
+  - Cannot create Admin or Manager accounts
+  - Cannot change roles to/from Admin or Manager
+  - Cannot reset Admin passwords
+  - Cannot reset other Manager passwords
+  - Cannot delete any user accounts (only deactivate)
 
 ##### ❌ No Access
 - **System Settings:** Cannot modify email config, integrations
-- **User CRUD:** Cannot create/delete users
 - **Audit Logs:** Cannot access system logs (Admin only)
 
 #### Use Cases
@@ -332,10 +348,16 @@ SETUP_PASSWORD=tantran
 | RMA operations | ✅ | ✅ | ❌ | ❌ |
 | Serial verification | ✅ | ✅ | ✅ | ❌ |
 | **Team** |
+| Access /team page | ✅ | ✅ | ❌ | ❌ |
 | View team | ✅ | ✅ | ❌ | ❌ |
-| Create user | ✅ | ❌ | ❌ | ❌ |
-| Update user | ✅ | ❌ | ❌ | ❌ |
-| Delete user | ✅ | ❌ | ❌ | ❌ |
+| Create user | ✅ | ✅ | ❌ | ❌ |
+| Update user info | ✅ | ✅ | ❌ | ❌ |
+| Change role (Tech ↔ Rec) | ✅ | ✅ | ❌ | ❌ |
+| Change role (to Admin/Mgr) | ✅ | ❌ | ❌ | ❌ |
+| Reset password (Tech/Rec) | ✅ | ✅ | ❌ | ❌ |
+| Reset password (Manager) | ✅ | ❌ | ❌ | ❌ |
+| Deactivate/Activate user | ✅ | ✅ | ❌ | ❌ |
+| Delete user | ❌ | ❌ | ❌ | ❌ |
 | Assign workload | ✅ | ✅ | ❌ | ❌ |
 | **Reports** |
 | View all reports | ✅ | ✅ | ❌ | ❌ |
@@ -628,6 +650,134 @@ const reassignTask = async (taskId: string, newTechId: string) => {
   await logAudit('task_reassigned', taskId);
 };
 ```
+
+### 5. Team Management Rules
+
+#### Access Control
+```typescript
+// Route guard for /team page
+const canAccessTeamPage = (userRole: Role) => {
+  return ['admin', 'manager'].includes(userRole);
+};
+
+// Block technicians and reception from accessing team management
+if (!canAccessTeamPage(currentUser.role)) {
+  throw new Error('Access denied: Team management requires Admin or Manager role');
+}
+```
+
+#### User Account Deletion Policy
+```typescript
+// NO user can delete accounts - only deactivate
+const deleteUser = async (userId: string) => {
+  throw new Error('Account deletion is not allowed. Use deactivate instead.');
+};
+
+// Deactivate instead of delete
+const deactivateUser = async (userId: string) => {
+  requireRole(['admin', 'manager']);
+
+  // Check if last active admin
+  if (await isLastActiveAdmin(userId)) {
+    throw new Error('Cannot deactivate the last active admin');
+  }
+
+  await db.profile.update({
+    where: { id: userId },
+    data: { is_active: false }
+  });
+
+  await logAudit('user_deactivated', userId);
+};
+```
+
+#### Role Change Restrictions
+```typescript
+// Admin and Manager can only change roles between Technician ↔ Reception
+const changeUserRole = async (userId: string, newRole: Role) => {
+  requireRole(['admin', 'manager']);
+
+  const user = await getUser(userId);
+  const currentRole = user.role;
+
+  // Admin can change any role
+  if (currentUser.role === 'admin') {
+    // Allow all role changes for admin
+    await updateRole(userId, newRole);
+    return;
+  }
+
+  // Manager can only change between Technician ↔ Reception
+  if (currentUser.role === 'manager') {
+    const allowedChanges = [
+      { from: 'technician', to: 'reception' },
+      { from: 'reception', to: 'technician' }
+    ];
+
+    const isAllowed = allowedChanges.some(
+      rule => rule.from === currentRole && rule.to === newRole
+    );
+
+    if (!isAllowed) {
+      throw new Error(
+        'Managers can only change roles between Technician and Reception'
+      );
+    }
+
+    await updateRole(userId, newRole);
+    await logAudit('role_changed', userId, { from: currentRole, to: newRole });
+  }
+};
+```
+
+#### Password Reset Restrictions
+```typescript
+// Determine who can reset whose password
+const canResetPassword = (actorRole: Role, targetRole: Role) => {
+  // Admin can reset Manager, Technician, Reception
+  if (actorRole === 'admin') {
+    return ['manager', 'technician', 'reception'].includes(targetRole);
+  }
+
+  // Manager can reset Technician, Reception only
+  if (actorRole === 'manager') {
+    return ['technician', 'reception'].includes(targetRole);
+  }
+
+  // Technician and Reception cannot reset any passwords
+  return false;
+};
+
+const resetUserPassword = async (userId: string, newPassword: string) => {
+  requireRole(['admin', 'manager']);
+
+  const targetUser = await getUser(userId);
+
+  if (!canResetPassword(currentUser.role, targetUser.role)) {
+    throw new Error(
+      `${currentUser.role} cannot reset password for ${targetUser.role}`
+    );
+  }
+
+  await updatePassword(userId, newPassword);
+  await logAudit('password_reset', userId);
+  await notifyUser(userId, 'Your password has been reset by an administrator');
+};
+```
+
+#### Summary of Team Management Permissions
+
+| Action | Admin | Manager | Technician | Reception |
+|--------|-------|---------|------------|-----------|
+| Access /team page | ✅ | ✅ | ❌ | ❌ |
+| Create Tech/Reception | ✅ | ✅ | ❌ | ❌ |
+| Create Admin/Manager | ✅ | ❌ | ❌ | ❌ |
+| Change role (Tech ↔ Rec) | ✅ | ✅ | ❌ | ❌ |
+| Change role (any) | ✅ | ❌ | ❌ | ❌ |
+| Reset password (Tech/Rec) | ✅ | ✅ | ❌ | ❌ |
+| Reset password (Manager) | ✅ | ❌ | ❌ | ❌ |
+| Deactivate user | ✅ | ✅ | ❌ | ❌ |
+| Delete user | ❌ | ❌ | ❌ | ❌ |
 
 ---
 

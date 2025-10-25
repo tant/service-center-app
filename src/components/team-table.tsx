@@ -59,6 +59,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -171,8 +180,14 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
   {
     accessorKey: "full_name",
     header: "Tài khoản",
-    cell: ({ row }) => {
-      return <TeamMemberViewer member={row.original} />;
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as any;
+      return (
+        <TeamMemberViewer
+          member={row.original}
+          currentUserRole={meta?.currentUserRole || 'reception'}
+        />
+      );
     },
     enableHiding: false,
   },
@@ -230,29 +245,36 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
   {
     id: "actions",
     header: "Thao tác",
-    cell: ({ row, table }) => (
-      <QuickActions
-        member={row.original}
-        allMembers={table.options.data as z.infer<typeof teamSchema>[]}
-        onUpdate={(updatedMember) => {
-          // This will be set by the table component
-          const meta = table.options.meta as any;
-          if (meta?.updateMember) {
-            meta.updateMember(updatedMember);
-          }
-        }}
-      />
-    ),
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as any;
+      return (
+        <QuickActions
+          member={row.original}
+          allMembers={table.options.data as z.infer<typeof teamSchema>[]}
+          currentUserRole={meta?.currentUserRole || 'reception'}
+          onUpdate={(updatedMember) => {
+            if (meta?.updateMember) {
+              meta.updateMember(updatedMember);
+            }
+          }}
+        />
+      );
+    },
   },
 ];
 
 interface QuickActionsProps {
   member: z.infer<typeof teamSchema>;
   allMembers: z.infer<typeof teamSchema>[];
+  currentUserRole: "admin" | "manager" | "technician" | "reception";
   onUpdate: (updatedMember: z.infer<typeof teamSchema>) => void;
 }
 
-function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
+function QuickActions({ member, allMembers, currentUserRole, onUpdate }: QuickActionsProps) {
+  const [showPasswordReset, setShowPasswordReset] = React.useState(false);
+  const [newPassword, setNewPassword] = React.useState("");
+  const [isResettingPassword, setIsResettingPassword] = React.useState(false);
+
   // Check if this member is the last active admin
   const isLastActiveAdmin = React.useMemo(() => {
     if (member.role !== "admin" || !member.is_active) {
@@ -265,6 +287,19 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
 
     return activeAdmins.length === 1;
   }, [member, allMembers]);
+
+  // Check if current user can reset this member's password
+  const canResetPassword = React.useMemo(() => {
+    if (currentUserRole === "admin") {
+      // Admin can reset passwords for Manager, Technician, and Reception
+      return ["manager", "technician", "reception"].includes(member.role);
+    }
+    if (currentUserRole === "manager") {
+      // Manager can only reset passwords for Technician and Reception
+      return ["technician", "reception"].includes(member.role);
+    }
+    return false;
+  }, [currentUserRole, member.role]);
 
   const handleRoleChange = async (newRole: string) => {
     // Prevent changing role of last active admin
@@ -322,10 +357,50 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
   };
 
   const handlePasswordChange = () => {
-    // TODO: Implement password change modal/form
-    const successMessage = "Tính năng thay đổi mật khẩu sắp ra mắt";
-    console.log("[Team] Password change:", successMessage, { member });
-    toast.success(successMessage);
+    if (!canResetPassword) {
+      const errorMessage = "Không có quyền đặt lại mật khẩu cho người dùng này";
+      console.error("[Team] Password reset permission denied:", errorMessage, { member, currentUserRole });
+      toast.error(errorMessage);
+      return;
+    }
+    setNewPassword("");
+    setShowPasswordReset(true);
+  };
+
+  const handlePasswordResetSubmit = async () => {
+    if (newPassword.length < 6) {
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+
+    setIsResettingPassword(true);
+
+    try {
+      const response = await fetch("/api/staff/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: member.user_id,
+          new_password: newPassword,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      const successMessage = `Đặt lại mật khẩu thành công cho ${member.full_name}`;
+      console.log("[Team] Password reset success:", successMessage, { member });
+      toast.success(successMessage);
+      setShowPasswordReset(false);
+      setNewPassword("");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể đặt lại mật khẩu";
+      console.error("[Team] Password reset error:", errorMessage, error);
+      toast.error(errorMessage);
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleToggleActive = async () => {
@@ -384,71 +459,88 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
     <div className="flex items-center gap-1">
       {/* Change Role */}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
                 className="size-9 p-0 text-muted-foreground hover:text-foreground"
+                aria-label="Thay đổi vai trò"
+                data-testid="role-change-button"
               >
                 <IconShield className="size-5" />
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Thay đổi vai trò</p>
-            </TooltipContent>
-          </Tooltip>
-        </DropdownMenuTrigger>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Thay đổi vai trò</p>
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-40">
           <div className="px-2 py-1.5 text-sm font-medium">
             Thay đổi vai trò
           </div>
           <DropdownMenuSeparator />
-          {["admin", "manager", "technician", "reception"].map((role) => {
-            const isCurrentRole = member.role === role;
-            const isDisabled =
-              member.role === "admin" && isLastActiveAdmin && role !== "admin";
+          {["admin", "manager", "technician", "reception"]
+            .filter((role) => {
+              // Manager can only see technician and reception options
+              if (currentUserRole === "manager") {
+                return ["technician", "reception"].includes(role);
+              }
+              // Admin can see all roles
+              return true;
+            })
+            .map((role) => {
+              const isCurrentRole = member.role === role;
+              const isDisabled =
+                member.role === "admin" && isLastActiveAdmin && role !== "admin";
 
-            return (
-              <DropdownMenuItem
-                key={role}
-                onClick={() => !isDisabled && handleRoleChange(role)}
-                className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={isDisabled}
-              >
-                {role === "admin"
-                  ? "Quản trị viên"
-                  : role === "manager"
-                    ? "Quản lý"
-                    : role === "technician"
-                      ? "Kỹ thuật viên"
-                      : "Lễ tân"}
-                {isDisabled && (
-                  <span className="ml-auto text-xs">(Được bảo vệ)</span>
-                )}
-              </DropdownMenuItem>
-            );
-          })}
+              return (
+                <DropdownMenuItem
+                  key={role}
+                  onClick={() => !isDisabled && handleRoleChange(role)}
+                  className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={isDisabled}
+                  data-role={role}
+                  data-testid={`role-option-${role}`}
+                >
+                  {role === "admin"
+                    ? "Quản trị viên"
+                    : role === "manager"
+                      ? "Quản lý"
+                      : role === "technician"
+                        ? "Kỹ thuật viên"
+                        : "Lễ tân"}
+                  {isDisabled && (
+                    <span className="ml-auto text-xs">(Được bảo vệ)</span>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
         </DropdownMenuContent>
       </DropdownMenu>
 
       {/* Change Password */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="size-9 p-0 text-muted-foreground hover:text-foreground"
-            onClick={handlePasswordChange}
-          >
-            <IconKey className="size-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Đổi mật khẩu</p>
-        </TooltipContent>
-      </Tooltip>
+      {canResetPassword && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-9 p-0 text-muted-foreground hover:text-foreground"
+              onClick={handlePasswordChange}
+              aria-label="Đổi mật khẩu"
+              data-testid="password-reset-button"
+            >
+              <IconKey className="size-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Đổi mật khẩu</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Toggle Active/Inactive */}
       <Tooltip>
@@ -463,6 +555,8 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
             } ${member.is_active ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
             onClick={handleToggleActive}
             disabled={isLastActiveAdmin && member.is_active}
+            aria-label={member.is_active ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản"}
+            data-testid="toggle-active-button"
           >
             {member.is_active ? (
               <IconUserCheck className="size-5" />
@@ -481,6 +575,47 @@ function QuickActions({ member, allMembers, onUpdate }: QuickActionsProps) {
           </p>
         </TooltipContent>
       </Tooltip>
+
+      {/* Password Reset Modal */}
+      <Dialog open={showPasswordReset} onOpenChange={setShowPasswordReset}>
+        <DialogContent data-testid="password-reset-dialog">
+          <DialogHeader>
+            <DialogTitle>Đặt lại mật khẩu</DialogTitle>
+            <DialogDescription>
+              Đặt lại mật khẩu cho {member.full_name} ({member.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="new-password">Mật khẩu mới</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                minLength={6}
+                disabled={isResettingPassword}
+                data-testid="new-password-input"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isResettingPassword}>
+                Hủy bỏ
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handlePasswordResetSubmit}
+              disabled={isResettingPassword || newPassword.length < 6}
+              data-testid="confirm-password-reset"
+            >
+              {isResettingPassword ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -494,6 +629,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof teamSchema>> }) {
     <TableRow
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
+      data-testid={`team-member-row-${row.original.email}`}
       ref={setNodeRef}
       className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
       style={{
@@ -512,8 +648,10 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof teamSchema>> }) {
 
 export function TeamTable({
   data: initialData,
+  currentUserRole,
 }: {
   data: z.infer<typeof teamSchema>[];
+  currentUserRole: "admin" | "manager" | "technician" | "reception";
 }) {
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -575,6 +713,7 @@ export function TeamTable({
     },
     meta: {
       updateMember,
+      currentUserRole,
     },
     getRowId: (row) => row.id,
     enableRowSelection: true,
@@ -690,6 +829,7 @@ export function TeamTable({
           </DropdownMenu>
           <TeamMemberModal
             mode="add"
+            currentUserRole={currentUserRole}
             trigger={
               <Button variant="outline" size="sm">
                 <IconPlus />
@@ -870,6 +1010,7 @@ interface TeamMemberModalProps {
   member?: z.infer<typeof teamSchema>;
   mode: "add" | "edit";
   trigger: React.ReactNode;
+  currentUserRole: "admin" | "manager" | "technician" | "reception";
   onSuccess?: () => void;
 }
 
@@ -877,6 +1018,7 @@ function TeamMemberModal({
   member,
   mode,
   trigger,
+  currentUserRole,
   onSuccess,
 }: TeamMemberModalProps) {
   const isMobile = useIsMobile();
@@ -1026,6 +1168,7 @@ function TeamMemberModal({
               <Label htmlFor="full_name">Họ và tên</Label>
               <Input
                 id="full_name"
+                name="fullName"
                 value={formData.full_name}
                 onChange={(e) =>
                   setFormData({ ...formData, full_name: e.target.value })
@@ -1038,6 +1181,7 @@ function TeamMemberModal({
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) =>
@@ -1052,6 +1196,7 @@ function TeamMemberModal({
                 <Label htmlFor="password">Mật khẩu</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) =>
@@ -1086,10 +1231,22 @@ function TeamMemberModal({
                   <SelectValue placeholder="Chọn vai trò" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
-                  <SelectItem value="manager">Quản lý</SelectItem>
-                  <SelectItem value="technician">Kỹ thuật viên</SelectItem>
-                  <SelectItem value="reception">Lễ tân</SelectItem>
+                  {/* Admin can create any role */}
+                  {currentUserRole === "admin" && (
+                    <>
+                      <SelectItem value="admin">Quản trị viên</SelectItem>
+                      <SelectItem value="manager">Quản lý</SelectItem>
+                      <SelectItem value="technician">Kỹ thuật viên</SelectItem>
+                      <SelectItem value="reception">Lễ tân</SelectItem>
+                    </>
+                  )}
+                  {/* Manager can only create Technician and Reception */}
+                  {currentUserRole === "manager" && (
+                    <>
+                      <SelectItem value="technician">Kỹ thuật viên</SelectItem>
+                      <SelectItem value="reception">Lễ tân</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1219,7 +1376,8 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
     "Jackson",
     "Martin",
   ];
-  const roles = ["admin", "manager", "technician", "reception"];
+  // Only allow creating non-admin roles (admin should be unique)
+  const roles = ["manager", "technician", "reception"];
   const domains = [
     "testcompany.com",
     "example.org",
@@ -1243,14 +1401,13 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
 
   const generateRandomRole = () => {
     return roles[Math.floor(Math.random() * roles.length)] as
-      | "admin"
       | "manager"
       | "technician"
       | "reception";
   };
 
   const handleGenerateSampleData = async () => {
-    if (!confirm("This will create 100 test accounts. Are you sure?")) {
+    if (!confirm("Thao tác này sẽ tạo 100 tài khoản thử nghiệm. Bạn có chắc chắn?")) {
       return;
     }
 
@@ -1359,11 +1516,18 @@ function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
   );
 }
 
-function TeamMemberViewer({ member }: { member: z.infer<typeof teamSchema> }) {
+function TeamMemberViewer({
+  member,
+  currentUserRole,
+}: {
+  member: z.infer<typeof teamSchema>;
+  currentUserRole: "admin" | "manager" | "technician" | "reception";
+}) {
   return (
     <TeamMemberModal
       member={member}
       mode="edit"
+      currentUserRole={currentUserRole}
       trigger={
         <Button variant="ghost" className="flex items-center gap-3 p-2 h-auto">
           <Avatar className="size-8">

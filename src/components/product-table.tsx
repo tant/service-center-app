@@ -233,8 +233,10 @@ function QuickActions({ product }: { product: z.infer<typeof productSchema> }) {
 
 export function ProductTable({
   data: initialData,
+  currentUserRole,
 }: {
   data: z.infer<typeof productSchema>[];
+  currentUserRole: "admin" | "manager" | "technician" | "reception";
 }) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -362,17 +364,22 @@ export function ProductTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <ProductModal
-            mode="add"
-            trigger={
-              <Button variant="outline" size="sm">
-                <IconPlus />
-                <span className="hidden lg:inline">Thêm sản phẩm</span>
-              </Button>
-            }
-            onSuccess={() => window.location.reload()}
-          />
-          <AddSampleProductsButton onSuccess={() => window.location.reload()} />
+          {/* Only Admin and Manager can add products */}
+          {['admin', 'manager'].includes(currentUserRole) && (
+            <>
+              <ProductModal
+                mode="add"
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <IconPlus />
+                    <span className="hidden lg:inline">Thêm sản phẩm</span>
+                  </Button>
+                }
+                onSuccess={() => window.location.reload()}
+              />
+              <AddSampleProductsButton onSuccess={() => window.location.reload()} />
+            </>
+          )}
         </div>
       </div>
       <TabsContent

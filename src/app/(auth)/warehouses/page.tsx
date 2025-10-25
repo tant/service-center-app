@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Story 1.6: Warehouse Hierarchy Setup
  * AC 5: Warehouse management UI at /dashboard/warehouses
@@ -9,40 +7,45 @@
  * - Physical warehouses table with CRUD operations
  * - Virtual warehouses table (read-only, showing seeded data)
  * - Create/Edit warehouse modal
+ *
+ * RBAC: Only Admin and Manager can access this page
  */
 
-import { useState } from "react";
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PhysicalWarehouseTable } from "@/components/warehouse/physical-warehouse-table";
-import { VirtualWarehouseTable } from "@/components/warehouse/virtual-warehouse-table";
+import { createClient } from "@/utils/supabase/server";
+import { WarehouseContent } from "@/components/warehouse/warehouse-content";
 
-export default function WarehousesPage() {
-  const [activeTab, setActiveTab] = useState("physical");
+export default async function WarehousesPage() {
+  // Route guard: Only Admin and Manager can access warehouse management
+  const supabase = await createClient();
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    redirect("/login");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error("Error fetching user profile:", profileError);
+    redirect("/login");
+  }
+
+  // Only admin and manager roles can access warehouse management
+  if (!['admin', 'manager'].includes(profile.role)) {
+    redirect("/unauthorized");
+  }
 
   return (
     <>
       <PageHeader title="Quản lý Kho" />
-      <div className="flex flex-1 flex-col">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="physical">Kho Vật Lý</TabsTrigger>
-                <TabsTrigger value="virtual">Kho Ảo</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="physical" className="mt-6">
-                <PhysicalWarehouseTable />
-              </TabsContent>
-
-              <TabsContent value="virtual" className="mt-6">
-                <VirtualWarehouseTable />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </div>
+      <WarehouseContent />
     </>
   );
 }

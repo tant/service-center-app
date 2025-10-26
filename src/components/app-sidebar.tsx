@@ -8,7 +8,6 @@ import {
   IconHelp,
   IconInnerShadowTop,
   IconPhone,
-  IconPlus,
   IconReport,
   IconSettings,
   IconUser,
@@ -17,7 +16,6 @@ import {
   IconBuildingWarehouse,
   IconPackage,
   IconInbox,
-  IconTruckDelivery,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -29,7 +27,6 @@ import { NavWorkflows } from "@/components/nav-workflows";
 import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
 import { usePendingCount } from "@/hooks/use-service-request";
-import { usePendingDeliveriesCount } from "@/hooks/use-delivery";
 import {
   Sidebar,
   SidebarContent,
@@ -38,8 +35,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupContent,
 } from "@/components/ui/sidebar";
 
 type UserRole = "admin" | "manager" | "technician" | "reception";
@@ -55,6 +50,12 @@ const baseData = {
       icon: IconDashboard,
       allowedRoles: ["admin", "manager"] as UserRole[],
     },
+    {
+      title: "Công việc của tôi",
+      url: "/my-tasks",
+      icon: IconChecklist,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+    },
   ],
   // Operations section - Daily work
   operations: [
@@ -69,18 +70,6 @@ const baseData = {
       url: "/operations/service-requests",
       icon: IconInbox,
       allowedRoles: ["admin", "manager", "reception"] as UserRole[],
-    },
-    {
-      title: "Chờ giao hàng",
-      url: "/operations/deliveries",
-      icon: IconTruckDelivery,
-      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
-    },
-    {
-      title: "Công việc của tôi",
-      url: "/operations/my-tasks",
-      icon: IconChecklist,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
     },
   ],
   // Inventory section - Stock & warehouse management
@@ -226,9 +215,6 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
   // Fetch pending service requests count for badge
   const { count: pendingCount } = usePendingCount();
 
-  // Fetch pending deliveries count for badge
-  const { count: deliveriesCount } = usePendingDeliveriesCount();
-
   // Determine user role from profile
   const userRole = (profile?.role as UserRole) || "reception";
 
@@ -240,12 +226,6 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
       return {
         ...item,
         badge: pendingCount,
-      };
-    }
-    if (item.url === "/operations/deliveries") {
-      return {
-        ...item,
-        badge: deliveriesCount,
       };
     }
     return item;
@@ -275,29 +255,6 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           <SidebarSkeleton />
         ) : (
           <>
-            {/* Quick Action Button */}
-            <SidebarGroup>
-              <SidebarGroupContent className="flex flex-col gap-2">
-                <SidebarMenu>
-                  <SidebarMenuItem className="flex items-center gap-2">
-                    <SidebarMenuButton
-                      asChild
-                      tooltip="Tạo phiếu nhanh"
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
-                    >
-                      <a
-                        href="/operations/tickets/add"
-                        className="flex items-center gap-2"
-                      >
-                        <IconPlus />
-                        <span>Tạo phiếu</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
             {/* Overview - Dashboard */}
             {data.overview.length > 0 && (
               <NavOverview items={data.overview} />

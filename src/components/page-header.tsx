@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { trpc } from "@/components/providers/trpc-provider";
-import { IconClock, IconTicket } from "@tabler/icons-react";
+import { IconClock, IconTicket, IconArrowLeft } from "@tabler/icons-react";
+import Link from "next/link";
 import * as React from "react";
 
 interface PageHeaderProps {
   title: string;
   children?: React.ReactNode;
+  backHref?: string;
 }
 
-export function PageHeader({ title, children }: PageHeaderProps) {
+export function PageHeader({ title, children, backHref }: PageHeaderProps) {
   const [currentTime, setCurrentTime] = React.useState(new Date());
   const { data: pendingCount } = trpc.tickets.getPendingCount.useQuery(
     undefined,
@@ -53,6 +55,19 @@ export function PageHeader({ title, children }: PageHeaderProps) {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
+        {backHref && (
+          <>
+            <Button variant="ghost" size="sm" asChild className="-ml-1">
+              <Link href={backHref}>
+                <IconArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Separator
+              orientation="vertical"
+              className="mx-2 data-[orientation=vertical]:h-4"
+            />
+          </>
+        )}
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-3">
           {children || (

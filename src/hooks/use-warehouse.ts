@@ -564,6 +564,22 @@ export function useCreateRMABatch() {
 }
 
 /**
+ * Hook for validating RMA serial numbers
+ * Admin/Manager only
+ */
+export function useValidateRMASerials() {
+  const mutation = trpc.inventory.validateRMASerials.useMutation();
+
+  return {
+    validate: mutation.mutate,
+    validateAsync: mutation.mutateAsync,
+    isValidating: mutation.isPending,
+    data: mutation.data,
+    error: mutation.error,
+  };
+}
+
+/**
  * Hook for adding products to RMA batch
  * Admin/Manager only
  */
@@ -590,6 +606,31 @@ export function useAddProductsToRMA() {
     addProducts: mutation.mutate,
     addProductsAsync: mutation.mutateAsync,
     isAdding: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for removing product from RMA batch
+ * Admin/Manager only
+ */
+export function useRemoveProductFromRMA() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.inventory.removeProductFromRMA.useMutation({
+    onSuccess: () => {
+      utils.inventory.getRMABatches.invalidate();
+      utils.inventory.getRMABatchDetails.invalidate();
+      utils.inventory.listProducts.invalidate();
+      toast.success('Đã xóa sản phẩm khỏi lô RMA');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi xóa sản phẩm khỏi lô RMA');
+    },
+  });
+
+  return {
+    removeProduct: mutation.mutate,
+    removeProductAsync: mutation.mutateAsync,
+    isRemoving: mutation.isPending,
   };
 }
 

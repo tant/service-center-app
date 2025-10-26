@@ -44,6 +44,10 @@ graph TB
 
 ### 3.2.1 ENUMs and Types
 
+
+Note: On 2025-10-27 we added an operational field to `physical_products` to support robust RMA flows:
+
+- `previous_virtual_warehouse_type` (public.warehouse_type nullable): when a physical product is moved into `rma_staging` the system now saves the product's source virtual warehouse in this field so it can be restored when the product is removed from an RMA batch. This enables reliable round-trip movement without relying on a global default return warehouse.
 ```mermaid
 graph LR
     subgraph "User Management"

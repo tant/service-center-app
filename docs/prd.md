@@ -264,6 +264,11 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 **Integration Requirements (FR18, FR24)** - ✅ Multiple Stories:
 - FR18: Story 01.01 (Foundation maintains backward compatibility)
 - FR24: Story 01.10 (RMA workflow)
+  
+Note: As of 2025-10-27 the RMA workflow has been tightened:
+- Only physical products currently stored in the virtual warehouse type `warranty_stock` are eligible to be added to an RMA batch. Products in other virtual warehouse types (e.g., `main`, `dead_stock`, `in_service`, `parts`) must be moved to `warranty_stock` before being eligible for RMA.
+- When a product is added to an RMA batch the system records its current virtual warehouse in `physical_products.previous_virtual_warehouse_type` and moves the product into `rma_staging`.
+- When a product is removed from an RMA batch it will be returned to its saved `previous_virtual_warehouse_type` (or `warranty_stock` if the value is missing) and the saved previous warehouse is cleared. The prior concept of a system-wide "default RMA return warehouse" has been removed.
 
 ---
 

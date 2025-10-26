@@ -19,6 +19,7 @@
 *   **Đánh số Tự động:** Tự động đánh số lô theo định dạng `RMA-YYYY-MM-NNN`.
 *   **Theo dõi Trạng thái:** Giám sát tiến trình của lô qua các giai đoạn trong vòng đời.
 *   **Tích hợp Kho:** Sản phẩm được tự động chuyển đến kho `RMA Staging`.
+*   **Lưu ý về Kho nguồn:** Chỉ các sản phẩm đang nằm trong `warranty_stock` mới được phép thêm vào lô RMA. Khi thêm, hệ thống sẽ lưu kho nguồn ban đầu vào trường `physical_products.previous_virtual_warehouse_type` rồi chuyển sản phẩm sang `rma_staging`.
 
 ---
 
@@ -33,6 +34,7 @@
    ↓
 3. Thêm Sản phẩm vào Lô
    ↓ (Sản phẩm được tự động chuyển đến Kho RMA Staging)
+   - Lưu ý: Hệ thống chỉ chấp nhận sản phẩm đang ở `warranty_stock`. Các sản phẩm khác cần được di chuyển vào `warranty_stock` trước khi thêm.
 4. Hoàn tất Lô (Đã gửi)
    ↓
 5. Gửi hàng (Đã vận chuyển)
@@ -83,6 +85,7 @@ Luồng trạng thái là một chiều: `draft` → `submitted` → `shipped` �
 
 *   **Bảng `rma_batches`:** Lưu trữ thông tin về mỗi lô, bao gồm số lô, nhà cung cấp, và trạng thái.
 *   **Bảng `physical_products`:** Một cột `rma_batch_id` (khóa ngoại) được sử dụng để theo dõi sản phẩm nào thuộc về lô nào.
+*   **Bảng `physical_products` (mới):** Thêm cột `previous_virtual_warehouse_type` (nullable, kiểu `public.warehouse_type`) để lưu kho nguồn trước khi di chuyển vào RMA staging. Khi xóa sản phẩm khỏi lô RMA, hệ thống sẽ trả sản phẩm về `previous_virtual_warehouse_type` nếu có, nếu không sẽ trả về `warranty_stock`.
 
 ### Đánh số Lô Tự động
 

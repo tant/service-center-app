@@ -50,7 +50,9 @@ All Phase 2 ENUMs correctly defined:
 |-----------|--------|--------|
 | `service_type` | {warranty, paid, replacement} | ✅ OK |
 | `warranty_type` | {warranty, paid, goodwill} | ✅ OK |
-| `warehouse_type` | {warranty_stock, rma_staging, dead_stock, in_service, parts} | ✅ OK |
+| `warehouse_type` | {main, warranty_stock, rma_staging, dead_stock, in_service, parts} | ✅ OK |
+
+**Note:** Migrations `202510260014`, `202510260015`, `202510260016` were applied to add 'main' and remove `display_name`/`color_code` from `virtual_warehouses`.
 | `movement_type` | {receipt, transfer, assignment, return, disposal} | ✅ OK |
 | `email_status` | {pending, sent, failed, bounced} | ✅ OK |
 

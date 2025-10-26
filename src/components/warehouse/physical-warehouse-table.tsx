@@ -5,14 +5,33 @@
  * AC 5.1: Physical warehouses table with CRUD operations
  */
 
-import { useState } from "react";
+import * as React from "react";
 import {
   IconPlus,
   IconEdit,
   IconTrash,
   IconBuildingWarehouse,
   IconMapPin,
+  IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronsLeft,
+  IconChevronsRight,
 } from "@tabler/icons-react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
 import {
   usePhysicalWarehouses,
   useDeletePhysicalWarehouse,
@@ -20,6 +39,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,31 +55,111 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { WarehouseFormModal } from "./warehouse-form-modal";
 import type { PhysicalWarehouse } from "@/types/warehouse";
 
+const columns: ColumnDef<PhysicalWarehouse>[] = [
+  {
+    accessorKey: "name",
+    header: "Tên Kho",
+    cell: ({ row }) => {
+      return (
+        <div className="flex items-center gap-2 font-medium">
+          <IconBuildingWarehouse className="h-4 w-4 text-muted-foreground" />
+          {row.original.name}
+        </div>
+      );
+    },
+    enableHiding: false,
+  },
+  {
+    accessorKey: "location",
+    header: "Địa Điểm",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <IconMapPin className="h-4 w-4 text-muted-foreground" />
+        {row.original.location}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "description",
+    header: "Mô Tả",
+    cell: ({ row }) => (
+      <div className="max-w-xs truncate">
+        {row.original.description || "—"}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "is_active",
+    header: "Trạng Thái",
+    cell: ({ row }) => (
+      <Badge variant={row.original.is_active ? "default" : "secondary"}>
+        {row.original.is_active ? "Hoạt động" : "Không hoạt động"}
+      </Badge>
+    ),
+  },
+  {
+    id: "actions",
+    header: () => <div className="text-right">Hành động</div>,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as {
+        onEdit: (warehouse: PhysicalWarehouse) => void;
+        onDelete: (id: string) => void;
+      };
+      
+      return (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => meta.onEdit(row.original)}
+          >
+            <IconEdit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => meta.onDelete(row.original.id)}
+          >
+            <IconTrash className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      );
+    },
+  },
+];
+
 export function PhysicalWarehouseTable() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingWarehouse, setEditingWarehouse] = useState<PhysicalWarehouse | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  const [editingWarehouse, setEditingWarehouse] = React.useState<PhysicalWarehouse | null>(null);
+  
+  // Table states
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const { warehouses, isLoading } = usePhysicalWarehouses({ is_active: true });
-  const { deleteWarehouse, isDeleting } = useDeletePhysicalWarehouse();
+  const { deleteWarehouse } = useDeletePhysicalWarehouse();
 
-  const filteredWarehouses = warehouses.filter((warehouse) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      warehouse.name.toLowerCase().includes(query) ||
-      warehouse.location.toLowerCase().includes(query)
-    );
-  });
+  // Filter warehouses based on search query
+  const filteredWarehouses = React.useMemo(() => {
+    if (!searchQuery) return warehouses;
+
+    return warehouses.filter((warehouse) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        warehouse.name.toLowerCase().includes(query) ||
+        warehouse.location.toLowerCase().includes(query)
+      );
+    });
+  }, [warehouses, searchQuery]);
 
   const handleDelete = (id: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa kho này?")) {
@@ -69,106 +176,183 @@ export function PhysicalWarehouseTable() {
     setEditingWarehouse(null);
   };
 
+  const table = useReactTable({
+    data: filteredWarehouses,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      pagination,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta: {
+      onEdit: handleEdit,
+      onDelete: handleDelete,
+    },
+  });
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <IconBuildingWarehouse className="h-5 w-5" />
-                Kho Vật Lý
-              </CardTitle>
-              <CardDescription>
-                Quản lý các địa điểm kho vật lý trong hệ thống
-              </CardDescription>
-            </div>
-            <Button onClick={() => setShowCreateModal(true)}>
-              <IconPlus className="mr-2 h-4 w-4" />
-              Thêm Kho Mới
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <Input
-              placeholder="Tìm kiếm theo tên kho hoặc địa điểm..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
-            />
-          </div>
+      <div className="flex flex-col gap-4">
+        {/* Search and Action Buttons */}
+        <div className="flex items-center justify-between gap-4">
+          <Input
+            placeholder="Tìm kiếm theo tên kho hoặc địa điểm..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+          
+          <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+            <IconPlus className="h-4 w-4" />
+            <span className="hidden lg:inline ml-2">Thêm Kho Mới</span>
+          </Button>
+        </div>
 
-          {isLoading ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Đang tải dữ liệu...
-            </div>
-          ) : filteredWarehouses.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              {searchQuery ? "Không tìm thấy kho phù hợp" : "Chưa có kho nào"}
-            </div>
-          ) : (
-            <div className="rounded-md border">
+        {/* Table */}
+        {isLoading ? (
+          <div className="rounded-lg border py-8 text-center text-muted-foreground">
+            Đang tải dữ liệu...
+          </div>
+        ) : table.getRowModel().rows?.length === 0 ? (
+          <div className="rounded-lg border py-8 text-center text-muted-foreground">
+            {searchQuery ? "Không tìm thấy kho phù hợp" : "Chưa có kho nào"}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-lg border">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tên Kho</TableHead>
-                    <TableHead>Địa Điểm</TableHead>
-                    <TableHead>Mô Tả</TableHead>
-                    <TableHead>Trạng Thái</TableHead>
-                    <TableHead className="text-right">Thao Tác</TableHead>
-                  </TableRow>
+                <TableHeader className="bg-muted sticky top-0 z-10">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
                 </TableHeader>
                 <TableBody>
-                  {filteredWarehouses.map((warehouse) => (
-                    <TableRow key={warehouse.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <IconBuildingWarehouse className="h-4 w-4 text-muted-foreground" />
-                          {warehouse.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <IconMapPin className="h-4 w-4 text-muted-foreground" />
-                          {warehouse.location}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {warehouse.description || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={warehouse.is_active ? "default" : "secondary"}>
-                          {warehouse.is_active ? "Hoạt động" : "Không hoạt động"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(warehouse)}
-                          >
-                            <IconEdit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(warehouse.id)}
-                            disabled={isDeleting}
-                          >
-                            <IconTrash className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-4">
+              {/* Page Info */}
+              <div className="flex w-fit items-center justify-center text-sm font-medium">
+                Trang {table.getState().pagination.pageIndex + 1} trên{" "}
+                {table.getPageCount()}
+              </div>
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center gap-8">
+                {/* Page Size Selector */}
+                <div className="hidden items-center gap-2 lg:flex">
+                  <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                    Số dòng mỗi trang
+                  </Label>
+                  <Select
+                    value={`${table.getState().pagination.pageSize}`}
+                    onValueChange={(value) => table.setPageSize(Number(value))}
+                  >
+                    <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                      <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                      {[10, 20, 30, 40, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                          {pageSize}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="ml-auto flex items-center gap-2 lg:ml-0">
+                  {/* First Page (desktop only) */}
+                  <Button
+                    variant="outline"
+                    className="hidden h-8 w-8 p-0 lg:flex"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <span className="sr-only">Đến trang đầu</span>
+                    <IconChevronsLeft className="h-4 w-4" />
+                  </Button>
+
+                  {/* Previous Page */}
+                  <Button
+                    variant="outline"
+                    className="size-8"
+                    size="icon"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <span className="sr-only">Trang trước</span>
+                    <IconChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  {/* Next Page */}
+                  <Button
+                    variant="outline"
+                    className="size-8"
+                    size="icon"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <span className="sr-only">Trang tiếp</span>
+                    <IconChevronRight className="h-4 w-4" />
+                  </Button>
+
+                  {/* Last Page (desktop only) */}
+                  <Button
+                    variant="outline"
+                    className="hidden size-8 lg:flex"
+                    size="icon"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <span className="sr-only">Đến trang cuối</span>
+                    <IconChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       <WarehouseFormModal
         open={showCreateModal || !!editingWarehouse}

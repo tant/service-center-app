@@ -1,20 +1,20 @@
-"use client";
-
 /**
- * Story 1.6: Warehouse Hierarchy Setup
- * AC 5.2: Virtual warehouses table (read-only)
- *
- * Displays the 5 seeded virtual warehouses with color-coded badges
+ * Task Types Table Component
+ * Display and manage task type definitions
  */
+
+"use client";
 
 import * as React from "react";
 import {
-  IconDatabase,
-  IconBox,
+  IconPlus,
+  IconEdit,
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconLayoutColumns,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -30,10 +30,10 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useVirtualWarehouses } from "@/hooks/use-warehouse";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -49,56 +49,60 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { WAREHOUSE_TYPE_COLORS, WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
-import type { WarehouseType } from "@/types/enums";
-import type { VirtualWarehouse } from "@/types/warehouse";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useTaskTypes } from "@/hooks/use-workflow";
+import type { TaskType } from "@/types/workflow";
 
-const columns: ColumnDef<VirtualWarehouse>[] = [
+const columns: ColumnDef<TaskType>[] = [
   {
-    accessorKey: "warehouse_type",
-    header: "Loại Kho",
-    cell: ({ row }) => {
-      const warehouseType = row.original.warehouse_type as WarehouseType;
-      const color = WAREHOUSE_TYPE_COLORS[warehouseType];
-
-      return (
-        <div className="flex items-center gap-2">
-          <div
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-          <code className="rounded bg-muted px-2 py-0.5 text-xs">
-            {row.original.warehouse_type}
-          </code>
-        </div>
-      );
-    },
+    accessorKey: "name",
+    header: "Tên Loại Công Việc",
+    cell: ({ row }) => (
+      <div className="font-medium">{row.original.name}</div>
+    ),
     enableHiding: false,
   },
   {
-    accessorKey: "display_name",
-    header: "Tên Hiển Thị",
-    cell: ({ row }) => {
-      const warehouseType = row.original.warehouse_type as WarehouseType;
-      const label = WAREHOUSE_TYPE_LABELS[warehouseType];
-
-      return (
-        <div className="flex items-center gap-2 font-medium">
-          <IconBox className="h-4 w-4 text-muted-foreground" />
-          {label || row.original.display_name}
-        </div>
-      );
-    },
-    enableHiding: false,
+    accessorKey: "category",
+    header: "Danh Mục",
+    cell: ({ row }) => (
+      <Badge variant="outline">
+        {row.original.category || "Khác"}
+      </Badge>
+    ),
   },
   {
     accessorKey: "description",
     header: "Mô Tả",
     cell: ({ row }) => (
-      <div className="max-w-md">
+      <div className="max-w-md truncate">
         {row.original.description || "—"}
       </div>
     ),
+  },
+  {
+    accessorKey: "estimated_duration_minutes",
+    header: "Thời Gian Ước Tính",
+    cell: ({ row }) => {
+      const minutes = row.original.estimated_duration_minutes;
+      if (!minutes) return "—";
+      
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      
+      if (hours > 0 && mins > 0) {
+        return `${hours}h ${mins}m`;
+      } else if (hours > 0) {
+        return `${hours}h`;
+      } else {
+        return `${mins}m`;
+      }
+    },
   },
   {
     accessorKey: "is_active",
@@ -109,9 +113,34 @@ const columns: ColumnDef<VirtualWarehouse>[] = [
       </Badge>
     ),
   },
+  {
+    id: "actions",
+    header: () => <div className="text-right">Hành động</div>,
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as {
+        onEdit: (taskType: TaskType) => void;
+      };
+      
+      return (
+        <div className="flex items-center justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => meta.onEdit(row.original)}
+          >
+            <IconEdit className="h-4 w-4" />
+          </Button>
+        </div>
+      );
+    },
+  },
 ];
 
-export function VirtualWarehouseTable() {
+export function TaskTypesTable() {
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
+  const [editingTaskType, setEditingTaskType] = React.useState<TaskType | null>(null);
+
   // Table states
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -121,10 +150,34 @@ export function VirtualWarehouseTable() {
     pageSize: 10,
   });
 
-  const { warehouses, isLoading } = useVirtualWarehouses();
+  const { taskTypes, isLoading } = useTaskTypes();
+
+  // Filter task types based on search query
+  const filteredTaskTypes = React.useMemo(() => {
+    if (!searchQuery) return taskTypes;
+
+    return taskTypes.filter((taskType) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        taskType.name.toLowerCase().includes(query) ||
+        taskType.category?.toLowerCase().includes(query) ||
+        taskType.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [taskTypes, searchQuery]);
+
+  const handleEdit = (taskType: TaskType) => {
+    setEditingTaskType(taskType);
+    setShowCreateModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowCreateModal(false);
+    setEditingTaskType(null);
+  };
 
   const table = useReactTable({
-    data: warehouses,
+    data: filteredTaskTypes,
     columns,
     state: {
       sorting,
@@ -142,10 +195,62 @@ export function VirtualWarehouseTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta: {
+      onEdit: handleEdit,
+    },
   });
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Action Buttons Row */}
+      <div className="flex items-center justify-between gap-4">
+        <Input
+          placeholder="Tìm kiếm theo tên, danh mục hoặc mô tả..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-sm"
+        />
+        
+        <div className="flex items-center gap-2">
+          {/* Column Visibility */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <IconLayoutColumns className="h-4 w-4" />
+                <span className="hidden lg:inline ml-2">Tùy chỉnh cột</span>
+                <span className="lg:hidden ml-2">Cột</span>
+                <IconChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Create Button */}
+          <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+            <IconPlus className="h-4 w-4" />
+            <span className="hidden lg:inline ml-2">Thêm Loại Công Việc</span>
+          </Button>
+        </div>
+      </div>
+
       {/* Table */}
       {isLoading ? (
         <div className="rounded-lg border py-8 text-center text-muted-foreground">
@@ -153,7 +258,7 @@ export function VirtualWarehouseTable() {
         </div>
       ) : table.getRowModel().rows?.length === 0 ? (
         <div className="rounded-lg border py-8 text-center text-muted-foreground">
-          Không tìm thấy kho ảo nào
+          {searchQuery ? "Không tìm thấy loại công việc phù hợp" : "Chưa có loại công việc nào"}
         </div>
       ) : (
         <>
@@ -207,14 +312,14 @@ export function VirtualWarehouseTable() {
             <div className="flex items-center gap-8">
               {/* Page Size Selector */}
               <div className="hidden items-center gap-2 lg:flex">
-                <Label htmlFor="rows-per-page-virtual" className="text-sm font-medium">
+                <Label htmlFor="rows-per-page" className="text-sm font-medium">
                   Số dòng mỗi trang
                 </Label>
                 <Select
                   value={`${table.getState().pagination.pageSize}`}
                   onValueChange={(value) => table.setPageSize(Number(value))}
                 >
-                  <SelectTrigger size="sm" className="w-20" id="rows-per-page-virtual">
+                  <SelectTrigger size="sm" className="w-20" id="rows-per-page">
                     <SelectValue placeholder={table.getState().pagination.pageSize} />
                   </SelectTrigger>
                   <SelectContent side="top">
@@ -280,14 +385,22 @@ export function VirtualWarehouseTable() {
         </>
       )}
 
-      {/* Info Note */}
-      <div className="rounded-lg bg-muted/50 p-4">
-        <p className="text-sm text-muted-foreground">
-          <strong>Lưu ý:</strong> Kho ảo là các loại kho cố định trong hệ thống,
-          đại diện cho trạng thái logic của sản phẩm (bảo hành, RMA, hỏng, đang sử dụng, linh kiện).
-          Không thể chỉnh sửa hoặc xóa các kho ảo này.
-        </p>
-      </div>
+      {/* TODO: Add Task Type Form Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-lg font-semibold mb-4">
+              {editingTaskType ? "Chỉnh sửa" : "Thêm"} Loại Công Việc
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Chức năng này đang được phát triển.
+            </p>
+            <Button onClick={handleCloseModal}>Đóng</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export { TaskTypesTable };

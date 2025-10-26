@@ -279,7 +279,7 @@ function DataTable<TData extends { id: string }, TValue>({
         <div className="flex w-full items-center gap-8 lg:w-fit">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="rows-per-page" className="text-sm font-medium">
-              Hàng trên trang
+              Số dòng mỗi trang
             </Label>
             <Select
               value={`${table.getState().pagination.pageSize}`}
@@ -302,7 +302,7 @@ function DataTable<TData extends { id: string }, TValue>({
             </Select>
           </div>
           <div className="flex w-fit items-center justify-center text-sm font-medium">
-            Trang {table.getState().pagination.pageIndex + 1} của{" "}
+            Trang {table.getState().pagination.pageIndex + 1} trên{" "}
             {table.getPageCount()}
           </div>
           <div className="ml-auto flex items-center gap-2 lg:ml-0">

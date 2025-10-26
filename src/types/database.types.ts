@@ -34,6 +34,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          changes: Json | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          reason: string | null
+          resource_id: string
+          resource_type: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          resource_id: string
+          resource_type: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role: string
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          resource_id?: string
+          resource_type?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           created_at: string
@@ -293,11 +347,9 @@ export type Database = {
         Row: {
           condition: Database["public"]["Enums"]["product_condition"]
           created_at: string
-          created_by_id: string | null
           current_ticket_id: string | null
           id: string
           notes: string | null
-          photo_urls: string[] | null
           physical_warehouse_id: string | null
           product_id: string
           purchase_date: string | null
@@ -307,7 +359,6 @@ export type Database = {
           rma_reason: string | null
           serial_number: string
           supplier_id: string | null
-          supplier_name: string | null
           updated_at: string
           virtual_warehouse_type: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date: string | null
@@ -317,11 +368,9 @@ export type Database = {
         Insert: {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
-          created_by_id?: string | null
           current_ticket_id?: string | null
           id?: string
           notes?: string | null
-          photo_urls?: string[] | null
           physical_warehouse_id?: string | null
           product_id: string
           purchase_date?: string | null
@@ -331,7 +380,6 @@ export type Database = {
           rma_reason?: string | null
           serial_number: string
           supplier_id?: string | null
-          supplier_name?: string | null
           updated_at?: string
           virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date?: string | null
@@ -341,11 +389,9 @@ export type Database = {
         Update: {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
-          created_by_id?: string | null
           current_ticket_id?: string | null
           id?: string
           notes?: string | null
-          photo_urls?: string[] | null
           physical_warehouse_id?: string | null
           product_id?: string
           purchase_date?: string | null
@@ -355,7 +401,6 @@ export type Database = {
           rma_reason?: string | null
           serial_number?: string
           supplier_id?: string | null
-          supplier_name?: string | null
           updated_at?: string
           virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
           warranty_end_date?: string | null
@@ -363,13 +408,6 @@ export type Database = {
           warranty_start_date?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "physical_products_created_by_id_fkey"
-            columns: ["created_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "physical_products_current_ticket_id_fkey"
             columns: ["current_ticket_id"]
@@ -1602,7 +1640,6 @@ export type Database = {
           created_at: string
           created_by_id: string
           description: string | null
-          enforce_sequence: boolean
           id: string
           is_active: boolean
           name: string
@@ -1615,7 +1652,6 @@ export type Database = {
           created_at?: string
           created_by_id: string
           description?: string | null
-          enforce_sequence?: boolean
           id?: string
           is_active?: boolean
           name: string
@@ -1628,7 +1664,6 @@ export type Database = {
           created_at?: string
           created_by_id?: string
           description?: string | null
-          enforce_sequence?: boolean
           id?: string
           is_active?: boolean
           name?: string
@@ -1855,36 +1890,44 @@ export type Database = {
       }
       virtual_warehouses: {
         Row: {
-          color_code: string | null
           created_at: string
           description: string | null
-          display_name: string
           id: string
           is_active: boolean
+          name: string
+          physical_warehouse_id: string | null
           updated_at: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
         Insert: {
-          color_code?: string | null
           created_at?: string
           description?: string | null
-          display_name: string
           id?: string
           is_active?: boolean
+          name: string
+          physical_warehouse_id?: string | null
           updated_at?: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
         Update: {
-          color_code?: string | null
           created_at?: string
           description?: string | null
-          display_name?: string
           id?: string
           is_active?: boolean
+          name?: string
+          physical_warehouse_id?: string | null
           updated_at?: string
           warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "virtual_warehouses_physical_warehouse_id_fkey"
+            columns: ["physical_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "physical_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2172,20 +2215,47 @@ export type Database = {
         Returns: string
       }
       decrease_part_stock: {
-        Args: { part_id: string; quantity_to_decrease: number }
+        Args: { p_part_id: string; p_quantity_to_decrease: number }
         Returns: boolean
       }
       generate_ticket_number: { Args: never; Returns: string }
+      get_my_role: { Args: never; Returns: string }
       get_warranty_status: {
         Args: { p_warranty_end_date: string }
         Returns: string
       }
+      has_any_role: { Args: { required_roles: string[] }; Returns: boolean }
+      has_role: { Args: { required_role: string }; Returns: boolean }
       increase_part_stock: {
-        Args: { part_id: string; quantity_to_increase: number }
+        Args: { p_part_id: string; p_quantity_to_increase: number }
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_manager: { Args: never; Returns: boolean }
+      is_manager_or_above: { Args: never; Returns: boolean }
+      is_reception: { Args: never; Returns: boolean }
+      is_technician: { Args: never; Returns: boolean }
+      log_audit: {
+        Args: {
+          p_action: string
+          p_metadata?: Json
+          p_new_values?: Json
+          p_old_values?: Json
+          p_reason?: string
+          p_resource_id: string
+          p_resource_type: string
+        }
+        Returns: string
+      }
+      log_template_switch: {
+        Args: {
+          p_new_template_id: string
+          p_old_template_id: string
+          p_reason: string
+          p_ticket_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       comment_type: "note" | "status_change" | "assignment" | "system"
@@ -2219,6 +2289,7 @@ export type Database = {
         | "dead_stock"
         | "in_service"
         | "parts"
+        | "main"
       warranty_type: "warranty" | "paid" | "goodwill"
     }
     CompositeTypes: {
@@ -2384,6 +2455,7 @@ export const Constants = {
         "dead_stock",
         "in_service",
         "parts",
+        "main",
       ],
       warranty_type: ["warranty", "paid", "goodwill"],
     },

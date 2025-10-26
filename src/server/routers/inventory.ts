@@ -18,6 +18,7 @@ const createProductSchema = z.object({
   product_id: z.string().uuid("Product ID must be a valid UUID"),
   physical_warehouse_id: z.string().uuid("Warehouse ID must be a valid UUID").optional(),
   virtual_warehouse_type: z.enum([
+    "main",
     "warranty_stock",
     "rma_staging",
     "dead_stock",
@@ -46,7 +47,7 @@ const updateProductSchema = z.object({
   product_id: z.string().uuid().optional(),
   physical_warehouse_id: z.string().uuid().nullable().optional(),
   virtual_warehouse_type: z
-    .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+    .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
     .optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_start_date: z.string().nullable().optional(),
@@ -62,7 +63,7 @@ const updateProductSchema = z.object({
 const listProductsSchema = z.object({
   physical_warehouse_id: z.string().uuid().optional(),
   virtual_warehouse_type: z
-    .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+    .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
     .optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
@@ -497,10 +498,10 @@ export const inventoryRouter = router({
         from_physical_warehouse_id: z.string().uuid().optional(),
         to_physical_warehouse_id: z.string().uuid().optional(),
         from_virtual_warehouse_type: z
-          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
           .optional(),
         to_virtual_warehouse_type: z
-          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
           .optional(),
         reference_ticket_id: z.string().uuid().optional(),
         notes: z.string().optional(),
@@ -681,7 +682,7 @@ export const inventoryRouter = router({
     .input(
       z.object({
         warehouse_type: z
-          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
           .optional(),
         status: z.enum(["ok", "warning", "critical"]).optional(),
         search: z.string().optional(),
@@ -734,7 +735,7 @@ export const inventoryRouter = router({
     .input(
       z.object({
         product_id: z.string().uuid(),
-        warehouse_type: z.enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]),
+        warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]),
         minimum_quantity: z.number().int().min(0),
         reorder_quantity: z.number().int().min(0).optional(),
         alert_enabled: z.boolean().default(true),
@@ -800,7 +801,7 @@ export const inventoryRouter = router({
     .input(
       z.object({
         warehouse_type: z
-          .enum(["warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
+          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
           .optional(),
         status: z.enum(["ok", "warning", "critical"]).optional(),
       })

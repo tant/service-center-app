@@ -41,7 +41,7 @@
 **Database Foundation (Primary Migration: 20251023000000_phase2_foundation.sql - 2,765 lines):**
 - ✅ Created Phase 2 ENUMs:
   - `task_status` ('pending', 'in_progress', 'completed', 'blocked', 'skipped')
-  - `warehouse_type` ('warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts')
+  - `warehouse_type` ('main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts')
   - Extended existing ENUMs (user_role, ticket_status, priority_level, warranty_type, comment_type)
 - ✅ Created Phase 2 database functions and triggers:
   - Automatic timestamp updates (updated_at triggers)
@@ -111,6 +111,13 @@
 - ✅ 91 total tRPC procedures operational
 - ✅ 37 application routes functional
 - ✅ All Phase 2 features working end-to-end
+
+**Developer follow-ups (Oct 26, 2025):**
+- Applied migrations `202510260014`, `202510260015`, `202510260016` to add `main` warehouse type and remove `display_name`/`color_code` from `virtual_warehouses`.
+- Required dev tasks:
+  - Regenerate TypeScript DB types: `supabase gen types typescript --local`
+  - Update Zod schemas (tRPC) and any hard-coded warehouse_type enums in frontend components
+  - Remove references to `display_name` and `color_code` from UI and server code
 
 **Blockers:** None
 

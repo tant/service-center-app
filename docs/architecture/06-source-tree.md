@@ -89,6 +89,8 @@ sevice-center/
 │   │   │   │   │   └── page.tsx
 │   │   │   │   └── task-progress/          # ✅ Task tracking
 │   │   │   │       └── page.tsx
+│   │   │   ├── my-tasks/               # Technician tasks
+│   │   │   │   └── page.tsx
 │   │   │   ├── operations/                 # 🎯 Daily Operations
 │   │   │   │   ├── tickets/                # Service tickets
 │   │   │   │   │   ├── page.tsx
@@ -98,11 +100,7 @@ sevice-center/
 │   │   │   │   │       ├── page.tsx
 │   │   │   │   │       └── edit/
 │   │   │   │   │           └── page.tsx
-│   │   │   │   ├── service-requests/       # Public service requests
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── deliveries/             # Delivery management
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── my-tasks/               # Technician tasks
+│   │   │   │   └── service-requests/       # Public service requests
 │   │   │   │       └── page.tsx
 │   │   │   ├── inventory/                  # 📦 Stock & Warehouse
 │   │   │   │   ├── products/               # Physical products tracking
@@ -284,6 +282,7 @@ graph TB
     App["app/(auth)/"]
 
     App --> Dashboard["📊 dashboard/<br/>Analytics & Overview"]
+    App --> MyTasks["my-tasks/<br/>Technician tasks"]
     App --> Operations["🎯 operations/<br/>Daily Work"]
     App --> Inventory["📦 inventory/<br/>Stock & Warehouse"]
     App --> Catalog["📚 catalog/<br/>Master Data"]
@@ -293,8 +292,6 @@ graph TB
 
     Operations --> Tickets["tickets/<br/>Service tickets"]
     Operations --> ServiceReq["service-requests/<br/>Public requests"]
-    Operations --> Deliveries["deliveries/<br/>Delivery management"]
-    Operations --> MyTasks["my-tasks/<br/>Technician tasks"]
 
     Inventory --> InvProducts["products/<br/>Physical tracking"]
     Inventory --> StockLevels["stock-levels/<br/>Stock alerts"]
@@ -315,6 +312,7 @@ graph TB
     Settings --> System["system/<br/>Admin config"]
 
     style Dashboard fill:#FFD700
+    style MyTasks fill:#FFD700
     style Operations fill:#4A90E2
     style Inventory fill:#FF6B6B
     style Catalog fill:#50C878
@@ -331,10 +329,9 @@ graph TB
 **URL Structure:**
 ```
 /dashboard                       → Main dashboard
+/my-tasks                       → Technician tasks
 /operations/tickets             → Service tickets
-/operations/service-requests    → Public service requests
-/operations/deliveries          → Delivery management
-/operations/my-tasks            → Technician tasks
+/operations/service-requests    → Public service requests (includes deliveries tab)
 /inventory/products             → Physical product tracking
 /inventory/stock-levels         → Stock level monitoring
 /inventory/rma                  → RMA batch management

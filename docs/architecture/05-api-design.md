@@ -766,7 +766,7 @@ const updateStatus = trpc.tickets.updateStatus.useMutation({
 | Router | Procedures | Primary Use Case | Stories |
 |--------|-----------|------------------|---------|
 | **workflow** | 12+ | Task templates & execution | 01.02-01.05, 01.17 |
-| **warehouse** | 5+ | Warehouse hierarchy | 01.06 |
+| **warehouse** | 8+ | Warehouse hierarchy | 01.06 |
 | **inventory** | 15+ | Physical products & RMA | 01.07-01.10 |
 | **serviceRequest** | 8+ | Public portal & staff mgmt | 01.11-01.13 |
 | **notifications** | 6+ | Email notification system | 01.15 |

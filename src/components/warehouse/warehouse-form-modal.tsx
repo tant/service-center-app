@@ -2,7 +2,7 @@
 
 /**
  * Story 1.6: Warehouse Hierarchy Setup
- * AC 5.3: Warehouse form modal for creating/editing physical warehouses
+ * AC 5.3: Warehouse form drawer for creating/editing physical warehouses
  */
 
 import { useState, useEffect } from "react";
@@ -11,18 +11,20 @@ import {
   useUpdatePhysicalWarehouse,
 } from "@/hooks/use-warehouse";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { PhysicalWarehouse } from "@/types/warehouse";
 
 interface WarehouseFormModalProps {
@@ -36,8 +38,10 @@ export function WarehouseFormModal({
   onClose,
   warehouse,
 }: WarehouseFormModalProps) {
+  const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
     name: "",
+    code: "",
     location: "",
     description: "",
     is_active: true,
@@ -56,6 +60,7 @@ export function WarehouseFormModal({
     if (warehouse) {
       setFormData({
         name: warehouse.name,
+        code: warehouse.code,
         location: warehouse.location || "",
         description: warehouse.description || "",
         is_active: warehouse.is_active,
@@ -63,6 +68,7 @@ export function WarehouseFormModal({
     } else {
       setFormData({
         name: "",
+        code: "",
         location: "",
         description: "",
         is_active: true,
@@ -76,6 +82,12 @@ export function WarehouseFormModal({
 
     if (!formData.name.trim()) {
       newErrors.name = "Tên kho là bắt buộc";
+    }
+
+    if (!formData.code.trim()) {
+      newErrors.code = "Mã kho là bắt buộc";
+    } else if (formData.code.trim().length > 20) {
+      newErrors.code = "Mã kho không được quá 20 ký tự";
     }
 
     if (!formData.location.trim()) {
@@ -94,6 +106,7 @@ export function WarehouseFormModal({
         {
           id: warehouse.id,
           name: formData.name.trim(),
+          code: formData.code.trim().toUpperCase(),
           location: formData.location.trim(),
           description: formData.description.trim() || undefined,
           is_active: formData.is_active,
@@ -108,6 +121,7 @@ export function WarehouseFormModal({
       createWarehouse(
         {
           name: formData.name.trim(),
+          code: formData.code.trim().toUpperCase(),
           location: formData.location.trim(),
           description: formData.description.trim() || undefined,
           is_active: formData.is_active,
@@ -126,20 +140,21 @@ export function WarehouseFormModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
-          <DialogTitle>
+    <Drawer open={open} onOpenChange={onClose} direction={isMobile ? "bottom" : "right"}>
+      <DrawerContent>
+        <DrawerHeader>
+          <DrawerTitle>
             {isEditMode ? "Chỉnh Sửa Kho" : "Thêm Kho Mới"}
-          </DialogTitle>
-          <DialogDescription>
+          </DrawerTitle>
+          <DrawerDescription>
             {isEditMode
               ? "Cập nhật thông tin kho vật lý"
               : "Tạo mới một kho vật lý trong hệ thống"}
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
-        <div className="grid gap-4 py-4">
+        {/* Form Content - Scrollable */}
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           {/* Name Field */}
           <div className="grid gap-2">
             <Label htmlFor="name">
@@ -157,6 +172,33 @@ export function WarehouseFormModal({
             />
             {errors.name && (
               <p className="text-sm text-destructive">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Code Field */}
+          <div className="grid gap-2">
+            <Label htmlFor="code">
+              Mã Kho <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="code"
+              value={formData.code}
+              onChange={(e) => {
+                setFormData({ ...formData, code: e.target.value.toUpperCase() });
+                if (errors.code) setErrors({ ...errors, code: "" });
+              }}
+              placeholder="Ví dụ: WH-01, MAIN, T1..."
+              maxLength={20}
+              className={errors.code ? "border-destructive" : ""}
+              disabled={isEditMode}
+            />
+            {errors.code && (
+              <p className="text-sm text-destructive">{errors.code}</p>
+            )}
+            {isEditMode && (
+              <p className="text-xs text-muted-foreground">
+                Mã kho không thể thay đổi sau khi tạo
+              </p>
             )}
           </div>
 
@@ -214,15 +256,7 @@ export function WarehouseFormModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-          >
-            Hủy
-          </Button>
+        <DrawerFooter>
           <Button
             type="button"
             onClick={handleSubmit}
@@ -234,8 +268,17 @@ export function WarehouseFormModal({
                 ? "Cập Nhật"
                 : "Tạo Kho"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DrawerClose asChild>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+            >
+              Hủy
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

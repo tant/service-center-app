@@ -8,6 +8,7 @@ import type { WarehouseType, ProductCondition, MovementType } from '@/types/enum
  * Vietnamese display names for virtual warehouse types
  */
 export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
+  main: 'Kho Chính',
   warranty_stock: 'Kho Bảo Hành',
   rma_staging: 'Khu Vực RMA',
   dead_stock: 'Kho Hàng Hỏng',
@@ -17,6 +18,7 @@ export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
 
 // Warehouse type colors for UI
 export const WAREHOUSE_TYPE_COLORS: Record<WarehouseType, string> = {
+  main: '#6366F1', // Indigo
   warranty_stock: '#10B981', // Green
   rma_staging: '#F59E0B', // Orange
   dead_stock: '#EF4444', // Red
@@ -44,6 +46,7 @@ export const MOVEMENT_TYPE_ICONS: Record<MovementType, string> = {
 
 // Warehouse type descriptions
 export const WAREHOUSE_TYPE_DESCRIPTIONS: Record<WarehouseType, string> = {
+  main: 'Main storage for general inventory',
   warranty_stock: 'Products available for warranty replacements',
   rma_staging: 'Products staged for return to supplier',
   dead_stock: 'Non-functional products for disposal',

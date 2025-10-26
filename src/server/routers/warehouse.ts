@@ -7,12 +7,13 @@ import {
 
 /**
  * Story 1.6: Warehouse Hierarchy Setup
- * AC 3: tRPC router with 5 procedures for warehouse management
+ * AC 3: tRPC router with procedures for warehouse management
  */
 
 // Physical warehouse schemas for validation
 const createPhysicalWarehouseSchema = z.object({
   name: z.string().min(1, "Warehouse name is required"),
+  code: z.string().min(1, "Warehouse code is required").max(20, "Warehouse code must be 20 characters or less"),
   location: z.string().min(1, "Location is required"),
   description: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
@@ -21,6 +22,7 @@ const createPhysicalWarehouseSchema = z.object({
 const updatePhysicalWarehouseSchema = z.object({
   id: z.string().uuid("Warehouse ID must be a valid UUID"),
   name: z.string().min(1, "Warehouse name is required").optional(),
+  code: z.string().min(1, "Warehouse code is required").max(20, "Warehouse code must be 20 characters or less").optional(),
   location: z.string().min(1, "Location is required").optional(),
   description: z.string().nullable().optional(),
   is_active: z.boolean().optional(),
@@ -35,6 +37,27 @@ const listPhysicalWarehousesSchema = z
     is_active: z.boolean().optional(),
   })
   .optional();
+
+// Virtual warehouse schemas
+const createVirtualWarehouseSchema = z.object({
+  name: z.string().min(1, "Warehouse name is required"),
+  physical_warehouse_id: z.string().uuid("Physical warehouse ID must be a valid UUID"),
+  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]).default("main"),
+  description: z.string().nullable().optional(),
+  is_active: z.boolean().default(true),
+});
+
+const updateVirtualWarehouseSchema = z.object({
+  id: z.string().uuid("Virtual warehouse ID must be a valid UUID"),
+  name: z.string().min(1, "Warehouse name is required").optional(),
+  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]).optional(),
+  description: z.string().nullable().optional(),
+  is_active: z.boolean().optional(),
+});
+
+const deleteVirtualWarehouseSchema = z.object({
+  id: z.string().uuid("Virtual warehouse ID must be a valid UUID"),
+});
 
 export const warehouseRouter = router({
   /**
@@ -76,6 +99,7 @@ export const warehouseRouter = router({
         .from("physical_warehouses")
         .insert({
           name: input.name,
+          code: input.code,
           location: input.location,
           description: input.description,
           is_active: input.is_active,
@@ -136,16 +160,19 @@ export const warehouseRouter = router({
     }),
 
   /**
-   * AC 3.5: List all virtual warehouses (these are fixed/seeded)
+   * AC 3.5: List all virtual warehouses
    */
   listVirtualWarehouses: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
     const { data: warehouses, error } = await ctx.supabaseAdmin
       .from("virtual_warehouses")
-      .select("*")
+      .select(`
+        *,
+        physical_warehouse:physical_warehouses(id, name, code, location)
+      `)
       .eq("is_active", true)
-      .order("warehouse_type", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch virtual warehouses: ${error.message}`);
@@ -153,4 +180,81 @@ export const warehouseRouter = router({
 
     return warehouses || [];
   }),
+
+  /**
+   * AC 3.6: Create a new virtual warehouse (admin/manager only)
+   */
+  createVirtualWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(createVirtualWarehouseSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { data: warehouse, error } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .insert({
+          name: input.name,
+          physical_warehouse_id: input.physical_warehouse_id,
+          warehouse_type: input.warehouse_type,
+          description: input.description,
+          is_active: input.is_active,
+        })
+        .select(`
+          *,
+          physical_warehouse:physical_warehouses(id, name, code)
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to create virtual warehouse: ${error.message}`);
+      }
+
+      return warehouse;
+    }),
+
+  /**
+   * AC 3.7: Update virtual warehouse details (admin/manager only)
+   */
+  updateVirtualWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(updateVirtualWarehouseSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updateData } = input;
+
+      const { data: warehouse, error } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .update(updateData)
+        .eq("id", id)
+        .select(`
+          *,
+          physical_warehouse:physical_warehouses(id, name, code)
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update virtual warehouse: ${error.message}`);
+      }
+
+      return warehouse;
+    }),
+
+  /**
+   * AC 3.8: Delete a virtual warehouse (soft delete via is_active)
+   */
+  deleteVirtualWarehouse: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(deleteVirtualWarehouseSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Soft delete by setting is_active to false
+      const { data: warehouse, error } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .update({ is_active: false })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to delete virtual warehouse: ${error.message}`);
+      }
+
+      return warehouse;
+    }),
 });

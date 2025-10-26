@@ -993,9 +993,15 @@ const navigationGroups = [
   {
     id: 'overview',
     title: 'Tổng quan',
-    allowedRoles: ['admin', 'manager'],
+    allowedRoles: ['admin', 'manager', 'technician'],
     items: [
-      { title: 'Dashboard', url: '/dashboard', icon: IconDashboard }
+      { title: 'Dashboard', url: '/dashboard', icon: IconDashboard },
+      {
+        title: 'Công việc của tôi',
+        url: '/my-tasks',
+        icon: IconChecklist,
+        allowedRoles: ['admin', 'manager', 'technician']
+      }
     ]
   },
   {
@@ -1014,19 +1020,6 @@ const navigationGroups = [
         icon: IconInbox,
         allowedRoles: ['admin', 'manager', 'reception'],
         badge: 'pendingServiceRequests' // Dynamic counter
-      },
-      {
-        title: 'Giao hàng',
-        url: '/operations/deliveries',
-        icon: IconTruckDelivery,
-        allowedRoles: ['admin', 'manager', 'reception'],
-        badge: 'pendingDeliveries'
-      },
-      {
-        title: 'Công việc của tôi',
-        url: '/operations/my-tasks',
-        icon: IconChecklist,
-        allowedRoles: ['admin', 'manager', 'technician']
       }
     ]
   },

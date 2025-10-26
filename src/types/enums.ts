@@ -27,7 +27,7 @@ export const WARRANTY_TYPES: WarrantyType[] = ['warranty', 'paid', 'goodwill'];
 export const COMMENT_TYPES: CommentType[] = ['note', 'status_change', 'assignment', 'system'];
 
 export const TASK_STATUSES: TaskStatus[] = ['pending', 'in_progress', 'completed', 'blocked', 'skipped'];
-export const WAREHOUSE_TYPES: WarehouseType[] = ['warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'];
+export const WAREHOUSE_TYPES: WarehouseType[] = ['main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'];
 export const REQUEST_STATUSES: RequestStatus[] = ['submitted', 'received', 'processing', 'completed', 'cancelled'];
 export const PRODUCT_CONDITIONS: ProductCondition[] = ['new', 'refurbished', 'used', 'faulty', 'for_parts'];
 export const SERVICE_TYPES: ServiceType[] = ['warranty', 'paid', 'replacement'];
@@ -68,6 +68,7 @@ export const getTaskStatusLabel = (status: TaskStatus): string => {
 
 export const getWarehouseTypeLabel = (type: WarehouseType): string => {
   const labels: Record<WarehouseType, string> = {
+    main: 'Main Storage',
     warranty_stock: 'Warranty Stock',
     rma_staging: 'RMA Staging',
     dead_stock: 'Dead Stock',

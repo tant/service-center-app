@@ -64,12 +64,15 @@ CREATE TYPE public.task_status AS ENUM (
 
 -- Warehouse Type ENUM
 CREATE TYPE public.warehouse_type AS ENUM (
+  'main',            -- Kho Chính (Main storage)
   'warranty_stock',  -- Products under warranty
   'rma_staging',     -- Products awaiting RMA
   'dead_stock',      -- Non-repairable products
   'in_service',      -- Products being repaired
   'parts'            -- Replacement parts inventory
 );
+
+-- Note: On 2025-10-26 migrations `202510260014`, `202510260015`, `202510260016` were applied to add 'main' and remove legacy `display_name` / `color_code` columns from `virtual_warehouses`.
 ```
 
 **Extended Existing ENUMs:**

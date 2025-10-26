@@ -58,7 +58,7 @@ export function ProductRegistrationModal({
   onClose,
   product,
 }: ProductRegistrationModalProps) {
-  type WarehouseType = "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
+  type WarehouseType = "main" | "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
   type ProductCondition = "new" | "refurbished" | "used" | "faulty" | "for_parts";
 
   const [formData, setFormData] = useState<{
@@ -130,10 +130,10 @@ export function ProductRegistrationModal({
         warranty_start_date: product.warranty_start_date || "",
         warranty_months: product.warranty_months || 0,
         purchase_date: product.purchase_date || "",
-        supplier_name: product.supplier_name || "",
+        supplier_name: "",
         purchase_price: product.purchase_price ? Number(product.purchase_price) : 0,
         notes: product.notes || "",
-        photo_urls: product.photo_urls || [],
+        photo_urls: [],
       });
     } else {
       // Reset form for new product
@@ -141,7 +141,7 @@ export function ProductRegistrationModal({
         serial_number: "",
         product_id: "",
         physical_warehouse_id: "",
-        virtual_warehouse_type: "warranty_stock",
+        virtual_warehouse_type: "main",
         condition: "new",
         warranty_start_date: "",
         warranty_months: 0,

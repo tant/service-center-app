@@ -133,6 +133,7 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
 
 export function PhysicalWarehouseTable() {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [editingWarehouse, setEditingWarehouse] = React.useState<PhysicalWarehouse | null>(null);
   
@@ -145,21 +146,32 @@ export function PhysicalWarehouseTable() {
     pageSize: 10,
   });
 
-  const { warehouses, isLoading } = usePhysicalWarehouses({ is_active: true });
+  // Get ALL warehouses (both active and inactive)
+  const { warehouses, isLoading } = usePhysicalWarehouses();
   const { deleteWarehouse } = useDeletePhysicalWarehouse();
 
-  // Filter warehouses based on search query
+  // Filter warehouses based on search query and status
   const filteredWarehouses = React.useMemo(() => {
-    if (!searchQuery) return warehouses;
+    let filtered = warehouses;
 
-    return warehouses.filter((warehouse) => {
+    // Filter by status
+    if (statusFilter === "active") {
+      filtered = filtered.filter((w) => w.is_active);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter((w) => !w.is_active);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return (
+      filtered = filtered.filter((warehouse) => 
         warehouse.name.toLowerCase().includes(query) ||
         warehouse.location.toLowerCase().includes(query)
       );
-    });
-  }, [warehouses, searchQuery]);
+    }
+
+    return filtered;
+  }, [warehouses, searchQuery, statusFilter]);
 
   const handleDelete = (id: string) => {
     if (confirm("Bạn có chắc chắn muốn xóa kho này?")) {
@@ -206,12 +218,25 @@ export function PhysicalWarehouseTable() {
       <div className="flex flex-col gap-4">
         {/* Search and Action Buttons */}
         <div className="flex items-center justify-between gap-4">
-          <Input
-            placeholder="Tìm kiếm theo tên kho hoặc địa điểm..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
+          <div className="flex items-center gap-2 flex-1">
+            <Input
+              placeholder="Tìm kiếm theo tên kho hoặc địa điểm..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Lọc trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="active">Hoạt động</SelectItem>
+                <SelectItem value="inactive">Không hoạt động</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
             <IconPlus className="h-4 w-4" />

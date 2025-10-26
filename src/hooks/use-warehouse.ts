@@ -102,7 +102,7 @@ export function useDeletePhysicalWarehouse() {
 
 /**
  * Hook for listing virtual warehouses
- * These are fixed/seeded warehouses representing logical inventory types
+ * These are warehouses representing logical inventory types linked to physical locations
  */
 export function useVirtualWarehouses() {
   const { data: warehouses, isLoading, error } = trpc.warehouse.listVirtualWarehouses.useQuery();
@@ -111,6 +111,72 @@ export function useVirtualWarehouses() {
     warehouses: warehouses ?? [],
     isLoading,
     error,
+  };
+}
+
+/**
+ * Hook for creating new virtual warehouse
+ * Admin/Manager only
+ */
+export function useCreateVirtualWarehouse() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.warehouse.createVirtualWarehouse.useMutation({
+    onSuccess: () => {
+      utils.warehouse.listVirtualWarehouses.invalidate();
+      toast.success('Virtual warehouse created successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create virtual warehouse');
+    },
+  });
+
+  return {
+    createWarehouse: mutation.mutate,
+    isCreating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for updating virtual warehouse
+ * Admin/Manager only
+ */
+export function useUpdateVirtualWarehouse() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.warehouse.updateVirtualWarehouse.useMutation({
+    onSuccess: () => {
+      utils.warehouse.listVirtualWarehouses.invalidate();
+      toast.success('Virtual warehouse updated successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update virtual warehouse');
+    },
+  });
+
+  return {
+    updateWarehouse: mutation.mutate,
+    isUpdating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for deleting virtual warehouse (soft delete)
+ * Admin/Manager only
+ */
+export function useDeleteVirtualWarehouse() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.warehouse.deleteVirtualWarehouse.useMutation({
+    onSuccess: () => {
+      utils.warehouse.listVirtualWarehouses.invalidate();
+      toast.success('Virtual warehouse deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete virtual warehouse');
+    },
+  });
+
+  return {
+    deleteWarehouse: mutation.mutate,
+    isDeleting: mutation.isPending,
   };
 }
 

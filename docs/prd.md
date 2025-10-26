@@ -163,6 +163,7 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 | Change | Date | Version | Description | Author |
 |--------|------|---------|-------------|--------|
 | Initial Draft | 2025-10-23 | 1.0 | PRD created from Project Brief for Phase 2 | John (PM) |
+| Database & Warehouse update | 2025-10-26 | 1.1 | Added new warehouse enum value `main` ("Kho Chính"); removed redundant `display_name` and `color_code` columns from `virtual_warehouses`; applied migrations `202510260014`, `202510260015`, `202510260016`. Developer actions: regenerate DB types, update Zod schemas, update UI components. | Dev Team |
 
 ---
 

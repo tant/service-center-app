@@ -96,6 +96,7 @@ This story provides the security foundation that all other Phase 2 stories depen
 **Acceptance Criteria - Database:**
 1. Create 12 new tables with proper foreign keys, indexes, and constraints
 2. Add 4 new ENUM types (task_status, warehouse_type, request_status, product_condition) + extend existing ticket_status ENUM if needed
+   - Note: `warehouse_type` was later extended to include 'main' ("Kho Chính") and legacy fields `display_name`/`color_code` on `virtual_warehouses` were removed via migrations `202510260014`..`202510260016`.
 3. Extend service_tickets table with new nullable columns (template_id, request_id, delivery_method, delivery_address)
 4. Create helper functions for auto-generation (tracking tokens, ticket numbers already exists)
 5. Implement RLS policies for all new tables using role helper functions from Story 01.00 (`has_role()`, `has_any_role()`, etc.)

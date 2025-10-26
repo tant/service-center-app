@@ -30,9 +30,7 @@
 3. ✅ `/inventory/stock-levels` - Inventory dashboard (Story 01.09)
 4. ✅ `/inventory/products` - Physical product management (Story 01.07)
 5. ✅ `/inventory/rma` - RMA batch operations (Story 01.10)
-6. ✅ `/operations/service-requests` - Service request management (Story 01.13)
-7. ✅ `/dashboard/task-progress` - Manager task progress dashboard (Story 01.16)
-8. ✅ `/operations/deliveries` - Delivery confirmation workflow (Story 01.14)
+6. ✅ `/operations/service-requests` - Service request management, which now includes the delivery confirmation workflow as a tab (Story 01.13 & 01.14)
 9. ✅ `/dashboard/notifications` - Email notification management (Story 01.15)
 
 **Modified Pages (Existing)** - ✅ ALL COMPLETE:
@@ -41,7 +39,7 @@
 3. ✅ `/dashboard` - Multiple widgets added (all phases)
 
 **New Pages (Technician)** - ✅ COMPLETE:
-1. ✅ `/operations/my-tasks` - Personal task dashboard (Story 01.04)
+1. ✅ `/my-tasks` - Personal task dashboard (Story 01.04)
 
 **New Public Pages** - ✅ ALL COMPLETE:
 1. ✅ `/service-request` - Service request creation form (Story 01.11)

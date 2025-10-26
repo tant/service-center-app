@@ -214,6 +214,28 @@ export function usePendingCount() {
 }
 
 /**
+ * Hook for pending incoming requests (status = submitted)
+ * For requests where customer is shipping items to service center
+ */
+export function usePendingIncomingRequests(params?: {
+  limit?: number;
+  offset?: number;
+}) {
+  const query = trpc.serviceRequest.listPending.useQuery({
+    status: "submitted",
+    limit: params?.limit || 50,
+    offset: params?.offset || 0,
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
+/**
  * Hook for service request analytics
  * TODO: Implement analytics queries
  */

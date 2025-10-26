@@ -35,7 +35,7 @@ interface RecordMovementModalProps {
 }
 
 type MovementType = "receipt" | "transfer" | "assignment" | "return" | "disposal";
-type WarehouseType = "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
+type WarehouseType = "main" | "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
 
 const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   receipt: "Nhập kho",

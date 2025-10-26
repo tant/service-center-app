@@ -103,6 +103,23 @@ create type public.warranty_type as enum (
 create type public.payment_status as enum (
   'unpaid', 'partial', 'paid', 'refunded'
 );
+
+-- Warehouse type enum (updated Oct 26, 2025)
+-- NOTE: A new value 'main' was added to support default virtual warehouses
+-- and simplify UI mappings. Two redundant fields were removed from
+-- `virtual_warehouses`: `display_name` and `color_code` (migrations
+-- applied: 202510260014, 202510260015, 202510260016). Developer follow-ups:
+--  * Regenerate TypeScript DB types (supabase gen types)
+--  * Update Zod schemas and frontend dropdowns to include 'main'
+--  * Update any code paths that referenced display_name or color_code
+create type public.warehouse_type as enum (
+  'main', -- Kho Chính (Main storage)
+  'warranty_stock',
+  'rma_staging',
+  'dead_stock',
+  'in_service',
+  'parts'
+);
 ```
 
 ### 3.2.2 Service Tickets Table (Core)
@@ -162,6 +179,14 @@ sequenceDiagram
     Trigger1->>Trigger1: Generate SV-2025-001
     Trigger1-->>DB: Set ticket_number
     DB-->>App: Ticket created
+
+    Note: The database also contains triggers that assist with warehouse automation. In particular,
+    the function `create_default_virtual_warehouse()` (used when a new `physical_warehouses` row
+    is inserted) was updated on 2025-10-26 to create the default virtual warehouse with
+    warehouse_type = 'main' instead of 'warranty_stock'. This change simplifies the default
+    mapping and aligns with UI expectations. See migrations `202510260014`, `202510260015`,
+    `202510260016` for details (these migrations also removed the legacy `display_name` and
+    `color_code` columns from `virtual_warehouses`).
 
     App->>DB: UPDATE ticket status
     DB->>Trigger2: AFTER UPDATE
@@ -526,9 +551,12 @@ create type public.task_status as enum (
 );
 
 -- Warehouse management
+-- NOTE: 'main' added Oct 26, 2025
 create type public.warehouse_type as enum (
-  'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'
+  'main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'
 );
+
+-- Migrations applied: 202510260014, 202510260015, 202510260016 (added 'main', removed `display_name` and `color_code` from virtual_warehouses)
 
 create type public.product_condition as enum (
   'new', 'refurbished', 'defective', 'parts_only'
@@ -594,8 +622,34 @@ $$ language sql security definer;
 - `ticket_template_changes` - Log of dynamic template switches
 
 **Warehouse Management (Stories 01.06-01.10):**
-- `physical_warehouses` - Physical warehouse locations
-- `virtual_warehouses` - Virtual warehouse zones within physical warehouses
+- `physical_warehouses` - Physical warehouse locations.
+  ```sql
+  create table "physical_warehouses" (
+    "id" uuid not null default gen_random_uuid(),
+    "name" text not null,
+    "code" text not null,
+    "address" text,
+    "description" text,
+    "created_at" timestamptz not null default now(),
+    "updated_at" timestamptz not null default now(),
+    constraint "physical_warehouses_pkey" primary key ("id"),
+    constraint "physical_warehouses_code_key" unique ("code")
+  );
+  ```
+- `virtual_warehouses` - Virtual warehouse zones within physical warehouses. A default virtual warehouse is created automatically when a physical one is created.
+  ```sql
+  create table "virtual_warehouses" (
+    "id" uuid not null default gen_random_uuid(),
+    "physical_warehouse_id" uuid references "physical_warehouses"("id") on delete set null,
+    "name" text not null,
+    "warehouse_type" public.warehouse_type,
+    "description" text,
+    "is_default" boolean not null default false,
+    "created_at" timestamptz not null default now(),
+    "updated_at" timestamptz not null default now(),
+    constraint "virtual_warehouses_pkey" primary key ("id")
+  );
+  ```
 - `physical_products` - Physical products with serial numbers
 - `stock_movements` - Product movement history
 - `product_stock_thresholds` - Low-stock alert thresholds
@@ -606,6 +660,53 @@ $$ language sql security definer;
 
 **Audit Logging (Story 01.00):**
 - `audit_logs` - Immutable audit trail for all permission-sensitive operations
+
+---
+
+### 3.7.4 Warehouse Automation Triggers
+
+Two triggers are in place to automate the management of a default virtual warehouse for each physical warehouse.
+
+**1. Auto-create default virtual warehouse:**
+When a new `physical_warehouses` record is inserted, a trigger creates a corresponding `virtual_warehouses` record.
+
+```sql
+create or replace function public.create_default_virtual_warehouse()
+returns trigger as $$
+begin
+  insert into public.virtual_warehouses (physical_warehouse_id, name, description, is_default)
+  values (new.id, new.name || ' - Kho chính', 'Default virtual warehouse for ' || new.name, true);
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger "after_insert_physical_warehouse"
+  after insert on "physical_warehouses"
+  for each row
+  execute function public.create_default_virtual_warehouse();
+```
+
+**2. Auto-update default virtual warehouse name:**
+When a `physical_warehouses` record's name is updated, the trigger finds the associated default virtual warehouse and updates its name accordingly.
+
+```sql
+create or replace function public.update_default_virtual_warehouse_name()
+returns trigger as $$
+begin
+  if old.name is distinct from new.name then
+    update public.virtual_warehouses
+    set name = new.name || ' - Kho chính'
+    where physical_warehouse_id = new.id and is_default = true;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger "after_update_physical_warehouse_name"
+  after update of name on "physical_warehouses"
+  for each row
+  execute function public.update_default_virtual_warehouse_name();
+```
 
 ---
 

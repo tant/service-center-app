@@ -402,5 +402,3 @@ export function TaskTypesTable() {
     </div>
   );
 }
-
-export { TaskTypesTable };

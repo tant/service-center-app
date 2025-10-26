@@ -158,7 +158,7 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/account")}>
+              <DropdownMenuItem onClick={() => router.push("/settings/account")}>
                 <IconUserCircle />
                 Tài khoản
               </DropdownMenuItem>

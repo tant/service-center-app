@@ -2,6 +2,7 @@
 
 import type { Icon } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 import {
   SidebarGroup,
@@ -12,13 +13,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function NavDocuments({
+export function NavSection({
+  title = "Dữ liệu",
   items,
 }: {
+  title?: string;
   items: {
     name: string;
     url: string;
     icon: Icon;
+    badge?: number | string;
   }[];
 }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -33,14 +37,19 @@ export function NavDocuments({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Dữ liệu</SidebarGroupLabel>
+      <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url} onClick={(e) => handleClick(e, item.url)}>
+              <a href={item.url} onClick={(e) => handleClick(e, item.url)} className="flex items-center gap-2">
                 <item.icon />
-                <span>{item.name}</span>
+                <span className="flex-1">{item.name}</span>
+                {item.badge !== undefined && item.badge !== 0 && (
+                  <Badge variant="default" className="ml-auto">
+                    {item.badge}
+                  </Badge>
+                )}
               </a>
             </SidebarMenuButton>
             {/* <DropdownMenu>

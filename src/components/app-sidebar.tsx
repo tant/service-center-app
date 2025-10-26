@@ -21,8 +21,8 @@ import {
 } from "@tabler/icons-react";
 import type * as React from "react";
 
-import { NavDocuments } from "@/components/nav-documents";
-import { NavMain } from "@/components/nav-main";
+import { NavSection } from "@/components/nav-section";
+import { NavOverview } from "@/components/nav-overview";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { NavWorkflows } from "@/components/nav-workflows";
@@ -38,6 +38,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar";
 
 type UserRole = "admin" | "manager" | "technician" | "reception";
@@ -45,60 +47,117 @@ type UserRole = "admin" | "manager" | "technician" | "reception";
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
 const baseData = {
-  navMain: [
+  // Overview section - Dashboard
+  overview: [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
+      allowedRoles: ["admin", "manager"] as UserRole[],
     },
+  ],
+  // Operations section - Daily work
+  operations: [
     {
       title: "Phiếu dịch vụ",
-      url: "/tickets",
+      url: "/operations/tickets",
       icon: IconClipboardList,
+      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
     },
     {
       title: "Yêu cầu dịch vụ",
-      url: "/dashboard/service-requests",
+      url: "/operations/service-requests",
       icon: IconInbox,
+      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
     },
     {
       title: "Chờ giao hàng",
-      url: "/dashboard/deliveries",
+      url: "/operations/deliveries",
       icon: IconTruckDelivery,
+      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
     },
+    {
+      title: "Công việc của tôi",
+      url: "/operations/my-tasks",
+      icon: IconChecklist,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+    },
+  ],
+  // Inventory section - Stock & warehouse management
+  inventory: [
+    {
+      title: "Sản phẩm vật lý",
+      url: "/inventory/products",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      readOnly: ["technician"] as UserRole[],
+    },
+    {
+      title: "Mức tồn kho",
+      url: "/inventory/stock-levels",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      readOnly: ["technician"] as UserRole[],
+    },
+    {
+      title: "Quản lý RMA",
+      url: "/inventory/rma",
+      icon: IconPackage,
+      allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+    {
+      title: "Quản lý kho",
+      url: "/inventory/warehouses",
+      icon: IconBuildingWarehouse,
+      allowedRoles: ["admin", "manager"] as UserRole[],
+    },
+  ],
+  // Catalog section - Master data
+  catalog: [
+    {
+      title: "Danh mục sản phẩm",
+      url: "/catalog/products",
+      icon: IconDevices,
+      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      readOnly: ["technician", "reception"] as UserRole[],
+    },
+    {
+      title: "Danh mục linh kiện",
+      url: "/catalog/parts",
+      icon: IconComponents,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      readOnly: ["technician"] as UserRole[],
+    },
+    {
+      title: "Nhãn hàng",
+      url: "/catalog/brands",
+      icon: IconComponents,
+      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      readOnly: ["technician", "reception"] as UserRole[],
+    },
+  ],
+  // Management section - Admin functions
+  management: [
     {
       title: "Khách hàng",
-      url: "/customers",
+      url: "/management/customers",
       icon: IconUser,
+      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
+    },
+    {
+      title: "Nhân sự",
+      url: "/management/team",
+      icon: IconUsers,
+      allowedRoles: ["admin", "manager"] as UserRole[],
     },
   ],
-  navSecondary: [
-    {
-      title: "Thiết lập",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Hướng dẫn",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Gọi hỗ trợ",
-      url: "https://widata.app",
-      icon: IconPhone,
-    },
-  ],
+  // Workflows section
   workflows: [
     {
       title: "Workflows",
       icon: IconChecklist,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      allowedRoles: ["admin", "manager"] as UserRole[],
       items: [
-        {
-          title: "Công việc của tôi",
-          url: "/my-tasks",
-        },
         {
           title: "Mẫu công việc",
           url: "/workflows/templates",
@@ -110,72 +169,53 @@ const baseData = {
       ],
     },
   ],
-  documents: [
+  // Settings section
+  settings: [
     {
-      name: "Sản phẩm dịch vụ",
-      url: "/products",
-      icon: IconDevices,
-      allowedRoles: ["admin", "manager"] as UserRole[],
+      title: "Tài khoản",
+      url: "/settings/account",
+      icon: IconSettings,
+      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+    },
+  ],
+  navSecondary: [
+    {
+      title: "Hướng dẫn",
+      url: "#",
+      icon: IconHelp,
     },
     {
-      name: "Kho linh kiện",
-      url: "/parts",
-      icon: IconComponents,
-      allowedRoles: ["admin", "manager"] as UserRole[],
-    },
-    {
-      name: "Quản lý kho",
-      url: "/warehouses",
-      icon: IconBuildingWarehouse,
-      allowedRoles: ["admin", "manager"] as UserRole[],
-    },
-    {
-      name: "Kho sản phẩm",
-      url: "/dashboard/inventory/products",
-      icon: IconPackage,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
-    },
-    {
-      name: "Mức tồn kho",
-      url: "/dashboard/inventory/stock-levels",
-      icon: IconPackage,
-      allowedRoles: ["admin", "manager"] as UserRole[],
-    },
-    {
-      name: "Quản lý RMA",
-      url: "/dashboard/inventory/rma",
-      icon: IconPackage,
-      allowedRoles: ["admin", "manager"] as UserRole[],
-    },
-    {
-      name: "Quản lý nhãn hàng",
-      url: "/brands",
-      icon: IconComponents,
-      allowedRoles: [
-        "admin",
-        "manager",
-        "technician",
-        "reception",
-      ] as UserRole[],
-    },
-    {
-      name: "Quản lý nhân sự",
-      url: "/team",
-      icon: IconUsers,
-      allowedRoles: ["admin"] as UserRole[],
+      title: "Gọi hỗ trợ",
+      url: "https://widata.app",
+      icon: IconPhone,
     },
   ],
 };
 
 function getFilteredData(userRole: UserRole = "reception") {
   return {
-    ...baseData,
+    overview: baseData.overview.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
+    operations: baseData.operations.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
+    inventory: baseData.inventory.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
+    catalog: baseData.catalog.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
+    management: baseData.management.filter((item) =>
+      item.allowedRoles.includes(userRole),
+    ),
     workflows: baseData.workflows.filter((item) =>
       item.allowedRoles.includes(userRole),
     ),
-    documents: baseData.documents.filter((item) =>
+    settings: baseData.settings.filter((item) =>
       item.allowedRoles.includes(userRole),
     ),
+    navSecondary: baseData.navSecondary,
   };
 }
 
@@ -194,15 +234,15 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
 
   const data = getFilteredData(userRole);
 
-  // Add badge counters to nav items
-  const navMainWithBadge = data.navMain.map((item) => {
-    if (item.url === "/dashboard/service-requests") {
+  // Add badge counters to navigation items
+  const operationsWithBadge = data.operations.map((item) => {
+    if (item.url === "/operations/service-requests") {
       return {
         ...item,
         badge: pendingCount,
       };
     }
-    if (item.url === "/dashboard/deliveries") {
+    if (item.url === "/operations/deliveries") {
       return {
         ...item,
         badge: deliveriesCount,
@@ -235,9 +275,98 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           <SidebarSkeleton />
         ) : (
           <>
-            <NavMain items={navMainWithBadge} />
+            {/* Quick Action Button */}
+            <SidebarGroup>
+              <SidebarGroupContent className="flex flex-col gap-2">
+                <SidebarMenu>
+                  <SidebarMenuItem className="flex items-center gap-2">
+                    <SidebarMenuButton
+                      asChild
+                      tooltip="Tạo phiếu nhanh"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
+                    >
+                      <a
+                        href="/operations/tickets/add"
+                        className="flex items-center gap-2"
+                      >
+                        <IconPlus />
+                        <span>Tạo phiếu</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {/* Overview - Dashboard */}
+            {data.overview.length > 0 && (
+              <NavOverview items={data.overview} />
+            )}
+
+            {/* Operations */}
+            {data.operations.length > 0 && (
+              <NavSection
+                title="Vận hành"
+                items={operationsWithBadge.map((item) => ({
+                  name: item.title,
+                  url: item.url,
+                  icon: item.icon,
+                  badge: 'badge' in item ? item.badge : undefined,
+                }))}
+              />
+            )}
+
+            {/* Inventory */}
+            {data.inventory.length > 0 && (
+              <NavSection
+                title="Kho hàng"
+                items={data.inventory.map((item) => ({
+                  name: item.title,
+                  url: item.url,
+                  icon: item.icon,
+                }))}
+              />
+            )}
+
+            {/* Catalog */}
+            {data.catalog.length > 0 && (
+              <NavSection
+                title="Danh mục"
+                items={data.catalog.map((item) => ({
+                  name: item.title,
+                  url: item.url,
+                  icon: item.icon,
+                }))}
+              />
+            )}
+
+            {/* Management */}
+            {data.management.length > 0 && (
+              <NavSection
+                title="Quản lý"
+                items={data.management.map((item) => ({
+                  name: item.title,
+                  url: item.url,
+                  icon: item.icon,
+                }))}
+              />
+            )}
+
+            {/* Workflows */}
             {data.workflows.length > 0 && <NavWorkflows items={data.workflows} />}
-            <NavDocuments items={data.documents} />
+
+            {/* Settings */}
+            {data.settings.length > 0 && (
+              <NavSection
+                title="Cài đặt"
+                items={data.settings.map((item) => ({
+                  name: item.title,
+                  url: item.url,
+                  icon: item.icon,
+                }))}
+              />
+            )}
+
             <NavSecondary items={data.navSecondary} className="mt-auto" />
           </>
         )}

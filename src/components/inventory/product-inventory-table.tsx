@@ -63,9 +63,9 @@ const CONDITION_COLORS = {
 
 export function ProductInventoryTable() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [warehouseFilter, setWarehouseFilter] = useState<string>("");
-  const [conditionFilter, setConditionFilter] = useState<string>("");
-  const [warrantyFilter, setWarrantyFilter] = useState<string>("");
+  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
+  const [conditionFilter, setConditionFilter] = useState<string>("all");
+  const [warrantyFilter, setWarrantyFilter] = useState<string>("all");
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<PhysicalProduct | null>(null);
@@ -74,9 +74,9 @@ export function ProductInventoryTable() {
 
   // Build filters object
   const filters: any = {};
-  if (warehouseFilter) filters.virtual_warehouse_type = warehouseFilter;
-  if (conditionFilter) filters.condition = conditionFilter;
-  if (warrantyFilter) filters.warranty_status = warrantyFilter;
+  if (warehouseFilter && warehouseFilter !== "all") filters.virtual_warehouse_type = warehouseFilter;
+  if (conditionFilter && conditionFilter !== "all") filters.condition = conditionFilter;
+  if (warrantyFilter && warrantyFilter !== "all") filters.warranty_status = warrantyFilter;
   if (searchQuery) filters.search = searchQuery;
 
   const { products, total, isLoading } = usePhysicalProducts(filters);
@@ -132,7 +132,7 @@ export function ProductInventoryTable() {
                 <SelectValue placeholder="Tất cả kho ảo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tất cả kho ảo</SelectItem>
+                <SelectItem value="all">Tất cả kho ảo</SelectItem>
                 {Object.entries(WAREHOUSE_TYPE_LABELS).map(([key, label]) => (
                   <SelectItem key={key} value={key}>
                     {label}
@@ -146,7 +146,7 @@ export function ProductInventoryTable() {
                 <SelectValue placeholder="Tất cả tình trạng" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tất cả tình trạng</SelectItem>
+                <SelectItem value="all">Tất cả tình trạng</SelectItem>
                 {Object.entries(CONDITION_LABELS).map(([key, label]) => (
                   <SelectItem key={key} value={key}>
                     {label}
@@ -160,7 +160,7 @@ export function ProductInventoryTable() {
                 <SelectValue placeholder="Tất cả bảo hành" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tất cả bảo hành</SelectItem>
+                <SelectItem value="all">Tất cả bảo hành</SelectItem>
                 <SelectItem value="active">Còn bảo hành</SelectItem>
                 <SelectItem value="expiring_soon">Sắp hết bảo hành</SelectItem>
                 <SelectItem value="expired">Hết bảo hành</SelectItem>
@@ -179,7 +179,10 @@ export function ProductInventoryTable() {
             <div className="py-8 text-center text-muted-foreground">Đang tải dữ liệu...</div>
           ) : products.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              {searchQuery || warehouseFilter || conditionFilter || warrantyFilter
+              {searchQuery || 
+               (warehouseFilter && warehouseFilter !== "all") || 
+               (conditionFilter && conditionFilter !== "all") || 
+               (warrantyFilter && warrantyFilter !== "all")
                 ? "Không tìm thấy sản phẩm phù hợp"
                 : "Chưa có sản phẩm nào"}
             </div>

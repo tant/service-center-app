@@ -513,6 +513,9 @@ export function CustomerTable({ data: initialData }: CustomerTableProps) {
               aria-label="Gửi email"
               data-testid="email-customer-button"
             >
+              <IconMail className="h-5 w-5" />
+              <span className="sr-only">Gửi email</span>
+            </Button>
           </div>
         );
       },

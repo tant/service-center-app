@@ -391,4 +391,84 @@ const baseData = {
     *   Khi mở, một lớp nền mờ sẽ che đi nội dung chính.
     *   Người dùng có thể đóng sidebar bằng cách nhấp vào lớp nền mờ, vuốt sidebar về lại bên trái, hoặc nhấp vào nút đóng (nếu có).
 
+---
+
+## 9. Quy chuẩn Giao diện cho Automation Test (Automation-Friendly UI Patterns)
+
+Để đảm bảo các bài test tự động (ví dụ: Playwright) hoạt động ổn định và đáng tin cậy, các component giao diện cần được code theo các quy chuẩn sau.
+
+### 9.1. Chiến lược Sử dụng Thuộc tính cho Test
+
+Để chọn các phần tử một cách nhất quán trong các bài test, hãy ưu tiên sử dụng các thuộc tính sau:
+
+1.  **`aria-label`:**
+    *   **Công dụng:** Cung cấp một nhãn có thể truy cập cho các phần tử không có text hiển thị (ví dụ: nút chỉ có icon).
+    *   **Lợi ích:** Cải thiện khả năng truy cập và tạo ra một selector ngữ nghĩa cho test.
+    *   **Ví dụ:**
+        ```tsx
+        <Button aria-label="Chỉnh sửa sản phẩm">
+          <IconEdit />
+        </Button>
+        ```
+    *   **Sử dụng trong Test:** `page.getByRole('button', { name: 'Chỉnh sửa sản phẩm' })`
+
+2.  **`data-testid`:**
+    *   **Công dụng:** Cung cấp một định danh ổn định, duy nhất cho các phần tử không có vai trò hoặc nhãn rõ ràng.
+    *   **Khi nào dùng:** Dùng cho các container, dialog, hoặc các phần tử cụ thể cần được nhắm đến trực tiếp.
+    *   **Ví dụ:**
+        ```tsx
+        <DialogContent data-testid="edit-product-dialog">
+        <TableRow data-testid={`product-row-${product.id}`}>
+        ```
+    *   **Sử dụng trong Test:** `page.getByTestId('edit-product-dialog')`
+
+3.  **`data-role`:**
+    *   **Công dụng:** Chọn các mục trong một danh sách mà không phụ thuộc vào ngôn ngữ hiển thị.
+    *   **Lợi ích:** Giúp test chạy ổn định trên nhiều ngôn ngữ.
+    *   **Ví dụ:**
+        ```tsx
+        <DropdownMenuItem data-role="reception">
+          Lễ tân
+        </DropdownMenuItem>
+        ```
+    *   **Sử dụng trong Test:** `page.locator('[role="menuitem"][data-role="reception"]')`
+
+### 9.2. Quy tắc Lồng Component (Component Nesting)
+
+**Vấn đề:** Các component tương tác lồng nhau không đúng cách có thể khiến test tự động thất bại, mặc dù chúng hoạt động bình thường khi kiểm tra thủ công.
+
+**Quy tắc BẮT BUỘC:** Khi lồng `Tooltip` và `DropdownMenuTrigger`, **`DropdownMenuTrigger` phải nằm bên trong `TooltipTrigger`**.
+
+*   **❌ SAI:**
+    ```tsx
+    <DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger>
+          <Button />
+        </TooltipTrigger>
+      </Tooltip>
+    </DropdownMenuTrigger>
+    ```
+*   **✅ ĐÚNG:**
+    ```tsx
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <DropdownMenuTrigger asChild>
+          <Button />
+        </DropdownMenuTrigger>
+      </TooltipTrigger>
+    </Tooltip>
+    ```
+
+### 9.3. Các Thực hành Tốt nhất cho Test
+
+*   **Dropdown Menus:**
+    *   Luôn chờ cho menu mở ra trước khi tương tác: `await expect(page.locator('[role="menu"]')).toBeVisible();`
+    *   Sử dụng selector có phạm vi rõ ràng để chọn các mục, ví dụ: `page.locator('[role="menuitem"][data-role="reception"]')`.
+*   **Pagination:**
+    *   Để xử lý phân trang, hãy luôn **sử dụng chức năng tìm kiếm** để lọc ra hàng (row) bạn cần trước khi tương tác với nó. Điều này đảm bảo hàng đó sẽ hiển thị trên trang hiện tại.
+*   **Chọn Nút (Button Selection):**
+    *   **Tránh** chọn nút dựa trên thứ tự (`.nth(0)`) hoặc các selector không ổn định.
+    *   **Nên** sử dụng các selector ngữ nghĩa như `getByRole` (với `aria-label`) hoặc `getByTestId`.
+
 **Tài liệu này là nguồn tham khảo chính cho việc phát triển giao diện. Vui lòng tuân thủ nghiêm ngặt.**

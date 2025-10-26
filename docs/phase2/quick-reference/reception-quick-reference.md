@@ -1,355 +1,77 @@
-# Reception Quick Reference Card
+# Thẻ tham khảo nhanh cho Lễ tân
 
-**Version:** 1.0 | **Role:** Reception | **Updated:** 2025-10-24
-
----
-
-## Your Main Responsibilities
-
-- Create new service tickets for customers
-- Manage customer information
-- Check ticket status for customers
-- Answer customer inquiries
-- View product and brand catalogs
+**Vai trò:** Lễ tân | **Cập nhật:** 2025-10-26
 
 ---
 
-## Common Tasks
+## Trách nhiệm chính của bạn
 
-### Create a New Service Ticket
-
-**Page:** `/tickets/add`
-
-1. **Customer Lookup**
-   - Enter customer phone number (10+ digits)
-   - System auto-fills if customer exists
-   - Click "Add New Customer" if not found
-   - Fill: Name (required), Phone (required), Email, Address
-
-2. **Select Product**
-   - Search by name or brand
-   - Select from dropdown
-   - Product determines warranty status
-
-3. **Add Parts (Optional)**
-   - Search available parts in inventory
-   - Enter quantity needed
-   - Price auto-fills (can adjust if needed)
-   - Multiple parts can be added
-
-4. **Service Details**
-   - Service Fee: Base repair charge
-   - Diagnosis Fee: Inspection cost
-   - Discount: Optional reduction
-   - Priority: Low, Normal, High, Urgent
-   - Warranty: Warranty, Paid, Goodwill
-   - Issue Description: Customer's problem
-   - Internal Notes: Staff-only notes
-
-5. **Review & Submit**
-   - Check all details
-   - Click "Create Ticket"
-   - Note the ticket number (SV-YYYY-NNN)
-
-**Shortcut:** From dashboard, click "+ New Ticket" button
+*   Tạo phiếu sửa chữa mới cho khách hàng.
+*   Quản lý thông tin khách hàng.
+*   Kiểm tra tình trạng phiếu sửa chữa cho khách hàng.
+*   Trả lời các câu hỏi của khách hàng.
 
 ---
 
-### Find Existing Tickets
+## Các công việc thường ngày
 
-**Page:** `/operations/tickets`
+### Tạo Phiếu sửa chữa Mới
 
-**Search Methods:**
-- Ticket number (e.g., SV-2025-001)
-- Customer name
-- Phone number
-- Status filter
+*   **Trang:** `/tickets/add`
+1.  **Tra cứu Khách hàng:** Nhập số điện thoại của khách hàng. Hệ thống sẽ tự động điền nếu khách hàng đã tồn tại. Nếu không, hãy tạo khách hàng mới.
+2.  **Chọn Sản phẩm:** Tìm kiếm và chọn sản phẩm từ danh mục.
+3.  **Thêm Linh kiện (Tùy chọn):** Thêm các linh kiện cần thiết từ kho.
+4.  **Chi tiết Dịch vụ:** Điền phí dịch vụ, phí chẩn đoán, mức độ ưu tiên, và mô tả sự cố.
+5.  **Xem lại & Gửi:** Kiểm tra lại tất cả thông tin và tạo phiếu. Ghi lại mã số phiếu để cung cấp cho khách hàng.
 
-**Status Colors:**
-- Yellow badge = Pending (not started)
-- Blue badge = In Progress (being worked on)
-- Green badge = Completed (finished)
-- Gray badge = Cancelled
+### Tìm Phiếu sửa chữa Hiện có
 
-**View Details:** Click any ticket row to see full information
+*   **Trang:** `/operations/tickets`
+*   Sử dụng các bộ lọc để tìm kiếm theo mã số phiếu, tên khách hàng, số điện thoại, hoặc trạng thái.
+*   **Màu sắc Trạng thái:** Vàng (Đang chờ), Xanh dương (Đang tiến hành), Xanh lá (Hoàn thành), Xám (Đã hủy).
 
----
+### Quản lý Khách hàng
 
-### Manage Customers
-
-**Page:** `/management/customers`
-
-**Add New Customer:**
-1. Click "+ Add Customer" button
-2. Fill required fields:
-   - Full Name (required)
-   - Phone Number (required, 10+ digits)
-   - Email (optional)
-   - Address (optional)
-3. Click "Create Customer"
-
-**Edit Customer:**
-1. Find customer in list
-2. Click "Edit" button (pencil icon)
-3. Update information
-4. Click "Save Changes"
-
-**View Customer History:**
-- Click customer name to see all their tickets
-- Review past service history
+*   **Trang:** `/management/customers`
+*   Thêm khách hàng mới hoặc chỉnh sửa thông tin của khách hàng hiện tại. Xem lịch sử tất cả các phiếu sửa chữa của một khách hàng bằng cách nhấp vào tên của họ.
 
 ---
 
-### Check Service Status for Customer
+## Các Bảng tham khảo nhanh
 
-1. Go to `/operations/tickets` page
-2. Search by customer phone or name
-3. Note the status badge color
-4. Click ticket to see details
-5. Communicate status to customer:
-   - Pending: "Ticket received, not started yet"
-   - In Progress: "Technician is working on it"
-   - Completed: "Ready for pickup"
-   - Cancelled: "Service was cancelled"
+### Ý nghĩa các Trạng thái Phiếu sửa chữa
 
----
+| Trạng thái | Ý nghĩa | Nói gì với Khách hàng |
+|---|---|---|
+| Pending | Chưa bắt đầu | "Chúng tôi đã nhận thiết bị của bạn, đang chờ kỹ thuật viên" |
+| In Progress | Đang được sửa | "Kỹ thuật viên đang làm việc trên đó" |
+| Completed | Đã hoàn thành | "Thiết bị của bạn đã sẵn sàng để nhận lại!" |
+| Cancelled | Đã hủy | "Dịch vụ đã bị hủy" |
 
-### View Product Information
+### Các Mức độ Ưu tiên
 
-**Page:** `/catalog/products`
-
-**What You Can Do:**
-- View all products (read-only)
-- See product names, brands, types
-- Check associated parts
-- Search by name or brand
-
-**Cannot Do:**
-- Add new products (Manager+ only)
-- Edit products (Manager+ only)
-- Delete products (Manager+ only)
+| Ưu tiên | Khi nào sử dụng | Màu sắc |
+|---|---|---|
+| Low | Không khẩn cấp | Xám |
+| Normal | Dịch vụ tiêu chuẩn | Xanh dương |
+| High | Khách hàng cần sớm | Cam |
+| Urgent | Khẩn cấp, trong ngày | Đỏ |
 
 ---
 
-## Quick Reference Tables
+## Các Lỗi Thường gặp và Cách khắc phục
 
-### Ticket Status Meanings
-
-| Status | Meaning | What to Tell Customer |
-|--------|---------|----------------------|
-| Pending | Not started yet | "We've received your device, waiting for technician" |
-| In Progress | Being repaired | "Technician is working on it now" |
-| Completed | Finished | "Your device is ready for pickup!" |
-| Cancelled | Not proceeding | "Service has been cancelled" |
-
-### Priority Levels
-
-| Priority | When to Use | Color |
-|----------|-------------|-------|
-| Low | Non-urgent, can wait | Gray |
-| Normal | Standard service | Blue |
-| High | Customer needs it soon | Orange |
-| Urgent | Emergency, same-day | Red |
-
-### Warranty Types
-
-| Type | Meaning | Customer Pays? |
-|------|---------|----------------|
-| Warranty | Under warranty | No |
-| Paid | Out of warranty | Yes |
-| Goodwill | Free as gesture | No |
+*   **"Số điện thoại phải có ít nhất 10 ký tự"**: Nhập số điện thoại đầy đủ.
+*   **"Khách hàng với số điện thoại này đã tồn tại"**: Tìm kiếm khách hàng hiện có trước, sau đó tạo phiếu sửa chữa.
+*   **"Không đủ hàng tồn kho"**: Chọn một linh kiện khác hoặc thông báo cho Quản lý để nhập thêm hàng.
 
 ---
 
-## Page URLs
+## Các Thực hành Tốt nhất
 
-| Task | URL | Shortcut |
-|------|-----|----------|
-| Dashboard | `/dashboard` | Click logo |
-| All Tickets | `/operations/tickets` | Main menu |
-| New Ticket | `/operations/tickets/add` | "+ New Ticket" button |
-| Customers | `/management/customers` | Main menu |
-| Products | `/catalog/products` | Main menu |
-| Brands | `/catalog/brands` | Under "Catalog" |
-| My Account | `/settings/account` | User menu (top right) |
+*   Luôn kiểm tra xem khách hàng đã tồn tại chưa trước khi tạo mới.
+*   Kiểm tra lại độ chính xác của số điện thoại.
+*   Viết mô tả sự cố rõ ràng và chi tiết.
+*   Cung cấp cho khách hàng mã số phiếu để tham khảo.
 
----
-
-## Common Error Messages
-
-### "Phone number must be at least 10 characters"
-**Solution:** Enter complete phone number with area code
-
-### "Customer with this phone already exists"
-**Solution:** Search for existing customer first, then create ticket
-
-### "Cannot add part: Insufficient stock"
-**Solution:** Choose different part or notify Manager to restock
-
-### "All fields are required"
-**Solution:** Fill all fields marked with red asterisk (*)
-
-### "Invalid phone number format"
-**Solution:** Use digits only, no spaces or special characters
-
----
-
-## Important Notes
-
-### Ticket Numbers
-- Format: SV-YYYY-NNN (e.g., SV-2025-001)
-- Automatically generated
-- Sequential by year
-- Give to customer for reference
-
-### Customer Phone Numbers
-- Required field
-- Must be at least 10 digits
-- Used as unique identifier
-- System auto-finds existing customers
-
-### Cost Calculation
-**Total Cost = Service Fee + Diagnosis Fee + Parts Total - Discount**
-- System calculates automatically
-- Parts total updates when parts added/removed
-- Check total before finalizing ticket
-
-### What You Cannot Do
-- Edit completed/cancelled tickets
-- Delete tickets (Manager+ only)
-- Change ticket status (Technician only)
-- Add/remove parts after creation (Technician only)
-- Manage staff accounts (Admin only)
-
----
-
-## Keyboard Shortcuts
-
-| Action | Shortcut |
-|--------|----------|
-| Search in page | Ctrl + F (or Cmd + F) |
-| Refresh page | F5 |
-| Close modal | Esc |
-| Submit form | Enter (in text fields) |
-
----
-
-## Best Practices
-
-### Creating Tickets
-1. Always check if customer exists first
-2. Double-check phone number accuracy
-3. Ask customer about warranty status
-4. Set appropriate priority level
-5. Write clear issue description
-6. Give ticket number to customer
-7. Explain estimated timeline
-
-### Customer Service
-- Be polite and professional
-- Set realistic expectations
-- Record all customer concerns in notes
-- Update customers proactively
-- Confirm customer contact information
-- Explain charges clearly
-
-### Data Entry
-- Use consistent naming (First Last)
-- Verify phone numbers before saving
-- Include area codes
-- Add email for digital receipts
-- Note special customer requests
-
----
-
-## Quick Troubleshooting
-
-### "I can't find a customer"
-1. Search by phone number (most reliable)
-2. Try variations (with/without spaces)
-3. Check spelling of name
-4. If truly new, create new customer
-
-### "I created duplicate customers"
-**Solution:** Notify Manager or Admin to merge/delete
-
-### "I made a mistake on a ticket"
-**Options:**
-- If pending: Ask Manager to edit
-- If wrong customer: Ask Admin to reassign
-- If wrong product: Add comment explaining error
-
-### "Customer asking about price"
-**Information to provide:**
-- Service Fee: Base repair charge
-- Diagnosis Fee: Inspection cost
-- Parts Cost: Itemized in ticket
-- Discount: If applicable
-- Total: Sum of all above
-
-### "Part not in system"
-**Solution:**
-1. Note part details in ticket comments
-2. Notify Manager to add to inventory
-3. Technician can add it later
-
----
-
-## When to Escalate
-
-Contact Manager or Admin if:
-- Customer dispute about charges
-- Warranty claim issue
-- Need to delete/cancel ticket
-- Technical system problem
-- Missing product or part in system
-- Staff access issue
-- Customer requests speak to manager
-
----
-
-## Daily Workflow
-
-**Morning:**
-1. Log in to system
-2. Check dashboard for pending tickets
-3. Review any customer pickup scheduled
-4. Prepare for new ticket intake
-
-**During Day:**
-1. Create tickets as customers arrive
-2. Answer customer status inquiries
-3. Update customer information as needed
-4. Coordinate with technicians on urgent tickets
-
-**End of Day:**
-1. Check all tickets created today
-2. Follow up on pending customer calls
-3. Note any issues for tomorrow
-4. Log out
-
----
-
-## Contact Information
-
-**Technical Support:** IT Department
-**System Issues:** Admin user
-**Ticket Questions:** Manager or Technician
-**Customer Disputes:** Manager
-
----
-
-## Tips for Success
-
-- Smile when greeting customers (builds trust)
-- Keep ticket numbers accurate for tracking
-- Write detailed issue descriptions (helps technicians)
-- Set realistic timelines (under-promise, over-deliver)
-- Update customers proactively (reduces inquiries)
-- Ask questions if unsure (better than guessing)
-- Keep customer data confidential
-- Always be professional in notes (others can see them)
-
----
-
-**Need help? Ask your Manager or check the full user guide.**
+**Cần giúp đỡ? Hãy hỏi Quản lý của bạn hoặc kiểm tra hướng dẫn sử dụng đầy đủ.**

@@ -195,7 +195,7 @@ const { data, refetch } = useTrackServiceRequest(
 
 ### Staff Dashboard Access
 
-**Route:** `/dashboard/service-requests`
+**Route:** `/operations/service-requests`
 
 **Permissions:** Admin, Manager, Reception roles
 

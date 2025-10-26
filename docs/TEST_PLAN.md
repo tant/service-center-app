@@ -289,7 +289,7 @@ This document outlines the comprehensive test plan for Service Center Phase 2, c
 
 2. **Staff Conversion:**
    - Login as Reception
-   - Navigate to /dashboard/service-requests
+   - Navigate to /operations/service-requests
    - Find new request
    - Click "Convert to Ticket"
    - Select customer, product, template

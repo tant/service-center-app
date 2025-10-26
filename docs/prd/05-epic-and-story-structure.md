@@ -73,11 +73,11 @@ Transform Service Center from basic ticket tracking to comprehensive service man
 - ✅ **Story 01.12**: Service Request Tracking Page
   - Code: `/app/(public)/service-request/track/page.tsx`
 - ✅ **Story 01.13**: Staff Request Management
-  - Code: Dashboard at `/dashboard/service-requests`
+  - Code: Dashboard at `/operations/service-requests`
   - Features: Request conversion, status management
 - ✅ **Story 01.14**: Customer Delivery Confirmation
   - Code: `confirmDelivery` procedure in tickets router
-  - UI: Deliveries dashboard at `/dashboard/deliveries`
+  - UI: Deliveries dashboard at `/operations/deliveries`
 
 **Phase 7: Enhanced Features (3/3 Complete)** ✅
 - ✅ **Story 01.15**: Email Notification System

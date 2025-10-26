@@ -436,12 +436,12 @@ Reception:  reception@example.com / reception123
    - **TEST RATE LIMITING:** Submit 11 requests rapidly (expect 11th to fail with 429)
 
 3. **Category 2 & 3: Task Execution** (60 min)
-   - Login as Technician → `/my-tasks`
+   - Login as Technician → `/operations/my-tasks`
    - Start task, complete with notes, block with reason
    - Test sequence enforcement (strict vs flexible templates)
 
 4. **Category 4: Warehouse** (30 min)
-   - Login as Admin → `/dashboard/inventory`
+   - Login as Admin → `/inventory/products`
    - Record stock movements, test low stock alerts, create RMA batch
 
 5. **Category 7: Dashboard** (30 min)

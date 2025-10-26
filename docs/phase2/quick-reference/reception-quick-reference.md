@@ -57,7 +57,7 @@
 
 ### Find Existing Tickets
 
-**Page:** `/tickets`
+**Page:** `/operations/tickets`
 
 **Search Methods:**
 - Ticket number (e.g., SV-2025-001)
@@ -77,7 +77,7 @@
 
 ### Manage Customers
 
-**Page:** `/customers`
+**Page:** `/management/customers`
 
 **Add New Customer:**
 1. Click "+ Add Customer" button
@@ -102,7 +102,7 @@
 
 ### Check Service Status for Customer
 
-1. Go to `/tickets` page
+1. Go to `/operations/tickets` page
 2. Search by customer phone or name
 3. Note the status badge color
 4. Click ticket to see details
@@ -116,7 +116,7 @@
 
 ### View Product Information
 
-**Page:** `/products`
+**Page:** `/catalog/products`
 
 **What You Can Do:**
 - View all products (read-only)
@@ -166,12 +166,12 @@
 | Task | URL | Shortcut |
 |------|-----|----------|
 | Dashboard | `/dashboard` | Click logo |
-| All Tickets | `/tickets` | Main menu |
-| New Ticket | `/tickets/add` | "+ New Ticket" button |
-| Customers | `/customers` | Main menu |
-| Products | `/products` | Main menu |
-| Brands | `/brands` | Under "Inventory" |
-| My Account | `/account` | User menu (top right) |
+| All Tickets | `/operations/tickets` | Main menu |
+| New Ticket | `/operations/tickets/add` | "+ New Ticket" button |
+| Customers | `/management/customers` | Main menu |
+| Products | `/catalog/products` | Main menu |
+| Brands | `/catalog/brands` | Under "Catalog" |
+| My Account | `/settings/account` | User menu (top right) |
 
 ---
 

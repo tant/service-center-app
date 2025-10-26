@@ -208,7 +208,7 @@ WHERE template_id = (SELECT id FROM task_templates WHERE name = 'Test Template -
 1. Create a test ticket with template (use template from FT-1.3)
 2. Assign ticket to technician@example.com
 3. Login as Technician
-4. Navigate to `/my-tasks`
+4. Navigate to `/operations/my-tasks`
 5. Find the test ticket in task list
 6. Click "Start" button on first task
 7. Confirm action
@@ -502,7 +502,7 @@ WHERE service_ticket_id = '[TICKET_ID]';
 
 **Test Steps:**
 1. Login as Admin
-2. Navigate to `/dashboard/inventory/products`
+2. Navigate to `/inventory/products`
 3. Note current stock level of a test product
 4. Click "Record Movement" on the product
 5. Fill movement form:
@@ -567,11 +567,11 @@ WHERE id = '[PRODUCT_ID]';
 
 **Test Steps:**
 1. Login as Admin
-2. Navigate to `/dashboard/inventory/products`
+2. Navigate to `/inventory/products`
 3. Select a test product
 4. Set low_stock_threshold = 10
 5. Record stock movements to reduce quantity to 9 (below threshold)
-6. Navigate to `/dashboard/inventory/stock-levels`
+6. Navigate to `/inventory/stock-levels`
 7. Observe low stock alerts section
 8. Verify product appears in alert list
 9. Check database:
@@ -617,7 +617,7 @@ WHERE status = 'low_stock';
 
 **Test Steps:**
 1. Login as Admin
-2. Navigate to `/dashboard/inventory/rma`
+2. Navigate to `/inventory/rma`
 3. Click "Create RMA Batch"
 4. Fill batch form:
    - Supplier: Select test supplier
@@ -824,7 +824,7 @@ LIMIT 1;
 
 **Test Steps:**
 1. Login as Reception (reception@example.com)
-2. Navigate to `/dashboard/service-requests`
+2. Navigate to `/operations/service-requests`
 3. Find the request submitted in FT-5.1
 4. Click "Convert to Ticket" button
 5. Conversion form opens

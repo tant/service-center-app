@@ -187,7 +187,7 @@ Scenario: Return 5 faulty phones to Samsung
 
 ### Viewing RMA Batches
 
-**Main RMA Page** (`/dashboard/inventory/rma`)
+**Main RMA Page** (`/inventory/rma`)
 
 Displays batch table with:
 - **Batch Number**: Auto-generated identifier (RMA-YYYY-MM-NNN)
@@ -675,7 +675,7 @@ const finalizeBatch = useFinalizeRMABatch();
 
 #### Main RMA Page
 
-**Location:** `/src/app/(auth)/dashboard/inventory/rma/page.tsx`
+**Location:** `/src/app/(auth)/inventory/rma/page.tsx`
 
 **Features:**
 - Stats cards (Total, Draft, Shipped, Completed)
@@ -883,7 +883,7 @@ For technical implementation details, refer to:
 - Story documentation: `/docs/stories/01.10.rma-batch-operations.md`
 - Database schemas: `/docs/data/schemas/13_task_tables.sql`
 - API implementation: `/src/server/routers/inventory.ts`
-- UI components: `/src/app/(auth)/dashboard/inventory/rma/`
+- UI components: `/src/app/(auth)/inventory/rma/`
 
 ---
 

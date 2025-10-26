@@ -75,7 +75,7 @@ The fastest way to see your work:
 ## My Tasks Page
 
 ### Overview
-The My Tasks page (`/my-tasks`) is your command center. It shows all tasks currently assigned to you, automatically grouped by service ticket.
+The My Tasks page (`/operations/my-tasks`) is your command center. It shows all tasks currently assigned to you, automatically grouped by service ticket.
 
 ### Page Layout
 

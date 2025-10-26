@@ -26,22 +26,22 @@
 
 **New Pages (Admin/Manager)** - ✅ ALL COMPLETE:
 1. ✅ `/workflows/templates` - Task template management (Story 01.02)
-2. ✅ `/warehouses` - Warehouse hierarchy management (Story 01.06)
-3. ✅ `/dashboard/inventory/stock-levels` - Inventory dashboard (Story 01.09)
-4. ✅ `/dashboard/inventory/products` - Physical product management (Story 01.07)
-5. ✅ `/dashboard/inventory/rma` - RMA batch operations (Story 01.10)
-6. ✅ `/dashboard/service-requests` - Service request management (Story 01.13)
+2. ✅ `/inventory/warehouses` - Warehouse hierarchy management (Story 01.06)
+3. ✅ `/inventory/stock-levels` - Inventory dashboard (Story 01.09)
+4. ✅ `/inventory/products` - Physical product management (Story 01.07)
+5. ✅ `/inventory/rma` - RMA batch operations (Story 01.10)
+6. ✅ `/operations/service-requests` - Service request management (Story 01.13)
 7. ✅ `/dashboard/task-progress` - Manager task progress dashboard (Story 01.16)
-8. ✅ `/dashboard/deliveries` - Delivery confirmation workflow (Story 01.14)
+8. ✅ `/operations/deliveries` - Delivery confirmation workflow (Story 01.14)
 9. ✅ `/dashboard/notifications` - Email notification management (Story 01.15)
 
 **Modified Pages (Existing)** - ✅ ALL COMPLETE:
-1. ✅ `/tickets/[id]` - Enhanced with task execution UI (Story 01.04)
-2. ✅ `/tickets` - Task progress integrated (Story 01.05)
+1. ✅ `/operations/tickets/[id]` - Enhanced with task execution UI (Story 01.04)
+2. ✅ `/operations/tickets` - Task progress integrated (Story 01.05)
 3. ✅ `/dashboard` - Multiple widgets added (all phases)
 
 **New Pages (Technician)** - ✅ COMPLETE:
-1. ✅ `/my-tasks` - Personal task dashboard (Story 01.04)
+1. ✅ `/operations/my-tasks` - Personal task dashboard (Story 01.04)
 
 **New Public Pages** - ✅ ALL COMPLETE:
 1. ✅ `/service-request` - Service request creation form (Story 01.11)

@@ -472,7 +472,7 @@ When repairs are completed, products move to "Chờ trả khách" (Ready for Pic
 
 **Navigation:**
 1. Click "Dashboard" then "Deliveries"
-2. Or navigate to `/dashboard/deliveries`
+2. Or navigate to `/operations/deliveries`
 3. View list of completed tickets awaiting delivery
 
 **Information Shown:**

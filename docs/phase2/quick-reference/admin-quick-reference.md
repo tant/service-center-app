@@ -49,7 +49,7 @@ ADMIN_NAME=Administrator
 
 ### Manage Team Members
 
-**Page:** `/team`
+**Page:** `/management/team`
 
 #### View All Staff
 
@@ -356,7 +356,7 @@ ORDER BY created_at DESC;
 #### "User can't log in"
 
 **Checklist:**
-1. Verify account exists in `/team`
+1. Verify account exists in `/management/team`
 2. Check account is active (not deleted)
 3. Verify password is correct (reset if needed)
 4. Check Supabase auth dashboard for errors
@@ -722,15 +722,14 @@ GROUP BY c.id, c.name, c.phone;
 |------|-----|--------------|
 | Setup | `/setup` | Password-protected |
 | Dashboard | `/dashboard` | All authenticated |
-| Tickets | `/tickets` | All authenticated |
-| Customers | `/customers` | All authenticated |
-| Products | `/products` | All authenticated |
-| Parts | `/parts` | Manager+ |
-| Brands | `/brands` | All authenticated |
-| Team | `/team` | Admin only |
-| Settings | `/setting` | Admin only |
-| App Settings | `/app-setting` | Admin only |
-| Reports | `/report` | Manager+ |
+| Tickets | `/operations/tickets` | All authenticated |
+| Customers | `/management/customers` | All authenticated |
+| Products | `/catalog/products` | All authenticated |
+| Parts | `/catalog/parts` | Manager+ |
+| Brands | `/catalog/brands` | All authenticated |
+| Team | `/management/team` | Admin only |
+| Account Settings | `/settings/account` | All authenticated |
+| System Settings | `/settings/system` | Admin only |
 
 ---
 

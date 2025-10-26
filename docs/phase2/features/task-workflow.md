@@ -198,7 +198,7 @@ When a template is updated:
 
 **Access**: Technician, Admin, Manager
 
-**My Tasks Page** (`/my-tasks`):
+**My Tasks Page** (`/operations/my-tasks`):
 - Shows all tasks assigned to current user
 - Groups tasks by service ticket
 - Displays progress metrics per ticket
@@ -421,7 +421,7 @@ Result:
 **Actor**: Technician
 
 **Steps:**
-1. Navigate to `/my-tasks` page
+1. Navigate to `/operations/my-tasks` page
 2. View tasks grouped by ticket
 3. Select task to work on
 4. Click "Start Task" button
@@ -848,7 +848,7 @@ Located in: `/src/hooks/use-workflow.ts`
 
 **Pages:**
 - `/workflows/templates`: Template management page (Admin/Manager)
-- `/my-tasks`: Technician task execution page
+- `/operations/my-tasks`: Technician task execution page
 - `/dashboard/task-progress`: Manager progress dashboard
 
 ---

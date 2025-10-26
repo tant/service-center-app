@@ -55,13 +55,13 @@ After logging in with your Manager account, you have access to the following sec
 **Main Navigation:**
 - **Dashboard** (`/dashboard`) - Overview with performance metrics
 - **Task Progress** (`/dashboard/task-progress`) - Real-time task monitoring
-- **Service Requests** (`/dashboard/service-requests`) - Incoming customer requests
-- **Deliveries** (`/dashboard/deliveries`) - Completed tickets awaiting customer pickup
-- **Tickets** (`/tickets`) - All service tickets
-- **Customers** (`/customers`) - Customer database
-- **Products** (`/products`) - Product catalog
-- **Parts** (`/parts`) - Parts inventory
-- **My Tasks** (`/my-tasks`) - Your assigned tasks (if you also work as technician)
+- **Service Requests** (`/operations/service-requests`) - Incoming customer requests
+- **Deliveries** (`/operations/deliveries`) - Completed tickets awaiting customer pickup
+- **Tickets** (`/operations/tickets`) - All service tickets
+- **Customers** (`/management/customers`) - Customer database
+- **Products** (`/catalog/products`) - Product catalog
+- **Parts** (`/catalog/parts`) - Parts inventory
+- **My Tasks** (`/operations/my-tasks`) - Your assigned tasks (if you also work as technician)
 - **Workflow Templates** (`/workflows/templates`) - Task template management
 
 ### Understanding Your Dashboard
@@ -200,7 +200,7 @@ The Task Progress Dashboard automatically refreshes every 30 seconds to provide 
 
 Managers oversee the conversion of public service requests into internal service tickets.
 
-**Access:** Navigate to `/dashboard/service-requests` from the main menu.
+**Access:** Navigate to `/operations/service-requests` from the main menu.
 
 ### Understanding the Service Request Flow
 
@@ -400,7 +400,7 @@ Once we receive this information, we can create a service ticket.
 
 Managers confirm that completed repairs are ready for customer pickup or delivery.
 
-**Access:** Navigate to `/dashboard/deliveries` from the main menu.
+**Access:** Navigate to `/operations/deliveries` from the main menu.
 
 ### Understanding Delivery Confirmation Workflow
 
@@ -627,7 +627,7 @@ Managers use reports to make data-driven decisions.
 - Support budget planning
 
 #### Ticket Status Reports
-**Access:** Tickets page (`/tickets`)
+**Access:** Tickets page (`/operations/tickets`)
 
 **What it shows:**
 - Tickets by status (pending, in progress, completed, cancelled)

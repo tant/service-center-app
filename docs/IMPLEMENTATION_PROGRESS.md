@@ -67,8 +67,8 @@
 **Frontend Foundation:**
 - ✅ Setup frontend directory structure:
   - Created `src/app/(auth)/workflows/` - Workflow management routes
-  - Created `src/app/(auth)/warehouses/` - Warehouse management routes
-  - Created `src/app/(auth)/dashboard/inventory/` - Inventory dashboard
+  - Created `src/app/(auth)/inventory/warehouses/` - Warehouse management routes
+  - Created `src/app/(auth)/inventory/` - Inventory dashboard and pages
   - Created `src/components/inventory/` - Inventory components
 - ✅ Created custom hooks (24,093 lines total):
   - `src/hooks/use-workflow.ts` (9,687 lines) - 15+ hooks for workflow operations
@@ -446,7 +446,7 @@
 - ✅ Created `ConvertToTicketModal` with pre-populated ticket form
 - ✅ Created `RejectRequestModal` with common rejection reasons
 - ✅ Created `useDebounce` hook for search optimization
-- ✅ Created `/dashboard/service-requests` page with stats and filters
+- ✅ Created `/operations/service-requests` page with stats and filters
 
 **Navigation:**
 - ✅ Added "Yêu cầu dịch vụ" link to sidebar with pending count badge
@@ -488,7 +488,7 @@
 **Frontend Components:**
 - ✅ Created `SignatureCanvas` component - Mouse/touch signature capture
 - ✅ Created `DeliveryConfirmationModal` - Full delivery workflow with signature upload
-- ✅ Created `/dashboard/deliveries` page - Pending deliveries list
+- ✅ Created `/operations/deliveries` page - Pending deliveries list
 - ✅ Created custom hooks in `use-delivery.ts`:
   - `useConfirmDelivery()` - Delivery confirmation mutation
   - `usePendingDeliveries()` - Query pending deliveries

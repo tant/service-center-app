@@ -80,54 +80,72 @@ sevice-center/
 │   └── setup-instance.sh    # Multi-tenant instance setup
 ├── src/                     # 🎯 Application source code
 │   ├── app/                 # Next.js App Router
-│   │   ├── (auth)/          # Protected routes
-│   │   │   ├── dashboard/
+│   │   ├── (auth)/          # Protected routes - Grouped by function
+│   │   │   ├── dashboard/                  # Main dashboard + analytics
 │   │   │   │   ├── page.tsx
-│   │   │   │   ├── inventory/        # ✅ Phase 2 - Stories 01.07-01.10
-│   │   │   │   │   ├── products/
+│   │   │   │   ├── actions.ts
+│   │   │   │   ├── data.json
+│   │   │   │   ├── notifications/          # ✅ Notification center
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── task-progress/          # ✅ Task tracking
+│   │   │   │       └── page.tsx
+│   │   │   ├── operations/                 # 🎯 Daily Operations
+│   │   │   │   ├── tickets/                # Service tickets
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── add/
 │   │   │   │   │   │   └── page.tsx
-│   │   │   │   │   ├── stock-levels/
-│   │   │   │   │   │   └── page.tsx
-│   │   │   │   │   └── rma/
-│   │   │   │   │       └── page.tsx
-│   │   │   │   ├── task-progress/    # ✅ Phase 2 - Story 01.16
+│   │   │   │   │   └── [ticket-id]/
+│   │   │   │   │       ├── page.tsx
+│   │   │   │   │       └── edit/
+│   │   │   │   │           └── page.tsx
+│   │   │   │   ├── service-requests/       # Public service requests
 │   │   │   │   │   └── page.tsx
-│   │   │   │   ├── service-requests/ # ✅ Phase 2 - Story 01.13
+│   │   │   │   ├── deliveries/             # Delivery management
 │   │   │   │   │   └── page.tsx
-│   │   │   │   ├── deliveries/       # ✅ Phase 2 - Story 01.14
+│   │   │   │   └── my-tasks/               # Technician tasks
+│   │   │   │       └── page.tsx
+│   │   │   ├── inventory/                  # 📦 Stock & Warehouse
+│   │   │   │   ├── products/               # Physical products tracking
 │   │   │   │   │   └── page.tsx
-│   │   │   │   └── notifications/    # ✅ Phase 2 - Story 01.15
-│   │   │   │       └── page.tsx
-│   │   │   ├── tickets/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── [id]/
+│   │   │   │   ├── stock-levels/           # Stock levels & alerts
 │   │   │   │   │   └── page.tsx
-│   │   │   │   └── new/
+│   │   │   │   ├── rma/                    # RMA management
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── warehouses/             # Warehouse management
 │   │   │   │       └── page.tsx
-│   │   │   ├── workflows/            # ✅ Phase 2 - Story 01.02
-│   │   │   │   └── templates/
+│   │   │   ├── catalog/                    # 📚 Master Data
+│   │   │   │   ├── products/               # Product catalog/SKU
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── parts/                  # Parts catalog
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── brands/                 # Brand management
 │   │   │   │       └── page.tsx
-│   │   │   ├── warehouses/           # ✅ Phase 2 - Story 01.06
-│   │   │   │   └── page.tsx
-│   │   │   ├── customers/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [id]/
+│   │   │   ├── management/                 # 👥 Admin Functions
+│   │   │   │   ├── customers/              # Customer management
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── team/                   # Team & users
 │   │   │   │       └── page.tsx
-│   │   │   ├── products/
+│   │   │   ├── workflows/                  # ⚙️ Process Templates
+│   │   │   │   ├── templates/              # Workflow templates
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── task-types/             # Task type definitions
+│   │   │   │       └── page.tsx
+│   │   │   ├── settings/                   # 🔧 Configuration
+│   │   │   │   ├── account/                # User account settings
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── system/                 # System settings (admin)
+│   │   │   │       └── page.tsx
+│   │   │   ├── unauthorized/               # Access denied page
 │   │   │   │   └── page.tsx
-│   │   │   ├── parts/
-│   │   │   │   └── page.tsx
-│   │   │   ├── team/
-│   │   │   │   └── page.tsx
-│   │   │   ├── unauthorized/         # ✅ Phase 2 - Story 01.00 (RBAC)
-│   │   │   │   └── page.tsx
-│   │   │   └── layout.tsx   # Auth layout with sidebar
+│   │   │   └── layout.tsx                  # Auth layout with sidebar
 │   │   ├── (public)/        # Public routes
 │   │   │   ├── login/
 │   │   │   │   └── page.tsx
+│   │   │   ├── logout/
+│   │   │   │   └── action.ts
 │   │   │   ├── setup/
 │   │   │   │   └── page.tsx
-│   │   │   └── service-request/      # ✅ Phase 2 - Stories 01.11-01.12
+│   │   │   └── service-request/      # Public service request form
 │   │   │       ├── page.tsx          # Request creation form
 │   │   │       ├── track/
 │   │   │       │   └── page.tsx      # Tracking page
@@ -148,16 +166,36 @@ sevice-center/
 │   │   │   ├── form.tsx
 │   │   │   ├── input.tsx
 │   │   │   ├── select.tsx
+│   │   │   ├── sidebar.tsx
 │   │   │   ├── table.tsx
 │   │   │   └── ...
-│   │   ├── add-customer-form.tsx
-│   │   ├── add-ticket-form.tsx
-│   │   ├── app-sidebar.tsx
-│   │   ├── customer-select.tsx
+│   │   ├── providers/       # Context providers
+│   │   │   └── trpc-provider.tsx
+│   │   ├── tables/          # TanStack Table components
+│   │   │   ├── email-notifications-table.tsx
+│   │   │   ├── service-requests-table.tsx
+│   │   │   ├── task-types-table.tsx
+│   │   │   └── template-list-table.tsx
+│   │   ├── inventory/       # Inventory-specific components
+│   │   │   ├── product-inventory-table.tsx
+│   │   │   └── ...
+│   │   ├── warehouse/       # Warehouse-specific components
+│   │   │   ├── physical-warehouse-table.tsx
+│   │   │   ├── virtual-warehouse-table.tsx
+│   │   │   └── warehouse-content.tsx
+│   │   ├── workflow/        # Workflow-specific components
+│   │   │   ├── task-card.tsx
+│   │   │   └── ...
+│   │   ├── app-sidebar.tsx              # Main sidebar navigation
+│   │   ├── nav-overview.tsx             # Dashboard navigation
+│   │   ├── nav-section.tsx              # Reusable section navigation
+│   │   ├── nav-workflows.tsx            # Collapsible workflows nav
+│   │   ├── nav-secondary.tsx            # Secondary links (Help, Support)
+│   │   ├── nav-user.tsx                 # User profile dropdown
 │   │   ├── customer-table.tsx
-│   │   ├── edit-customer-form.tsx
-│   │   ├── edit-ticket-form.tsx
-│   │   ├── product-select.tsx
+│   │   ├── ticket-table.tsx
+│   │   ├── team-table.tsx
+│   │   └── ...
 │   │   ├── quick-upload-images-modal.tsx
 │   │   ├── ticket-parts-manager.tsx
 │   │   ├── ticket-status-badge.tsx
@@ -237,35 +275,80 @@ sevice-center/
 
 ### 6.3.1 `src/app/` - Next.js App Router
 
+**Navigation Structure (October 2025 - Refactored):**
+
+The application uses a **functional grouping** approach for better UX and role-based access control:
+
 ```mermaid
 graph TB
-    App[app/]
+    App["app/(auth)/"]
 
-    App --> Auth["(auth)/<br/>Protected Routes"]
-    App --> Public["(public)/<br/>Public Routes"]
-    App --> API[api/trpc/]
+    App --> Dashboard["📊 dashboard/<br/>Analytics & Overview"]
+    App --> Operations["🎯 operations/<br/>Daily Work"]
+    App --> Inventory["📦 inventory/<br/>Stock & Warehouse"]
+    App --> Catalog["📚 catalog/<br/>Master Data"]
+    App --> Management["👥 management/<br/>Admin Functions"]
+    App --> Workflows["⚙️ workflows/<br/>Process Templates"]
+    App --> Settings["🔧 settings/<br/>Configuration"]
 
-    Auth --> Dashboard[dashboard/]
-    Auth --> Tickets[tickets/]
-    Auth --> Customers[customers/]
-    Auth --> Products[products/]
-    Auth --> Parts[parts/]
-    Auth --> Team[team/]
+    Operations --> Tickets["tickets/<br/>Service tickets"]
+    Operations --> ServiceReq["service-requests/<br/>Public requests"]
+    Operations --> Deliveries["deliveries/<br/>Delivery management"]
+    Operations --> MyTasks["my-tasks/<br/>Technician tasks"]
 
-    Public --> Login[login/]
-    Public --> Setup[setup/]
+    Inventory --> InvProducts["products/<br/>Physical tracking"]
+    Inventory --> StockLevels["stock-levels/<br/>Stock alerts"]
+    Inventory --> RMA["rma/<br/>RMA management"]
+    Inventory --> Warehouses["warehouses/<br/>Warehouse config"]
 
-    API --> TRPCRoute["[...trpc]/route.ts"]
+    Catalog --> CatProducts["products/<br/>Product SKU"]
+    Catalog --> Parts["parts/<br/>Parts catalog"]
+    Catalog --> Brands["brands/<br/>Brand management"]
 
-    style Auth fill:#4A90E2
-    style Public fill:#50C878
-    style API fill:#FFD700
+    Management --> Customers["customers/<br/>Customer data"]
+    Management --> Team["team/<br/>User management"]
+
+    Workflows --> Templates["templates/<br/>Workflow templates"]
+    Workflows --> TaskTypes["task-types/<br/>Task definitions"]
+
+    Settings --> Account["account/<br/>User settings"]
+    Settings --> System["system/<br/>Admin config"]
+
+    style Dashboard fill:#FFD700
+    style Operations fill:#4A90E2
+    style Inventory fill:#FF6B6B
+    style Catalog fill:#50C878
+    style Management fill:#9370DB
+    style Workflows fill:#FF8C00
+    style Settings fill:#20B2AA
 ```
 
 **Route Groups:**
 - `(auth)/` - Requires authentication, shares sidebar layout
-- `(public)/` - No authentication, minimal layout
+- `(public)/` - No authentication, minimal layout (login, service-request)
 - `api/` - API routes (tRPC endpoint)
+
+**URL Structure:**
+```
+/dashboard                       → Main dashboard
+/operations/tickets             → Service tickets
+/operations/service-requests    → Public service requests
+/operations/deliveries          → Delivery management
+/operations/my-tasks            → Technician tasks
+/inventory/products             → Physical product tracking
+/inventory/stock-levels         → Stock level monitoring
+/inventory/rma                  → RMA batch management
+/inventory/warehouses           → Warehouse configuration
+/catalog/products               → Product catalog (SKU)
+/catalog/parts                  → Parts catalog
+/catalog/brands                 → Brand management
+/management/customers           → Customer management
+/management/team                → Team & user management
+/workflows/templates            → Workflow templates
+/workflows/task-types           → Task type definitions
+/settings/account               → User account settings
+/settings/system                → System configuration (admin)
+```
 
 **File Conventions:**
 - `page.tsx` - Page component (becomes route)
@@ -273,35 +356,35 @@ graph TB
 - `loading.tsx` - Loading UI (Suspense fallback)
 - `error.tsx` - Error boundary
 - `not-found.tsx` - 404 page
+- `actions.ts` - Server actions
 
 ---
 
 ### 6.3.2 `src/components/` - React Components
 
+**Navigation Components:**
+
 ```mermaid
-mindmap
-  root((components/))
-    ui/
-      button.tsx
-      card.tsx
-      dialog.tsx
-      form.tsx
-      table.tsx
-    Forms
-      add-ticket-form.tsx
-      edit-ticket-form.tsx
-      add-customer-form.tsx
-    Tables
-      ticket-table.tsx
-      customer-table.tsx
-    Navigation
-      app-sidebar.tsx
-    Business Logic
-      ticket-parts-manager.tsx
-      quick-upload-images-modal.tsx
+graph TB
+    AppSidebar[app-sidebar.tsx<br/>Main Sidebar Container]
+
+    AppSidebar --> NavOverview[nav-overview.tsx<br/>Dashboard Navigation]
+    AppSidebar --> NavSection[nav-section.tsx<br/>Reusable Section Component]
+    AppSidebar --> NavWorkflows[nav-workflows.tsx<br/>Collapsible Workflows]
+    AppSidebar --> NavSecondary[nav-secondary.tsx<br/>Help & Support Links]
+    AppSidebar --> NavUser[nav-user.tsx<br/>User Profile Dropdown]
+
+    NavSection --> Operations[Operations Section]
+    NavSection --> Inventory[Inventory Section]
+    NavSection --> Catalog[Catalog Section]
+    NavSection --> Management[Management Section]
+    NavSection --> Settings[Settings Section]
+
+    style AppSidebar fill:#FFD700
+    style NavSection fill:#4A90E2
 ```
 
-**Structure:**
+**Component Structure:**
 - **Flat** - All components in one directory (except `ui/`)
 - **ui/** - shadcn/ui base components (copy-pasted, customizable)
 - **Business Components** - Domain-specific (tickets, customers)

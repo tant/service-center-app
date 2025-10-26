@@ -345,14 +345,59 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 - Maintain existing color palette and typography scale
 - Reuse existing form patterns (React Hook Form + Zod validation)
 
-**Navigation Integration:**
-- New workflow, warehouse, and request modules added to existing sidebar navigation
-- Maintain current dashboard layout structure
-- Follow existing breadcrumb and page header patterns
-- Integrate with existing notification system
+**Navigation Architecture (Refactored October 2025):**
+
+The application uses a **functional grouping** approach for improved UX and RBAC:
+
+```
+📊 Overview
+  /dashboard                        → Analytics & KPIs
+
+🎯 Operations (Daily Work)
+  /operations/tickets              → Service tickets
+  /operations/service-requests     → Public service requests
+  /operations/deliveries           → Delivery management
+  /operations/my-tasks             → Technician tasks
+
+📦 Inventory (Stock & Warehouse)
+  /inventory/products              → Physical product tracking
+  /inventory/stock-levels          → Stock levels & alerts
+  /inventory/rma                   → RMA management
+  /inventory/warehouses            → Warehouse configuration
+
+📚 Catalog (Master Data)
+  /catalog/products                → Product catalog/SKU
+  /catalog/parts                   → Parts catalog
+  /catalog/brands                  → Brand management
+
+👥 Management (Admin Functions)
+  /management/customers            → Customer management
+  /management/team                 → Team & user management
+
+⚙️ Workflows (Process Templates)
+  /workflows/templates             → Workflow templates
+  /workflows/task-types            → Task type definitions
+
+🔧 Settings (Configuration)
+  /settings/account                → User account settings
+  /settings/system                 → System configuration (admin)
+```
+
+**Sidebar Navigation Components:**
+- `NavOverview` - Dashboard navigation (admin, manager only)
+- `NavSection` - Reusable section component with title and items
+- `NavWorkflows` - Collapsible workflows section
+- `NavSecondary` - Help and support links
+- `NavUser` - User profile dropdown with logout
+
+**Role-Based Visibility:**
+- **Admin:** All 18 pages (100%)
+- **Manager:** 16 pages (89% - no System Settings, Audit Logs)
+- **Technician:** 7 pages (39% - task-focused, read-only inventory/catalog)
+- **Reception:** 6 pages (33% - customer intake, delivery confirmation)
 
 **Component Reuse:**
-- Use existing Table component for data grids (tasks, warehouse stock, requests)
+- Use TanStack React Table for all data grids (responsive, sortable, filterable)
 - Reuse existing Modal/Dialog components for forms
 - Leverage existing Card components for dashboard widgets
 - Utilize existing Badge components for status indicators
@@ -361,24 +406,47 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 
 **✅ IMPLEMENTATION STATUS: All pages COMPLETE (18/21 stories - 86%)**
 
-**New Pages (Admin/Manager)** - ✅ ALL COMPLETE:
-1. ✅ `/workflows/templates` - Task template management (Story 01.02)
-2. ✅ `/warehouses` - Warehouse hierarchy management (Story 01.06)
-3. ✅ `/dashboard/inventory/stock-levels` - Inventory dashboard (Story 01.09)
-4. ✅ `/dashboard/inventory/products` - Physical product management (Story 01.07)
-5. ✅ `/dashboard/inventory/rma` - RMA batch operations (Story 01.10)
-6. ✅ `/dashboard/service-requests` - Service request management (Story 01.13)
-7. ✅ `/dashboard/task-progress` - Manager task progress dashboard (Story 01.16)
-8. ✅ `/dashboard/deliveries` - Delivery confirmation workflow (Story 01.14)
-9. ✅ `/dashboard/notifications` - Email notification management (Story 01.15)
+**Core Pages (All Roles):**
+1. ✅ `/operations/tickets` - Service ticket management
+2. ✅ `/operations/tickets/[ticket-id]` - Ticket details
+3. ✅ `/operations/tickets/add` - Create new ticket
+4. ✅ `/management/customers` - Customer management
+5. ✅ `/catalog/brands` - Brand management
+
+**Operations Pages:**
+6. ✅ `/operations/service-requests` - Service request management (Story 01.13)
+7. ✅ `/operations/deliveries` - Delivery management (Story 01.14)
+8. ✅ `/operations/my-tasks` - Technician task view (Story 01.03)
+
+**Inventory Pages:**
+9. ✅ `/inventory/products` - Physical product tracking (Story 01.07)
+10. ✅ `/inventory/stock-levels` - Inventory dashboard (Story 01.09)
+11. ✅ `/inventory/rma` - RMA batch operations (Story 01.10)
+12. ✅ `/inventory/warehouses` - Warehouse hierarchy (Story 01.06)
+
+**Catalog Pages:**
+13. ✅ `/catalog/products` - Product catalog/SKU
+14. ✅ `/catalog/parts` - Parts catalog
+
+**Workflow Pages:**
+15. ✅ `/workflows/templates` - Task template management (Story 01.02)
+16. ✅ `/workflows/task-types` - Task type definitions
+
+**Management Pages:**
+17. ✅ `/management/team` - Team & user management (Story 01.00 RBAC)
+
+**Dashboard Pages:**
+18. ✅ `/dashboard` - Main analytics dashboard
+19. ✅ `/dashboard/task-progress` - Manager task monitoring (Story 01.16)
+20. ✅ `/dashboard/notifications` - Notification center (Story 01.15)
 
 **Modified Pages (Existing)** - ✅ ALL COMPLETE:
-1. ✅ `/tickets/[id]` - Enhanced with task execution UI (Story 01.04)
-2. ✅ `/tickets` - Task progress integrated (Story 01.05)
+1. ✅ `/operations/tickets/[id]` - Enhanced with task execution UI (Story 01.04)
+2. ✅ `/operations/tickets` - Task progress integrated (Story 01.05)
 3. ✅ `/dashboard` - Multiple widgets added (all phases)
 
 **New Pages (Technician)** - ✅ COMPLETE:
-1. ✅ `/my-tasks` - Personal task dashboard (Story 01.04)
+1. ✅ `/operations/my-tasks` - Personal task dashboard (Story 01.04)
 
 **New Public Pages** - ✅ ALL COMPLETE:
 1. ✅ `/service-request` - Service request creation form (Story 01.11)
@@ -493,10 +561,14 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 - ✅ Uses existing tRPC context (supabaseAdmin, supabaseClient, user)
 
 **Frontend Integration Strategy:**
-- Create new route groups:
-  - `app/(auth)/workflows/*` - Task template management
-  - `app/(auth)/warehouses/*` - Warehouse management
-  - `app/(auth)/requests/*` - Request management
+- Application uses functional grouping route structure:
+  - `app/(auth)/operations/*` - Daily operations (tickets, service requests, deliveries, my-tasks)
+  - `app/(auth)/inventory/*` - Stock & warehouse management (products, stock-levels, rma, warehouses)
+  - `app/(auth)/catalog/*` - Master data (products, parts, brands)
+  - `app/(auth)/management/*` - Admin functions (customers, team)
+  - `app/(auth)/workflows/*` - Process templates (templates, task-types)
+  - `app/(auth)/settings/*` - Configuration (account, system)
+  - `app/(auth)/dashboard/*` - Analytics (main dashboard, task-progress, notifications)
   - `app/(public)/request/*` - Public request creation
   - `app/(public)/track/*` - Public tracking
 - Reuse existing components from `src/components/ui/*`
@@ -847,11 +919,11 @@ Transform Service Center from basic ticket tracking to comprehensive service man
 - ✅ **Story 01.12**: Service Request Tracking Page
   - Code: `/app/(public)/service-request/track/page.tsx`
 - ✅ **Story 01.13**: Staff Request Management
-  - Code: Dashboard at `/dashboard/service-requests`
+  - Code: Dashboard at `/operations/service-requests`
   - Features: Request conversion, status management
 - ✅ **Story 01.14**: Customer Delivery Confirmation
   - Code: `confirmDelivery` procedure in tickets router
-  - UI: Deliveries dashboard at `/dashboard/deliveries`
+  - UI: Deliveries dashboard at `/operations/deliveries`
 
 **Phase 7: Enhanced Features (3/3 Complete)** ✅
 - ✅ **Story 01.15**: Email Notification System

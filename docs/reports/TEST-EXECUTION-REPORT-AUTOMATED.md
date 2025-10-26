@@ -131,7 +131,7 @@ Status: ✅ ACTIVE
 ```
 
 **Manual UI Testing Required:**
-- [ ] Navigate to `/dashboard/inventory/products`
+- [ ] Navigate to `/inventory/products`
 - [ ] Record stock movement (IN/OUT)
 - [ ] Verify stock updates
 - [ ] Test low stock alerts

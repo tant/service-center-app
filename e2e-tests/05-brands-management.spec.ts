@@ -54,6 +54,7 @@ test.describe("Brands Management", () => {
         await dialog.getByLabel("Tên thương hiệu").fill(brandName);
         await dialog.getByRole("button", { name: "Tạo thương hiệu" }).click();
         await expect(page.getByText("Thương hiệu đã được tạo thành công")).toBeVisible();
+        await page.waitForTimeout(2000); // Wait for toast to disappear
       } else {
         console.log(`Brand "${brandName}" already exists.`);
       }

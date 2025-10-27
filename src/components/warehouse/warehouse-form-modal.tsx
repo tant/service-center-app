@@ -10,21 +10,11 @@ import {
   useCreatePhysicalWarehouse,
   useUpdatePhysicalWarehouse,
 } from "@/hooks/use-warehouse";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useIsMobile } from "@/hooks/use-mobile";
 import type { PhysicalWarehouse } from "@/types/warehouse";
 
 interface WarehouseFormModalProps {
@@ -38,7 +28,6 @@ export function WarehouseFormModal({
   onClose,
   warehouse,
 }: WarehouseFormModalProps) {
-  const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -140,21 +129,27 @@ export function WarehouseFormModal({
   };
 
   return (
-    <Drawer open={open} onOpenChange={onClose} direction={isMobile ? "bottom" : "right"}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>
-            {isEditMode ? "Chỉnh Sửa Kho" : "Thêm Kho Mới"}
-          </DrawerTitle>
-          <DrawerDescription>
-            {isEditMode
-              ? "Cập nhật thông tin kho vật lý"
-              : "Tạo mới một kho vật lý trong hệ thống"}
-          </DrawerDescription>
-        </DrawerHeader>
-
-        {/* Form Content - Scrollable */}
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+    <FormDrawer
+      open={open}
+      onOpenChange={onClose}
+      title={isEditMode ? "Chỉnh Sửa Kho" : "Thêm Kho Mới"}
+      description={
+        isEditMode
+          ? "Cập nhật thông tin kho vật lý"
+          : "Tạo mới một kho vật lý trong hệ thống"
+      }
+      isSubmitting={isSubmitting}
+      onSubmit={handleSubmit}
+      submitLabel={
+        isSubmitting
+          ? "Đang xử lý..."
+          : isEditMode
+            ? "Cập Nhật"
+            : "Tạo Kho"
+      }
+      cancelLabel="Hủy"
+    >
+      <div className="flex flex-col gap-4">
           {/* Name Field */}
           <div className="grid gap-2">
             <Label htmlFor="name">
@@ -255,30 +250,6 @@ export function WarehouseFormModal({
             />
           </div>
         </div>
-
-        <DrawerFooter>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? "Đang xử lý..."
-              : isEditMode
-                ? "Cập Nhật"
-                : "Tạo Kho"}
-          </Button>
-          <DrawerClose asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSubmitting}
-            >
-              Hủy
-            </Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+    </FormDrawer>
   );
 }

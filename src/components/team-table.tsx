@@ -21,10 +21,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronsLeft,
-  IconChevronsRight,
   IconGripVertical,
   IconKey,
   IconLayoutColumns,
@@ -67,16 +63,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -94,6 +81,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -109,7 +97,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 // TODO: REMOVE IN PRODUCTION - Sample data generator imports for development/testing only
 import { IconDatabase } from "@tabler/icons-react";
@@ -911,77 +898,7 @@ export function TeamTable({
             {table.getFilteredSelectedRowModel().rows.length} đã chọn{" "}
             {table.getFilteredRowModel().rows.length} người dùng.
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Số dòng mỗi trang
-              </Label>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
-              {table.getPageCount()}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Đến trang đầu</span>
-                <IconChevronsLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Trang trước</span>
-                <IconChevronLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Trang tiếp</span>
-                <IconChevronRight />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Đến trang cuối</span>
-                <IconChevronsRight />
-              </Button>
-            </div>
-          </div>
+          <TablePagination table={table} labelId="rows-per-page-team" />
         </div>
       </TabsContent>
       <TabsContent
@@ -1021,7 +938,6 @@ function TeamMemberModal({
   currentUserRole,
   onSuccess,
 }: TeamMemberModalProps) {
-  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [formData, setFormData] = React.useState({
@@ -1137,32 +1053,46 @@ function TeamMemberModal({
   };
 
   return (
-    <Drawer
+    <FormDrawer
       open={open}
       onOpenChange={setOpen}
-      direction={isMobile ? "bottom" : "right"}
+      trigger={trigger}
+      titleElement={
+        <div className="flex items-center gap-3">
+          {mode === "edit" && (
+            <Avatar className="size-10">
+              <AvatarImage src={member?.avatar_url || ""} />
+              <AvatarFallback>
+                <IconUser className="size-5" />
+              </AvatarFallback>
+            </Avatar>
+          )}
+          {mode === "add" ? "Thêm Nhân Viên Mới" : member?.full_name}
+        </div>
+      }
+      description={
+        mode === "add"
+          ? "Tạo tài khoản nhân viên mới với các thông tin bắt buộc."
+          : "Chi tiết và tùy chọn quản lý thành viên"
+      }
+      isSubmitting={isLoading}
+      onSubmit={() => {
+        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+        handleSubmit(fakeEvent);
+      }}
+      submitLabel={
+        isLoading
+          ? mode === "add"
+            ? "Đang tạo..."
+            : "Đang cập nhật..."
+          : mode === "add"
+            ? "Tạo nhân viên"
+            : "Lưu thay đổi"
+      }
+      cancelLabel="Hủy bỏ"
+      headerClassName="gap-1"
     >
-      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle className="flex items-center gap-3">
-            {mode === "edit" && (
-              <Avatar className="size-10">
-                <AvatarImage src={member?.avatar_url || ""} />
-                <AvatarFallback>
-                  <IconUser className="size-5" />
-                </AvatarFallback>
-              </Avatar>
-            )}
-            {mode === "add" ? "Thêm Nhân Viên Mới" : member?.full_name}
-          </DrawerTitle>
-          <DrawerDescription>
-            {mode === "add"
-              ? "Tạo tài khoản nhân viên mới với các thông tin bắt buộc."
-              : "Chi tiết và tùy chọn quản lý thành viên"}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+      <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="full_name">Họ và tên</Label>
@@ -1300,30 +1230,7 @@ function TeamMemberModal({
             )}
           </div>
         </div>
-        <DrawerFooter>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit(e);
-            }}
-            disabled={isLoading}
-          >
-            {isLoading
-              ? mode === "add"
-                ? "Đang tạo..."
-                : "Đang cập nhật..."
-              : mode === "add"
-                ? "Tạo nhân viên"
-                : "Lưu thay đổi"}
-          </Button>
-          <DrawerClose asChild>
-            <Button variant="outline" disabled={isLoading}>
-              Hủy bỏ
-            </Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+    </FormDrawer>
   );
 }
 

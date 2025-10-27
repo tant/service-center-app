@@ -1,22 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import { useCreateRMABatch } from "@/hooks/use-warehouse";
 
 interface CreateRMABatchDrawerProps {
@@ -25,7 +14,6 @@ interface CreateRMABatchDrawerProps {
 }
 
 export function CreateRMABatchDrawer({ trigger, onSuccess }: CreateRMABatchDrawerProps) {
-  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [supplierName, setSupplierName] = React.useState("");
   const [shippingDate, setShippingDate] = React.useState("");
@@ -34,8 +22,7 @@ export function CreateRMABatchDrawer({ trigger, onSuccess }: CreateRMABatchDrawe
 
   const { createBatch, isCreating } = useCreateRMABatch();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (!supplierName.trim()) return;
 
     createBatch(
@@ -60,23 +47,19 @@ export function CreateRMABatchDrawer({ trigger, onSuccess }: CreateRMABatchDrawe
   };
 
   return (
-    <Drawer
+    <FormDrawer
       open={open}
       onOpenChange={setOpen}
-      direction={isMobile ? "bottom" : "right"}
+      trigger={trigger}
+      title="Tạo lô RMA mới"
+      description="Tạo lô hàng mới để trả về nhà cung cấp. Các sản phẩm sẽ được thêm vào sau."
+      isSubmitting={isCreating}
+      onSubmit={handleSubmit}
+      submitLabel={isCreating ? "Đang tạo..." : "Tạo lô RMA"}
+      submitDisabled={!supplierName.trim()}
+      cancelLabel="Hủy bỏ"
     >
-      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Tạo lô RMA mới</DrawerTitle>
-          <DrawerDescription>
-            Tạo lô hàng mới để trả về nhà cung cấp. Các sản phẩm sẽ được thêm vào sau.
-          </DrawerDescription>
-        </DrawerHeader>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Form Content */}
-          <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+      <div className="flex flex-col gap-4">
             {/* Supplier Name (Required) */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="supplier-name">
@@ -140,19 +123,6 @@ export function CreateRMABatchDrawer({ trigger, onSuccess }: CreateRMABatchDrawe
               />
             </div>
           </div>
-
-          <DrawerFooter>
-            <Button type="submit" disabled={isCreating || !supplierName.trim()}>
-              {isCreating ? "Đang tạo..." : "Tạo lô RMA"}
-            </Button>
-            <DrawerClose asChild>
-              <Button variant="outline" disabled={isCreating}>
-                Hủy bỏ
-              </Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+    </FormDrawer>
   );
 }

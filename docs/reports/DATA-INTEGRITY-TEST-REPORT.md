@@ -151,6 +151,8 @@ The `trigger_auto_move_product_on_ticket_event` trigger contains a critical bug 
 - ✅ Composite unique constraints prevent duplicate relationships
 - ⚠️ Customer email NOT unique (intentional design decision)
 
+**Note (Oct 26, 2025):** The `warehouse_type` enum has been extended to include `'main'` (Kho Chính). Data integrity and migration tests that validate `virtual_warehouses` and `product_stock_thresholds` should include `'main'` as a valid value where appropriate.
+
 #### INT-1.3: Check Constraints ✅ EXCELLENT (Verified via Catalog)
 
 **Status:** Automated verification complete

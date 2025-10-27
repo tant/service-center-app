@@ -290,6 +290,222 @@ File này là reference implementation đầy đủ của tất cả patterns tr
 
 ---
 
+## 2.6. Shared Components & Code Reusability
+
+**✨ TIÊU CHUẨN MỚI (v1.2 - Oct 27, 2025)**
+
+Để tránh code duplication và đảm bảo tính nhất quán, **LUÔN SỬ DỤNG** các shared components có sẵn thay vì tự implement lại logic tương tự.
+
+### 2.6.1. Nguyên Tắc DRY (Don't Repeat Yourself)
+
+**Quy tắc vàng:**
+1. **Kiểm tra trước khi code** - Luôn search codebase để tìm implementation tương tự
+2. **Tái sử dụng** - Dùng shared components thay vì copy-paste
+3. **Refactor khi thấy repetition** - Nếu thấy code lặp lại ≥3 lần, extract thành component
+4. **Single source of truth** - Mỗi pattern chỉ nên có 1 implementation chính
+
+### 2.6.2. TablePagination Component
+
+**Component:** `src/components/ui/table-pagination.tsx`
+
+**Áp dụng cho:** TẤT CẢ các bảng có phân trang
+
+**❌ KHÔNG LÀM:**
+```tsx
+// Đừng tự implement pagination UI (~70-80 lines)
+<div className="flex items-center justify-between px-4 lg:px-6">
+  <div className="flex-1 text-sm text-muted-foreground">
+    {table.getFilteredSelectedRowModel().rows.length > 0 && (
+      <span>Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong {table.getFilteredRowModel().rows.length}</span>
+    )}
+  </div>
+  <div className="flex w-full items-center gap-8 lg:w-fit">
+    <div className="hidden items-center gap-2 lg:flex">
+      <Label htmlFor="rows-per-page">Hàng trên trang</Label>
+      <Select value={`${pageSize}`} onValueChange={...}>
+        {/* 30+ more lines */}
+      </Select>
+    </div>
+    {/* 40+ more lines of pagination controls */}
+  </div>
+</div>
+```
+
+**✅ ĐÚNG:**
+```tsx
+import { TablePagination } from "@/components/ui/table-pagination";
+
+// Chỉ 1 dòng thay thế ~70-80 lines
+<TablePagination table={table} labelId="rows-per-page-products" />
+```
+
+**Props:**
+- `table` - TanStack Table instance
+- `labelId` - Unique ID cho label "Hàng trên trang" (để tránh conflict khi có nhiều table)
+
+**Features:**
+- ✅ Selection count display
+- ✅ Page size selector (10, 20, 30, 40, 50)
+- ✅ Current page indicator
+- ✅ First/Previous/Next/Last navigation buttons
+- ✅ Responsive design (mobile + desktop)
+- ✅ Consistent styling across all tables
+
+**Đã áp dụng cho 8 tables:**
+1. `physical-warehouse-table.tsx`
+2. `virtual-warehouse-table.tsx`
+3. `team-table.tsx`
+4. `brands-table.tsx`
+5. `parts-table.tsx`
+6. `product-table.tsx`
+7. `customer-table.tsx`
+8. `ticket-table.tsx`
+
+### 2.6.3. FormDrawer Component
+
+**Component:** `src/components/ui/form-drawer.tsx`
+
+**Áp dụng cho:** TẤT CẢ các form trong Drawer (thêm/sửa entities)
+
+**❌ KHÔNG LÀM:**
+```tsx
+// Đừng tự implement drawer wrapper (~150-200 lines)
+<Drawer open={open} onOpenChange={setOpen} direction={isMobile ? "bottom" : "right"}>
+  <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+  <DrawerContent>
+    <DrawerHeader>
+      <DrawerTitle>{title}</DrawerTitle>
+      <DrawerDescription>{description}</DrawerDescription>
+    </DrawerHeader>
+    <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+      {/* Form fields */}
+    </div>
+    <DrawerFooter>
+      <Button onClick={handleSubmit} disabled={isLoading}>
+        {submitLabel}
+      </Button>
+      <DrawerClose asChild>
+        <Button variant="outline">Hủy bỏ</Button>
+      </DrawerClose>
+    </DrawerFooter>
+  </DrawerContent>
+</Drawer>
+```
+
+**✅ ĐÚNG:**
+```tsx
+import { FormDrawer } from "@/components/ui/form-drawer";
+
+<FormDrawer
+  open={open}
+  onOpenChange={setOpen}
+  trigger={trigger}
+  title="Thêm Sản Phẩm Mới"
+  description="Tạo sản phẩm mới trong danh mục"
+  isSubmitting={isLoading}
+  onSubmit={handleSubmit}
+  submitLabel={isLoading ? "Đang tạo..." : "Tạo sản phẩm"}
+  cancelLabel="Hủy bỏ"
+>
+  {/* Form fields only */}
+</FormDrawer>
+```
+
+**Props:**
+- `open` - Boolean state
+- `onOpenChange` - State setter
+- `trigger?` - Optional trigger button
+- `title?` - Simple string title
+- `titleElement?` - Custom React element for complex titles (e.g., with Avatar)
+- `description?` - Drawer description
+- `isSubmitting` - Loading state
+- `onSubmit` - Submit handler
+- `submitLabel` - Submit button text
+- `cancelLabel?` - Cancel button text (default: "Hủy bỏ")
+- `submitDisabled?` - Disable submit button
+- `headerClassName?` - Custom header styling
+- `children` - Form content
+
+**Advanced: Custom Title with Avatar**
+```tsx
+<FormDrawer
+  open={open}
+  onOpenChange={setOpen}
+  trigger={trigger}
+  titleElement={
+    <div className="flex items-center gap-3">
+      <Avatar className="size-10">
+        <AvatarImage src={member?.avatar_url} />
+        <AvatarFallback>{member?.full_name?.[0]}</AvatarFallback>
+      </Avatar>
+      {mode === "add" ? "Thêm Nhân Viên Mới" : member?.full_name}
+    </div>
+  }
+  description="Cập nhật thông tin nhân viên"
+  isSubmitting={isLoading}
+  onSubmit={handleSubmit}
+  submitLabel="Lưu thay đổi"
+  headerClassName="gap-1"
+>
+  {/* Form fields */}
+</FormDrawer>
+```
+
+**Features:**
+- ✅ Automatic mobile/desktop direction (bottom/right)
+- ✅ Consistent header/footer layout
+- ✅ Loading state management
+- ✅ Scrollable content area
+- ✅ Support for simple string titles OR complex custom title elements
+- ✅ Customizable header styling
+
+**Đã áp dụng cho các forms:**
+1. Task type management
+2. Template management
+3. Warehouse management
+4. Team member management
+5. (Có thể mở rộng cho products, parts, brands, customers)
+
+### 2.6.4. Impact & Benefits
+
+**Từ các refactoring vừa qua:**
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Total code removed | - | ~700 lines | Reduced duplication |
+| Tables using TablePagination | 0 | 8 | 100% coverage |
+| Forms using FormDrawer | 0 | 4+ | Growing adoption |
+| Bundle size (avg) | Higher | 5-15 kB | Optimized |
+| Maintainability | Low | High | Single source of truth |
+
+**Lợi ích:**
+- ⚡ **Faster development** - Không cần implement lại pagination/drawer
+- 🎯 **Consistency** - Tất cả tables/forms có cùng UX
+- 🔧 **Easy maintenance** - Fix bug một lần, apply cho tất cả
+- 📦 **Smaller bundles** - Code reuse giảm bundle size
+- ✅ **Type safety** - Shared components có proper TypeScript types
+
+### 2.6.5. Best Practices
+
+**Khi tạo component mới:**
+1. ✅ Check xem đã có shared component chưa (search trong `src/components/ui/`)
+2. ✅ Nếu thấy pattern lặp lại ≥3 lần → extract thành shared component
+3. ✅ Đặt shared components trong `src/components/ui/`
+4. ✅ Export proper TypeScript interfaces
+5. ✅ Document props và usage examples
+6. ✅ Ensure responsive design (mobile + desktop)
+7. ✅ Add dark mode support
+
+**Khi refactor existing code:**
+1. ✅ Identify repetitive patterns across files
+2. ✅ Create shared component with flexible props
+3. ✅ Migrate existing code to use shared component
+4. ✅ Verify build succeeds
+5. ✅ Test on multiple breakpoints
+6. ✅ Update documentation (như guide này)
+
+---
+
 ## 3. Hệ thống Tabs (Tabs System)
 
 Tất cả các trang dạng bảng (table pages) PHẢI sử dụng component `Tabs` với các biến thể cho mobile và desktop để chuyển đổi giữa các view (ví dụ: lọc theo trạng thái).
@@ -443,11 +659,24 @@ Khi bảng không có dữ liệu để hiển thị, PHẢI hiển thị một 
 
 ### Phân trang (Pagination)
 
-Tất cả các bảng phải có hệ thống phân trang đầy đủ ở phía dưới, bao gồm:
+**⚠️ BẮT BUỘC: Sử dụng `TablePagination` Component**
+
+Tất cả các bảng phải sử dụng component `TablePagination` để đảm bảo tính nhất quán và tránh code duplication.
+
+**Cấu trúc:**
+```tsx
+import { TablePagination } from "@/components/ui/table-pagination";
+
+<TablePagination table={table} labelId="rows-per-page-[table-name]" />
+```
+
+**KHÔNG tự implement pagination UI.** Component này cung cấp đầy đủ:
 *   **Đếm số lượng đã chọn:** (ví dụ: "Đã chọn 5 trong 50")
 *   **Chọn kích thước trang:** (10, 20, 30, 40, 50)
 *   **Thông tin trang:** (ví dụ: "Trang 1 trên 10")
-*   **Các nút điều hướng:** Trang đầu, Trang trước, Trang tiếp, Trang cuối.
+*   **Các nút điều hướng:** Trang đầu, Trang trước, Trang tiếp, Trang cuối
+
+**Xem thêm:** Section 2.6.2 - TablePagination Component
 
 ---
 
@@ -482,18 +711,63 @@ Trên trang `/dashboard`, các thẻ được sử dụng để hiển thị cá
 
 ## 6. Ngăn kéo (Drawers) cho Form
 
-Để đảm bảo trải nghiệm người dùng nhất quán, tất cả các hành động **tạo mới** hoặc **chỉnh sửa** các mục phức tạp (ví dụ: sản phẩm, khách hàng) PHẢI sử dụng component `Drawer`.
+Để đảm bảo trải nghiệm người dùng nhất quán, tất cả các hành động **tạo mới** hoặc **chỉnh sửa** các mục phức tạp (ví dụ: sản phẩm, khách hàng) PHẢI sử dụng component `FormDrawer`.
 
-`Drawer` cung cấp nhiều không gian hơn cho các biểu mẫu phức tạp và mang lại trải nghiệm người dùng hiện đại.
+`FormDrawer` là shared component cung cấp nhiều không gian cho các biểu mẫu phức tạp, xử lý responsive behavior tự động, và mang lại trải nghiệm người dùng hiện đại nhất quán.
 
 ### Hành vi và Giao diện
 
-*   **Desktop:** `Drawer` sẽ trượt ra từ **bên phải** của màn hình.
-*   **Mobile:** `Drawer` sẽ trượt lên từ **dưới cùng** của màn hình.
+*   **Desktop:** Drawer sẽ trượt ra từ **bên phải** của màn hình.
+*   **Mobile:** Drawer sẽ trượt lên từ **dưới cùng** của màn hình.
+*   **Tự động detect:** Component tự xử lý responsive behavior, không cần `useIsMobile()`.
 
-### Cấu trúc Drawer
+### Cấu trúc Drawer (Khuyến nghị)
 
-Sử dụng các component `Drawer` từ `@/components/ui/drawer`.
+**⚠️ BẮT BUỘC: Sử dụng `FormDrawer` Component**
+
+```tsx
+import { FormDrawer } from "@/components/ui/form-drawer";
+
+function MyEntityModal({ mode, trigger, onSuccess, entity }) {
+  const [open, setOpen] = React.useState(false);
+
+  // ... (logic form và state)
+
+  return (
+    <FormDrawer
+      open={open}
+      onOpenChange={setOpen}
+      trigger={trigger}
+      title={mode === "add" ? "Thêm Sản Phẩm Mới" : "Chỉnh sửa Sản Phẩm"}
+      description={mode === "add"
+        ? "Tạo sản phẩm mới trong danh mục"
+        : "Cập nhật thông tin sản phẩm"}
+      isSubmitting={isLoading}
+      onSubmit={handleSubmit}
+      submitLabel={isLoading
+        ? (mode === "add" ? "Đang tạo..." : "Đang cập nhật...")
+        : (mode === "add" ? "Tạo sản phẩm" : "Lưu thay đổi")}
+      submitDisabled={!isValid}
+    >
+      {/* Chỉ cần viết form fields, không cần wrapper */}
+      <div className="flex flex-col gap-4">
+        <Label>Tên sản phẩm</Label>
+        <Input ... />
+        {/* More fields */}
+      </div>
+    </FormDrawer>
+  );
+}
+```
+
+**Xem thêm:** Section 2.6.3 - FormDrawer Component
+
+### Cấu trúc Drawer (Cách cũ - Deprecated)
+
+**⚠️ KHÔNG KHUYẾN KHÍCH** - Chỉ sử dụng nếu có requirements đặc biệt không phù hợp với FormDrawer.
+
+<details>
+<summary>Xem cách implement thủ công (deprecated)</summary>
 
 ```tsx
 import {
@@ -527,7 +801,7 @@ function MyEntityModal({ mode, trigger, onSuccess }) {
             [Mô tả ngắn gọn về chức năng của form].
           </DrawerDescription>
         </DrawerHeader>
-        
+
         {/* Nội dung chính, thường là một form có thể cuộn */}
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
           <MyForm />
@@ -548,6 +822,14 @@ function MyEntityModal({ mode, trigger, onSuccess }) {
   );
 }
 ```
+
+**Vấn đề với cách này:**
+- ❌ Tốn ~150-200 lines code mỗi form
+- ❌ Phải tự handle `useIsMobile()`
+- ❌ Code duplication cao
+- ❌ Khó maintain khi cần thay đổi layout
+
+</details>
 
 ### Khi nào sử dụng Drawer
 

@@ -11,16 +11,7 @@ import {
   useUpdateVirtualWarehouse,
   usePhysicalWarehouses,
 } from "@/hooks/use-warehouse";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -31,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useIsMobile } from "@/hooks/use-mobile";
 import type { VirtualWarehouse } from "@/types/warehouse";
 
 // Extended type to include new fields from migration
@@ -57,7 +47,6 @@ export function VirtualWarehouseFormModal({
   onClose,
   warehouse,
 }: VirtualWarehouseFormModalProps) {
-  const isMobile = useIsMobile();
   const [formData, setFormData] = useState<{
     name: string;
     physical_warehouse_id: string;
@@ -162,21 +151,27 @@ export function VirtualWarehouseFormModal({
   ];
 
   return (
-    <Drawer open={open} onOpenChange={onClose} direction={isMobile ? "bottom" : "right"}>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>
-            {isEditMode ? "Chỉnh Sửa Kho Ảo" : "Thêm Kho Ảo Mới"}
-          </DrawerTitle>
-          <DrawerDescription>
-            {isEditMode
-              ? "Cập nhật thông tin kho ảo"
-              : "Tạo mới một kho ảo trong hệ thống"}
-          </DrawerDescription>
-        </DrawerHeader>
-
-        {/* Form Content - Scrollable */}
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+    <FormDrawer
+      open={open}
+      onOpenChange={onClose}
+      title={isEditMode ? "Chỉnh Sửa Kho Ảo" : "Thêm Kho Ảo Mới"}
+      description={
+        isEditMode
+          ? "Cập nhật thông tin kho ảo"
+          : "Tạo mới một kho ảo trong hệ thống"
+      }
+      isSubmitting={isSubmitting}
+      onSubmit={handleSubmit}
+      submitLabel={
+        isSubmitting
+          ? "Đang xử lý..."
+          : isEditMode
+            ? "Cập Nhật"
+            : "Tạo Kho"
+      }
+      cancelLabel="Hủy"
+    >
+      <div className="flex flex-col gap-4">
           {/* Name Field */}
           <div className="grid gap-2">
             <Label htmlFor="name">
@@ -279,26 +274,6 @@ export function VirtualWarehouseFormModal({
             />
           </div>
         </div>
-
-        <DrawerFooter>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting
-              ? "Đang xử lý..."
-              : isEditMode
-                ? "Cập Nhật"
-                : "Tạo Kho"}
-          </Button>
-          <DrawerClose asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSubmitting}
-            >
-              Hủy
-            </Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+    </FormDrawer>
   );
 }

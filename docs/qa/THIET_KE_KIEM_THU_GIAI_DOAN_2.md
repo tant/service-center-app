@@ -163,7 +163,7 @@ ORDER BY table_name;
 **Then:**
 - Các ENUM sau tồn tại với giá trị đúng:
   - `task_status`: pending, in_progress, completed, blocked, skipped
-  - `warehouse_type`: warranty_stock, rma_staging, dead_stock, in_service, parts
+  - `warehouse_type`: main, warranty_stock, rma_staging, dead_stock, in_service, parts
 
 **SQL Kiểm Tra:**
 ```sql

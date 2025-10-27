@@ -143,9 +143,10 @@ BEGIN
     ORDER BY created_at DESC
     LIMIT 1;
 
-    -- If no previous warehouse found, default to warranty_stock
+    -- If no previous warehouse found, default to 'main' (Kho Chính)
+    -- (Historically this default was 'warranty_stock'; since 2025-10-26 default virtual warehouses are 'main')
     IF v_previous_warehouse IS NULL THEN
-      v_previous_warehouse := 'warranty_stock';
+      v_previous_warehouse := 'main';
     END IF;
 
     -- Record movement
@@ -177,6 +178,11 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+  -- QA Note (Oct 26, 2025): The system now creates default virtual warehouses with
+  -- warehouse_type = 'main'. When testing trigger behavior and stock movements,
+  -- ensure test data accounts for 'main' as a possible previous or default warehouse.
+  -- Related migrations: 202510260014, 202510260015, 202510260016.
 ```
 
 **Changes Made:**

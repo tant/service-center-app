@@ -164,6 +164,8 @@ All new modules integrate with existing tRPC architecture, Supabase RLS model, a
 |--------|------|---------|-------------|--------|
 | Initial Draft | 2025-10-23 | 1.0 | PRD created from Project Brief for Phase 2 | John (PM) |
 | Database & Warehouse update | 2025-10-26 | 1.1 | Added new warehouse enum value `main` ("Kho Chính"); removed redundant `display_name` and `color_code` columns from `virtual_warehouses`; applied migrations `202510260014`, `202510260015`, `202510260016`. Developer actions: regenerate DB types, update Zod schemas, update UI components. | Dev Team |
+| Task Type Management | 2025-10-27 | 1.2 | Implemented complete Task Type Management with create, update, and toggle functionality. Added `react-hook-form` and `@hookform/resolvers` dependencies. Created `task-type-form.tsx` component with 7 predefined categories. Added `taskType.update` and `taskType.toggleActive` procedures with validation. | Dev Team |
+| Task Type Filter & UI Guide Compliance | 2025-10-27 | 1.3 | Enhanced `taskType.list` to support optional `is_active` filter (true/false/undefined for all). Implemented Tabs system per UI_CODING_GUIDE.md with 3 filters (All/Active/Inactive). Fixed issue where deactivated task types disappeared from view. Added responsive Mobile Select ↔ Desktop TabsList. All validation messages and notifications translated to Vietnamese with actionable guidance. | Dev Team |
 
 ---
 
@@ -558,6 +560,11 @@ The application uses a **functional grouping** approach for improved UX and RBAC
 **API Integration Strategy:**
 - Create new tRPC routers:
   - ✅ `workflow` - Task template and task execution procedures (COMPLETE - 43KB, Stories 01.02-01.05, 01.17)
+    - Task Type Management:
+      - `taskType.list` - **Enhanced with optional `is_active` filter** (true/false/undefined for all)
+      - `taskType.create`, `taskType.update`, `taskType.toggleActive`
+    - Task Template Management: `template.list`, `template.create`, `template.update`, `template.switchTemplate`
+    - Task Execution: `task.list`, `task.getById`, `task.start`, `task.complete`, `task.updateStatus`
   - ✅ `warehouse` - Physical/virtual warehouse, stock movement procedures (COMPLETE - 4KB, Story 01.06)
   - ✅ `inventory` - Physical products, stock movements, RMA operations (COMPLETE - 40KB, Stories 01.07-01.10)
   - ✅ `serviceRequest` - Public and staff request management procedures (COMPLETE - 28KB, Stories 01.11-01.13)

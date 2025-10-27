@@ -75,7 +75,7 @@ export function SwitchTemplateModal({
   const handleSubmit = () => {
     // Validation
     if (!selectedTemplateId) {
-      setValidationError("Vui lòng chọn template mới");
+      setValidationError("Vui lòng chọn mẫu quy trình mới");
       return;
     }
 
@@ -122,9 +122,9 @@ export function SwitchTemplateModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Chuyển đổi Template công việc</DialogTitle>
+          <DialogTitle>Chuyển đổi mẫu quy trình</DialogTitle>
           <DialogDescription>
-            Thay đổi template công việc khi chẩn đoán phát hiện vấn đề khác.
+            Thay đổi mẫu quy trình khi chẩn đoán phát hiện vấn đề khác.
             Các công việc đã hoàn thành sẽ được giữ lại.
           </DialogDescription>
         </DialogHeader>
@@ -133,7 +133,7 @@ export function SwitchTemplateModal({
           {/* Current Template Info */}
           <Alert>
             <IconInfoCircle className="h-4 w-4" />
-            <AlertTitle>Template hiện tại</AlertTitle>
+            <AlertTitle>Mẫu quy trình hiện tại</AlertTitle>
             <AlertDescription>
               {currentTemplateName || "Không xác định"}
             </AlertDescription>
@@ -147,7 +147,7 @@ export function SwitchTemplateModal({
               <ul className="list-disc list-inside space-y-1 text-sm mt-2">
                 <li>Các công việc đã hoàn thành và đang thực hiện sẽ được giữ lại</li>
                 <li>Các công việc đang chờ hoặc bị chặn sẽ bị xóa</li>
-                <li>Công việc mới từ template mới sẽ được thêm vào</li>
+                <li>Công việc mới từ mẫu quy trình mới sẽ được thêm vào</li>
                 <li>Thao tác này sẽ được ghi lại trong lịch sử audit</li>
               </ul>
             </AlertDescription>
@@ -156,7 +156,7 @@ export function SwitchTemplateModal({
           {/* Template Selection */}
           <div className="space-y-2">
             <Label htmlFor="template-select">
-              Chọn Template mới <span className="text-destructive">*</span>
+              Chọn mẫu quy trình mới <span className="text-destructive">*</span>
             </Label>
             <Select
               value={selectedTemplateId}
@@ -167,12 +167,12 @@ export function SwitchTemplateModal({
               disabled={templatesLoading || isSwitching}
             >
               <SelectTrigger id="template-select">
-                <SelectValue placeholder="-- Chọn template --" />
+                <SelectValue placeholder="-- Chọn mẫu quy trình --" />
               </SelectTrigger>
               <SelectContent>
                 {availableTemplates.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground">
-                    Không có template khả dụng
+                    Không có mẫu quy trình khả dụng
                   </div>
                 ) : (
                   availableTemplates.map((template) => (

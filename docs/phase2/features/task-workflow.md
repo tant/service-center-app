@@ -1,7 +1,7 @@
 # Hệ thống Quy trình Công việc (Task Workflow)
 
 **Tài liệu Tính năng**
-**Cập nhật lần cuối:** 2025-10-26
+**Cập nhật lần cuối:** 2025-10-27
 
 ---
 
@@ -23,6 +23,30 @@ Hệ thống Quy trình Công việc cho phép thực thi dịch vụ một các
 ### 1. Loại Công việc (Task Types)
 
 Là các đơn vị công việc có thể tái sử dụng trong nhiều mẫu khác nhau (ví dụ: "Chẩn đoán ban đầu", "Thay pin").
+
+**Thuộc tính của Task Type:**
+- **Tên (name)**: Tên mô tả công việc (tối thiểu 3 ký tự, tối đa 255 ký tự)
+- **Mô tả (description)**: Mô tả chi tiết về công việc (tùy chọn)
+- **Danh mục (category)**: Phân loại công việc (7 danh mục cố định)
+  - Kiểm tra
+  - Sửa chữa
+  - Thay thế
+  - Vệ sinh
+  - Cài đặt
+  - Kiểm tra cuối
+  - Khác
+- **Thời gian ước tính (estimated_duration_minutes)**: Số phút dự kiến hoàn thành (tùy chọn)
+- **Yêu cầu ghi chú (requires_notes)**: Bắt buộc nhập ghi chú khi hoàn thành
+- **Yêu cầu ảnh (requires_photo)**: Bắt buộc chụp ảnh khi hoàn thành
+- **Trạng thái hoạt động (is_active)**: Chỉ task types đang hoạt động mới có thể sử dụng trong templates
+
+**Quản lý Task Types:**
+- **Quyền truy cập:** Admin, Manager
+- **Tạo mới:** Thêm task type mới với form validation
+- **Chỉnh sửa:** Cập nhật thông tin task type (không cho phép duplicate tên)
+- **Kích hoạt/Vô hiệu hóa:** Toggle trạng thái active
+  - Không thể vô hiệu hóa task type đang được sử dụng trong active templates
+  - Hệ thống tự động kiểm tra và ngăn chặn với thông báo lỗi rõ ràng
 
 ### 2. Mẫu Công việc (Task Templates)
 
@@ -91,5 +115,114 @@ blocked      skipped
 
 *   **Router:** `workflow` (`/src/server/routers/workflow.ts`)
 *   Bao gồm các thủ tục để quản lý loại công việc, mẫu công việc, thực thi công việc, và lấy dữ liệu cho dashboard.
+
+**Task Type Procedures:**
+- `taskType.list` - Lấy danh sách task types với filter tùy chọn
+  - Input: `{ is_active?: boolean }` (optional)
+  - `undefined`: Trả về tất cả task types
+  - `true`: Chỉ trả về task types đang hoạt động
+  - `false`: Chỉ trả về task types đã vô hiệu hóa
+- `taskType.create` - Tạo task type mới (Admin/Manager only)
+- `taskType.update` - Cập nhật task type (Admin/Manager only)
+  - Validation: Ngăn chặn duplicate name
+  - Validation: Kiểm tra task type tồn tại
+- `taskType.toggleActive` - Kích hoạt/vô hiệu hóa task type (Admin/Manager only)
+  - Validation: Ngăn chặn vô hiệu hóa nếu đang được sử dụng trong active templates
+  - Trả về thông báo lỗi chi tiết với số lượng templates đang sử dụng
+
+**Task Template Procedures:**
+- `template.list` - Lấy danh sách templates theo product type và service type
+- `template.create` - Tạo template mới
+- `template.update` - Cập nhật template (tạo version mới)
+- `template.delete` - Xóa template (nếu không được sử dụng)
+- `template.switchTemplate` - Chuyển đổi template động với audit logging
+
+**Task Execution Procedures:**
+- `task.list` - Lấy danh sách tasks theo ticket
+- `task.getById` - Lấy chi tiết task
+- `task.start` - Bắt đầu thực hiện task
+- `task.complete` - Hoàn thành task với notes/photos
+- `task.updateStatus` - Cập nhật trạng thái task
+- `task.listByTechnician` - Lấy tasks của kỹ thuật viên
+
+**Task Analytics Procedures:**
+- `task.getProgressSummary` - Tổng quan tiến độ tasks
+- `task.getBlockedTasks` - Danh sách tasks bị chặn
+- `task.getTechnicianWorkload` - Khối lượng công việc của kỹ thuật viên
+
+---
+
+## UI Components
+
+### Task Type Form (`src/components/forms/task-type-form.tsx`)
+
+Form component để tạo và chỉnh sửa task types với các tính năng:
+- **Form Library**: React Hook Form với Zod validation
+- **Validation Rules**:
+  - Tên: 3-255 ký tự
+  - Thời gian ước tính: số nguyên dương hoặc null
+- **Categories Dropdown**: 7 danh mục được định nghĩa sẵn
+- **Toggle Controls**: Switch components cho requires_notes, requires_photo, is_active
+- **Bilingual**: Tất cả labels và messages bằng tiếng Việt
+
+### Task Types Table (`src/components/tables/task-types-table.tsx`)
+
+Data table hiển thị và quản lý task types theo UI_CODING_GUIDE.md:
+- **Tabs System** (UI Guide Section 3):
+  - Mobile: Select dropdown với 3 options (Tất cả/Đang hoạt động/Đã vô hiệu)
+  - Desktop: TabsList với 3 tabs (breakpoint @4xl/main)
+  - Filter động theo tab selection
+- **TanStack React Table**: Sortable, filterable columns
+- **Actions Menu**: Dropdown với Edit và Toggle options
+- **Drawer Integration**: Hiển thị form trong drawer (mobile-responsive per UI Guide Section 6)
+- **Search**: Tìm kiếm realtime theo tên và danh mục (max-w-sm per UI Guide)
+- **Column Visibility**: Người dùng tùy chỉnh cột hiển thị
+- **Status Badge**:
+  - Active: variant="default" (xanh)
+  - Inactive: variant="destructive" (đỏ)
+- **Sticky Header**: bg-muted sticky top-0 z-10 (per UI Guide Section 4)
+- **Pagination**: Full pagination controls với page size selector
+
+### Custom Hooks (`src/hooks/use-workflow.ts`)
+
+React hooks tích hợp với tRPC:
+- `useTaskTypes(filters?)` - Query hook lấy danh sách task types
+  - Parameter: `{ is_active?: boolean }` (optional)
+  - Hỗ trợ filter theo trạng thái hoạt động
+- `useCreateTaskType()` - Mutation hook tạo task type mới
+- `useUpdateTaskType()` - Mutation hook cập nhật task type
+- `useToggleTaskType()` - Mutation hook toggle active status
+
+**Tính năng chung:**
+- Automatic query invalidation sau mutations
+- Toast notifications (100% tiếng Việt với hướng dẫn khắc phục)
+- Loading states
+- Error handling với actionable messages
+
+---
+
+## Cập nhật Gần Đây
+
+**2025-10-27 (Commit a51cca7 - Morning):**
+- ✅ Hoàn thành tính năng quản lý Task Type
+- ✅ Thêm form tạo/chỉnh sửa với React Hook Form
+- ✅ Implement update và toggle procedures với validation
+- ✅ UI improvements: Drawer, DropdownMenu, Badge components
+- ✅ Dependencies mới: `react-hook-form@^7.65.0`, `@hookform/resolvers@^5.2.2`
+- ✅ 7 categories chuẩn hóa cho phân loại task types
+
+**2025-10-27 (Afternoon - UI Enhancement & Filter Feature):**
+- ✅ Enhanced `taskType.list` với optional `is_active` filter parameter
+- ✅ Implemented Tabs system theo UI_CODING_GUIDE.md section 3
+  - 3 tabs: Tất cả / Đang hoạt động / Đã vô hiệu
+  - Responsive: Mobile Select ↔ Desktop TabsList (breakpoint @4xl/main)
+- ✅ Fixed issue: Deactivated task types không còn biến mất
+- ✅ Enhanced hook: `useTaskTypes(filters?)` hỗ trợ filter parameter
+- ✅ 100% Vietnamese messages với actionable guidance
+- ✅ Full compliance với UI_CODING_GUIDE.md:
+  - Section 3: Tabs System ✓
+  - Section 4: Tables ✓
+  - Section 6: Drawers ✓
+  - Section 9: Automation-friendly attributes ✓
 
 **End of Task Workflow Feature Document**

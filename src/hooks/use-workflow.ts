@@ -10,10 +10,11 @@ import type { TaskTemplate, ServiceTicketTask, TaskProgressSummary } from '@/typ
 
 /**
  * Hook for managing task types
- * Returns all active task types for template creation
+ * Supports filtering by is_active status
+ * @param filters - Optional filters: is_active (true/false/undefined for all)
  */
-export function useTaskTypes() {
-  const { data: taskTypes, isLoading, error } = trpc.workflow.taskType.list.useQuery();
+export function useTaskTypes(filters?: { is_active?: boolean }) {
+  const { data: taskTypes, isLoading, error } = trpc.workflow.taskType.list.useQuery(filters);
 
   return {
     taskTypes: taskTypes ?? [],
@@ -136,10 +137,10 @@ export function useCreateTemplate() {
   const mutation = trpc.workflow.template.create.useMutation({
     onSuccess: () => {
       utils.workflow.template.list.invalidate();
-      toast.success('Template created successfully');
+      toast.success('Mẫu quy trình đã được tạo thành công');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create template');
+      toast.error(error.message || 'Không thể tạo mẫu quy trình. Vui lòng kiểm tra lại thông tin và thử lại');
     },
   });
 
@@ -158,10 +159,10 @@ export function useUpdateTemplate() {
   const mutation = trpc.workflow.template.update.useMutation({
     onSuccess: () => {
       utils.workflow.template.list.invalidate();
-      toast.success('Template updated successfully (new version created)');
+      toast.success('Mẫu quy trình đã được cập nhật (phiên bản mới đã được tạo)');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update template');
+      toast.error(error.message || 'Không thể cập nhật mẫu quy trình. Vui lòng thử lại');
     },
   });
 
@@ -183,12 +184,12 @@ export function useDeleteTemplate() {
       utils.workflow.template.list.invalidate();
       toast.success(
         data.soft_deleted
-          ? 'Template deactivated successfully'
-          : 'Template deleted successfully'
+          ? 'Mẫu quy trình đã được vô hiệu hóa'
+          : 'Mẫu quy trình đã được xóa thành công'
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete template');
+      toast.error(error.message || 'Không thể xóa mẫu quy trình. Có thể mẫu đang được sử dụng bởi các phiếu dịch vụ đang hoạt động');
     },
   });
 
@@ -412,11 +413,11 @@ export function useSwitchTemplate() {
 
       // Show success toast with summary
       toast.success(
-        `Đã chuyển template thành công! ${data.summary.tasks_preserved} công việc giữ lại, ${data.summary.tasks_added} công việc mới được thêm.`
+        `Đã chuyển mẫu quy trình thành công! ${data.summary.tasks_preserved} công việc giữ lại, ${data.summary.tasks_added} công việc mới được thêm.`
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể chuyển template');
+      toast.error(error.message || 'Không thể chuyển mẫu quy trình');
     },
   });
 

@@ -26,7 +26,9 @@ import type { TaskType } from "@/types/workflow";
 
 // Schema for form validation
 const taskTypeSchema = z.object({
-  name: z.string().min(3, "Tên phải có ít nhất 3 ký tự").max(255, "Tên tối đa 255 ký tự"),
+  name: z.string()
+    .min(3, "Tên quá ngắn. Vui lòng nhập ít nhất 3 ký tự để mô tả rõ loại công việc")
+    .max(255, "Tên quá dài. Vui lòng rút gọn xuống tối đa 255 ký tự"),
   description: z.string().optional(),
   category: z.string().optional(),
   estimated_duration_minutes: z.string().optional().transform((val) => {

@@ -54,9 +54,9 @@ export function TemplatePreviewModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Xem trước mẫu công việc</DialogTitle>
+          <DialogTitle>Xem trước mẫu quy trình</DialogTitle>
           <DialogDescription>
-            Xem trước chi tiết mẫu công việc trước khi kích hoạt
+            Xem trước chi tiết mẫu quy trình trước khi kích hoạt
           </DialogDescription>
         </DialogHeader>
 

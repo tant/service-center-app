@@ -148,7 +148,7 @@ const baseData = {
       allowedRoles: ["admin", "manager"] as UserRole[],
       items: [
         {
-          title: "Mẫu công việc",
+          title: "Mẫu quy trình",
           url: "/workflows/templates",
         },
         {

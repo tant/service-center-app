@@ -765,21 +765,41 @@ const updateStatus = trpc.tickets.updateStatus.useMutation({
 
 | Router | Procedures | Primary Use Case | Stories |
 |--------|-----------|------------------|---------|
-| **workflow** | 12+ | Task templates & execution | 01.02-01.05, 01.17 |
+| **workflow** | 14+ | Task templates & execution | 01.02-01.05, 01.17 |
 | **warehouse** | 8+ | Warehouse hierarchy | 01.06 |
 | **inventory** | 15+ | Physical products & RMA | 01.07-01.10 |
 | **serviceRequest** | 8+ | Public portal & staff mgmt | 01.11-01.13 |
 | **notifications** | 6+ | Email notification system | 01.15 |
-| **Subtotal** | **~45** | Phase 2 coverage |
+| **Subtotal** | **~47** | Phase 2 coverage |
+
+**Workflow Router Procedures (Latest - Oct 27, 2025):**
+- **Task Type Management**:
+  - `taskType.list` - **Enhanced with optional filter**
+    - Input: `{ is_active?: boolean }` (optional)
+    - Returns: All task types (undefined), active only (true), or inactive only (false)
+  - `taskType.create`, `taskType.update`, `taskType.toggleActive`
+    - Update validation: prevents duplicate names
+    - Toggle validation: prevents deactivation if used in active templates
+- **Task Template Management**: `template.list`, `template.create`, `template.update`, `template.delete`, `template.switchTemplate`
+- **Task Execution**: `task.list`, `task.getById`, `task.start`, `task.complete`, `task.updateStatus`, `task.listByTechnician`
+- **Task Analytics**: `task.getProgressSummary`, `task.getBlockedTasks`, `task.getTechnicianWorkload`
 
 **Total API Surface:**
 
 | Metric | Count |
 |--------|-------|
 | **Total Routers** | 13 (8 + 5) |
-| **Total Procedures** | **~95** |
+| **Total Procedures** | **~97** |
 | **Protected Endpoints** | 50+ (RBAC middleware) |
 | **Public Endpoints** | 3 (service request portal) |
+
+**Latest Updates (Oct 27, 2025):**
+- **Morning:** Added `taskType.update` and `taskType.toggleActive` procedures with comprehensive validation
+- **Afternoon:** Enhanced `taskType.list` with optional `is_active` filter parameter
+  - Supports filtering: all (undefined), active (true), inactive (false)
+  - Enables viewing deactivated task types for audit and reactivation
+- Implemented Tabs system UI per UI_CODING_GUIDE.md section 3
+- Added form-based UI with react-hook-form integration and Vietnamese validation messages
 
 ---
 

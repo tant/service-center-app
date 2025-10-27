@@ -92,15 +92,19 @@ export const workflowRouter = router({
      * List all task types
      * AC: 2 - taskType.list procedure
      * Requires: Admin or Manager role
+     * Supports filtering by is_active status
      */
     list: publicProcedure
-      .query(async ({ ctx }) => {
+      .input(z.object({
+        is_active: z.boolean().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
         // Authentication check
         const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
         if (authError || !user) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'You must be logged in to view task types',
+            message: 'Bạn cần đăng nhập để xem danh sách loại công việc. Vui lòng đăng nhập lại',
           });
         }
 
@@ -114,7 +118,7 @@ export const workflowRouter = router({
         if (profileError || !profile) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch user profile',
+            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
             cause: profileError,
           });
         }
@@ -123,21 +127,28 @@ export const workflowRouter = router({
         if (!['admin', 'manager', 'technician', 'reception'].includes(profile.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Insufficient permissions to view task types',
+            message: 'Bạn không có quyền xem danh sách loại công việc',
           });
         }
 
-        const { data, error } = await ctx.supabaseAdmin
+        // Build query with optional is_active filter
+        let query = ctx.supabaseAdmin
           .from('task_types')
           .select('*')
-          .eq('is_active', true)
           .order('category', { ascending: true })
           .order('name', { ascending: true });
+
+        // Apply is_active filter if provided
+        if (input?.is_active !== undefined) {
+          query = query.eq('is_active', input.is_active);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch task types',
+            message: 'Không thể tải danh sách loại công việc. Vui lòng thử lại sau',
             cause: error,
           });
         }
@@ -158,7 +169,7 @@ export const workflowRouter = router({
         if (authError || !user) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'You must be logged in to create task types',
+            message: 'Bạn cần đăng nhập để tạo loại công việc. Vui lòng đăng nhập lại',
           });
         }
 
@@ -172,7 +183,7 @@ export const workflowRouter = router({
         if (profileError || !profile) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch user profile',
+            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
             cause: profileError,
           });
         }
@@ -181,7 +192,7 @@ export const workflowRouter = router({
         if (!['admin', 'manager'].includes(profile.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Only admin and manager can create task types',
+            message: 'Chỉ Admin và Manager mới có quyền tạo loại công việc',
           });
         }
 
@@ -195,7 +206,7 @@ export const workflowRouter = router({
         if (existing) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Task type "${input.name}" already exists`,
+            message: `Loại công việc "${input.name}" đã tồn tại. Vui lòng chọn tên khác`,
           });
         }
 
@@ -208,7 +219,7 @@ export const workflowRouter = router({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to create task type',
+            message: 'Không thể tạo loại công việc. Vui lòng kiểm tra lại thông tin và thử lại',
             cause: error,
           });
         }
@@ -228,7 +239,7 @@ export const workflowRouter = router({
         if (authError || !user) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'You must be logged in to update task types',
+            message: 'Bạn cần đăng nhập để cập nhật loại công việc. Vui lòng đăng nhập lại',
           });
         }
 
@@ -242,7 +253,7 @@ export const workflowRouter = router({
         if (profileError || !profile) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch user profile',
+            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
             cause: profileError,
           });
         }
@@ -251,7 +262,7 @@ export const workflowRouter = router({
         if (!['admin', 'manager'].includes(profile.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Only admin and manager can update task types',
+            message: 'Chỉ Admin và Manager mới có quyền cập nhật loại công việc',
           });
         }
 
@@ -265,7 +276,7 @@ export const workflowRouter = router({
         if (existingError || !existing) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Task type not found',
+            message: 'Không tìm thấy loại công việc. Có thể đã bị xóa hoặc không tồn tại',
           });
         }
 
@@ -280,7 +291,7 @@ export const workflowRouter = router({
         if (duplicate) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Task type "${input.name}" already exists`,
+            message: `Loại công việc "${input.name}" đã tồn tại. Vui lòng chọn tên khác`,
           });
         }
 
@@ -295,7 +306,7 @@ export const workflowRouter = router({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to update task type',
+            message: 'Không thể cập nhật loại công việc. Vui lòng kiểm tra lại thông tin và thử lại',
             cause: error,
           });
         }
@@ -315,7 +326,7 @@ export const workflowRouter = router({
         if (authError || !user) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'You must be logged in to toggle task type status',
+            message: 'Bạn cần đăng nhập để thay đổi trạng thái loại công việc. Vui lòng đăng nhập lại',
           });
         }
 
@@ -329,7 +340,7 @@ export const workflowRouter = router({
         if (profileError || !profile) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch user profile',
+            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
             cause: profileError,
           });
         }
@@ -338,7 +349,7 @@ export const workflowRouter = router({
         if (!['admin', 'manager'].includes(profile.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Only admin and manager can toggle task type status',
+            message: 'Chỉ Admin và Manager mới có quyền thay đổi trạng thái loại công việc',
           });
         }
 
@@ -352,7 +363,7 @@ export const workflowRouter = router({
         if (existingError || !existing) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Task type not found',
+            message: 'Không tìm thấy loại công việc. Có thể đã bị xóa hoặc không tồn tại',
           });
         }
 
@@ -370,7 +381,7 @@ export const workflowRouter = router({
           if (checkError) {
             throw new TRPCError({
               code: 'INTERNAL_SERVER_ERROR',
-              message: 'Failed to check task type usage',
+              message: 'Không thể kiểm tra trạng thái sử dụng. Vui lòng thử lại sau',
               cause: checkError,
             });
           }
@@ -378,7 +389,7 @@ export const workflowRouter = router({
           if (templatesUsing && templatesUsing.length > 0) {
             throw new TRPCError({
               code: 'CONFLICT',
-              message: `Cannot deactivate task type "${existing.name}" because it is used in ${templatesUsing.length} active template(s)`,
+              message: `Không thể vô hiệu hóa loại công việc "${existing.name}" vì đang được sử dụng trong ${templatesUsing.length} mẫu quy trình đang hoạt động. Vui lòng vô hiệu hóa các mẫu đó trước`,
             });
           }
         }
@@ -393,7 +404,7 @@ export const workflowRouter = router({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to toggle task type status',
+            message: 'Không thể thay đổi trạng thái loại công việc. Vui lòng thử lại sau',
             cause: error,
           });
         }

@@ -3,7 +3,6 @@
 import {
   IconBuilding,
   IconChevronDown,
-  IconDatabase,
   IconEdit,
   IconLayoutColumns,
   IconPlus,
@@ -262,147 +261,6 @@ function BrandFormDialog({
   );
 }
 
-function AddSampleBrandsButton({ onSuccess }: { onSuccess?: () => void }) {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  const createBrandMutation = trpc.brands.createBrand.useMutation({
-    onSuccess: (data) => {
-      console.log("[Brands] Sample brand created:", { response: data });
-    },
-    onError: (error) => {
-      const errorMessage = error.message || "Lỗi khi tạo thương hiệu mẫu";
-      console.error("[Brands] Sample brand creation error:", errorMessage, {
-        error,
-      });
-      toast.error(errorMessage);
-    },
-  });
-
-  // Sample computer hardware brands
-  const sampleBrands = [
-    {
-      name: "ZOTAC",
-      description: "Graphics cards and mini PCs manufacturer",
-    },
-    {
-      name: "SSTC",
-      description: "Computer hardware and components",
-    },
-    {
-      name: "ASUS",
-      description:
-        "Motherboards, graphics cards, laptops, and gaming peripherals manufacturer",
-    },
-    {
-      name: "MSI",
-      description:
-        "Micro-Star International - Gaming hardware and computer components",
-    },
-    {
-      name: "Gigabyte",
-      description: "Motherboards, graphics cards, and PC hardware components",
-    },
-    {
-      name: "Corsair",
-      description:
-        "Gaming peripherals, memory, cooling systems, and PC components",
-    },
-    {
-      name: "Kingston",
-      description: "Memory modules, SSDs, and storage solutions",
-    },
-    {
-      name: "Samsung",
-      description: "SSDs, memory, and display technology",
-    },
-    {
-      name: "Intel",
-      description: "Processors, chipsets, and computing technology",
-    },
-    {
-      name: "AMD",
-      description: "Processors, graphics cards, and computing solutions",
-    },
-  ];
-
-  const handleAddSampleBrands = async () => {
-    setIsLoading(true);
-    console.log("[Brands] Adding sample brands started:", {
-      totalBrands: sampleBrands.length,
-    });
-
-    try {
-      let successCount = 0;
-      const totalBrands = sampleBrands.length;
-
-      for (const brand of sampleBrands) {
-        try {
-          await createBrandMutation.mutateAsync(brand);
-          successCount++;
-        } catch (error) {
-          console.error(
-            `[Brands] Failed to create sample brand: ${brand.name}`,
-            error,
-          );
-        }
-      }
-
-      if (successCount === totalBrands) {
-        const successMessage = `Đã thêm thành công ${successCount} thương hiệu mẫu`;
-        console.log(
-          "[Brands] All sample brands added successfully:",
-          successMessage,
-          { successCount, totalBrands },
-        );
-        toast.success(successMessage);
-      } else if (successCount > 0) {
-        const successMessage = `Đã thêm thành công ${successCount}/${totalBrands} thương hiệu mẫu`;
-        console.log("[Brands] Partial sample brands added:", successMessage, {
-          successCount,
-          totalBrands,
-        });
-        toast.success(successMessage);
-      } else {
-        const errorMessage = "Không thể thêm thương hiệu mẫu nào";
-        console.error("[Brands] No sample brands added:", errorMessage, {
-          successCount,
-          totalBrands,
-        });
-        toast.error(errorMessage);
-      }
-
-      if (successCount > 0) {
-        router.refresh();
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
-    } catch (error) {
-      const errorMessage = "Lỗi khi thêm thương hiệu mẫu";
-      console.error("[Brands] Sample brands addition error:", errorMessage, {
-        error,
-      });
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleAddSampleBrands}
-      disabled={isLoading}
-    >
-      <IconDatabase />
-      <span className="hidden lg:inline">
-        {isLoading ? "Đang thêm..." : "Thêm sample"}
-      </span>
-    </Button>
-  );
-}
 
 export function BrandsTable({ data: initialData }: { data: Brand[] }) {
   const [data, setData] = React.useState(() => initialData);
@@ -572,7 +430,6 @@ export function BrandsTable({ data: initialData }: { data: Brand[] }) {
               <IconPlus />
               <span className="hidden lg:inline">Thêm thương hiệu</span>
             </Button>
-            <AddSampleBrandsButton />
           </div>
         </div>
         <TabsContent

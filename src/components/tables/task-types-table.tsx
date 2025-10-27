@@ -15,6 +15,9 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconLayoutColumns,
+  IconDots,
+  IconToggleLeft,
+  IconToggleRight,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -54,9 +57,23 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useTaskTypes } from "@/hooks/use-workflow";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useTaskTypes, useToggleTaskType } from "@/hooks/use-workflow";
 import type { TaskType } from "@/types/workflow";
+import { TaskTypeForm } from "@/components/forms/task-type-form";
 
 const columns: ColumnDef<TaskType>[] = [
   {
@@ -119,17 +136,42 @@ const columns: ColumnDef<TaskType>[] = [
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
         onEdit: (taskType: TaskType) => void;
+        onToggle: (taskType: TaskType) => void;
       };
       
       return (
         <div className="flex items-center justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => meta.onEdit(row.original)}
-          >
-            <IconEdit className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Mở menu hành động"
+              >
+                <IconDots className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => meta.onEdit(row.original)}>
+                <IconEdit className="mr-2 h-4 w-4" />
+                Chỉnh sửa
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => meta.onToggle(row.original)}>
+                {row.original.is_active ? (
+                  <>
+                    <IconToggleLeft className="mr-2 h-4 w-4" />
+                    Vô hiệu hóa
+                  </>
+                ) : (
+                  <>
+                    <IconToggleRight className="mr-2 h-4 w-4" />
+                    Kích hoạt
+                  </>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       );
     },
@@ -137,6 +179,7 @@ const columns: ColumnDef<TaskType>[] = [
 ];
 
 export function TaskTypesTable() {
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [editingTaskType, setEditingTaskType] = React.useState<TaskType | null>(null);
@@ -151,6 +194,7 @@ export function TaskTypesTable() {
   });
 
   const { taskTypes, isLoading } = useTaskTypes();
+  const { toggleTaskType, isToggling } = useToggleTaskType();
 
   // Filter task types based on search query
   const filteredTaskTypes = React.useMemo(() => {
@@ -169,6 +213,19 @@ export function TaskTypesTable() {
   const handleEdit = (taskType: TaskType) => {
     setEditingTaskType(taskType);
     setShowCreateModal(true);
+  };
+
+  const handleToggle = (taskType: TaskType) => {
+    if (window.confirm(
+      taskType.is_active
+        ? `Bạn có chắc muốn vô hiệu hóa loại công việc "${taskType.name}"?`
+        : `Bạn có chắc muốn kích hoạt loại công việc "${taskType.name}"?`
+    )) {
+      toggleTaskType({
+        id: taskType.id,
+        is_active: !taskType.is_active,
+      });
+    }
   };
 
   const handleCloseModal = () => {
@@ -197,6 +254,7 @@ export function TaskTypesTable() {
     getFacetedUniqueValues: getFacetedUniqueValues(),
     meta: {
       onEdit: handleEdit,
+      onToggle: handleToggle,
     },
   });
 
@@ -215,7 +273,7 @@ export function TaskTypesTable() {
           {/* Column Visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" aria-label="Tùy chỉnh cột hiển thị">
                 <IconLayoutColumns className="h-4 w-4" />
                 <span className="hidden lg:inline ml-2">Tùy chỉnh cột</span>
                 <span className="lg:hidden ml-2">Cột</span>
@@ -244,10 +302,48 @@ export function TaskTypesTable() {
           </DropdownMenu>
 
           {/* Create Button */}
-          <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
-            <IconPlus className="h-4 w-4" />
-            <span className="hidden lg:inline ml-2">Thêm Loại Công Việc</span>
-          </Button>
+          <Drawer
+            open={showCreateModal}
+            onOpenChange={setShowCreateModal}
+            direction={isMobile ? "bottom" : "right"}
+          >
+            <DrawerTrigger asChild>
+              <Button variant="outline" size="sm">
+                <IconPlus className="h-4 w-4" />
+                <span className="hidden lg:inline ml-2">Thêm Loại Công Việc</span>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>
+                  {editingTaskType ? "Chỉnh sửa" : "Thêm"} Loại Công Việc
+                </DrawerTitle>
+                <DrawerDescription>
+                  {editingTaskType 
+                    ? "Cập nhật thông tin loại công việc."
+                    : "Tạo loại công việc mới cho hệ thống."}
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+                <TaskTypeForm 
+                  taskType={editingTaskType || undefined}
+                  onSuccess={handleCloseModal}
+                />
+              </div>
+
+              <DrawerFooter>
+                <Button type="submit" form="task-type-form">
+                  {editingTaskType ? "Cập nhật" : "Tạo mới"}
+                </Button>
+                <DrawerClose asChild>
+                  <Button variant="outline" onClick={handleCloseModal}>
+                    Hủy bỏ
+                  </Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
 
@@ -285,6 +381,7 @@ export function TaskTypesTable() {
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    data-testid={`task-type-row-${row.original.id}`}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
@@ -383,21 +480,6 @@ export function TaskTypesTable() {
             </div>
           </div>
         </>
-      )}
-
-      {/* TODO: Add Task Type Form Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-lg font-semibold mb-4">
-              {editingTaskType ? "Chỉnh sửa" : "Thêm"} Loại Công Việc
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Chức năng này đang được phát triển.
-            </p>
-            <Button onClick={handleCloseModal}>Đóng</Button>
-          </div>
-        </div>
       )}
     </div>
   );

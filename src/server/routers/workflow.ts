@@ -20,6 +20,22 @@ const taskTypeCreateSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
+const taskTypeUpdateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(3).max(255),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  estimated_duration_minutes: z.number().int().positive().optional(),
+  requires_notes: z.boolean(),
+  requires_photo: z.boolean(),
+  is_active: z.boolean(),
+});
+
+const taskTypeToggleSchema = z.object({
+  id: z.string().uuid(),
+  is_active: z.boolean(),
+});
+
 const templateCreateSchema = z.object({
   name: z.string().min(3).max(255),
   description: z.string().optional(),
@@ -193,6 +209,191 @@ export const workflowRouter = router({
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Failed to create task type',
+            cause: error,
+          });
+        }
+
+        return data;
+      }),
+
+    /**
+     * Update an existing task type
+     * Requires: Admin or Manager role
+     */
+    update: publicProcedure
+      .input(taskTypeUpdateSchema)
+      .mutation(async ({ ctx, input }) => {
+        // Authentication check
+        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+        if (authError || !user) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to update task types',
+          });
+        }
+
+        // Get profile for role checking
+        const { data: profile, error: profileError } = await ctx.supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch user profile',
+            cause: profileError,
+          });
+        }
+
+        // Authorization check
+        if (!['admin', 'manager'].includes(profile.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and manager can update task types',
+          });
+        }
+
+        // Check if task type exists
+        const { data: existing, error: existingError } = await ctx.supabaseAdmin
+          .from('task_types')
+          .select('id')
+          .eq('id', input.id)
+          .single();
+
+        if (existingError || !existing) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Task type not found',
+          });
+        }
+
+        // Check for duplicate name (excluding current task type)
+        const { data: duplicate } = await ctx.supabaseAdmin
+          .from('task_types')
+          .select('id')
+          .eq('name', input.name)
+          .neq('id', input.id)
+          .single();
+
+        if (duplicate) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Task type "${input.name}" already exists`,
+          });
+        }
+
+        const { id, ...updateData } = input;
+        const { data, error } = await ctx.supabaseAdmin
+          .from('task_types')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to update task type',
+            cause: error,
+          });
+        }
+
+        return data;
+      }),
+
+    /**
+     * Toggle task type active status (activate/deactivate)
+     * Requires: Admin or Manager role
+     */
+    toggleActive: publicProcedure
+      .input(taskTypeToggleSchema)
+      .mutation(async ({ ctx, input }) => {
+        // Authentication check
+        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+        if (authError || !user) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to toggle task type status',
+          });
+        }
+
+        // Get profile for role checking
+        const { data: profile, error: profileError } = await ctx.supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch user profile',
+            cause: profileError,
+          });
+        }
+
+        // Authorization check
+        if (!['admin', 'manager'].includes(profile.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and manager can toggle task type status',
+          });
+        }
+
+        // Check if task type exists
+        const { data: existing, error: existingError } = await ctx.supabaseAdmin
+          .from('task_types')
+          .select('id, name')
+          .eq('id', input.id)
+          .single();
+
+        if (existingError || !existing) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Task type not found',
+          });
+        }
+
+        // If deactivating, check if it's being used in active templates
+        if (!input.is_active) {
+          const { data: templatesUsing, error: checkError } = await ctx.supabaseAdmin
+            .from('task_templates_tasks')
+            .select(`
+              id,
+              template:task_templates!inner(id, name, is_active)
+            `)
+            .eq('task_type_id', input.id)
+            .eq('template.is_active', true);
+
+          if (checkError) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Failed to check task type usage',
+              cause: checkError,
+            });
+          }
+
+          if (templatesUsing && templatesUsing.length > 0) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: `Cannot deactivate task type "${existing.name}" because it is used in ${templatesUsing.length} active template(s)`,
+            });
+          }
+        }
+
+        const { data, error } = await ctx.supabaseAdmin
+          .from('task_types')
+          .update({ is_active: input.is_active })
+          .eq('id', input.id)
+          .select()
+          .single();
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to toggle task type status',
             cause: error,
           });
         }

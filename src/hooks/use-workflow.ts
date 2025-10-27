@@ -31,16 +31,64 @@ export function useCreateTaskType() {
   const mutation = trpc.workflow.taskType.create.useMutation({
     onSuccess: () => {
       utils.workflow.taskType.list.invalidate();
-      toast.success('Task type created successfully');
+      toast.success('Loại công việc đã được tạo thành công');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create task type');
+      toast.error(error.message || 'Không thể tạo loại công việc');
     },
   });
 
   return {
     createTaskType: mutation.mutate,
     isCreating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for updating task types
+ * Admin/Manager only
+ */
+export function useUpdateTaskType() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.workflow.taskType.update.useMutation({
+    onSuccess: () => {
+      utils.workflow.taskType.list.invalidate();
+      toast.success('Loại công việc đã được cập nhật thành công');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Không thể cập nhật loại công việc');
+    },
+  });
+
+  return {
+    updateTaskType: mutation.mutate,
+    isUpdating: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for toggling task type active status
+ * Admin/Manager only
+ */
+export function useToggleTaskType() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.workflow.taskType.toggleActive.useMutation({
+    onSuccess: (data) => {
+      utils.workflow.taskType.list.invalidate();
+      toast.success(
+        data.is_active 
+          ? 'Loại công việc đã được kích hoạt' 
+          : 'Loại công việc đã được vô hiệu hóa'
+      );
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Không thể thay đổi trạng thái loại công việc');
+    },
+  });
+
+  return {
+    toggleTaskType: mutation.mutate,
+    isToggling: mutation.isPending,
   };
 }
 

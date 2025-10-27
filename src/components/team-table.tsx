@@ -22,12 +22,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   IconChevronDown,
   IconGripVertical,
-  IconKey,
   IconLayoutColumns,
   IconPlus,
-  IconShield,
-  IconToggleLeft,
-  IconToggleRight,
   IconUser,
   IconUserCheck,
   IconUserX,
@@ -54,22 +50,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -92,14 +77,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
-// TODO: REMOVE IN PRODUCTION - Sample data generator imports for development/testing only
-import { IconDatabase } from "@tabler/icons-react";
+import { PasswordResetButton } from "@/components/team/password-reset-button";
+import { RoleChangeButton } from "@/components/team/role-change-button";
+import { ToggleActiveButton } from "@/components/team/toggle-active-button";
+import { useStaffApi } from "@/hooks/use-staff-api";
+import { getRoleLabel, type UserRole } from "@/lib/constants/roles";
 
 export const teamSchema = z.object({
   id: z.string(),
@@ -193,13 +175,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
         variant={row.original.role === "admin" ? "default" : "secondary"}
         className="text-xs"
       >
-        {row.original.role === "admin"
-          ? "Quản trị viên"
-          : row.original.role === "manager"
-            ? "Quản lý"
-            : row.original.role === "technician"
-              ? "Kỹ thuật viên"
-              : "Lễ tân"}
+        {getRoleLabel(row.original.role)}
       </Badge>
     ),
   },
@@ -253,15 +229,11 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
 interface QuickActionsProps {
   member: z.infer<typeof teamSchema>;
   allMembers: z.infer<typeof teamSchema>[];
-  currentUserRole: "admin" | "manager" | "technician" | "reception";
+  currentUserRole: UserRole;
   onUpdate: (updatedMember: z.infer<typeof teamSchema>) => void;
 }
 
 function QuickActions({ member, allMembers, currentUserRole, onUpdate }: QuickActionsProps) {
-  const [showPasswordReset, setShowPasswordReset] = React.useState(false);
-  const [newPassword, setNewPassword] = React.useState("");
-  const [isResettingPassword, setIsResettingPassword] = React.useState(false);
-
   // Check if this member is the last active admin
   const isLastActiveAdmin = React.useMemo(() => {
     if (member.role !== "admin" || !member.is_active) {
@@ -275,334 +247,46 @@ function QuickActions({ member, allMembers, currentUserRole, onUpdate }: QuickAc
     return activeAdmins.length === 1;
   }, [member, allMembers]);
 
-  // Check if current user can reset this member's password
-  const canResetPassword = React.useMemo(() => {
-    if (currentUserRole === "admin") {
-      // Admin can reset passwords for Manager, Technician, and Reception
-      return ["manager", "technician", "reception"].includes(member.role);
-    }
-    if (currentUserRole === "manager") {
-      // Manager can only reset passwords for Technician and Reception
-      return ["technician", "reception"].includes(member.role);
-    }
-    return false;
-  }, [currentUserRole, member.role]);
-
-  const handleRoleChange = async (newRole: string) => {
-    // Prevent changing role of last active admin
-    if (member.role === "admin" && isLastActiveAdmin && newRole !== "admin") {
-      const errorMessage =
-        "Không thể thay đổi vai trò của quản trị viên cuối cùng";
-      console.error("[Team] Role change error:", errorMessage, {
-        member,
-        newRole,
-      });
-      toast.error(errorMessage);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/staff", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: member.user_id,
-          role: newRole,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
-
-      const roleLabel =
-        newRole === "admin"
-          ? "Quản trị viên"
-          : newRole === "manager"
-            ? "Quản lý"
-            : newRole === "technician"
-              ? "Kỹ thuật viên"
-              : "Lễ tân";
-      const successMessage = `Vai trò đã được cập nhật thành ${roleLabel}`;
-      console.log("[Team] Role change success:", successMessage, {
-        member,
-        newRole,
-      });
-      toast.success(successMessage);
-
-      // Update local state
-      onUpdate({
-        ...member,
-        role: newRole as any,
-        updated_at: new Date().toISOString(),
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Không thể thay đổi vai trò";
-      console.error("[Team] Role change error:", errorMessage, error);
-      toast.error(errorMessage);
-    }
+  const handleRoleChange = (newRole: UserRole) => {
+    onUpdate({
+      ...member,
+      role: newRole,
+      updated_at: new Date().toISOString(),
+    });
   };
 
-  const handlePasswordChange = () => {
-    if (!canResetPassword) {
-      const errorMessage = "Không có quyền đặt lại mật khẩu cho người dùng này";
-      console.error("[Team] Password reset permission denied:", errorMessage, { member, currentUserRole });
-      toast.error(errorMessage);
-      return;
-    }
-    setNewPassword("");
-    setShowPasswordReset(true);
-  };
-
-  const handlePasswordResetSubmit = async () => {
-    if (newPassword.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
-      return;
-    }
-
-    setIsResettingPassword(true);
-
-    try {
-      const response = await fetch("/api/staff/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: member.user_id,
-          new_password: newPassword,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
-
-      const successMessage = `Đặt lại mật khẩu thành công cho ${member.full_name}`;
-      console.log("[Team] Password reset success:", successMessage, { member });
-      toast.success(successMessage);
-      setShowPasswordReset(false);
-      setNewPassword("");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Không thể đặt lại mật khẩu";
-      console.error("[Team] Password reset error:", errorMessage, error);
-      toast.error(errorMessage);
-    } finally {
-      setIsResettingPassword(false);
-    }
-  };
-
-  const handleToggleActive = async () => {
-    // Prevent deactivating the last active admin
-    if (isLastActiveAdmin && member.is_active) {
-      const errorMessage =
-        "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.";
-      console.error("[Team] Toggle active error:", errorMessage, {
-        member,
-        isLastActiveAdmin,
-      });
-      toast.error(errorMessage, { duration: 5000 });
-      return;
-    }
-
-    const newStatus = !member.is_active;
-
-    try {
-      const response = await fetch("/api/staff", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: member.user_id,
-          is_active: newStatus,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
-
-      const successMessage = `Tài khoản đã được ${newStatus ? "kích hoạt" : "vô hiệu hóa"}`;
-      console.log("[Team] Toggle active success:", successMessage, {
-        member,
-        newStatus,
-      });
-
-      // Update local state immediately for instant UI feedback
-      onUpdate({
-        ...member,
-        is_active: newStatus,
-        updated_at: new Date().toISOString(),
-      });
-
-      toast.success(successMessage);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Không thể thay đổi trạng thái tài khoản";
-      console.error("[Team] Toggle active error:", errorMessage, error);
-      toast.error(errorMessage);
-    }
+  const handleToggleActive = (newStatus: boolean) => {
+    onUpdate({
+      ...member,
+      is_active: newStatus,
+      updated_at: new Date().toISOString(),
+    });
   };
 
   return (
     <div className="flex items-center gap-1">
-      {/* Change Role */}
-      <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="size-9 p-0 text-muted-foreground hover:text-foreground"
-                aria-label="Thay đổi vai trò"
-                data-testid="role-change-button"
-              >
-                <IconShield className="size-5" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Thay đổi vai trò</p>
-          </TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent align="end" className="w-40">
-          <div className="px-2 py-1.5 text-sm font-medium">
-            Thay đổi vai trò
-          </div>
-          <DropdownMenuSeparator />
-          {["admin", "manager", "technician", "reception"]
-            .filter((role) => {
-              // Manager can only see technician and reception options
-              if (currentUserRole === "manager") {
-                return ["technician", "reception"].includes(role);
-              }
-              // Admin can see all roles
-              return true;
-            })
-            .map((role) => {
-              const isCurrentRole = member.role === role;
-              const isDisabled =
-                member.role === "admin" && isLastActiveAdmin && role !== "admin";
+      <RoleChangeButton
+        userId={member.user_id}
+        currentRole={member.role}
+        currentUserRole={currentUserRole}
+        isLastActiveAdmin={isLastActiveAdmin}
+        onSuccess={handleRoleChange}
+      />
 
-              return (
-                <DropdownMenuItem
-                  key={role}
-                  onClick={() => !isDisabled && handleRoleChange(role)}
-                  className={`${isCurrentRole ? "bg-accent" : ""} ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={isDisabled}
-                  data-role={role}
-                  data-testid={`role-option-${role}`}
-                >
-                  {role === "admin"
-                    ? "Quản trị viên"
-                    : role === "manager"
-                      ? "Quản lý"
-                      : role === "technician"
-                        ? "Kỹ thuật viên"
-                        : "Lễ tân"}
-                  {isDisabled && (
-                    <span className="ml-auto text-xs">(Được bảo vệ)</span>
-                  )}
-                </DropdownMenuItem>
-              );
-            })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <PasswordResetButton
+        userId={member.user_id}
+        fullName={member.full_name}
+        email={member.email}
+        role={member.role}
+        currentUserRole={currentUserRole}
+      />
 
-      {/* Change Password */}
-      {canResetPassword && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-9 p-0 text-muted-foreground hover:text-foreground"
-              onClick={handlePasswordChange}
-              aria-label="Đổi mật khẩu"
-              data-testid="password-reset-button"
-            >
-              <IconKey className="size-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Đổi mật khẩu</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-
-      {/* Toggle Active/Inactive */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`size-9 p-0 ${
-              isLastActiveAdmin && member.is_active
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            } ${member.is_active ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
-            onClick={handleToggleActive}
-            disabled={isLastActiveAdmin && member.is_active}
-            aria-label={member.is_active ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản"}
-            data-testid="toggle-active-button"
-          >
-            {member.is_active ? (
-              <IconUserCheck className="size-5" />
-            ) : (
-              <IconUserX className="size-5" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            {isLastActiveAdmin && member.is_active
-              ? "Không thể vô hiệu hóa quản trị viên cuối cùng"
-              : member.is_active
-                ? "Nhấn để vô hiệu hóa tài khoản"
-                : "Nhấn để kích hoạt tài khoản"}
-          </p>
-        </TooltipContent>
-      </Tooltip>
-
-      {/* Password Reset Modal */}
-      <Dialog open={showPasswordReset} onOpenChange={setShowPasswordReset}>
-        <DialogContent data-testid="password-reset-dialog">
-          <DialogHeader>
-            <DialogTitle>Đặt lại mật khẩu</DialogTitle>
-            <DialogDescription>
-              Đặt lại mật khẩu cho {member.full_name} ({member.email})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="new-password">Mật khẩu mới</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
-                minLength={6}
-                disabled={isResettingPassword}
-                data-testid="new-password-input"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" disabled={isResettingPassword}>
-                Hủy bỏ
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handlePasswordResetSubmit}
-              disabled={isResettingPassword || newPassword.length < 6}
-              data-testid="confirm-password-reset"
-            >
-              {isResettingPassword ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ToggleActiveButton
+        userId={member.user_id}
+        isActive={member.is_active}
+        isLastActiveAdmin={isLastActiveAdmin}
+        onSuccess={handleToggleActive}
+      />
     </div>
   );
 }
@@ -638,7 +322,7 @@ export function TeamTable({
   currentUserRole,
 }: {
   data: z.infer<typeof teamSchema>[];
-  currentUserRole: "admin" | "manager" | "technician" | "reception";
+  currentUserRole: UserRole;
 }) {
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -825,9 +509,6 @@ export function TeamTable({
             }
             onSuccess={() => window.location.reload()}
           />
-
-          {/* TODO: REMOVE IN PRODUCTION - Sample data generator for development/testing only */}
-          <SampleDataGenerator onSuccess={() => window.location.reload()} />
         </div>
       </div>
       <TabsContent
@@ -927,7 +608,7 @@ interface TeamMemberModalProps {
   member?: z.infer<typeof teamSchema>;
   mode: "add" | "edit";
   trigger: React.ReactNode;
-  currentUserRole: "admin" | "manager" | "technician" | "reception";
+  currentUserRole: UserRole;
   onSuccess?: () => void;
 }
 
@@ -945,9 +626,11 @@ function TeamMemberModal({
     email: "",
     password: "",
     avatar_url: "",
-    role: "technician",
+    role: "technician" as UserRole,
     is_active: true,
   });
+
+  const { createStaff, updateStaff } = useStaffApi();
 
   // Reset form when modal opens or mode/member changes
   React.useEffect(() => {
@@ -967,20 +650,12 @@ function TeamMemberModal({
     e.preventDefault();
 
     if (!formData.full_name || !formData.email || !formData.role) {
-      const errorMessage = "Vui lòng điền đầy đủ các trường bắt buộc";
-      console.error("[Team] Form validation error:", errorMessage, {
-        formData,
-      });
-      toast.error(errorMessage);
+      toast.error("Vui lòng điền đầy đủ các trường bắt buộc");
       return;
     }
 
     if (mode === "add" && formData.password.length < 6) {
-      const errorMessage = "Mật khẩu phải có ít nhất 6 ký tự";
-      console.error("[Team] Password validation error:", errorMessage, {
-        passwordLength: formData.password.length,
-      });
-      toast.error(errorMessage);
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
       return;
     }
 
@@ -988,69 +663,41 @@ function TeamMemberModal({
 
     try {
       if (mode === "add") {
-        const response = await fetch("/api/staff", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            full_name: formData.full_name,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role,
-          }),
-        });
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-
-        const successMessage = "Tạo nhân viên thành công";
-        console.log("[Team] Staff created successfully:", successMessage, {
+        await createStaff({
+          full_name: formData.full_name,
           email: formData.email,
+          password: formData.password,
           role: formData.role,
         });
-        toast.success(successMessage);
       } else {
-        // Update existing user
         if (!member?.user_id) {
           throw new Error("User ID is required for update");
         }
 
-        const response = await fetch("/api/staff", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: member.user_id,
-            full_name: formData.full_name,
-            email: formData.email,
-            role: formData.role,
-            is_active: formData.is_active,
-            avatar_url: formData.avatar_url || null,
-          }),
-        });
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-
-        const successMessage = "Cập nhật thông tin nhân viên thành công";
-        console.log("[Team] Staff updated successfully:", successMessage, {
-          user_id: member.user_id,
+        await updateStaff(member.user_id, {
+          full_name: formData.full_name,
           email: formData.email,
           role: formData.role,
+          is_active: formData.is_active,
+          avatar_url: formData.avatar_url || null,
         });
-        toast.success(successMessage);
       }
 
       setOpen(false);
-
       if (onSuccess) onSuccess();
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Có lỗi xảy ra";
-      console.error("[Team] Submit error:", errorMessage, error);
-      toast.error(errorMessage);
+      // Error already handled by useStaffApi
     } finally {
       setIsLoading(false);
     }
   };
+
+  const availableRoles: UserRole[] = React.useMemo(() => {
+    if (currentUserRole === "manager") {
+      return ["technician", "reception"];
+    }
+    return ["admin", "manager", "technician", "reception"];
+  }, [currentUserRole]);
 
   return (
     <FormDrawer
@@ -1093,333 +740,133 @@ function TeamMemberModal({
       headerClassName="gap-1"
     >
       <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="full_name">Họ và tên</Label>
+            <Input
+              id="full_name"
+              name="fullName"
+              value={formData.full_name}
+              onChange={(e) =>
+                setFormData({ ...formData, full_name: e.target.value })
+              }
+              placeholder="Nhập họ và tên"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              placeholder="Nhập địa chỉ email"
+              required
+            />
+          </div>
+          {mode === "add" && (
             <div className="flex flex-col gap-3">
-              <Label htmlFor="full_name">Họ và tên</Label>
+              <Label htmlFor="password">Mật khẩu</Label>
               <Input
-                id="full_name"
-                name="fullName"
-                value={formData.full_name}
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
                 onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
+                  setFormData({ ...formData, password: e.target.value })
                 }
-                placeholder="Nhập họ và tên"
+                placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                minLength={6}
                 required
               />
             </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                placeholder="Nhập địa chỉ email"
-                required
-              />
-            </div>
-            {mode === "add" && (
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="password">Mật khẩu</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-                  minLength={6}
-                  required
-                />
-              </div>
-            )}
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="avatar_url">Đường dẫn Avatar</Label>
-              <Input
-                id="avatar_url"
-                value={formData.avatar_url}
-                onChange={(e) =>
-                  setFormData({ ...formData, avatar_url: e.target.value })
-                }
-                placeholder="Nhập đường dẫn avatar (tùy chọn)"
-              />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="roles">Vai trò</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, role: value as any })
-                }
-              >
-                <SelectTrigger id="roles" className="w-full">
-                  <SelectValue placeholder="Chọn vai trò" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Admin can create any role */}
-                  {currentUserRole === "admin" && (
-                    <>
-                      <SelectItem value="admin">Quản trị viên</SelectItem>
-                      <SelectItem value="manager">Quản lý</SelectItem>
-                      <SelectItem value="technician">Kỹ thuật viên</SelectItem>
-                      <SelectItem value="reception">Lễ tân</SelectItem>
-                    </>
-                  )}
-                  {/* Manager can only create Technician and Reception */}
-                  {currentUserRole === "manager" && (
-                    <>
-                      <SelectItem value="technician">Kỹ thuật viên</SelectItem>
-                      <SelectItem value="reception">Lễ tân</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="is_active">Trạng thái</Label>
-              <Select
-                value={formData.is_active ? "active" : "inactive"}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, is_active: value === "active" })
-                }
-              >
-                <SelectTrigger id="is_active" className="w-full">
-                  <SelectValue placeholder="Chọn trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="inactive">Vô hiệu hóa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {mode === "edit" && member && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">
-                      ID Người dùng
-                    </Label>
-                    <div className="font-mono text-xs">{member.user_id}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">ID Hồ sơ</Label>
-                    <div className="font-mono text-xs">{member.id}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Ngày tạo</Label>
-                    <div>
-                      {new Date(member.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">
-                      Cập nhật lúc
-                    </Label>
-                    <div>
-                      {new Date(member.updated_at).toLocaleDateString()}
-                    </div>
+          )}
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="avatar_url">Đường dẫn Avatar</Label>
+            <Input
+              id="avatar_url"
+              value={formData.avatar_url}
+              onChange={(e) =>
+                setFormData({ ...formData, avatar_url: e.target.value })
+              }
+              placeholder="Nhập đường dẫn avatar (tùy chọn)"
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="roles">Vai trò</Label>
+            <Select
+              value={formData.role}
+              onValueChange={(value) =>
+                setFormData({ ...formData, role: value as UserRole })
+              }
+            >
+              <SelectTrigger id="roles" className="w-full">
+                <SelectValue placeholder="Chọn vai trò" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRoles.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {getRoleLabel(role)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="is_active">Trạng thái</Label>
+            <Select
+              value={formData.is_active ? "active" : "inactive"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, is_active: value === "active" })
+              }
+            >
+              <SelectTrigger id="is_active" className="w-full">
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Hoạt động</SelectItem>
+                <SelectItem value="inactive">Vô hiệu hóa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {mode === "edit" && member && (
+            <>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">
+                    ID Người dùng
+                  </Label>
+                  <div className="font-mono text-xs">{member.user_id}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">ID Hồ sơ</Label>
+                  <div className="font-mono text-xs">{member.id}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Ngày tạo</Label>
+                  <div>
+                    {new Date(member.created_at).toLocaleDateString()}
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">
+                    Cập nhật lúc
+                  </Label>
+                  <div>
+                    {new Date(member.updated_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
+      </div>
     </FormDrawer>
-  );
-}
-
-// TODO: REMOVE IN PRODUCTION - Sample data generator component for development/testing only
-function SampleDataGenerator({ onSuccess }: { onSuccess?: () => void }) {
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  // Random data generators
-  const firstNames = [
-    "John",
-    "Jane",
-    "Mike",
-    "Sarah",
-    "David",
-    "Lisa",
-    "Tom",
-    "Anna",
-    "Chris",
-    "Maria",
-    "Alex",
-    "Emma",
-    "Ryan",
-    "Sofia",
-    "James",
-    "Luna",
-    "Kevin",
-    "Nina",
-    "Paul",
-    "Zoe",
-  ];
-  const lastNames = [
-    "Smith",
-    "Johnson",
-    "Williams",
-    "Brown",
-    "Jones",
-    "Garcia",
-    "Miller",
-    "Davis",
-    "Rodriguez",
-    "Martinez",
-    "Hernandez",
-    "Lopez",
-    "Gonzalez",
-    "Wilson",
-    "Anderson",
-    "Thomas",
-    "Taylor",
-    "Moore",
-    "Jackson",
-    "Martin",
-  ];
-  // Only allow creating non-admin roles (admin should be unique)
-  const roles = ["manager", "technician", "reception"];
-  const domains = [
-    "testcompany.com",
-    "example.org",
-    "demo.net",
-    "sample.io",
-    "test.co",
-  ];
-
-  const generateRandomName = () => {
-    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    return `${firstName} ${lastName}`;
-  };
-
-  const generateRandomEmail = (name: string) => {
-    const domain = domains[Math.floor(Math.random() * domains.length)];
-    const cleanName = name.toLowerCase().replace(/\s+/g, ".");
-    const randomNum = Math.floor(Math.random() * 1000);
-    return `${cleanName}.${randomNum}@${domain}`;
-  };
-
-  const generateRandomRole = () => {
-    return roles[Math.floor(Math.random() * roles.length)] as
-      | "manager"
-      | "technician"
-      | "reception";
-  };
-
-  const handleGenerateSampleData = async () => {
-    if (!confirm("Thao tác này sẽ tạo 100 tài khoản thử nghiệm. Bạn có chắc chắn?")) {
-      return;
-    }
-
-    setIsLoading(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    try {
-      const infoMessage = "Tạo 100 tài khoản mẫu... Có thể mất một lút.";
-      console.log("[Team] Sample data generation started:", infoMessage);
-      toast.info(infoMessage);
-
-      // Create accounts in batches of 10 to avoid overwhelming the server
-      for (let batch = 0; batch < 10; batch++) {
-        const batchPromises = [];
-
-        for (let i = 0; i < 10; i++) {
-          const accountNumber = batch * 10 + i + 1;
-          const fullName = generateRandomName();
-          const email = generateRandomEmail(fullName);
-          const role = generateRandomRole();
-
-          const accountData = {
-            full_name: fullName,
-            email: email,
-            password: "123456",
-            role: role,
-          };
-
-          const promise = fetch("/api/staff", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(accountData),
-          })
-            .then(async (response) => {
-              if (response.ok) {
-                successCount++;
-              } else {
-                errorCount++;
-                const error = await response.json();
-                console.error(
-                  `[Team] Failed to create account ${accountNumber}:`,
-                  error,
-                );
-              }
-            })
-            .catch((error) => {
-              errorCount++;
-              console.error(
-                `[Team] Error creating account ${accountNumber}:`,
-                error,
-              );
-            });
-
-          batchPromises.push(promise);
-        }
-
-        // Wait for current batch to complete before starting next batch
-        await Promise.all(batchPromises);
-
-        // Show progress
-        const progressMessage = `Đã tạo ${(batch + 1) * 10} tài khoản...`;
-        console.log(`[Team] Sample data progress:`, progressMessage);
-        toast.info(progressMessage);
-
-        // Small delay between batches to prevent overwhelming the server
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-
-      const successMessage = `Tạo dữ liệu mẫu hoàn thành! Đã tạo thành công ${successCount} tài khoản. ${errorCount > 0 ? `${errorCount} thất bại.` : ""}`;
-      console.log("[Team] Sample data generation completed:", successMessage, {
-        successCount,
-        errorCount,
-      });
-      toast.success(successMessage);
-
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      const errorMessage = "Tạo dữ liệu mẫu thất bại";
-      console.error(
-        "[Team] Sample data generation error:",
-        errorMessage,
-        error,
-      );
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleGenerateSampleData}
-      disabled={isLoading}
-      className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-    >
-      <IconDatabase className="size-4" />
-      <span className="hidden lg:inline">
-        {isLoading ? "Đang thêm..." : "Thêm mẫu"}
-      </span>
-    </Button>
   );
 }
 
@@ -1428,7 +875,7 @@ function TeamMemberViewer({
   currentUserRole,
 }: {
   member: z.infer<typeof teamSchema>;
-  currentUserRole: "admin" | "manager" | "technician" | "reception";
+  currentUserRole: UserRole;
 }) {
   return (
     <TeamMemberModal

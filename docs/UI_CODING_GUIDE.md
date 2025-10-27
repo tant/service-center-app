@@ -1,6 +1,6 @@
 # Hướng dẫn Code Giao diện (UI Coding Guide)
 
-**Phiên bản:** 1.1
+**Phiên bản:** 1.2
 **Cập nhật lần cuối:** 2025-10-27
 
 ---
@@ -1052,6 +1052,19 @@ const baseData = {
 ---
 
 ## 10. Change Log
+
+**Version 1.2 (2025-10-27):**
+- ✅ **Thêm Section 2.6:** Shared Components & Code Reusability
+  - Nguyên tắc DRY (Don't Repeat Yourself)
+  - **TablePagination Component** - Áp dụng cho 8 tables, giảm ~600 lines code
+  - **FormDrawer Component** - Áp dụng cho 4+ forms, giảm ~150-200 lines/form
+  - Impact & Benefits analysis
+  - Best practices cho component creation và refactoring
+- 🔄 **Cập nhật Section 4 (Tables):** Pagination phải dùng TablePagination component
+- 🔄 **Cập nhật Section 6 (Drawers):** Forms phải dùng FormDrawer component
+- 📦 Bundle size optimization: Average 5-15 kB per route
+- ⚡ Faster development với shared components
+- 🎯 Consistency improvements across all tables và forms
 
 **Version 1.1 (2025-10-27):**
 - ✅ **Thêm Section 2.5:** Hệ Thống Màu Sắc & Badges (Color System & Badge Usage)

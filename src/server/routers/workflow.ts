@@ -5,6 +5,11 @@
 import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { logAudit } from '../utils/auditLog';
+import {
+  requireManagerOrAbove,
+  requireAnyAuthenticated,
+} from '../middleware/requireRole';
 
 // =====================================================
 // INPUT VALIDATION SCHEMAS
@@ -113,46 +118,15 @@ export const workflowRouter = router({
     /**
      * List all task types
      * AC: 2 - taskType.list procedure
-     * Requires: Admin or Manager role
+     * Requires: Any authenticated user
      * Supports filtering by is_active status
      */
     list: publicProcedure
+      .use(requireAnyAuthenticated)
       .input(z.object({
         is_active: z.boolean().optional(),
       }).optional())
       .query(async ({ ctx, input }) => {
-        // Authentication check
-        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
-        if (authError || !user) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Bạn cần đăng nhập để xem danh sách loại công việc. Vui lòng đăng nhập lại',
-          });
-        }
-
-        // Get profile for role checking
-        const { data: profile, error: profileError } = await ctx.supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
-            cause: profileError,
-          });
-        }
-
-        // Authorization check
-        if (!['admin', 'manager', 'technician', 'reception'].includes(profile.role)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Bạn không có quyền xem danh sách loại công việc',
-          });
-        }
-
         // Build query with optional is_active filter
         let query = ctx.supabaseAdmin
           .from('task_types')
@@ -184,40 +158,9 @@ export const workflowRouter = router({
      * Requires: Admin or Manager role
      */
     create: publicProcedure
+      .use(requireManagerOrAbove)
       .input(taskTypeCreateSchema)
       .mutation(async ({ ctx, input }) => {
-        // Authentication check
-        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
-        if (authError || !user) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Bạn cần đăng nhập để tạo loại công việc. Vui lòng đăng nhập lại',
-          });
-        }
-
-        // Get profile for role checking
-        const { data: profile, error: profileError } = await ctx.supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
-            cause: profileError,
-          });
-        }
-
-        // Authorization check
-        if (!['admin', 'manager'].includes(profile.role)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Chỉ Admin và Manager mới có quyền tạo loại công việc',
-          });
-        }
-
         // Check for duplicate name
         const { data: existing } = await ctx.supabaseAdmin
           .from('task_types')
@@ -254,40 +197,9 @@ export const workflowRouter = router({
      * Requires: Admin or Manager role
      */
     update: publicProcedure
+      .use(requireManagerOrAbove)
       .input(taskTypeUpdateSchema)
       .mutation(async ({ ctx, input }) => {
-        // Authentication check
-        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
-        if (authError || !user) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Bạn cần đăng nhập để cập nhật loại công việc. Vui lòng đăng nhập lại',
-          });
-        }
-
-        // Get profile for role checking
-        const { data: profile, error: profileError } = await ctx.supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
-            cause: profileError,
-          });
-        }
-
-        // Authorization check
-        if (!['admin', 'manager'].includes(profile.role)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Chỉ Admin và Manager mới có quyền cập nhật loại công việc',
-          });
-        }
-
         // Check if task type exists
         const { data: existing, error: existingError } = await ctx.supabaseAdmin
           .from('task_types')
@@ -341,40 +253,9 @@ export const workflowRouter = router({
      * Requires: Admin or Manager role
      */
     toggleActive: publicProcedure
+      .use(requireManagerOrAbove)
       .input(taskTypeToggleSchema)
       .mutation(async ({ ctx, input }) => {
-        // Authentication check
-        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
-        if (authError || !user) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Bạn cần đăng nhập để thay đổi trạng thái loại công việc. Vui lòng đăng nhập lại',
-          });
-        }
-
-        // Get profile for role checking
-        const { data: profile, error: profileError } = await ctx.supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Không thể tải thông tin người dùng. Vui lòng thử lại sau',
-            cause: profileError,
-          });
-        }
-
-        // Authorization check
-        if (!['admin', 'manager'].includes(profile.role)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Chỉ Admin và Manager mới có quyền thay đổi trạng thái loại công việc',
-          });
-        }
-
         // Check if task type exists
         const { data: existing, error: existingError } = await ctx.supabaseAdmin
           .from('task_types')
@@ -443,43 +324,12 @@ export const workflowRouter = router({
     /**
      * List templates with optional filters
      * AC: 2 - template.list procedure
-     * Requires: Admin or Manager role
+     * Requires: Any authenticated user
      */
     list: publicProcedure
+      .use(requireAnyAuthenticated)
       .input(templateListSchema.optional())
       .query(async ({ ctx, input }) => {
-        // Authentication check
-        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
-        if (authError || !user) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'You must be logged in to view templates',
-          });
-        }
-
-        // Get profile for role checking
-        const { data: profile, error: profileError } = await ctx.supabaseAdmin
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch user profile',
-            cause: profileError,
-          });
-        }
-
-        // Authorization check
-        if (!['admin', 'manager', 'technician', 'reception'].includes(profile.role)) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Insufficient permissions to view templates',
-          });
-        }
-
         let query = ctx.supabaseAdmin
           .from('task_templates')
           .select(`
@@ -725,10 +575,14 @@ export const workflowRouter = router({
       }),
 
     /**
-     * Update template (creates new version)
+     * Update template (in-place update with active ticket check)
      * AC: 2 - template.update procedure
-     * AC: 3 - Template versioning
      * Requires: Admin or Manager role
+     *
+     * Business Logic:
+     * - Blocks update if template is being used by active tickets
+     * - Performs in-place update (no versioning)
+     * - Logs changes to audit_logs for history
      */
     update: publicProcedure
       .input(templateUpdateSchema)
@@ -765,20 +619,6 @@ export const workflowRouter = router({
           });
         }
 
-        // Fetch current template
-        const { data: currentTemplate, error: fetchError } = await ctx.supabaseAdmin
-          .from('task_templates')
-          .select('*')
-          .eq('id', input.template_id)
-          .single();
-
-        if (fetchError || !currentTemplate) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Template not found',
-          });
-        }
-
         // Validate sequence_order uniqueness
         const sequenceOrders = input.tasks.map(t => t.sequence_order);
         const uniqueSequences = new Set(sequenceOrders);
@@ -789,78 +629,135 @@ export const workflowRouter = router({
           });
         }
 
-        // 1. Mark current template as inactive
-        const { error: deactivateError } = await ctx.supabaseAdmin
-          .from('task_templates')
-          .update({ is_active: false })
-          .eq('id', currentTemplate.id);
+        // CHECK: Template being used by active tickets?
+        const { count: activeTicketsCount, error: countError } = await ctx.supabaseAdmin
+          .from('service_tickets')
+          .select('id', { count: 'exact', head: true })
+          .eq('template_id', input.template_id)
+          .in('status', ['pending', 'in_progress']);
 
-        if (deactivateError) {
+        if (countError) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to deactivate old template version',
-            cause: deactivateError,
+            message: 'Failed to check active tickets',
+            cause: countError,
           });
         }
 
-        // 2. Create new template version
+        if (activeTicketsCount && activeTicketsCount > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Không thể sửa mẫu quy trình đang được sử dụng bởi ${activeTicketsCount} phiếu dịch vụ. Vui lòng đợi các phiếu hoàn thành hoặc tạo mẫu mới.`,
+          });
+        }
+
+        // Fetch OLD template snapshot for audit log
+        const { data: oldTemplate, error: fetchError } = await ctx.supabaseAdmin
+          .from('task_templates')
+          .select(`
+            *,
+            tasks:task_templates_tasks(
+              id,
+              sequence_order,
+              is_required,
+              custom_instructions,
+              task_type_id
+            )
+          `)
+          .eq('id', input.template_id)
+          .single();
+
+        if (fetchError || !oldTemplate) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Template not found',
+          });
+        }
+
+        // 1. UPDATE template (in-place)
         const { tasks, template_id, enforce_sequence, ...templateData } = input;
 
-        const { data: newTemplate, error: createError } = await ctx.supabaseAdmin
+        const { data: updatedTemplate, error: updateError } = await ctx.supabaseAdmin
           .from('task_templates')
-          .insert({
+          .update({
             ...templateData,
             strict_sequence: enforce_sequence, // Map field name to DB column
-            created_by_id: profile.id,
-            is_active: true,
           })
+          .eq('id', input.template_id)
           .select()
           .single();
 
-        if (createError || !newTemplate) {
-          // Rollback: Reactivate old template
-          await ctx.supabaseAdmin
-            .from('task_templates')
-            .update({ is_active: true })
-            .eq('id', currentTemplate.id);
-
+        if (updateError || !updatedTemplate) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to create new template version',
-            cause: createError,
+            message: 'Failed to update template',
+            cause: updateError,
           });
         }
 
-        // 3. Create new template tasks
+        // 2. DELETE old tasks
+        const { error: deleteTasksError } = await ctx.supabaseAdmin
+          .from('task_templates_tasks')
+          .delete()
+          .eq('template_id', input.template_id);
+
+        if (deleteTasksError) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to delete old template tasks',
+            cause: deleteTasksError,
+          });
+        }
+
+        // 3. INSERT new tasks
         const newTemplateTasks = tasks.map(task => ({
-          template_id: newTemplate.id,
+          template_id: input.template_id,
           ...task,
         }));
 
-        const { error: tasksError } = await ctx.supabaseAdmin
+        const { error: insertTasksError } = await ctx.supabaseAdmin
           .from('task_templates_tasks')
           .insert(newTemplateTasks);
 
-        if (tasksError) {
-          // Rollback: Delete new template and reactivate old
-          await ctx.supabaseAdmin
-            .from('task_templates')
-            .delete()
-            .eq('id', newTemplate.id);
-
-          await ctx.supabaseAdmin
-            .from('task_templates')
-            .update({ is_active: true })
-            .eq('id', currentTemplate.id);
-
+        if (insertTasksError) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to create template tasks',
-            cause: tasksError,
+            message: 'Failed to create new template tasks',
+            cause: insertTasksError,
           });
         }
 
-        // Fetch complete new template
+        // 4. LOG to audit_logs
+        try {
+          await logAudit(ctx.supabaseAdmin, user.id, {
+            action: 'update',
+            resourceType: 'template',
+            resourceId: input.template_id,
+            oldValues: {
+              name: oldTemplate.name,
+              description: oldTemplate.description,
+              service_type: oldTemplate.service_type,
+              strict_sequence: oldTemplate.strict_sequence,
+              tasks: oldTemplate.tasks,
+            },
+            newValues: {
+              name: updatedTemplate.name,
+              description: updatedTemplate.description,
+              service_type: updatedTemplate.service_type,
+              strict_sequence: updatedTemplate.strict_sequence,
+              tasks: input.tasks,
+            },
+            metadata: {
+              tasks_count_before: oldTemplate.tasks?.length || 0,
+              tasks_count_after: input.tasks.length,
+            },
+          });
+        } catch (auditError) {
+          // Log error but don't fail the operation
+          console.error('[AUDIT] Failed to log template update:', auditError);
+        }
+
+        // 5. Fetch complete updated template
         const { data: completeTemplate } = await ctx.supabaseAdmin
           .from('task_templates')
           .select(`
@@ -874,7 +771,7 @@ export const workflowRouter = router({
               task_type:task_types(*)
             )
           `)
-          .eq('id', newTemplate.id)
+          .eq('id', input.template_id)
           .single();
 
         // Map strict_sequence to enforce_sequence for API response
@@ -1002,9 +899,16 @@ export const workflowRouter = router({
         if (activeTickets && activeTickets.length > 0) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message: `Cannot delete template: ${activeTickets.length} active ticket(s) are using this template`,
+            message: `Không thể xóa mẫu quy trình đang được sử dụng bởi ${activeTickets.length} phiếu dịch vụ. Vui lòng đợi các phiếu hoàn thành.`,
           });
         }
+
+        // Fetch template info for audit log
+        const { data: template } = await ctx.supabaseAdmin
+          .from('task_templates')
+          .select('name, service_type, is_active')
+          .eq('id', input.template_id)
+          .single();
 
         if (input.soft_delete) {
           // Soft delete: Mark as inactive
@@ -1021,6 +925,19 @@ export const workflowRouter = router({
             });
           }
 
+          // Log to audit
+          try {
+            await logAudit(ctx.supabaseAdmin, user.id, {
+              action: 'delete',
+              resourceType: 'template',
+              resourceId: input.template_id,
+              oldValues: template || undefined,
+              metadata: { soft_delete: true },
+            });
+          } catch (auditError) {
+            console.error('[AUDIT] Failed to log template soft delete:', auditError);
+          }
+
           return { success: true, soft_deleted: true };
         } else {
           // Hard delete: Remove from database
@@ -1035,6 +952,19 @@ export const workflowRouter = router({
               message: 'Failed to delete template',
               cause: deleteError,
             });
+          }
+
+          // Log to audit
+          try {
+            await logAudit(ctx.supabaseAdmin, user.id, {
+              action: 'delete',
+              resourceType: 'template',
+              resourceId: input.template_id,
+              oldValues: template || undefined,
+              metadata: { soft_delete: false },
+            });
+          } catch (auditError) {
+            console.error('[AUDIT] Failed to log template hard delete:', auditError);
           }
 
           return { success: true, soft_deleted: false };

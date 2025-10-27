@@ -6,6 +6,7 @@
 - ✅ Main Index (`docs/architecture.md`) - Complete with diagrams
 - ✅ 01 - Introduction (`01-introduction.md`) - Complete with 8 diagrams
 - ✅ 04 - Component Architecture (`04-component-architecture.md`) - Complete with 5 diagrams
+- ✅ 11 - Audit Logging (`11-audit-logging.md`) - Complete (2025-10-27)
 
 **Remaining Shards to Create:**
 - ⏳ 02 - Technology Stack

@@ -1,7 +1,7 @@
 # Hướng dẫn Code Giao diện (UI Coding Guide)
 
-**Phiên bản:** 1.0
-**Cập nhật lần cuối:** 2025-10-26
+**Phiên bản:** 1.1
+**Cập nhật lần cuối:** 2025-10-27
 
 ---
 
@@ -69,6 +69,227 @@ Sử dụng các utility class của Tailwind để đảm bảo khoảng cách 
 
 ---
 
+## 2.5. Hệ Thống Màu Sắc & Badges (Color System & Badge Usage)
+
+**✨ TIÊU CHUẨN MỚI (v1.1 - Oct 27, 2025)**
+
+Hệ thống màu sắc và badges được thiết kế để tạo visual hierarchy rõ ràng, cải thiện khả năng quét thông tin (scannability), và mang lại personality cho UI.
+
+### 2.5.1. Nguyên Tắc Sử Dụng Màu
+
+**Quy tắc vàng:**
+1. **Màu có ý nghĩa** - Mỗi màu phải truyền tải thông tin cụ thể
+2. **Nhất quán** - Cùng một loại dữ liệu phải dùng cùng màu xuyên suốt app
+3. **Phân biệt** - Các category khác nhau phải có màu riêng biệt
+4. **Dark mode** - Tất cả màu phải có variant cho dark mode
+5. **Accessibility** - Đảm bảo contrast ratio đủ (WCAG AA minimum)
+
+### 2.5.2. Category Badge Pattern
+
+**Áp dụng cho:** Phân loại dữ liệu (task types, product categories, service types, v.v.)
+
+**Cấu trúc:**
+```tsx
+// 1. Define color mappings (at component top level)
+const CATEGORY_COLORS = {
+  "Category 1": "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+  "Category 2": "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
+  // ... more categories
+} as const;
+
+// 2. Optional: Define icons for visual recognition
+const CATEGORY_ICONS = {
+  "Category 1": "🔍",
+  "Category 2": "🔧",
+  // ... more icons
+} as const;
+
+// 3. Usage in table column
+{
+  accessorKey: "category",
+  header: "Danh Mục",
+  cell: ({ row }) => {
+    const category = row.original.category || "Default";
+    const colorClass = CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS];
+    return (
+      <Badge variant="outline" className={colorClass}>
+        {category}
+      </Badge>
+    );
+  },
+}
+```
+
+**Bảng Màu Chuẩn cho Categories:**
+
+| Category Type | Color | Light Mode | Dark Mode | Use Case |
+|--------------|-------|------------|-----------|----------|
+| Inspection/Kiểm tra | Blue | `bg-blue-100 text-blue-700 border-blue-300` | `dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700` | Các hành động kiểm tra, xem xét |
+| Repair/Sửa chữa | Orange | `bg-orange-100 text-orange-700 border-orange-300` | `dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700` | Sửa chữa, khắc phục |
+| Replace/Thay thế | Purple | `bg-purple-100 text-purple-700 border-purple-300` | `dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700` | Thay thế linh kiện |
+| Clean/Vệ sinh | Green | `bg-green-100 text-green-700 border-green-300` | `dark:bg-green-900/30 dark:text-green-300 dark:border-green-700` | Vệ sinh, làm sạch |
+| Install/Cài đặt | Cyan | `bg-cyan-100 text-cyan-700 border-cyan-300` | `dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700` | Cài đặt, setup |
+| Test/Kiểm tra cuối | Indigo | `bg-indigo-100 text-indigo-700 border-indigo-300` | `dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700` | Kiểm tra cuối, QA |
+| Other/Khác | Gray | `bg-gray-100 text-gray-700 border-gray-300` | `dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600` | Các loại khác |
+
+### 2.5.3. Status Badge Pattern
+
+**Áp dụng cho:** Trạng thái hoạt động (active/inactive, enabled/disabled, on/off)
+
+**Cấu trúc:**
+```tsx
+{
+  accessorKey: "is_active",
+  header: "Trạng Thái",
+  cell: ({ row }) => (
+    <Badge
+      variant={row.original.is_active ? "default" : "destructive"}
+      className={row.original.is_active
+        ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-300 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300 dark:border-green-700"
+        : "bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-red-300 dark:from-red-900/30 dark:to-rose-900/30 dark:text-red-300 dark:border-red-700"
+      }
+    >
+      <span className={row.original.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+        {row.original.is_active ? "●" : "○"}
+      </span>
+      <span className="ml-1">{row.original.is_active ? "Hoạt động" : "Vô hiệu"}</span>
+    </Badge>
+  ),
+}
+```
+
+**Quy ước:**
+- **Active/Enabled:** Gradient xanh lá → xanh emerald, filled dot (●)
+- **Inactive/Disabled:** Gradient đỏ → đỏ hồng, empty dot (○)
+- Luôn dùng gradient cho status badges để tạo visual depth
+
+### 2.5.4. Boolean Badge Pattern
+
+**Áp dụng cho:** Các giá trị boolean (yes/no, required/optional, has/hasn't)
+
+**Cấu trúc:**
+```tsx
+// For positive boolean (Yes/Có/Required)
+<Badge
+  variant={value ? "default" : "secondary"}
+  className={value
+    ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+  }
+>
+  {value ? "✓ Có" : "○ Không"}
+</Badge>
+
+// For specific boolean with icon context (e.g., photo required)
+<Badge
+  variant={requiresPhoto ? "default" : "secondary"}
+  className={requiresPhoto
+    ? "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
+    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+  }
+>
+  {requiresPhoto ? "📷 Có" : "○ Không"}
+</Badge>
+```
+
+**Quy ước:**
+- **True/Yes:** Màu xanh (emerald hoặc sky tùy context), checkmark (✓) hoặc icon phù hợp
+- **False/No:** Màu xám, empty circle (○)
+- Thêm icon emoji nếu có context cụ thể (📷 cho photo, 📝 cho notes, v.v.)
+
+### 2.5.5. Metric Badge Pattern
+
+**Áp dụng cho:** Các số liệu có ngưỡng (duration, quantity, score)
+
+**Cấu trúc:**
+```tsx
+{
+  accessorKey: "estimated_duration_minutes",
+  header: "Thời Gian (phút)",
+  cell: ({ row }) => {
+    const duration = row.original.estimated_duration_minutes;
+    if (!duration) {
+      return <span className="text-sm text-muted-foreground">-</span>;
+    }
+
+    // Color coding based on thresholds
+    let colorClass = "bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700";
+    if (duration > 60) {
+      colorClass = "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
+    } else if (duration > 30) {
+      colorClass = "bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700";
+    }
+
+    return (
+      <Badge variant="outline" className={colorClass}>
+        ⏱️ {duration} phút
+      </Badge>
+    );
+  },
+}
+```
+
+**Quy ước:**
+- **Low/Fast:** Xanh lá (green)
+- **Medium:** Vàng (yellow)
+- **High/Slow:** Cam/Hổ phách (amber)
+- Thêm icon emoji phù hợp (⏱️ cho time, 📊 cho metrics)
+
+### 2.5.6. Icon Integration Pattern
+
+**Áp dụng cho:** Tăng visual recognition cho các items trong bảng
+
+**Cấu trúc:**
+```tsx
+{
+  accessorKey: "name",
+  header: "Tên",
+  cell: ({ row }) => {
+    const category = row.original.category || "Default";
+    const icon = CATEGORY_ICONS[category as keyof typeof CATEGORY_ICONS];
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-lg" role="img" aria-label={category}>
+          {icon}
+        </span>
+        <span className="font-medium">{row.original.name}</span>
+      </div>
+    );
+  },
+}
+```
+
+**Quy ước:**
+- Icon nằm bên trái text
+- Gap 2 units (`gap-2`)
+- Font size `text-lg` cho emoji icons
+- Thêm `role="img"` và `aria-label` cho accessibility
+
+### 2.5.7. Best Practices
+
+**DO:**
+- ✅ Sử dụng const objects với `as const` cho type safety
+- ✅ Luôn có dark mode variant
+- ✅ Sử dụng gradient cho status badges
+- ✅ Thêm icons để tăng visual recognition
+- ✅ Sử dụng semantic colors (xanh = tốt, đỏ = cảnh báo)
+- ✅ Tạo color mappings ở top level của component
+
+**DON'T:**
+- ❌ Inline colors trực tiếp trong JSX
+- ❌ Dùng cùng một màu cho nhiều ý nghĩa khác nhau
+- ❌ Quên dark mode variants
+- ❌ Dùng quá nhiều màu (tối đa 7-8 màu cho một category system)
+- ❌ Bỏ qua accessibility (icons phải có aria-label)
+
+### 2.5.8. Ví Dụ Thực Tế
+
+**Tham khảo implementation:** `/src/components/tables/task-types-table.tsx`
+
+File này là reference implementation đầy đủ của tất cả patterns trên.
+
+---
+
 ## 3. Hệ thống Tabs (Tabs System)
 
 Tất cả các trang dạng bảng (table pages) PHẢI sử dụng component `Tabs` với các biến thể cho mobile và desktop để chuyển đổi giữa các view (ví dụ: lọc theo trạng thái).
@@ -127,7 +348,7 @@ Các trang hiển thị danh sách dữ liệu phải sử dụng cấu trúc b�
       {/* Headers ở đây */}
     </TableHeader>
     <TableBody>
-      {/* Rows ở đây */}
+      {/* Rows hoặc Trạng thái Rỗng ở đây */}
     </TableBody>
   </Table>
 </div>
@@ -139,8 +360,81 @@ Các trang hiển thị danh sách dữ liệu phải sử dụng cấu trúc b�
 ### Các Cột Tiêu chuẩn
 
 1.  **Cột Chọn (Select):** Dành cho các thao tác hàng loạt.
-2.  **Cột Chính (Tên/Name):** Phải là một `Button` có thể nhấp để mở modal chỉnh sửa.
-3.  **Cột Hành động (Actions):** Một `DropdownMenu` ở cuối mỗi hàng, chứa các hành động như "Sửa" và "Xóa".
+2.  **Cột Chính (Tên/Name):** Phải là một `Button` có thể nhấp để mở `Drawer` chỉnh sửa.
+3.  **Cột Hành động (Actions):**
+    *   Để đảm bảo tính nhất quán và tiết kiệm không gian, tất cả các hành động cho một hàng phải được đặt bên trong một `DropdownMenu`.
+    *   Trigger để mở menu này PHẢI là một `Button` **chỉ có icon** (icon-only) với `variant="ghost"`. Biểu tượng được khuyến nghị là "dấu ba chấm" (ví dụ: `IconDots`).
+    *   **Không** hiển thị nhiều icon hành động riêng lẻ trên mỗi hàng.
+    *   **Không** sử dụng cách tiếp cận hybrid (một icon riêng và một menu).
+    *   **Lý do:** Cách tiếp cận này hoạt động tốt nhất trên cả desktop và mobile, có khả năng mở rộng và giữ cho giao diện bảng gọn gàng.
+
+### Căn lề và Padding cho Ô (Cell Alignment & Padding)
+
+Để đảm bảo layout của bảng nhất quán và dễ đọc, hãy tuân thủ các quy tắc về padding cho các cột đầu tiên.
+
+**Quy tắc chung:**
+*   Tất cả các ô chứa dữ liệu văn bản (`TableCell`) phải có padding mặc định của `shadcn/ui`, tức là `px-4` ở hai bên.
+
+**Cấu trúc các cột đầu tiên:**
+
+1.  **Cột Kéo-thả (Drag Handle) (nếu có):**
+    *   Đây là cột đầu tiên.
+    *   `TableCell` chứa nó nên có `className="p-0 w-8"`.
+    *   Bên trong là một `Button` `variant="ghost"` để chứa icon `IconGripVertical`.
+    *   **Ví dụ (`customer-table.tsx`):**
+        ```tsx
+        {
+          id: "drag",
+          header: () => null,
+          cell: ({ row }) => <DragHandle id={row.original.id} />,
+        }
+        ```
+
+2.  **Cột Chọn (Checkbox) (nếu có):**
+    *   Đây là cột thứ hai (nếu có cột drag) hoặc cột đầu tiên (nếu không có).
+    *   `TableCell` chứa nó nên có `className="p-0"`.
+    *   Bên trong là một `div` với `className="flex items-center justify-center"` để căn giữa `Checkbox`.
+    *   **Ví dụ (`parts-table.tsx`):**
+        ```tsx
+        {
+          id: "select",
+          cell: ({ row }) => (
+            <div className="flex items-center justify-center">
+              <Checkbox ... />
+            </div>
+          ),
+        }
+        ```
+
+3.  **Cột Dữ liệu Đầu tiên (First Data Column):**
+    *   Đây là cột chứa nội dung chính đầu tiên (ví dụ: Tên sản phẩm, Tên khách hàng).
+    *   `TableCell` của cột này **không cần thêm class tùy chỉnh** và sẽ tự động nhận padding `px-4` mặc định. Điều này tạo ra khoảng trống cần thiết so với lề trái hoặc so với cột checkbox/drag handle.
+
+### Trạng thái Rỗng (Empty State)
+
+Khi bảng không có dữ liệu để hiển thị, PHẢI hiển thị một hàng duy nhất bên trong `<TableBody>` với một thông báo rõ ràng.
+
+**Quan trọng:** `TableHeader` của bảng **luôn luôn** phải được hiển thị, ngay cả khi không có dữ liệu. Điều này đảm bảo người dùng luôn thấy được cấu trúc của bảng và các nút hành động liên quan (như "Thêm mới") vẫn hiển thị, tránh thay đổi layout đột ngột.
+
+**Cấu trúc:**
+```tsx
+<TableBody>
+  {table.getRowModel().rows?.length ? (
+    table.getRowModel().rows.map((row) => (
+      // ... render a <TableRow> for each data row
+    ))
+  ) : (
+    <TableRow>
+      <TableCell colSpan={columns.length} className="h-24 text-center">
+        Không tìm thấy [tên đối tượng] nào.
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>
+```
+*   **`colSpan`:** Phải bằng tổng số cột để thông báo chiếm toàn bộ chiều rộng của bảng.
+*   **Styling:** Sử dụng `h-24 text-center` để đảm bảo thông báo được căn giữa và có đủ không gian.
+*   **Nội dung:** Thông báo phải bằng tiếng Việt và thân thiện với người dùng (ví dụ: "Không tìm thấy sản phẩm nào.").
 
 ### Thanh Tìm kiếm và Lọc
 
@@ -472,3 +766,31 @@ const baseData = {
     *   **Nên** sử dụng các selector ngữ nghĩa như `getByRole` (với `aria-label`) hoặc `getByTestId`.
 
 **Tài liệu này là nguồn tham khảo chính cho việc phát triển giao diện. Vui lòng tuân thủ nghiêm ngặt.**
+
+---
+
+## 10. Change Log
+
+**Version 1.1 (2025-10-27):**
+- ✅ **Thêm Section 2.5:** Hệ Thống Màu Sắc & Badges (Color System & Badge Usage)
+  - Category Badge Pattern với 7 màu chuẩn
+  - Status Badge Pattern với gradients
+  - Boolean Badge Pattern với icons
+  - Metric Badge Pattern với color-coded thresholds
+  - Icon Integration Pattern
+  - Best practices và DO/DON'T guidelines
+  - Reference implementation: `/src/components/tables/task-types-table.tsx`
+- 🎨 Thiết lập tiêu chuẩn màu sắc nhất quán cho toàn bộ ứng dụng
+- 🌙 Tất cả patterns đều có dark mode support
+
+**Version 1.0 (2025-10-26):**
+- Phiên bản ban đầu với các sections:
+  - Page Structure
+  - Style, Spacing và Padding
+  - Tabs System
+  - Tables
+  - Cards
+  - Drawers
+  - Dedicated Add/Edit Pages
+  - Sidebar
+  - Automation-Friendly UI Patterns

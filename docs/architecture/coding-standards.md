@@ -131,7 +131,7 @@ const createTaskTemplateSchema = z.object({
   name: z.string().min(3),
   product_type: z.string().uuid(),
   service_type: z.enum(['warranty', 'paid', 'replacement']),
-  strict_sequence: z.boolean().default(false),
+  enforce_sequence: z.boolean().default(true), // API uses enforce_sequence, mapped to strict_sequence in DB
 });
 ```
 
@@ -430,6 +430,43 @@ pnpx supabase migration up
 pnpx supabase gen types typescript --local > src/types/database.types.ts
 ```
 
+### Field Mapping (DB ↔ API)
+
+**Convention:** When database field names differ from API field names, map them in tRPC procedures.
+
+**Example:** `task_templates.strict_sequence` (DB) ↔ `enforce_sequence` (API)
+
+```typescript
+// ✅ Correct - Map fields in tRPC procedures
+// CREATE procedure
+const { tasks, enforce_sequence, ...templateData } = input;
+const { data: template } = await ctx.supabaseAdmin
+  .from('task_templates')
+  .insert({
+    ...templateData,
+    strict_sequence: enforce_sequence, // Map API → DB
+    created_by_id: profile.id,
+  });
+
+// Helper function for responses
+function mapTemplateFromDb(template: any) {
+  const { strict_sequence, ...rest } = template;
+  return { ...rest, enforce_sequence: strict_sequence }; // Map DB → API
+}
+
+// LIST procedure
+const { data } = await ctx.supabaseAdmin.from('task_templates').select('*');
+return mapTemplatesFromDb(data); // Always map before returning
+
+// ❌ Incorrect - Don't expose DB field names in API
+return { ...template, strict_sequence: true }; // Client expects enforce_sequence
+```
+
+**Why?**
+- Database schemas may use legacy or different naming conventions
+- API provides a consistent interface regardless of DB changes
+- Enables gradual schema migrations without breaking clients
+
 ### RLS Policy Pattern
 
 ```sql
@@ -657,7 +694,8 @@ export function calculateWarrantyEndDate(
 
 // ✅ Inline comments for business logic
 // Check if task sequence is strict mode
-if (template.strict_sequence) {
+// Note: DB field is strict_sequence, API uses enforce_sequence
+if (template.enforce_sequence) {
   // Block task completion if previous tasks incomplete
   const incompleteTasks = await checkPreviousTasks(taskId);
   if (incompleteTasks > 0) {

@@ -111,8 +111,8 @@ export default function TemplateDetailPage() {
 
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <div className="max-w-5xl space-y-6">
+          <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+            <div className="space-y-6">
               {/* Actions */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

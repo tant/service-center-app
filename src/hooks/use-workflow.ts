@@ -151,15 +151,17 @@ export function useCreateTemplate() {
 }
 
 /**
- * Hook for updating templates (creates new version)
+ * Hook for updating templates (in-place update)
  * Admin/Manager only
+ * Blocks update if template is being used by active tickets
  */
 export function useUpdateTemplate() {
   const utils = trpc.useUtils();
   const mutation = trpc.workflow.template.update.useMutation({
     onSuccess: () => {
       utils.workflow.template.list.invalidate();
-      toast.success('Mẫu quy trình đã được cập nhật (phiên bản mới đã được tạo)');
+      utils.workflow.template.getById.invalidate();
+      toast.success('Mẫu quy trình đã được cập nhật thành công');
     },
     onError: (error) => {
       toast.error(error.message || 'Không thể cập nhật mẫu quy trình. Vui lòng thử lại');

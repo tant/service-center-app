@@ -2,7 +2,6 @@
 
 import {
   IconChevronDown,
-  IconDatabase,
   IconEdit,
   IconLayoutColumns,
   IconPackage,
@@ -30,16 +29,7 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -76,7 +66,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export const productSchema = z.object({
   id: z.string(),
@@ -364,19 +353,16 @@ export function ProductTable({
           </DropdownMenu>
           {/* Only Admin and Manager can add products */}
           {['admin', 'manager'].includes(currentUserRole) && (
-            <>
-              <ProductModal
-                mode="add"
-                trigger={
-                  <Button variant="outline" size="sm" data-testid="add-product-button">
-                    <IconPlus />
-                    <span className="hidden lg:inline">Thêm sản phẩm</span>
-                  </Button>
-                }
-                onSuccess={() => window.location.reload()}
-              />
-              <AddSampleProductsButton onSuccess={() => window.location.reload()} />
-            </>
+            <ProductModal
+              mode="add"
+              trigger={
+                <Button variant="outline" size="sm" data-testid="add-product-button">
+                  <IconPlus />
+                  <span className="hidden lg:inline">Thêm sản phẩm</span>
+                </Button>
+              }
+              onSuccess={() => window.location.reload()}
+            />
           )}
         </div>
       </div>
@@ -538,7 +524,6 @@ function ProductModal({
   trigger,
   onSuccess,
 }: ProductModalProps) {
-  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: "",
@@ -646,9 +631,7 @@ function ProductModal({
     [parts],
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!formData.name) {
       const errorMessage = "Vui lòng nhập tên sản phẩm";
       console.error("[Products] Validation error:", errorMessage, { formData });
@@ -682,33 +665,45 @@ function ProductModal({
     }
   };
 
+  const title =
+    mode === "edit" && product ? (
+      <div className="flex items-center gap-3">
+        <ProductImage
+          src={product.primary_image}
+          alt={product.name || "Product"}
+          className="w-10 h-10"
+        />
+        <span>{product.name}</span>
+      </div>
+    ) : (
+      "Thêm Sản Phẩm Mới"
+    );
+
   return (
-    <Drawer
+    <FormDrawer
       open={open}
       onOpenChange={setOpen}
-      direction={isMobile ? "bottom" : "right"}
+      trigger={trigger}
+      titleElement={title}
+      description={
+        mode === "add"
+          ? "Tạo sản phẩm mới với các thông tin bắt buộc."
+          : "Chi tiết và tùy chọn quản lý sản phẩm"
+      }
+      isSubmitting={isLoading}
+      onSubmit={handleSubmit}
+      submitLabel={
+        isLoading
+          ? mode === "add"
+            ? "Đang tạo..."
+            : "Đang cập nhật..."
+          : mode === "add"
+            ? "Tạo sản phẩm"
+            : "Lưu thay đổi"
+      }
+      headerClassName="gap-1"
     >
-      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle className="flex items-center gap-3">
-            {mode === "edit" && (
-              <ProductImage
-                src={product?.primary_image}
-                alt={product?.name || "Product"}
-                className="w-10 h-10"
-              />
-            )}
-            {mode === "add" ? "Thêm Sản Phẩm Mới" : product?.name}
-          </DrawerTitle>
-          <DrawerDescription>
-            {mode === "add"
-              ? "Tạo sản phẩm mới với các thông tin bắt buộc."
-              : "Chi tiết và tùy chọn quản lý sản phẩm"}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="name">Tên sản phẩm *</Label>
               <Input
@@ -932,272 +927,6 @@ function ProductModal({
               </>
             )}
           </div>
-        </div>
-        <DrawerFooter>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit(e);
-            }}
-            disabled={isLoading}
-          >
-            {isLoading
-              ? mode === "add"
-                ? "Đang tạo..."
-                : "Đang cập nhật..."
-              : mode === "add"
-                ? "Tạo sản phẩm"
-                : "Lưu thay đổi"}
-          </Button>
-          <DrawerClose asChild>
-            <Button variant="outline" disabled={isLoading}>
-              Hủy bỏ
-            </Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  );
-}
-
-function AddSampleProductsButton({ onSuccess }: { onSuccess?: () => void }) {
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  // Fetch brands to get the ZOTAC brand ID
-  const { data: brands } = trpc.brands.getBrands.useQuery();
-
-  const createProductMutation = trpc.products.createProduct.useMutation({
-    onSuccess: (data) => {
-      // Success is handled in the batch operation
-      console.log("[Products] Sample product created:", { response: data });
-    },
-    onError: (error) => {
-      const errorMessage = error.message || "Lỗi khi tạo sản phẩm mẫu";
-      console.error("[Products] Sample product creation error:", errorMessage, {
-        error,
-      });
-      toast.error(errorMessage);
-    },
-  });
-
-  // Get ZOTAC brand ID from brands list
-  const zotacBrandId = React.useMemo(() => {
-    return brands?.find((b) => b.name === "ZOTAC")?.id || null;
-  }, [brands]);
-
-  // Sample products from VGA data file (selected variety)
-  const sampleProducts = React.useMemo(
-    () => [
-      {
-        name: "GAMING GeForce RTX 3050 ECO Edition 8GB",
-        sku: "14-500-567",
-        short_description:
-          "ZOTAC GAMING GeForce RTX 3050 ECO Edition 8GB GDDR6 128-bit 14 Gbps PCIE 4.0 Gaming Graphics Card, Active Fan Control, FREEZE Fan Stop, ZT-A30500K-10M",
-        brand_id: zotacBrandId,
-        model: "ZT-A30500K-10M",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-567-02.jpg",
-      },
-      {
-        name: "ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB",
-        sku: "14-500-630",
-        short_description:
-          "ZOTAC ARCTICSTORM AIO Liquid Cooling GeForce RTX 5090 32GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5090 ARCTICSTORM AIO ZT-B50900K-30P",
-        brand_id: zotacBrandId,
-        model: "ZT-B50900K-30P",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-630-01.jpg",
-      },
-      {
-        name: "SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB",
-        sku: "14-500-631",
-        short_description:
-          "ZOTAC SOLID CORE OC White Edition GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 x16 ATX Graphics Card RTX 5070 Ti SOLID CORE White Edition ZT-B50710Q2-10P",
-        brand_id: zotacBrandId,
-        model: "ZT-B50710Q2-10P",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-631-01.jpg",
-      },
-      {
-        name: "AMP Extreme Infinity GeForce RTX 5080 16GB",
-        sku: "14-500-595",
-        short_description:
-          "ZOTAC AMP Extreme Infinity GeForce RTX 5080 16GB 256-Bit GDDR7 PCI-Express 5.0 DLSS 4.0 Graphics Card ZT-B50800B-10P",
-        brand_id: zotacBrandId,
-        model: "ZT-B50800B-10P",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-595-02.jpg",
-      },
-      {
-        name: "GAMING GeForce RTX 3060 Twin Edge 12GB",
-        sku: "14-500-509",
-        short_description:
-          "ZOTAC GAMING GeForce RTX 3060 Twin Edge 12GB GDDR6 192-bit 15 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Cooling, Active Fan Control, FREEZE Fan Stop, ZT-A30600E-10M",
-        brand_id: zotacBrandId,
-        model: "ZT-A30600E-10M",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-509-V08.jpg",
-      },
-      {
-        name: "Twin Edge OC GeForce RTX 5060 Ti 16GB",
-        sku: "14-500-612",
-        short_description:
-          "ZOTAC Twin Edge OC GeForce RTX 5060 Ti PCI Express 5.0 x8 16GB 128-Bit GDDR7 Graphics Card ZT-B50620H-10M",
-        brand_id: zotacBrandId,
-        model: "ZT-B50620H-10M",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-612-10.jpg",
-      },
-      {
-        name: "AMP GeForce RTX 5070 12GB White Edition",
-        sku: "14-500-617",
-        short_description:
-          "ZOTAC AMP GeForce RTX 5070 12GB 192-Bit GDDR7 PCI Express 5.0 x16 Graphics Card RTX 5070 AMP White Edition ZT-B50700FQ-10P",
-        brand_id: zotacBrandId,
-        model: "ZT-B50700FQ-10P",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-617-10.jpg",
-      },
-      {
-        name: "SOLO GeForce RTX 5050 8GB",
-        sku: "14-500-625",
-        short_description:
-          "ZOTAC SOLO GeForce RTX 5050 8GB GDDR6 PCI Express 5.0 x8 ATX Graphics Card GeForce RTX 5050 SOLO ZT-B50500G-10L",
-        brand_id: zotacBrandId,
-        model: "ZT-B50500G-10L",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-625-02.jpg",
-      },
-      {
-        name: "GAMING GeForce RTX 5060 Twin Edge OC 8GB",
-        sku: "14-500-623",
-        short_description:
-          "ZOTAC GAMING GeForce RTX 5060 Twin Edge OC DLSS 4 8GB GDDR7 128-bit 28 Gbps PCIE 5.0 Gaming Graphics Card, SFF-ready compact card, ZT-B50600H-10M",
-        brand_id: zotacBrandId,
-        model: "ZT-B50600H-10M",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-623-02.jpg",
-      },
-      {
-        name: "GAMING GeForce GTX 1660 SUPER Twin Fan 6GB",
-        sku: "9SIADT2KAU1283",
-        short_description:
-          "ZOTAC GAMING GeForce GTX 1660 SUPER Twin Fan Black 6GB GDDR6 192-bit Gaming Graphics Card, ZT-T16620J-10M",
-        brand_id: zotacBrandId,
-        model: "ZT-T16620J-10M",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/1FT-000M-003U0-S08.jpg",
-      },
-      {
-        name: "GAMING GeForce RTX 3090 Trinity OC 24GB",
-        sku: "9SIABKXKBC4109",
-        short_description:
-          "ZOTAC GAMING GeForce RTX 3090 Trinity OC 24GB GDDR6X 384-bit 19.5 Gbps PCIE 4.0 Gaming Graphics Card, IceStorm 2.0 Advanced Cooling, SPECTRA 2.0 RGB Lighting, ZT-A30900J-10P",
-        brand_id: zotacBrandId,
-        model: "ZT-A30900J-10P",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-510-V01.jpg",
-      },
-      {
-        name: "GAMING GeForce RTX 4060 8GB Solo",
-        sku: "9SIBTK0KCK4538",
-        short_description:
-          "ZOTAC GAMING GeForce RTX 4060 8GB Solo DLSS 3 8GB GDDR6 128-bit 17 Gbps PCIE 4.0 Super Compact Gaming Graphics Card, ZT-D40600G-10L",
-        brand_id: zotacBrandId,
-        model: "ZT-D40600G-10L",
-        type: "VGA" as const,
-        primary_image:
-          "https://c1.neweggimages.com/productimage/nb300/14-500-558-S09.jpg",
-      },
-    ],
-    [zotacBrandId],
-  );
-
-  const handleAddSampleProducts = async () => {
-    setIsLoading(true);
-    console.log("[Products] Adding sample products started:", {
-      totalProducts: sampleProducts.length,
-    });
-
-    try {
-      let successCount = 0;
-      const totalProducts = sampleProducts.length;
-
-      for (const product of sampleProducts) {
-        try {
-          await createProductMutation.mutateAsync(product);
-          successCount++;
-        } catch (error) {
-          console.error(
-            `[Products] Failed to create sample product: ${product.name}`,
-            error,
-          );
-        }
-      }
-
-      if (successCount === totalProducts) {
-        const successMessage = `Đã thêm thành công ${successCount} sản phẩm mẫu`;
-        console.log(
-          "[Products] All sample products added successfully:",
-          successMessage,
-          { successCount, totalProducts },
-        );
-        toast.success(successMessage);
-      } else if (successCount > 0) {
-        const successMessage = `Đã thêm thành công ${successCount}/${totalProducts} sản phẩm mẫu`;
-        console.log(
-          "[Products] Partial sample products added:",
-          successMessage,
-          { successCount, totalProducts },
-        );
-        toast.success(successMessage);
-      } else {
-        const errorMessage = "Không thể thêm sản phẩm mẫu nào";
-        console.error("[Products] No sample products added:", errorMessage, {
-          successCount,
-          totalProducts,
-        });
-        toast.error(errorMessage);
-      }
-
-      if (successCount > 0 && onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      const errorMessage = "Lỗi khi thêm sản phẩm mẫu";
-      console.error(
-        "[Products] Sample products addition error:",
-        errorMessage,
-        { error },
-      );
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleAddSampleProducts}
-      disabled={isLoading}
-    >
-      <IconDatabase />
-      <span className="hidden lg:inline">
-        {isLoading ? "Đang thêm..." : "Thêm mẫu"}
-      </span>
-    </Button>
+    </FormDrawer>
   );
 }

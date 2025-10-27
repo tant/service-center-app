@@ -22,7 +22,7 @@ interface TemplatePreviewModalProps {
     name: string;
     description?: string | null;
     service_type: string;
-    strict_sequence: boolean;
+    enforce_sequence: boolean; // API field (mapped from DB's strict_sequence)
     is_active: boolean;
     tasks?: Array<{
       id: string;
@@ -98,7 +98,7 @@ export function TemplatePreviewModal({
                 </Badge>
               </div>
 
-              {template.strict_sequence && (
+              {template.enforce_sequence && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">
                     Thứ tự
@@ -167,7 +167,7 @@ export function TemplatePreviewModal({
             )}
           </div>
 
-          {template.strict_sequence && template.tasks && template.tasks.length > 0 && (
+          {template.enforce_sequence && template.tasks && template.tasks.length > 0 && (
             <div className="rounded-lg bg-muted p-4">
               <p className="text-sm text-muted-foreground">
                 <strong>Lưu ý:</strong> Mẫu này yêu cầu thực hiện công việc theo thứ tự nghiêm ngặt.

@@ -66,7 +66,7 @@ interface Template {
   name: string;
   description?: string;
   service_type: "warranty" | "paid" | "replacement";
-  strict_sequence: boolean;
+  enforce_sequence: boolean; // API field (mapped from DB's strict_sequence)
   is_active: boolean;
   created_at: string;
   tasks?: Array<{
@@ -85,7 +85,7 @@ interface TemplateListTableInterface {
   templates: Template[];
   isLoading: boolean;
   onEdit: (templateId: string) => void;
-  onPreview: (templateId: string) => void;
+  onView: (templateId: string) => void;
   onCreateNew: () => void;
 }
 
@@ -105,7 +105,7 @@ export function TemplateListTable({
   templates,
   isLoading,
   onEdit,
-  onPreview,
+  onView,
   onCreateNew,
 }: TemplateListTableInterface) {
   const [rowSelection, setRowSelection] = React.useState({});
@@ -154,7 +154,7 @@ export function TemplateListTable({
           <Button
             variant="ghost"
             className="h-auto p-2 font-medium hover:bg-accent"
-            onClick={() => onEdit(row.original.id)}
+            onClick={() => onView(row.original.id)}
           >
             {row.original.name}
           </Button>
@@ -181,7 +181,7 @@ export function TemplateListTable({
             <span className="font-medium">
               {row.original.tasks?.length || 0}
             </span>
-            {row.original.strict_sequence && (
+            {row.original.enforce_sequence && (
               <Badge variant="outline" className="text-xs">
                 Tuần tự
               </Badge>
@@ -211,9 +211,9 @@ export function TemplateListTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onPreview(row.original.id)}>
+                <DropdownMenuItem onClick={() => onView(row.original.id)}>
                   <IconEye className="mr-2 h-4 w-4" />
-                  Xem trước
+                  Xem chi tiết
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
                   <IconEdit className="mr-2 h-4 w-4" />
@@ -238,7 +238,7 @@ export function TemplateListTable({
         ),
       },
     ],
-    [onEdit, onPreview, deleteTemplate, isDeleting]
+    [onEdit, onView, deleteTemplate, isDeleting]
   );
 
   const table = useReactTable({
@@ -576,7 +576,7 @@ function AddSampleTemplatesButton({ onSuccess }: { onSuccess?: () => void }) {
         name: "Bảo hành - Sửa chữa",
         description: "Quy trình bảo hành cho sản phẩm có thể sửa chữa (GPU lỗi quạt/thermal, Mini PC, Barebone PC). Áp dụng khi: còn BH, seal nguyên vẹn, có thể sửa được.",
         service_type: "warranty" as const,
-        strict_sequence: true,
+        enforce_sequence: true,
         is_active: true,
         tasks: [
           // INTAKE - Tiếp nhận
@@ -704,7 +704,7 @@ function AddSampleTemplatesButton({ onSuccess }: { onSuccess?: () => void }) {
         name: "Bảo hành - Đổi sản phẩm mới",
         description: "Quy trình bảo hành cho sản phẩm không thể sửa chữa (SSD lỗi controller, RAM lỗi chip, GPU core/VRAM chết). Sản phẩm lỗi sẽ được đổi mới và gửi RMA về hãng.",
         service_type: "warranty" as const,
-        strict_sequence: true,
+        enforce_sequence: true,
         is_active: true,
         tasks: [
           // INTAKE
@@ -826,7 +826,7 @@ function AddSampleTemplatesButton({ onSuccess }: { onSuccess?: () => void }) {
         name: "Sửa chữa trả phí",
         description: "Quy trình sửa chữa có tính phí cho sản phẩm hết bảo hành, seal bị mở, có vết va đập/nước, hoặc khách hàng muốn sửa dù không đủ điều kiện BH. Yêu cầu báo giá và chấp thuận trước khi sửa.",
         service_type: "paid" as const,
-        strict_sequence: true,
+        enforce_sequence: true,
         is_active: true,
         tasks: [
           // INTAKE
@@ -960,7 +960,7 @@ function AddSampleTemplatesButton({ onSuccess }: { onSuccess?: () => void }) {
         name: "Dịch vụ chẩn đoán nhanh",
         description: "Dịch vụ chẩn đoán để xác định sản phẩm bị lỗi gì, có sửa được không, ước tính chi phí. Khách hàng nhận báo cáo chi tiết nhưng KHÔNG sửa luôn, sẽ quyết định sau. Phù hợp khi khách muốn second opinion hoặc xem có đáng sửa không.",
         service_type: "paid" as const,
-        strict_sequence: false,
+        enforce_sequence: false,
         is_active: true,
         tasks: [
           // INTAKE

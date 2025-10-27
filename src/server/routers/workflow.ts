@@ -78,6 +78,28 @@ const templateDeleteSchema = z.object({
 });
 
 // =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+/**
+ * Map database field strict_sequence to API field enforce_sequence
+ * This maintains backward compatibility while using better naming in the API
+ */
+function mapTemplateFromDb(template: any) {
+  if (!template) return null;
+  const { strict_sequence, ...rest } = template;
+  return {
+    ...rest,
+    enforce_sequence: strict_sequence,
+  };
+}
+
+function mapTemplatesFromDb(templates: any[]) {
+  if (!templates) return [];
+  return templates.map(mapTemplateFromDb);
+}
+
+// =====================================================
 // WORKFLOW ROUTER
 // =====================================================
 
@@ -494,7 +516,8 @@ export const workflowRouter = router({
           });
         }
 
-        return data;
+        // Map strict_sequence to enforce_sequence for API response
+        return mapTemplatesFromDb(data || []);
       }),
 
     /**
@@ -566,7 +589,8 @@ export const workflowRouter = router({
           data.tasks.sort((a: any, b: any) => a.sequence_order - b.sequence_order);
         }
 
-        return data;
+        // Map strict_sequence to enforce_sequence for API response
+        return mapTemplateFromDb(data);
       }),
 
     /**
@@ -634,13 +658,14 @@ export const workflowRouter = router({
         }
 
         // Start transaction: Create template + tasks
-        const { tasks, ...templateData } = input;
+        const { tasks, enforce_sequence, ...templateData } = input;
 
-        // 1. Create template
+        // 1. Create template (map enforce_sequence to strict_sequence for DB)
         const { data: template, error: templateError } = await ctx.supabaseAdmin
           .from('task_templates')
           .insert({
             ...templateData,
+            strict_sequence: enforce_sequence, // Map field name to DB column
             created_by_id: profile.id,
           })
           .select()
@@ -695,7 +720,8 @@ export const workflowRouter = router({
           .eq('id', template.id)
           .single();
 
-        return completeTemplate;
+        // Map strict_sequence to enforce_sequence for API response
+        return mapTemplateFromDb(completeTemplate);
       }),
 
     /**
@@ -778,12 +804,13 @@ export const workflowRouter = router({
         }
 
         // 2. Create new template version
-        const { tasks, template_id, ...templateData } = input;
+        const { tasks, template_id, enforce_sequence, ...templateData } = input;
 
         const { data: newTemplate, error: createError } = await ctx.supabaseAdmin
           .from('task_templates')
           .insert({
             ...templateData,
+            strict_sequence: enforce_sequence, // Map field name to DB column
             created_by_id: profile.id,
             is_active: true,
           })
@@ -850,7 +877,71 @@ export const workflowRouter = router({
           .eq('id', newTemplate.id)
           .single();
 
-        return completeTemplate;
+        // Map strict_sequence to enforce_sequence for API response
+        return mapTemplateFromDb(completeTemplate);
+      }),
+
+    /**
+     * Toggle template active status
+     * Simple toggle without creating new version
+     * Requires: Admin or Manager role
+     */
+    toggleActive: publicProcedure
+      .input(z.object({
+        template_id: z.string().uuid(),
+        is_active: z.boolean(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Authentication check
+        const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+        if (authError || !user) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to toggle template status',
+          });
+        }
+
+        // Get profile for role checking
+        const { data: profile, error: profileError } = await ctx.supabaseAdmin
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch user profile',
+            cause: profileError,
+          });
+        }
+
+        // Authorization check
+        if (!['admin', 'manager'].includes(profile.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only admin and manager can toggle template status',
+          });
+        }
+
+        // Update is_active field only
+        const { error: updateError } = await ctx.supabaseAdmin
+          .from('task_templates')
+          .update({ is_active: input.is_active })
+          .eq('id', input.template_id);
+
+        if (updateError) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to update template status',
+            cause: updateError,
+          });
+        }
+
+        return {
+          success: true,
+          is_active: input.is_active,
+        };
       }),
 
     /**
@@ -1239,10 +1330,10 @@ export const workflowRouter = router({
         });
       }
 
-      // Get template to check enforce_sequence
+      // Get template to check enforce_sequence (map from strict_sequence in DB)
       const { data: ticket } = await ctx.supabaseAdmin
         .from('service_tickets')
-        .select('template_id, task_templates(enforce_sequence)')
+        .select('template_id, task_templates(strict_sequence)')
         .eq('id', currentTask.ticket_id)
         .single();
 
@@ -1279,7 +1370,7 @@ export const workflowRouter = router({
 
       return {
         prerequisites: prerequisites || [],
-        enforce_sequence: taskTemplate?.enforce_sequence ?? true,
+        enforce_sequence: taskTemplate?.strict_sequence ?? true, // Map DB field to API field
         incomplete_count: prerequisites?.filter(p =>
           p.status !== 'completed' && p.status !== 'skipped'
         ).length ?? 0,

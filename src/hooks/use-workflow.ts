@@ -173,6 +173,34 @@ export function useUpdateTemplate() {
 }
 
 /**
+ * Hook for toggling template active status
+ * Admin/Manager only
+ * Simple toggle without creating new version
+ */
+export function useToggleTemplate() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.workflow.template.toggleActive.useMutation({
+    onSuccess: (data) => {
+      utils.workflow.template.list.invalidate();
+      utils.workflow.template.getById.invalidate();
+      toast.success(
+        data.is_active
+          ? 'Mẫu quy trình đã được kích hoạt'
+          : 'Mẫu quy trình đã được vô hiệu hóa'
+      );
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Không thể thay đổi trạng thái mẫu quy trình');
+    },
+  });
+
+  return {
+    toggleTemplate: mutation.mutate,
+    isToggling: mutation.isPending,
+  };
+}
+
+/**
  * Hook for deleting templates
  * Admin/Manager only
  * Validates that template is not in use by active tickets

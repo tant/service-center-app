@@ -266,50 +266,6 @@ export function useUpdatePhysicalProduct() {
 }
 
 /**
- * Story 1.9: Warehouse Stock Levels and Low Stock Alerts
- * Hook for warehouse stock levels
- */
-export function useStockLevels(filters?: {
-  warehouse_type?: 'warranty_stock' | 'rma_staging' | 'dead_stock' | 'in_service' | 'parts';
-  status?: 'ok' | 'warning' | 'critical';
-  search?: string;
-  limit?: number;
-  offset?: number;
-}) {
-  const { data, isLoading, error } = trpc.physicalProducts.getStockLevels.useQuery(filters ?? {});
-
-  return {
-    stockLevels: data?.stockLevels ?? [],
-    total: data?.total ?? 0,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Hook for setting stock thresholds
- */
-export function useSetThreshold() {
-  const utils = trpc.useUtils();
-  const mutation = trpc.physicalProducts.setThreshold.useMutation({
-    onSuccess: () => {
-      utils.physicalProducts.getStockLevels.invalidate();
-      utils.physicalProducts.getLowStockAlerts.invalidate();
-      toast.success('Đã cập nhật ngưỡng tồn kho');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Lỗi khi cập nhật ngưỡng tồn kho');
-    },
-  });
-
-  return {
-    setThreshold: mutation.mutate,
-    setThresholdAsync: mutation.mutateAsync,
-    isUpdating: mutation.isPending,
-  };
-}
-
-/**
  * Story 1.8: Serial Number Verification and Stock Movements
  * Hook for serial number verification
  */
@@ -407,51 +363,6 @@ export function useStockMovements(productId?: string) {
     isLoading,
     error,
     // TODO: Add mutation (createMovement)
-  };
-}
-
-/**
- * Story 1.9: Hook for low stock alerts
- */
-export function useLowStockAlerts() {
-  const { data, isLoading, error } = trpc.physicalProducts.getLowStockAlerts.useQuery();
-
-  return {
-    alerts: data?.alerts ?? [],
-    criticalCount: data?.criticalCount ?? 0,
-    warningCount: data?.warningCount ?? 0,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Hook for exporting stock report
- */
-export function useExportStockReport() {
-  const mutation = trpc.physicalProducts.exportStockReport.useMutation({
-    onSuccess: (result) => {
-      // Trigger download
-      const blob = new Blob([result.csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      toast.success('Đã xuất báo cáo tồn kho');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Lỗi khi xuất báo cáo');
-    },
-  });
-
-  return {
-    exportReport: mutation.mutate,
-    exportReportAsync: mutation.mutateAsync,
-    isExporting: mutation.isPending,
   };
 }
 

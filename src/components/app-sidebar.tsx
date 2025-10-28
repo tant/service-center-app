@@ -17,6 +17,7 @@ import {
   IconPackage,
   IconInbox,
   IconFileText,
+  IconAdjustments,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -91,13 +92,6 @@ const baseData = {
     {
       title: "Sản phẩm vật lý",
       url: "/inventory/products",
-      icon: IconPackage,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
-      readOnly: ["technician"] as UserRole[],
-    },
-    {
-      title: "Mức tồn kho",
-      url: "/inventory/stock-levels",
       icon: IconPackage,
       allowedRoles: ["admin", "manager", "technician"] as UserRole[],
       readOnly: ["technician"] as UserRole[],
@@ -179,6 +173,12 @@ const baseData = {
       url: "/settings/account",
       icon: IconSettings,
       allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+    },
+    {
+      title: "Cài đặt ứng dụng",
+      url: "/admin/app-settings",
+      icon: IconAdjustments,
+      allowedRoles: ["admin"] as UserRole[],
     },
   ],
   navSecondary: [

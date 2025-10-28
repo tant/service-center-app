@@ -74,10 +74,13 @@ export const transfersRouter = router({
               physical_product:physical_products(serial_number, warranty_end_date)
             )
           ),
+          from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name),
+          to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
+          generated_issue:stock_issues!generated_issue_id(id, issue_number),
+          generated_receipt:stock_receipts!generated_receipt_id(id, receipt_number),
           created_by:profiles!created_by_id(id, full_name),
           approved_by:profiles!approved_by_id(id, full_name),
-          received_by:profiles!received_by_id(id, full_name),
-          attachments:stock_document_attachments(*)
+          received_by:profiles!received_by_id(id, full_name)
         `
         )
         .eq("id", input.id)
@@ -90,7 +93,17 @@ export const transfersRouter = router({
         throw new Error(`Failed to get transfer: ${error.message}`);
       }
 
-      return data;
+      // Query attachments separately (polymorphic relationship)
+      const { data: attachments } = await ctx.supabaseAdmin
+        .from("stock_document_attachments")
+        .select("*")
+        .eq("document_type", "transfer")
+        .eq("document_id", input.id);
+
+      return {
+        ...data,
+        attachments: attachments || []
+      };
     }),
 
   /**
@@ -99,10 +112,8 @@ export const transfersRouter = router({
   create: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
-        fromVirtualWarehouseType: z.string(),
-        fromPhysicalWarehouseId: z.string().optional(),
-        toVirtualWarehouseType: z.string(),
-        toPhysicalWarehouseId: z.string().optional(),
+        fromVirtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
+        toVirtualWarehouseId: z.string(),   // REDESIGNED: Direct warehouse reference
         transferDate: z.string(),
         expectedDeliveryDate: z.string().optional(),
         notes: z.string().optional(),
@@ -112,7 +123,7 @@ export const transfersRouter = router({
             quantity: z.number().int().min(1),
             notes: z.string().optional(),
           })
-        ),
+        ).min(1),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -128,10 +139,7 @@ export const transfersRouter = router({
       }
 
       // Validate: Cannot transfer to same warehouse
-      if (
-        input.fromVirtualWarehouseType === input.toVirtualWarehouseType &&
-        input.fromPhysicalWarehouseId === input.toPhysicalWarehouseId
-      ) {
+      if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
         throw new Error("Cannot transfer to the same warehouse");
       }
 
@@ -139,10 +147,8 @@ export const transfersRouter = router({
       const { data: transfer, error: transferError } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .insert({
-          from_virtual_warehouse_type: input.fromVirtualWarehouseType,
-          from_physical_warehouse_id: input.fromPhysicalWarehouseId,
-          to_virtual_warehouse_type: input.toVirtualWarehouseType,
-          to_physical_warehouse_id: input.toPhysicalWarehouseId,
+          from_virtual_warehouse_id: input.fromVirtualWarehouseId, // REDESIGNED: Direct warehouse reference
+          to_virtual_warehouse_id: input.toVirtualWarehouseId,     // REDESIGNED: Direct warehouse reference
           transfer_date: input.transferDate,
           expected_delivery_date: input.expectedDeliveryDate,
           notes: input.notes,
@@ -364,7 +370,7 @@ export const transfersRouter = router({
       // Get transfer to check source warehouse
       const { data: transfer } = await ctx.supabaseAdmin
         .from("stock_transfers")
-        .select("from_virtual_warehouse_type, from_physical_warehouse_id")
+        .select("from_virtual_warehouse_id, from_physical_warehouse_id")
         .eq("id", transferItem.transfer_id)
         .single();
 
@@ -375,7 +381,7 @@ export const transfersRouter = router({
       // Validate physical products exist and belong to source warehouse
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_type, physical_warehouse_id")
+        .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
         .in("id", input.physicalProductIds);
 
       if (validateError) {
@@ -390,7 +396,7 @@ export const transfersRouter = router({
       const invalid = physicalProducts.filter(
         (p) =>
           p.product_id !== transferItem.product_id ||
-          p.virtual_warehouse_type !== transfer.from_virtual_warehouse_type ||
+          p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id ||
           (transfer.from_physical_warehouse_id &&
             p.physical_warehouse_id !== transfer.from_physical_warehouse_id)
       );
@@ -523,7 +529,7 @@ export const transfersRouter = router({
       const { error: updateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .update({
-          virtual_warehouse_type: transfer.to_virtual_warehouse_type,
+          virtual_warehouse_id: transfer.to_virtual_warehouse_id,
           physical_warehouse_id: transfer.to_physical_warehouse_id,
         })
         .in("id", allPhysicalProductIds);
@@ -558,7 +564,7 @@ export const transfersRouter = router({
     .input(
       z.object({
         productId: z.string(),
-        virtualWarehouseType: z.string(),
+        virtualWarehouseId: z.string(),
         physicalWarehouseId: z.string().optional(),
         search: z.string().optional(),
       })
@@ -568,7 +574,7 @@ export const transfersRouter = router({
         .from("physical_products")
         .select("id, serial_number, warranty_end_date, created_at")
         .eq("product_id", input.productId)
-        .eq("virtual_warehouse_type", input.virtualWarehouseType)
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
         .is("issued_at", null); // Not issued
 
       if (input.physicalWarehouseId) {

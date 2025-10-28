@@ -87,12 +87,12 @@ export function InventoryTablePhysical() {
                   </TableRow>
                 ) : (
                   stock.map((item) => (
-                    <TableRow key={`${item.product_id}-${item.virtual_warehouse_type}`}>
+                    <TableRow key={`${item.product_id}-${item.virtual_warehouse_id}`}>
                       <TableCell className="font-medium">{item.product_name}</TableCell>
                       <TableCell className="text-muted-foreground">{item.sku || "-"}</TableCell>
                       <TableCell>
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded">
-                          {item.virtual_warehouse_type.replace(/_/g, " ")}
+                          {item.virtual_warehouse_name}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">{item.declared_quantity.toLocaleString()}</TableCell>

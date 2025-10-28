@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Create Transfer Page
- * Form for creating new stock transfer
+ * Create Transfer Page - REDESIGNED
+ * Form for creating new stock transfer (using virtual warehouse IDs)
  */
 
 import { useState } from "react";
@@ -19,14 +19,6 @@ import { ArrowLeft, Plus, Trash2, Save, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-const WAREHOUSE_TYPES = [
-  { value: "warranty_stock", label: "Kho Bảo Hành" },
-  { value: "rma_staging", label: "Kho RMA" },
-  { value: "dead_stock", label: "Kho Hỏng" },
-  { value: "in_service", label: "Đang Sử Dụng" },
-  { value: "parts", label: "Kho Linh Kiện" },
-];
-
 interface ProductItem {
   productId: string;
   quantity: number;
@@ -34,14 +26,15 @@ interface ProductItem {
 
 export default function CreateTransferPage() {
   const router = useRouter();
-  const [fromWarehouseType, setFromWarehouseType] = useState("");
-  const [toWarehouseType, setToWarehouseType] = useState("");
+  const [fromWarehouseId, setFromWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
+  const [toWarehouseId, setToWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createTransfer = trpc.inventory.transfers.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch virtual warehouses
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -58,12 +51,12 @@ export default function CreateTransferPage() {
   };
 
   const handleSubmit = async () => {
-    if (!fromWarehouseType || !toWarehouseType || items.length === 0) {
+    if (!fromWarehouseId || !toWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    if (fromWarehouseType === toWarehouseType) {
+    if (fromWarehouseId === toWarehouseId) {
       toast.error("Kho nguồn và kho đích không được giống nhau");
       return;
     }
@@ -76,8 +69,8 @@ export default function CreateTransferPage() {
 
     try {
       const transfer = await createTransfer.mutateAsync({
-        fromVirtualWarehouseType: fromWarehouseType,
-        toVirtualWarehouseType: toWarehouseType,
+        fromVirtualWarehouseId: fromWarehouseId, // REDESIGNED: Use warehouse ID
+        toVirtualWarehouseId: toWarehouseId,     // REDESIGNED: Use warehouse ID
         transferDate,
         notes: notes || undefined,
         items: items.map((item) => ({
@@ -119,14 +112,14 @@ export default function CreateTransferPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Từ kho *</Label>
-                      <Select value={fromWarehouseType} onValueChange={setFromWarehouseType}>
+                      <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho nguồn" />
                         </SelectTrigger>
                         <SelectContent>
-                          {WAREHOUSE_TYPES.map((wh) => (
-                            <SelectItem key={wh.value} value={wh.value}>
-                              {wh.label}
+                          {virtualWarehouses?.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -135,14 +128,14 @@ export default function CreateTransferPage() {
 
                     <div className="grid gap-2">
                       <Label>Đến kho *</Label>
-                      <Select value={toWarehouseType} onValueChange={setToWarehouseType}>
+                      <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho đích" />
                         </SelectTrigger>
                         <SelectContent>
-                          {WAREHOUSE_TYPES.map((wh) => (
-                            <SelectItem key={wh.value} value={wh.value}>
-                              {wh.label}
+                          {virtualWarehouses?.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -155,14 +148,14 @@ export default function CreateTransferPage() {
                     </div>
                   </div>
 
-                  {fromWarehouseType && toWarehouseType && (
+                  {fromWarehouseId && toWarehouseId && (
                     <div className="rounded-md bg-muted p-4 flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {WAREHOUSE_TYPES.find((w) => w.value === fromWarehouseType)?.label}
+                        {virtualWarehouses?.find((w) => w.id === fromWarehouseId)?.name}
                       </span>
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">
-                        {WAREHOUSE_TYPES.find((w) => w.value === toWarehouseType)?.label}
+                        {virtualWarehouses?.find((w) => w.id === toWarehouseId)?.name}
                       </span>
                     </div>
                   )}

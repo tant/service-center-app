@@ -9,19 +9,16 @@ import { StockIssueWithRelations } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, Package } from "lucide-react";
+import { Calendar, User, FileText, Package, Warehouse } from "lucide-react";
 
 interface IssueDetailHeaderProps {
   issue: StockIssueWithRelations;
 }
 
+// REDESIGNED: Simplified to 2 types
 const ISSUE_TYPE_LABELS: Record<string, string> = {
-  warranty_return: "Xuất trả bảo hành",
-  parts_usage: "Xuất sử dụng linh kiện",
-  rma_out: "Xuất RMA",
-  transfer_out: "Xuất chuyển kho",
-  disposal: "Xuất thanh lý",
-  adjustment_out: "Điều chỉnh xuất",
+  normal: "Phiếu xuất bình thường",
+  adjustment: "Phiếu điều chỉnh (kiểm kê)",
 };
 
 export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
@@ -42,6 +39,16 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
                 <div className="text-sm font-medium">Loại phiếu</div>
                 <div className="text-sm text-muted-foreground">
                   {ISSUE_TYPE_LABELS[issue.issue_type] || issue.issue_type}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Warehouse className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">Kho xuất</div>
+                <div className="text-sm text-muted-foreground">
+                  {(issue as any).virtual_warehouse?.name || "-"}
                 </div>
               </div>
             </div>

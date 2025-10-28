@@ -89,7 +89,11 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                       <TableCell className="text-muted-foreground">
                         {item.product?.sku || "-"}
                       </TableCell>
-                      <TableCell className="text-right">{item.declared_quantity}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={item.declared_quantity < 0 ? "text-red-600 font-medium" : ""}>
+                          {item.declared_quantity}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <span className={isComplete ? "text-green-600 font-semibold" : ""}>
                           {serialCount}

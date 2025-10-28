@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRecordMovement, usePhysicalWarehouses } from "@/hooks/use-warehouse";
+import { trpc } from "@/components/providers/trpc-provider";
 import type { PhysicalProduct } from "@/types/warehouse";
 import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 
@@ -35,7 +36,6 @@ interface RecordMovementModalProps {
 }
 
 type MovementType = "receipt" | "transfer" | "assignment" | "return" | "disposal";
-type WarehouseType = "main" | "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
 
 const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   receipt: "Nhập kho",
@@ -48,19 +48,26 @@ const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
 export function RecordMovementModal({ open, onClose, product }: RecordMovementModalProps) {
   const [movementType, setMovementType] = useState<MovementType>("transfer");
   const [toPhysicalWarehouseId, setToPhysicalWarehouseId] = useState<string>("");
-  const [toVirtualWarehouseType, setToVirtualWarehouseType] = useState<WarehouseType | "">("");
+  const [toVirtualWarehouseId, setToVirtualWarehouseId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { recordMovement, isRecording } = useRecordMovement();
   const { warehouses: physicalWarehouses } = usePhysicalWarehouses({ is_active: true });
 
+  // Fetch virtual warehouses and current product warehouse details
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: productDetails } = trpc.physicalProducts.getProduct.useQuery(
+    { id: product?.id || "" },
+    { enabled: !!product?.id && open }
+  );
+
   // Reset form when modal opens
   useEffect(() => {
     if (open && product) {
       setMovementType("transfer");
       setToPhysicalWarehouseId("");
-      setToVirtualWarehouseType("");
+      setToVirtualWarehouseId("");
       setNotes("");
       setErrors({});
     }
@@ -70,7 +77,7 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
     const newErrors: Record<string, string> = {};
 
     // At least one destination must be specified
-    if (!toPhysicalWarehouseId && !toVirtualWarehouseType) {
+    if (!toPhysicalWarehouseId && !toVirtualWarehouseId) {
       newErrors.destination = "Vui lòng chọn kho đích (vật lý hoặc ảo)";
     }
 
@@ -85,7 +92,7 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
       product_id: product.id,
       movement_type: movementType,
       from_physical_warehouse_id: product.physical_warehouse_id || undefined,
-      from_virtual_warehouse_type: product.virtual_warehouse_type,
+      from_virtual_warehouse_id: product.virtual_warehouse_id || undefined,
       notes: notes || undefined,
       force: false,
     };
@@ -94,8 +101,8 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
       movementData.to_physical_warehouse_id = toPhysicalWarehouseId;
     }
 
-    if (toVirtualWarehouseType) {
-      movementData.to_virtual_warehouse_type = toVirtualWarehouseType;
+    if (toVirtualWarehouseId) {
+      movementData.to_virtual_warehouse_id = toVirtualWarehouseId;
     }
 
     recordMovement(movementData, {
@@ -124,12 +131,12 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
             <div className="text-sm space-y-1">
               <p>
                 <span className="text-muted-foreground">Kho ảo: </span>
-                {WAREHOUSE_TYPE_LABELS[product.virtual_warehouse_type]}
+                {productDetails?.virtual_warehouse?.name || "Không xác định"}
               </p>
-              {product.physical_warehouse_id && (
+              {productDetails?.physical_warehouse && (
                 <p>
                   <span className="text-muted-foreground">Kho vật lý: </span>
-                  {product.physical_warehouse_id}
+                  {productDetails.physical_warehouse.name} ({productDetails.physical_warehouse.code})
                 </p>
               )}
             </div>
@@ -161,9 +168,9 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
           <div className="grid gap-2">
             <Label htmlFor="to-virtual-warehouse">Kho ảo đích</Label>
             <Select
-              value={toVirtualWarehouseType}
-              onValueChange={(value: any) => {
-                setToVirtualWarehouseType(value);
+              value={toVirtualWarehouseId}
+              onValueChange={(value) => {
+                setToVirtualWarehouseId(value);
                 if (errors.destination) setErrors({ ...errors, destination: "" });
               }}
             >
@@ -172,9 +179,9 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">-- Không thay đổi --</SelectItem>
-                {Object.entries(WAREHOUSE_TYPE_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
+                {virtualWarehouses?.map((vw) => (
+                  <SelectItem key={vw.id} value={vw.id}>
+                    {vw.name} ({WAREHOUSE_TYPE_LABELS[vw.warehouse_type as keyof typeof WAREHOUSE_TYPE_LABELS]})
                   </SelectItem>
                 ))}
               </SelectContent>

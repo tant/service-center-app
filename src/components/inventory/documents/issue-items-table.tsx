@@ -65,7 +65,11 @@ export function IssueItemsTable({ issue, onSerialsSelected }: IssueItemsTablePro
                     <TableCell className="text-muted-foreground">
                       {item.product?.sku || "-"}
                     </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={item.quantity < 0 ? "text-red-600 font-medium" : ""}>
+                        {item.quantity}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">
                       <span className={isComplete ? "text-green-600 font-semibold" : ""}>
                         {serialCount}

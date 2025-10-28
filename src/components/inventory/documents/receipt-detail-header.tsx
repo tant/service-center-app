@@ -9,18 +9,16 @@ import { StockReceiptWithRelations } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, Package } from "lucide-react";
+import { Calendar, User, FileText, Package, Warehouse } from "lucide-react";
 
 interface ReceiptDetailHeaderProps {
   receipt: StockReceiptWithRelations;
 }
 
+// REDESIGNED: Simplified to 2 types
 const RECEIPT_TYPE_LABELS: Record<string, string> = {
-  supplier_receipt: "Nhập từ nhà cung cấp",
-  rma_return: "Nhập từ RMA",
-  transfer_in: "Nhập từ chuyển kho",
-  breakdown: "Nhập từ tách hàng",
-  adjustment_in: "Điều chỉnh nhập",
+  normal: "Phiếu nhập bình thường",
+  adjustment: "Phiếu điều chỉnh (kiểm kê)",
 };
 
 export function ReceiptDetailHeader({ receipt }: ReceiptDetailHeaderProps) {
@@ -41,6 +39,16 @@ export function ReceiptDetailHeader({ receipt }: ReceiptDetailHeaderProps) {
                 <div className="text-sm font-medium">Loại phiếu</div>
                 <div className="text-sm text-muted-foreground">
                   {RECEIPT_TYPE_LABELS[receipt.receipt_type] || receipt.receipt_type}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Warehouse className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">Kho nhập</div>
+                <div className="text-sm text-muted-foreground">
+                  {(receipt as any).virtual_warehouse?.name || "-"}
                 </div>
               </div>
             </div>

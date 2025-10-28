@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Create Receipt Page
- * Form for creating new stock receipt
+ * Create Receipt Page - REDESIGNED
+ * Form for creating new stock receipt (simplified types + virtual warehouse IDs)
  */
 
 import { useState } from "react";
@@ -15,24 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { toast } from "sonner";
 
+// REDESIGNED: Only 2 receipt types
 const RECEIPT_TYPES = [
-  { value: "supplier_receipt", label: "Nhập từ nhà cung cấp" },
-  { value: "rma_return", label: "Nhập từ RMA" },
-  { value: "transfer_in", label: "Nhập từ chuyển kho" },
-  { value: "breakdown", label: "Nhập từ tách hàng" },
-  { value: "adjustment_in", label: "Điều chỉnh nhập" },
-];
-
-const WAREHOUSE_TYPES = [
-  { value: "warranty_stock", label: "Kho Bảo Hành" },
-  { value: "rma_staging", label: "Kho RMA" },
-  { value: "dead_stock", label: "Kho Hỏng" },
-  { value: "in_service", label: "Đang Sử Dụng" },
-  { value: "parts", label: "Kho Linh Kiện" },
+  { value: "normal", label: "Phiếu nhập bình thường" },
+  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
 ];
 
 interface ProductItem {
@@ -42,14 +33,15 @@ interface ProductItem {
 
 export default function CreateReceiptPage() {
   const router = useRouter();
-  const [receiptType, setReceiptType] = useState("");
-  const [virtualWarehouseType, setVirtualWarehouseType] = useState("");
+  const [receiptType, setReceiptType] = useState<"normal" | "adjustment">("normal"); // REDESIGNED
+  const [virtualWarehouseId, setVirtualWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createReceipt = trpc.inventory.receipts.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", declaredQuantity: 1 }]);
@@ -66,21 +58,31 @@ export default function CreateReceiptPage() {
   };
 
   const handleSubmit = async () => {
-    if (!receiptType || !virtualWarehouseType || items.length === 0) {
+    if (!receiptType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
-    if (invalidItems.length > 0) {
-      toast.error("Vui lòng chọn sản phẩm và số lượng hợp lệ cho tất cả dòng");
-      return;
+    // REDESIGNED: Validate based on type
+    if (receiptType === "normal") {
+      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
+      if (invalidItems.length > 0) {
+        toast.error("Phiếu nhập bình thường phải có số lượng dương");
+        return;
+      }
+    } else {
+      // Adjustment: allow negative but not zero
+      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity === 0);
+      if (invalidItems.length > 0) {
+        toast.error("Số lượng không được bằng 0");
+        return;
+      }
     }
 
     try {
       const receipt = await createReceipt.mutateAsync({
-        receiptType: receiptType as any,
-        virtualWarehouseType,
+        receiptType,
+        virtualWarehouseId, // REDESIGNED: Use warehouse ID
         receiptDate,
         notes: notes || undefined,
         items: items.map((item) => ({
@@ -122,7 +124,7 @@ export default function CreateReceiptPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Loại phiếu *</Label>
-                      <Select value={receiptType} onValueChange={setReceiptType}>
+                      <Select value={receiptType} onValueChange={(v) => setReceiptType(v as "normal" | "adjustment")}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn loại phiếu" />
                         </SelectTrigger>
@@ -138,14 +140,14 @@ export default function CreateReceiptPage() {
 
                     <div className="grid gap-2">
                       <Label>Kho nhập *</Label>
-                      <Select value={virtualWarehouseType} onValueChange={setVirtualWarehouseType}>
+                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {WAREHOUSE_TYPES.map((wh) => (
-                            <SelectItem key={wh.value} value={wh.value}>
-                              {wh.label}
+                          {virtualWarehouses?.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -157,6 +159,16 @@ export default function CreateReceiptPage() {
                       <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
                     </div>
                   </div>
+
+                  {/* REDESIGNED: Show alert for adjustment type */}
+                  {receiptType === "adjustment" && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Phiếu điều chỉnh:</strong> Số dương = tăng stock, số âm = giảm stock. Dùng khi kiểm kê hoặc sửa sai sót.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -213,9 +225,10 @@ export default function CreateReceiptPage() {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min="1"
+                              min={receiptType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
                               value={item.declaredQuantity}
                               onChange={(e) => handleItemChange(index, "declaredQuantity", Number.parseInt(e.target.value))}
+                              className={item.declaredQuantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>
 

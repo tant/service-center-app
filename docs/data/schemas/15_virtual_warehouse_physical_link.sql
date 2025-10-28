@@ -110,8 +110,12 @@ BEGIN
   END LOOP;
 END $$;
 
--- Step 9: Add comment
-COMMENT ON COLUMN public.virtual_warehouses.physical_warehouse_id IS 'Link to physical warehouse (NULL for system-wide virtual warehouses)';
+-- Step 9: Make physical_warehouse_id NOT NULL (after data migration)
+ALTER TABLE public.virtual_warehouses
+ALTER COLUMN physical_warehouse_id SET NOT NULL;
+
+-- Step 10: Add comment
+COMMENT ON COLUMN public.virtual_warehouses.physical_warehouse_id IS 'Physical warehouse that this virtual warehouse belongs to (required - every virtual warehouse must belong to a physical warehouse)';
 COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (auto-generated for default, custom for user-created)';
 
 -- Display result

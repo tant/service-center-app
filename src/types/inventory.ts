@@ -12,19 +12,12 @@ export type StockDocumentStatus =
   | 'cancelled';
 
 export type StockReceiptType =
-  | 'supplier_receipt'
-  | 'rma_return'
-  | 'transfer_in'
-  | 'breakdown'
-  | 'adjustment_in';
+  | 'normal'      // Phiếu nhập bình thường (mặc định)
+  | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
 export type StockIssueType =
-  | 'warranty_return'
-  | 'parts_usage'
-  | 'rma_out'
-  | 'transfer_out'
-  | 'disposal'
-  | 'adjustment_out';
+  | 'normal'      // Phiếu xuất bình thường (mặc định)
+  | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
 export type TransferStatus =
   | 'draft'
@@ -41,8 +34,7 @@ export type StockStatus = 'ok' | 'warning' | 'critical';
 export interface ProductWarehouseStock {
   id: string;
   product_id: string;
-  virtual_warehouse_type: string;
-  physical_warehouse_id: string | null;
+  virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   declared_quantity: number;
   initial_stock_entry: number;
   created_at: string;
@@ -56,8 +48,7 @@ export interface StockReceipt {
   receipt_number: string;
   receipt_type: StockReceiptType;
   status: StockDocumentStatus;
-  virtual_warehouse_type: string;
-  physical_warehouse_id: string | null;
+  virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   receipt_date: string;
   expected_date: string | null;
   completed_at: string | null;
@@ -130,8 +121,7 @@ export interface StockIssue {
   issue_number: string;
   issue_type: StockIssueType;
   status: StockDocumentStatus;
-  virtual_warehouse_type: string;
-  physical_warehouse_id: string | null;
+  virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   issue_date: string;
   completed_at: string | null;
   ticket_id: string | null;
@@ -202,10 +192,8 @@ export interface StockTransfer {
   id: string;
   transfer_number: string;
   status: TransferStatus;
-  from_virtual_warehouse_type: string;
-  from_physical_warehouse_id: string | null;
-  to_virtual_warehouse_type: string;
-  to_physical_warehouse_id: string | null;
+  from_virtual_warehouse_id: string; // REDESIGNED: Direct reference to source warehouse
+  to_virtual_warehouse_id: string;   // REDESIGNED: Direct reference to destination warehouse
   transfer_date: string;
   expected_delivery_date: string | null;
   completed_at: string | null;
@@ -213,6 +201,8 @@ export interface StockTransfer {
   approved_by_id: string | null;
   approved_at: string | null;
   received_by_id: string | null;
+  generated_issue_id: string | null;   // NEW: Auto-generated issue document
+  generated_receipt_id: string | null; // NEW: Auto-generated receipt document
   notes: string | null;
   rejection_reason: string | null;
   created_at: string;
@@ -256,7 +246,9 @@ export interface StockSummary {
   product_id: string;
   product_name: string;
   sku: string | null;
-  virtual_warehouse_type: string;
+  virtual_warehouse_id: string;        // REDESIGNED: Virtual warehouse reference
+  virtual_warehouse_name: string;      // REDESIGNED: Virtual warehouse name
+  warehouse_type: string;              // Warehouse type (from virtual warehouse)
   physical_warehouse_id: string | null;
   physical_warehouse_name: string | null;
   declared_quantity: number;

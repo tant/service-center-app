@@ -83,7 +83,7 @@ export interface PhysicalProductFormData {
   product_id: string;
   serial_number: string;
   condition: ProductCondition;
-  virtual_warehouse_type: WarehouseType;
+  virtual_warehouse_id: string; // Changed to virtual warehouse ID
   physical_warehouse_id?: string;
   warranty_start_date?: string;
   warranty_months?: number;
@@ -98,8 +98,8 @@ export interface PhysicalProductFormData {
 export interface StockMovementFormData {
   physical_product_id: string;
   movement_type: MovementType;
-  from_virtual_warehouse?: WarehouseType;
-  to_virtual_warehouse?: WarehouseType;
+  from_virtual_warehouse_id?: string; // Changed to virtual warehouse ID
+  to_virtual_warehouse_id?: string; // Changed to virtual warehouse ID
   from_physical_warehouse_id?: string;
   to_physical_warehouse_id?: string;
   ticket_id?: string;
@@ -129,7 +129,7 @@ export interface BulkProductImportRow {
   serial_number: string;
   product_sku: string;
   condition: ProductCondition;
-  warehouse_type: WarehouseType;
+  virtual_warehouse_name: string; // Changed to virtual warehouse name (will be resolved to ID)
   physical_warehouse_code?: string;
   warranty_start_date?: string;
   warranty_months?: number;
@@ -161,7 +161,8 @@ export interface SerialVerification {
     brand_name: string;
   };
   current_location?: {
-    virtual_warehouse: WarehouseType;
+    virtual_warehouse_id: string; // Changed to virtual warehouse ID
+    virtual_warehouse_name?: string; // Optional name for display
     physical_warehouse?: string;
   };
   warranty_status?: string;

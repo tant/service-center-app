@@ -186,7 +186,7 @@ export function useDeleteVirtualWarehouse() {
  */
 export function usePhysicalProducts(filters?: {
   physical_warehouse_id?: string;
-  virtual_warehouse_type?: 'warranty_stock' | 'rma_staging' | 'dead_stock' | 'in_service' | 'parts';
+  virtual_warehouse_id?: string;
   condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
   warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
   search?: string;

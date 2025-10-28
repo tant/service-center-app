@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { usePhysicalProducts } from "@/hooks/use-warehouse";
+import { trpc } from "@/components/providers/trpc-provider";
 import { ProductRegistrationModal } from "./product-registration-modal";
 import { BulkImportModal } from "./bulk-import-modal";
 import { WarrantyStatusBadge } from "./warranty-status-badge";
@@ -76,6 +77,11 @@ type PhysicalProductWithRelations = PhysicalProduct & {
   physical_warehouse?: {
     id: string;
     name: string;
+  };
+  virtual_warehouse?: {
+    id: string;
+    name: string;
+    warehouse_type: string;
   };
 };
 
@@ -121,12 +127,12 @@ const columns: ColumnDef<PhysicalProductWithRelations>[] = [
     ),
   },
   {
-    accessorKey: "virtual_warehouse_type",
+    accessorKey: "virtual_warehouse",
     header: "Kho",
     cell: ({ row }) => (
       <div>
         <Badge variant="outline" className="mb-1">
-          {WAREHOUSE_TYPE_LABELS[row.original.virtual_warehouse_type as keyof typeof WAREHOUSE_TYPE_LABELS]}
+          {row.original.virtual_warehouse?.name || "Không xác định"}
         </Badge>
         {row.original.physical_warehouse && (
           <div className="text-xs text-muted-foreground">
@@ -193,9 +199,12 @@ export function ProductInventoryTable() {
     pageSize: 10,
   });
 
+  // Fetch virtual warehouses for filter dropdown
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+
   // Build filters object
   const filters: any = {};
-  if (warehouseFilter && warehouseFilter !== "all") filters.virtual_warehouse_type = warehouseFilter;
+  if (warehouseFilter && warehouseFilter !== "all") filters.virtual_warehouse_id = warehouseFilter;
   if (conditionFilter && conditionFilter !== "all") filters.condition = conditionFilter;
   if (warrantyFilter && warrantyFilter !== "all") filters.warranty_status = warrantyFilter;
   if (searchQuery) filters.search = searchQuery;
@@ -303,9 +312,9 @@ export function ProductInventoryTable() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả kho ảo</SelectItem>
-              {Object.entries(WAREHOUSE_TYPE_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
+              {virtualWarehouses?.map((vw) => (
+                <SelectItem key={vw.id} value={vw.id}>
+                  {vw.name}
                 </SelectItem>
               ))}
             </SelectContent>

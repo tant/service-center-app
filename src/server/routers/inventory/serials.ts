@@ -330,7 +330,8 @@ export const serialsRouter = router({
         .select(
           `
           *,
-          product:products(id, name, sku)
+          product:products(id, name, sku),
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
         `
         )
         .eq("serial_number", input.serialNumber)
@@ -381,7 +382,7 @@ export const serialsRouter = router({
         event: "received",
         date: physicalProduct.created_at,
         warehouse: {
-          virtual: physicalProduct.virtual_warehouse_type,
+          virtual: physicalProduct.virtual_warehouse?.warehouse_type,
           physical: physicalProduct.physical_warehouse_id,
         },
       });
@@ -430,11 +431,13 @@ export const serialsRouter = router({
               transfer_number,
               transfer_date,
               status,
-              from_virtual_warehouse_type,
+              from_virtual_warehouse_id,
               from_physical_warehouse_id,
-              to_virtual_warehouse_type,
+              to_virtual_warehouse_id,
               to_physical_warehouse_id,
-              completed_at
+              completed_at,
+              from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name, warehouse_type),
+              to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name, warehouse_type)
             )
           )
         `
@@ -452,11 +455,11 @@ export const serialsRouter = router({
             transferNumber: transfer.transfer_number,
             status: transfer.status,
             from: {
-              virtual: transfer.from_virtual_warehouse_type,
+              virtual: transfer.from_virtual_warehouse?.warehouse_type,
               physical: transfer.from_physical_warehouse_id,
             },
             to: {
-              virtual: transfer.to_virtual_warehouse_type,
+              virtual: transfer.to_virtual_warehouse?.warehouse_type,
               physical: transfer.to_physical_warehouse_id,
             },
             completedAt: transfer.completed_at,
@@ -468,7 +471,7 @@ export const serialsRouter = router({
         status: physicalProduct.issued_at ? "issued" : "in_stock",
         serialNumber: input.serialNumber,
         currentLocation: {
-          virtual: physicalProduct.virtual_warehouse_type,
+          virtual: physicalProduct.virtual_warehouse?.warehouse_type,
           physical: physicalProduct.physical_warehouse_id,
         },
         product: physicalProduct.product,
@@ -491,7 +494,7 @@ export const serialsRouter = router({
     .input(
       z.object({
         search: z.string().min(1),
-        virtualWarehouseType: z.string().optional(),
+        virtualWarehouseId: z.string().optional(),
         physicalWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false), // Only show not-issued serials
         limit: z.number().int().min(1).max(100).default(50),
@@ -504,19 +507,20 @@ export const serialsRouter = router({
           `
           id,
           serial_number,
-          virtual_warehouse_type,
+          virtual_warehouse_id,
           physical_warehouse_id,
           warranty_start_date,
           warranty_end_date,
           issued_at,
           created_at,
-          product:products(id, name, sku)
+          product:products(id, name, sku),
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
         `
         )
         .ilike("serial_number", `%${input.search}%`);
 
-      if (input.virtualWarehouseType) {
-        query = query.eq("virtual_warehouse_type", input.virtualWarehouseType);
+      if (input.virtualWarehouseId) {
+        query = query.eq("virtual_warehouse_id", input.virtualWarehouseId);
       }
 
       if (input.physicalWarehouseId) {
@@ -546,7 +550,7 @@ export const serialsRouter = router({
     .input(
       z.object({
         productId: z.string(),
-        virtualWarehouseType: z.string().optional(),
+        virtualWarehouseId: z.string().optional(),
         physicalWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false),
       })
@@ -558,18 +562,19 @@ export const serialsRouter = router({
           `
           id,
           serial_number,
-          virtual_warehouse_type,
+          virtual_warehouse_id,
           physical_warehouse_id,
           warranty_start_date,
           warranty_end_date,
           issued_at,
-          created_at
+          created_at,
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
         `
         )
         .eq("product_id", input.productId);
 
-      if (input.virtualWarehouseType) {
-        query = query.eq("virtual_warehouse_type", input.virtualWarehouseType);
+      if (input.virtualWarehouseId) {
+        query = query.eq("virtual_warehouse_id", input.virtualWarehouseId);
       }
 
       if (input.physicalWarehouseId) {

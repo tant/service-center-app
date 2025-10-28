@@ -17,14 +17,7 @@ const createProductSchema = z.object({
     .transform((val) => val.toUpperCase()),
   product_id: z.string().uuid("Product ID must be a valid UUID"),
   physical_warehouse_id: z.string().uuid("Warehouse ID must be a valid UUID").optional(),
-  virtual_warehouse_type: z.enum([
-    "main",
-    "warranty_stock",
-    "rma_staging",
-    "dead_stock",
-    "in_service",
-    "parts",
-  ]),
+  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID"),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]),
   warranty_start_date: z.string().optional(),
   warranty_months: z.number().int().min(0).optional(),
@@ -46,9 +39,7 @@ const updateProductSchema = z.object({
     .optional(),
   product_id: z.string().uuid().optional(),
   physical_warehouse_id: z.string().uuid().nullable().optional(),
-  virtual_warehouse_type: z
-    .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
-    .optional(),
+  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_start_date: z.string().nullable().optional(),
   warranty_months: z.number().int().min(0).nullable().optional(),
@@ -62,9 +53,7 @@ const updateProductSchema = z.object({
 
 const listProductsSchema = z.object({
   physical_warehouse_id: z.string().uuid().optional(),
-  virtual_warehouse_type: z
-    .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
-    .optional(),
+  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
   search: z.string().optional(),
@@ -105,7 +94,7 @@ export const inventoryRouter = router({
           serial_number: input.serial_number,
           product_id: input.product_id,
           physical_warehouse_id: input.physical_warehouse_id,
-          virtual_warehouse_type: input.virtual_warehouse_type,
+          virtual_warehouse_id: input.virtual_warehouse_id,
           condition: input.condition,
           warranty_start_date: input.warranty_start_date,
           warranty_months: input.warranty_months,
@@ -202,8 +191,8 @@ export const inventoryRouter = router({
         query = query.eq("physical_warehouse_id", input.physical_warehouse_id);
       }
 
-      if (input.virtual_warehouse_type) {
-        query = query.eq("virtual_warehouse_type", input.virtual_warehouse_type);
+      if (input.virtual_warehouse_id) {
+        query = query.eq("virtual_warehouse_id", input.virtual_warehouse_id);
       }
 
       if (input.condition) {
@@ -385,7 +374,7 @@ export const inventoryRouter = router({
               serial_number: productData.serial_number,
               product_id: productData.product_id,
               physical_warehouse_id: productData.physical_warehouse_id,
-              virtual_warehouse_type: productData.virtual_warehouse_type,
+              virtual_warehouse_id: productData.virtual_warehouse_id,
               condition: productData.condition,
               warranty_start_date: productData.warranty_start_date,
               warranty_months: productData.warranty_months,
@@ -436,6 +425,7 @@ export const inventoryRouter = router({
           *,
           product:products(*),
           physical_warehouse:physical_warehouses(*),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*),
           current_ticket:service_tickets(id, ticket_number, status)
         `
         )
@@ -461,12 +451,8 @@ export const inventoryRouter = router({
         ? getRemainingDays(product.warranty_end_date)
         : null;
 
-      // Get virtual warehouse info by type
-      const { data: virtualWarehouse } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("*")
-        .eq("warehouse_type", product.virtual_warehouse_type)
-        .single();
+      // Virtual warehouse info is already included in the product relation
+      const virtualWarehouse = product.virtual_warehouse;
 
       return {
         found: true,
@@ -497,12 +483,8 @@ export const inventoryRouter = router({
         movement_type: z.enum(["receipt", "transfer", "assignment", "return", "disposal"]),
         from_physical_warehouse_id: z.string().uuid().optional(),
         to_physical_warehouse_id: z.string().uuid().optional(),
-        from_virtual_warehouse_type: z
-          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
-          .optional(),
-        to_virtual_warehouse_type: z
-          .enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"])
-          .optional(),
+        from_virtual_warehouse_id: z.string().uuid().optional(),
+        to_virtual_warehouse_id: z.string().uuid().optional(),
         reference_ticket_id: z.string().uuid().optional(),
         notes: z.string().optional(),
         force: z.boolean().default(false),
@@ -548,8 +530,8 @@ export const inventoryRouter = router({
           movement_type: input.movement_type,
           from_physical_warehouse_id: input.from_physical_warehouse_id,
           to_physical_warehouse_id: input.to_physical_warehouse_id,
-          from_virtual_warehouse: input.from_virtual_warehouse_type,
-          to_virtual_warehouse: input.to_virtual_warehouse_type,
+          from_virtual_warehouse_id: input.from_virtual_warehouse_id,
+          to_virtual_warehouse_id: input.to_virtual_warehouse_id,
           ticket_id: input.reference_ticket_id,
           notes: input.notes,
         });
@@ -566,8 +548,8 @@ export const inventoryRouter = router({
       if (input.to_physical_warehouse_id !== undefined) {
         updateData.physical_warehouse_id = input.to_physical_warehouse_id;
       }
-      if (input.to_virtual_warehouse_type) {
-        updateData.virtual_warehouse_type = input.to_virtual_warehouse_type;
+      if (input.to_virtual_warehouse_id) {
+        updateData.virtual_warehouse_id = input.to_virtual_warehouse_id;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -652,12 +634,27 @@ export const inventoryRouter = router({
         });
       }
 
+      // Find in_service warehouse
+      const { data: inServiceWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("id")
+        .eq("warehouse_type", "in_service")
+        .limit(1)
+        .single();
+
+      if (!inServiceWarehouse) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "In-service warehouse not found in system",
+        });
+      }
+
       // Record movement
       await ctx.supabaseAdmin.from("stock_movements").insert({
         physical_product_id: product.id,
         movement_type: "assignment",
-        from_virtual_warehouse: product.virtual_warehouse_type,
-        to_virtual_warehouse: "in_service",
+        from_virtual_warehouse_id: product.virtual_warehouse_id,
+        to_virtual_warehouse_id: inServiceWarehouse.id,
         ticket_id: input.ticket_id,
         notes: "Product assigned to service ticket",
       });
@@ -666,7 +663,7 @@ export const inventoryRouter = router({
       await ctx.supabaseAdmin
         .from("physical_products")
         .update({
-          virtual_warehouse_type: "in_service",
+          virtual_warehouse_id: inServiceWarehouse.id,
           current_ticket_id: input.ticket_id,
         })
         .eq("id", product.id);
@@ -864,7 +861,8 @@ export const inventoryRouter = router({
           id,
           serial_number,
           rma_batch_id,
-          virtual_warehouse_type,
+          virtual_warehouse_id,
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type),
           product:products(
             id,
             name,
@@ -924,11 +922,12 @@ export const inventoryRouter = router({
         }
 
         // Only accept products from warranty_stock warehouse (RMA eligible inventory)
-        if (product.virtual_warehouse_type !== "warranty_stock") {
+        const warehouse = product.virtual_warehouse as any;
+        if (!warehouse || warehouse.warehouse_type !== "warranty_stock") {
           return {
             serial_number: serial,
             status: "invalid" as const,
-            message: `Sản phẩm phải ở kho warranty_stock mới có thể RMA. Hiện tại: "${product.virtual_warehouse_type}"`,
+            message: `Sản phẩm phải ở kho warranty_stock mới có thể RMA. Hiện tại: "${warehouse?.name || "unknown"}"`,
           };
         }
 
@@ -1017,9 +1016,9 @@ export const inventoryRouter = router({
       for (const productId of input.product_ids) {
         try {
           // Get product details
-          const { data: product, error: productError } = await ctx.supabaseAdmin
+          const { data: product, error: productError} = await ctx.supabaseAdmin
             .from("physical_products")
-            .select("id, serial_number, rma_batch_id, virtual_warehouse_type")
+            .select("id, serial_number, rma_batch_id, virtual_warehouse_id, virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type)")
             .eq("id", productId)
             .single();
 
@@ -1034,9 +1033,23 @@ export const inventoryRouter = router({
             continue;
           }
 
-          // Only accept products from warranty_stock
-          if (product.virtual_warehouse_type !== "warranty_stock") {
-            errors.push(`Product ${product.serial_number} must be in warranty_stock warehouse. Current: ${product.virtual_warehouse_type}`);
+          // Only accept products from warranty_stock warehouse type
+          const currentWarehouse = product.virtual_warehouse as any;
+          if (!currentWarehouse || currentWarehouse.warehouse_type !== "warranty_stock") {
+            errors.push(`Product ${product.serial_number} must be in warranty_stock warehouse. Current: ${currentWarehouse?.name || "unknown"}`);
+            continue;
+          }
+
+          // Find the RMA staging warehouse
+          const { data: rmaWarehouse } = await ctx.supabaseAdmin
+            .from("virtual_warehouses")
+            .select("id")
+            .eq("warehouse_type", "rma_staging")
+            .limit(1)
+            .single();
+
+          if (!rmaWarehouse) {
+            errors.push(`RMA staging warehouse not found in system`);
             continue;
           }
 
@@ -1044,9 +1057,9 @@ export const inventoryRouter = router({
           const { error: updateError } = await ctx.supabaseAdmin
             .from("physical_products")
             .update({
-              previous_virtual_warehouse_type: product.virtual_warehouse_type, // Save source warehouse
+              previous_virtual_warehouse_id: product.virtual_warehouse_id, // Save source warehouse
               rma_batch_id: input.batch_id,
-              virtual_warehouse_type: "rma_staging",
+              virtual_warehouse_id: rmaWarehouse.id,
               rma_date: new Date().toISOString(),
               rma_reason: "Pending RMA", // Default reason, can be updated later
             })
@@ -1061,8 +1074,8 @@ export const inventoryRouter = router({
           await ctx.supabaseAdmin.from("stock_movements").insert({
             physical_product_id: product.id,
             movement_type: "rma_out",
-            from_virtual_warehouse: product.virtual_warehouse_type,
-            to_virtual_warehouse: "rma_staging",
+            from_virtual_warehouse_id: product.virtual_warehouse_id,
+            to_virtual_warehouse_id: rmaWarehouse.id,
             notes: `Moved to RMA batch for supplier return`,
             moved_by_id: user.id,
           });
@@ -1243,7 +1256,7 @@ export const inventoryRouter = router({
       // Get product to check and get previous warehouse
       const { data: product, error: productError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, rma_batch_id, virtual_warehouse_type, previous_virtual_warehouse_type")
+        .select("id, serial_number, rma_batch_id, virtual_warehouse_id, previous_virtual_warehouse_id")
         .eq("id", input.product_id)
         .single();
 
@@ -1261,16 +1274,35 @@ export const inventoryRouter = router({
         });
       }
 
-      // Use previous warehouse if available, fallback to warranty_stock
-      const destinationWarehouseType = product.previous_virtual_warehouse_type || "warranty_stock";
+      // Use previous warehouse if available, fallback to warranty_stock warehouse
+      let destinationWarehouseId = product.previous_virtual_warehouse_id;
+
+      if (!destinationWarehouseId) {
+        // Fallback: find a warranty_stock warehouse
+        const { data: warrantyWarehouse } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id")
+          .eq("warehouse_type", "warranty_stock")
+          .limit(1)
+          .single();
+
+        destinationWarehouseId = warrantyWarehouse?.id;
+      }
+
+      if (!destinationWarehouseId) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not find destination warehouse",
+        });
+      }
 
       // Remove from batch and return to previous warehouse
       const { error: updateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .update({
           rma_batch_id: null,
-          virtual_warehouse_type: destinationWarehouseType,
-          previous_virtual_warehouse_type: null, // Clear saved warehouse
+          virtual_warehouse_id: destinationWarehouseId,
+          previous_virtual_warehouse_id: null, // Clear saved warehouse
           rma_date: null,
           rma_reason: null,
         })
@@ -1287,9 +1319,9 @@ export const inventoryRouter = router({
       await ctx.supabaseAdmin.from("stock_movements").insert({
         physical_product_id: product.id,
         movement_type: "rma_return",
-        from_virtual_warehouse: "rma_staging",
-        to_virtual_warehouse: destinationWarehouseType,
-        notes: `Removed from RMA batch, returned to original warehouse: ${destinationWarehouseType}`,
+        from_virtual_warehouse_id: product.virtual_warehouse_id,
+        to_virtual_warehouse_id: destinationWarehouseId,
+        notes: `Removed from RMA batch, returned to original warehouse`,
         moved_by_id: user.id,
       });
 

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Create Issue Page
- * Form for creating new stock issue
+ * Create Issue Page - REDESIGNED
+ * Form for creating new stock issue (simplified types + virtual warehouse IDs)
  */
 
 import { useState } from "react";
@@ -15,25 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { toast } from "sonner";
 
+// REDESIGNED: Only 2 issue types
 const ISSUE_TYPES = [
-  { value: "warranty_return", label: "Xuất trả bảo hành" },
-  { value: "parts_usage", label: "Xuất sử dụng linh kiện" },
-  { value: "rma_out", label: "Xuất RMA" },
-  { value: "transfer_out", label: "Xuất chuyển kho" },
-  { value: "disposal", label: "Xuất thanh lý" },
-  { value: "adjustment_out", label: "Điều chỉnh xuất" },
-];
-
-const WAREHOUSE_TYPES = [
-  { value: "warranty_stock", label: "Kho Bảo Hành" },
-  { value: "rma_staging", label: "Kho RMA" },
-  { value: "dead_stock", label: "Kho Hỏng" },
-  { value: "in_service", label: "Đang Sử Dụng" },
-  { value: "parts", label: "Kho Linh Kiện" },
+  { value: "normal", label: "Phiếu xuất bình thường" },
+  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
 ];
 
 interface ProductItem {
@@ -43,14 +33,15 @@ interface ProductItem {
 
 export default function CreateIssuePage() {
   const router = useRouter();
-  const [issueType, setIssueType] = useState("");
-  const [virtualWarehouseType, setVirtualWarehouseType] = useState("");
+  const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal"); // REDESIGNED
+  const [virtualWarehouseId, setVirtualWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createIssue = trpc.inventory.issues.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -67,21 +58,31 @@ export default function CreateIssuePage() {
   };
 
   const handleSubmit = async () => {
-    if (!issueType || !virtualWarehouseType || items.length === 0) {
+    if (!issueType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
 
-    const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
-    if (invalidItems.length > 0) {
-      toast.error("Vui lòng chọn sản phẩm và số lượng hợp lệ cho tất cả dòng");
-      return;
+    // REDESIGNED: Validate based on type
+    if (issueType === "normal") {
+      const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
+      if (invalidItems.length > 0) {
+        toast.error("Phiếu xuất bình thường phải có số lượng dương");
+        return;
+      }
+    } else {
+      // Adjustment: allow negative but not zero
+      const invalidItems = items.filter((item) => !item.productId || item.quantity === 0);
+      if (invalidItems.length > 0) {
+        toast.error("Số lượng không được bằng 0");
+        return;
+      }
     }
 
     try {
       const issue = await createIssue.mutateAsync({
-        issueType: issueType as any,
-        virtualWarehouseType,
+        issueType,
+        virtualWarehouseId, // REDESIGNED: Use warehouse ID
         issueDate,
         notes: notes || undefined,
         items: items.map((item) => ({
@@ -123,7 +124,7 @@ export default function CreateIssuePage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Loại phiếu *</Label>
-                      <Select value={issueType} onValueChange={setIssueType}>
+                      <Select value={issueType} onValueChange={(v) => setIssueType(v as "normal" | "adjustment")}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn loại phiếu" />
                         </SelectTrigger>
@@ -139,14 +140,14 @@ export default function CreateIssuePage() {
 
                     <div className="grid gap-2">
                       <Label>Kho xuất *</Label>
-                      <Select value={virtualWarehouseType} onValueChange={setVirtualWarehouseType}>
+                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {WAREHOUSE_TYPES.map((wh) => (
-                            <SelectItem key={wh.value} value={wh.value}>
-                              {wh.label}
+                          {virtualWarehouses?.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -158,6 +159,16 @@ export default function CreateIssuePage() {
                       <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
                     </div>
                   </div>
+
+                  {/* REDESIGNED: Show alert for adjustment type */}
+                  {issueType === "adjustment" && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Phiếu điều chỉnh:</strong> Số dương = giảm stock, số âm = tăng stock. Dùng khi kiểm kê hoặc sửa sai sót.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -214,9 +225,10 @@ export default function CreateIssuePage() {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min="1"
+                              min={issueType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
                               value={item.quantity}
                               onChange={(e) => handleItemChange(index, "quantity", Number.parseInt(e.target.value))}
+                              className={item.quantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>
 

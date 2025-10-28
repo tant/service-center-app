@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 // Input validation schema
 const setupInputSchema = z.object({
@@ -440,4 +442,715 @@ export const adminRouter = router({
         });
       }
     }),
+
+  seedMockData: publicProcedure.mutation(async ({ ctx }) => {
+    console.log("🌱 SEED: Starting mock data seeding process...");
+    const { supabaseAdmin } = ctx;
+    const results: string[] = [];
+
+    try {
+      // Read mock data file
+      const mockDataPath = join(process.cwd(), "docs", "data", "mock-data.json");
+      console.log("📂 SEED: Reading mock data from:", mockDataPath);
+      const mockDataContent = readFileSync(mockDataPath, "utf-8");
+      const mockData = JSON.parse(mockDataContent);
+      console.log("✅ SEED: Mock data loaded successfully");
+      results.push("✅ Đọc file mock-data.json thành công");
+
+      // Get admin user ID from database for created_by fields
+      const { data: adminProfile, error: adminError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, user_id")
+        .eq("role", "admin")
+        .limit(1)
+        .single();
+
+      if (adminError || !adminProfile) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No admin user found in database. Please run /setup first.",
+        });
+      }
+
+      const adminUserId = adminProfile.id;
+      console.log(`✅ SEED: Using admin user ID: ${adminUserId}`);
+
+      // Step 1: Create Staff Users
+      console.log("\n👥 SEED STEP 1: Creating staff users...");
+      results.push("👥 Bước 1: Tạo Staff Users...");
+
+      for (const staffUser of mockData.staffUsers) {
+        try {
+          // Check if user already exists in profiles
+          const { data: existingProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("email")
+            .eq("email", staffUser.email)
+            .single();
+
+          if (existingProfile) {
+            console.log(`⚠️ SEED: User ${staffUser.email} already exists, skipping...`);
+            results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
+            continue;
+          }
+
+          // Create auth user
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: staffUser.email,
+            password: staffUser.password,
+            email_confirm: true,
+          });
+
+          if (authError) {
+            if (authError.message.includes("already registered")) {
+              console.log(`⚠️ SEED: User ${staffUser.email} already registered in auth, skipping...`);
+              results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
+              continue;
+            }
+            throw authError;
+          }
+
+          // Create profile
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .insert({
+              user_id: authData.user.id,
+              email: staffUser.email,
+              full_name: staffUser.fullName,
+              role: staffUser.role,
+              is_active: true,
+            });
+
+          if (profileError) {
+            console.error(`❌ SEED: Failed to create profile for ${staffUser.email}:`, profileError);
+            results.push(`❌ Lỗi tạo profile cho ${staffUser.email}`);
+          } else {
+            console.log(`✅ SEED: Created user ${staffUser.email} with role ${staffUser.role}`);
+            results.push(`✅ Tạo ${staffUser.email} (${staffUser.role})`);
+          }
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating user ${staffUser.email}:`, error);
+          results.push(`❌ Lỗi tạo ${staffUser.email}: ${error.message}`);
+        }
+      }
+
+      // Step 2: Create Physical Warehouses
+      console.log("\n🏭 SEED STEP 2: Creating physical warehouses...");
+      results.push("🏭 Bước 2: Tạo Physical Warehouses...");
+
+      const warehouseMap = new Map<string, string>(); // code -> id mapping
+
+      for (const warehouse of mockData.physicalWarehouses) {
+        try {
+          // Check if warehouse already exists
+          const { data: existingWarehouse } = await supabaseAdmin
+            .from("physical_warehouses")
+            .select("id, code")
+            .eq("code", warehouse.code)
+            .single();
+
+          if (existingWarehouse) {
+            console.log(`⚠️ SEED: Warehouse ${warehouse.code} already exists, using existing ID...`);
+            results.push(`⚠️ Kho ${warehouse.name} đã tồn tại, bỏ qua`);
+            warehouseMap.set(warehouse.code, existingWarehouse.id);
+          } else {
+            // Create physical warehouse
+            const { data: whData, error: whError } = await supabaseAdmin
+              .from("physical_warehouses")
+              .insert({
+                name: warehouse.name,
+                code: warehouse.code,
+                location: warehouse.location,
+                description: warehouse.description,
+                is_active: true,
+              })
+              .select("id")
+              .single();
+
+            if (whError) {
+              console.error(`❌ SEED: Failed to create warehouse ${warehouse.name}:`, whError);
+              results.push(`❌ Lỗi tạo kho ${warehouse.name}: ${whError.message}`);
+              continue;
+            }
+
+            warehouseMap.set(warehouse.code, whData.id);
+            console.log(`✅ SEED: Created warehouse ${warehouse.name}`);
+            results.push(`✅ Tạo kho ${warehouse.name}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating warehouse ${warehouse.name}:`, error);
+          results.push(`❌ Lỗi tạo kho ${warehouse.name}: ${error.message}`);
+        }
+      }
+
+      // Step 2b: Create Virtual Warehouses (separate entities)
+      console.log("\n🗂️ SEED STEP 2b: Creating virtual warehouses...");
+      results.push("🗂️ Bước 2b: Tạo Virtual Warehouses...");
+
+      const virtualWarehouseMap = new Map<string, string>(); // name -> id mapping
+
+      for (const vw of mockData.virtualWarehouses) {
+        try {
+          // Check if virtual warehouse already exists
+          const { data: existingVW } = await supabaseAdmin
+            .from("virtual_warehouses")
+            .select("id, name")
+            .eq("name", vw.name)
+            .single();
+
+          if (existingVW) {
+            console.log(`⚠️ SEED: Virtual warehouse ${vw.name} already exists, skipping...`);
+            results.push(`⚠️ Kho ảo ${vw.name} đã tồn tại, bỏ qua`);
+            virtualWarehouseMap.set(vw.name, existingVW.id);
+            continue;
+          }
+
+          // Get physical warehouse ID
+          const physicalWarehouseId = warehouseMap.get(vw.physicalWarehouseCode);
+
+          if (!physicalWarehouseId) {
+            console.error(`❌ SEED: Physical warehouse ${vw.physicalWarehouseCode} not found for virtual warehouse ${vw.name}`);
+            results.push(`❌ Không tìm thấy kho vật lý ${vw.physicalWarehouseCode}`);
+            continue;
+          }
+
+          const { data: vwData, error: vwError } = await supabaseAdmin
+            .from("virtual_warehouses")
+            .insert({
+              name: vw.name,
+              warehouse_type: vw.warehouseType,
+              description: vw.description,
+              physical_warehouse_id: physicalWarehouseId,
+              is_active: true,
+            })
+            .select("id")
+            .single();
+
+          if (vwError) {
+            console.error(`❌ SEED: Failed to create virtual warehouse ${vw.name}:`, vwError);
+            results.push(`❌ Lỗi tạo kho ảo ${vw.name}: ${vwError.message}`);
+          } else {
+            virtualWarehouseMap.set(vw.name, vwData.id);
+            console.log(`✅ SEED: Created virtual warehouse ${vw.name}`);
+            results.push(`✅ Tạo kho ảo ${vw.name}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating virtual warehouse ${vw.name}:`, error);
+          results.push(`❌ Lỗi tạo kho ảo ${vw.name}: ${error.message}`);
+        }
+      }
+
+      // Step 3: Create Brands
+      console.log("\n🏷️ SEED STEP 3: Creating brands...");
+      results.push("🏷️ Bước 3: Tạo Brands...");
+
+      const brandMap = new Map<string, string>(); // name -> id mapping
+
+      for (const brand of mockData.brands) {
+        try {
+          // Check if brand already exists
+          const { data: existingBrand } = await supabaseAdmin
+            .from("brands")
+            .select("id, name")
+            .eq("name", brand.name)
+            .single();
+
+          if (existingBrand) {
+            console.log(`⚠️ SEED: Brand ${brand.name} already exists, skipping...`);
+            results.push(`⚠️ Nhãn hàng ${brand.name} đã tồn tại, bỏ qua`);
+            brandMap.set(brand.name, existingBrand.id);
+            continue;
+          }
+
+          const { data: brandData, error: brandError } = await supabaseAdmin
+            .from("brands")
+            .insert({
+              name: brand.name,
+              description: brand.description,
+            })
+            .select("id")
+            .single();
+
+          if (brandError) {
+            console.error(`❌ SEED: Failed to create brand ${brand.name}:`, brandError);
+            results.push(`❌ Lỗi tạo nhãn hàng ${brand.name}: ${brandError.message}`);
+            continue;
+          }
+
+          brandMap.set(brand.name, brandData.id);
+          console.log(`✅ SEED: Created brand ${brand.name}`);
+          results.push(`✅ Tạo nhãn hàng ${brand.name}`);
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating brand ${brand.name}:`, error);
+          results.push(`❌ Lỗi tạo nhãn hàng ${brand.name}: ${error.message}`);
+        }
+      }
+
+      // Step 4: Create Parts
+      console.log("\n🔧 SEED STEP 4: Creating parts...");
+      results.push("🔧 Bước 4: Tạo Parts...");
+
+      const partMap = new Map<string, string>(); // partNumber -> id mapping
+
+      for (const part of mockData.parts) {
+        try {
+          // Check if part already exists
+          const { data: existingPart } = await supabaseAdmin
+            .from("parts")
+            .select("id, part_number")
+            .eq("part_number", part.partNumber)
+            .single();
+
+          if (existingPart) {
+            console.log(`⚠️ SEED: Part ${part.partNumber} already exists, skipping...`);
+            results.push(`⚠️ Linh kiện ${part.name} đã tồn tại, bỏ qua`);
+            partMap.set(part.partNumber, existingPart.id);
+            continue;
+          }
+
+          const { data: partData, error: partError } = await supabaseAdmin
+            .from("parts")
+            .insert({
+              name: part.name,
+              part_number: part.partNumber,
+              category: part.category,
+              price: part.price,
+              cost_price: part.costPrice,
+              stock_quantity: part.stockQuantity,
+              min_stock_level: part.minStockLevel,
+              description: part.description || null,
+            })
+            .select("id")
+            .single();
+
+          if (partError) {
+            console.error(`❌ SEED: Failed to create part ${part.name}:`, partError);
+            results.push(`❌ Lỗi tạo linh kiện ${part.name}: ${partError.message}`);
+            continue;
+          }
+
+          partMap.set(part.partNumber, partData.id);
+          console.log(`✅ SEED: Created part ${part.name}`);
+          results.push(`✅ Tạo linh kiện ${part.name}`);
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating part ${part.name}:`, error);
+          results.push(`❌ Lỗi tạo linh kiện ${part.name}: ${error.message}`);
+        }
+      }
+
+      // Step 5: Create Products with compatible parts binding
+      console.log("\n📦 SEED STEP 5: Creating products...");
+      console.log(`📦 SEED: Total products to create: ${mockData.products?.length || 0}`);
+      results.push("📦 Bước 5: Tạo Products...");
+      results.push(`📦 Tổng số sản phẩm cần tạo: ${mockData.products?.length || 0}`);
+
+      const productMap = new Map<string, string>(); // sku -> id mapping
+
+      for (const product of mockData.products) {
+        console.log(`\n🔍 SEED: Processing product: ${product.name}`);
+        try {
+          // Check if product already exists
+          const { data: existingProduct } = await supabaseAdmin
+            .from("products")
+            .select("id, sku")
+            .eq("sku", product.sku)
+            .single();
+
+          if (existingProduct) {
+            console.log(`⚠️ SEED: Product ${product.sku} already exists, skipping...`);
+            results.push(`⚠️ Sản phẩm ${product.name} đã tồn tại, bỏ qua`);
+            productMap.set(product.sku, existingProduct.id);
+            continue;
+          }
+
+          const brandId = brandMap.get(product.brand);
+
+          if (!brandId) {
+            console.error(`❌ SEED: Brand ${product.brand} not found for product ${product.name}`);
+            results.push(`❌ Không tìm thấy brand ${product.brand} cho ${product.name}`);
+            continue;
+          }
+
+          console.log(`🔄 SEED: Inserting product: ${product.name}, SKU: ${product.sku}, Brand ID: ${brandId}`);
+
+          const { data: productData, error: productError } = await supabaseAdmin
+            .from("products")
+            .insert({
+              name: product.name,
+              type: product.type,
+              brand_id: brandId,
+              model: product.model,
+              sku: product.sku,
+              warranty_period_months: product.warrantyMonths,
+            })
+            .select("id")
+            .single();
+
+          console.log(`📊 SEED: Insert result - Data:`, productData, `Error:`, productError);
+
+          if (productError) {
+            console.error(`❌ SEED: Failed to create product ${product.name}:`, productError);
+            results.push(`❌ Lỗi tạo sản phẩm ${product.name}: ${productError.message}`);
+            continue;
+          }
+
+          productMap.set(product.sku, productData.id);
+          console.log(`✅ SEED: Created product ${product.name}`);
+          results.push(`✅ Tạo sản phẩm ${product.name}`);
+
+          // Bind compatible parts to product
+          if (product.compatibleParts && product.compatibleParts.length > 0) {
+            for (const partNumber of product.compatibleParts) {
+              const partId = partMap.get(partNumber);
+
+              if (!partId) {
+                console.warn(`⚠️ SEED: Part ${partNumber} not found for product ${product.name}`);
+                continue;
+              }
+
+              // Check if binding already exists
+              const { data: existingBinding } = await supabaseAdmin
+                .from("product_parts")
+                .select("product_id")
+                .eq("product_id", productData.id)
+                .eq("part_id", partId)
+                .single();
+
+              if (existingBinding) {
+                console.log(`⚠️ SEED: Part ${partNumber} already bound to ${product.name}, skipping...`);
+                continue;
+              }
+
+              const { error: bindError } = await supabaseAdmin
+                .from("product_parts")
+                .insert({
+                  product_id: productData.id,
+                  part_id: partId,
+                });
+
+              if (bindError) {
+                console.error(`❌ SEED: Failed to bind part ${partNumber} to product ${product.name}:`, bindError);
+              } else {
+                console.log(`✅ SEED: Bound part ${partNumber} to product ${product.name}`);
+              }
+            }
+
+            results.push(`  ↳ Bind ${product.compatibleParts.length} parts vào ${product.name}`);
+          }
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating product ${product.name}:`, error);
+          results.push(`❌ Lỗi tạo sản phẩm ${product.name}: ${error.message}`);
+        }
+      }
+
+      // Step 6: Create Physical Products (GRN with full workflow)
+      console.log("\n📋 SEED STEP 6: Creating physical products (GRN receipts)...");
+      results.push("📋 Bước 6: Tạo Physical Products (GRN)...");
+
+      // Check if any physical products already exist
+      const { count: existingPhysicalProductsCount } = await supabaseAdmin
+        .from("physical_products")
+        .select("*", { count: "exact", head: true });
+
+      if (existingPhysicalProductsCount && existingPhysicalProductsCount > 0) {
+        console.log(`⚠️ SEED: Physical products already exist (${existingPhysicalProductsCount} items), skipping GRN creation...`);
+        results.push(`⚠️ Đã có ${existingPhysicalProductsCount} sản phẩm vật lý, bỏ qua tạo GRN`);
+      } else {
+        for (const receipt of mockData.physicalProducts.receipts) {
+        try {
+          // Get virtual warehouse ID by name
+          const virtualWarehouseId = virtualWarehouseMap.get(receipt.toVirtualWarehouseName);
+
+          if (!virtualWarehouseId) {
+            console.error(`❌ SEED: Virtual warehouse ${receipt.toVirtualWarehouseName} not found`);
+            results.push(`❌ Không tìm thấy kho ảo ${receipt.toVirtualWarehouseName}`);
+            continue;
+          }
+
+          // Step 6.1: Create receipt (draft)
+          const { data: receiptData, error: receiptError } = await supabaseAdmin
+            .from("stock_receipts")
+            .insert({
+              receipt_type: receipt.receiptType,
+              virtual_warehouse_id: virtualWarehouseId,
+              receipt_date: receipt.receiptDate,
+              notes: receipt.notes,
+              status: "draft",
+              created_by_id: adminUserId,
+            })
+            .select()
+            .single();
+
+          if (receiptError) {
+            console.error(`❌ SEED: Failed to create receipt:`, receiptError);
+            results.push(`❌ Lỗi tạo phiếu nhập: ${receiptError.message}`);
+            continue;
+          }
+
+          console.log(`✅ SEED: Created receipt ${receiptData.receipt_number}`);
+          results.push(`✅ Tạo phiếu nhập ${receiptData.receipt_number}`);
+
+          // Step 6.2: Create receipt items and add serials
+          for (const item of receipt.items) {
+            const productId = productMap.get(item.productSku);
+
+            if (!productId) {
+              console.warn(`⚠️ SEED: Product ${item.productSku} not found`);
+              continue;
+            }
+
+            // Create receipt item
+            const { data: itemData, error: itemError } = await supabaseAdmin
+              .from("stock_receipt_items")
+              .insert({
+                receipt_id: receiptData.id,
+                product_id: productId,
+                declared_quantity: item.quantity,
+                warranty_start_date: item.warrantyStartDate,
+                warranty_months: item.warrantyMonths,
+              })
+              .select()
+              .single();
+
+            if (itemError) {
+              console.error(`❌ SEED: Failed to create receipt item:`, itemError);
+              continue;
+            }
+
+            // Add serials
+            const serialsToInsert = item.serials.map((serial: string) => ({
+              receipt_item_id: itemData.id,
+              serial_number: serial,
+              warranty_start_date: item.warrantyStartDate,
+              warranty_months: item.warrantyMonths,
+            }));
+
+            const { error: serialsError } = await supabaseAdmin
+              .from("stock_receipt_serials")
+              .insert(serialsToInsert);
+
+            if (serialsError) {
+              console.error(`❌ SEED: Failed to add serials:`, serialsError);
+              results.push(`❌ Lỗi thêm serials cho ${item.productSku}`);
+            } else {
+              console.log(`✅ SEED: Added ${item.serials.length} serials for ${item.productSku}`);
+              results.push(`  ↳ Thêm ${item.serials.length} serials cho ${item.productSku}`);
+            }
+          }
+
+          // Step 6.3: Submit for approval
+          const { error: submitError } = await supabaseAdmin
+            .from("stock_receipts")
+            .update({ status: "pending_approval" })
+            .eq("id", receiptData.id);
+
+          if (submitError) {
+            console.error(`❌ SEED: Failed to submit for approval:`, submitError);
+            results.push(`❌ Lỗi submit phiếu nhập`);
+            continue;
+          }
+
+          // Step 6.4: Approve receipt
+          const { error: approveError } = await supabaseAdmin
+            .from("stock_receipts")
+            .update({
+              status: "approved",
+              approved_by_id: adminUserId,
+              approved_at: new Date().toISOString(),
+            })
+            .eq("id", receiptData.id);
+
+          if (approveError) {
+            console.error(`❌ SEED: Failed to approve receipt:`, approveError);
+            results.push(`❌ Lỗi approve phiếu nhập`);
+            continue;
+          }
+
+          // Step 6.5: Complete receipt (creates physical_products)
+          const { error: completeError } = await supabaseAdmin
+            .from("stock_receipts")
+            .update({
+              status: "completed",
+              completed_by_id: adminUserId,
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", receiptData.id);
+
+          if (completeError) {
+            console.error(`❌ SEED: Failed to complete receipt:`, completeError);
+            results.push(`❌ Lỗi complete phiếu nhập: ${completeError.message}`);
+            continue;
+          }
+
+          console.log(`✅ SEED: Completed receipt ${receiptData.receipt_number} - Physical products created`);
+          results.push(`✅ Hoàn tất phiếu nhập ${receiptData.receipt_number} - Tạo sản phẩm vật lý`);
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating receipt:`, error);
+          results.push(`❌ Lỗi tạo GRN: ${error.message}`);
+        }
+        }
+      }
+
+      // Step 7: Create Task Types
+      console.log("\n📝 SEED STEP 7: Creating task types...");
+      results.push("📝 Bước 7: Tạo Task Types...");
+
+      const taskTypeMap = new Map<string, string>(); // name -> id mapping
+
+      for (const taskType of mockData.taskTypes) {
+        try {
+          // Check if task type already exists
+          const { data: existingTaskType } = await supabaseAdmin
+            .from("task_types")
+            .select("id, name")
+            .eq("name", taskType.name)
+            .single();
+
+          if (existingTaskType) {
+            console.log(`⚠️ SEED: Task type ${taskType.name} already exists, skipping...`);
+            results.push(`⚠️ Task type ${taskType.name} đã tồn tại, bỏ qua`);
+            taskTypeMap.set(taskType.name, existingTaskType.id);
+            continue;
+          }
+
+          const { data: taskTypeData, error: taskTypeError } = await supabaseAdmin
+            .from("task_types")
+            .insert({
+              name: taskType.name,
+              description: taskType.description,
+              category: taskType.category,
+              estimated_duration_minutes: taskType.estimatedDurationMinutes,
+              requires_notes: taskType.requiresNotes,
+              requires_photo: taskType.requiresPhoto,
+              is_active: true,
+            })
+            .select("id")
+            .single();
+
+          if (taskTypeError) {
+            console.error(`❌ SEED: Failed to create task type ${taskType.name}:`, taskTypeError);
+            results.push(`❌ Lỗi tạo task type ${taskType.name}: ${taskTypeError.message}`);
+            continue;
+          }
+
+          taskTypeMap.set(taskType.name, taskTypeData.id);
+          console.log(`✅ SEED: Created task type ${taskType.name}`);
+          results.push(`✅ Tạo task type ${taskType.name}`);
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating task type ${taskType.name}:`, error);
+          results.push(`❌ Lỗi tạo task type ${taskType.name}: ${error.message}`);
+        }
+      }
+
+      // Step 8: Create Task Templates
+      console.log("\n📋 SEED STEP 8: Creating task templates...");
+      results.push("📋 Bước 8: Tạo Task Templates...");
+
+      for (const template of mockData.taskTemplates) {
+        try {
+          // Check if template already exists
+          const { data: existingTemplate } = await supabaseAdmin
+            .from("task_templates")
+            .select("id, name")
+            .eq("name", template.name)
+            .single();
+
+          if (existingTemplate) {
+            console.log(`⚠️ SEED: Template ${template.name} already exists, skipping...`);
+            results.push(`⚠️ Template ${template.name} đã tồn tại, bỏ qua`);
+            continue;
+          }
+
+          const productId = productMap.get(template.productSku);
+
+          if (!productId) {
+            console.error(`❌ SEED: Product ${template.productSku} not found for template ${template.name}`);
+            results.push(`❌ Không tìm thấy product ${template.productSku} cho template ${template.name}`);
+            continue;
+          }
+
+          const { data: templateData, error: templateError } = await supabaseAdmin
+            .from("task_templates")
+            .insert({
+              name: template.name,
+              description: template.description,
+              product_type: productId,
+              service_type: template.serviceType,
+              strict_sequence: template.strictSequence,
+              is_active: true,
+              created_by_id: adminUserId,
+            })
+            .select("id")
+            .single();
+
+          if (templateError) {
+            console.error(`❌ SEED: Failed to create template ${template.name}:`, templateError);
+            results.push(`❌ Lỗi tạo template ${template.name}: ${templateError.message}`);
+            continue;
+          }
+
+          console.log(`✅ SEED: Created template ${template.name}`);
+          results.push(`✅ Tạo template ${template.name}`);
+
+          // Create template tasks
+          for (const task of template.tasks) {
+            const taskTypeId = taskTypeMap.get(task.taskTypeName);
+
+            if (!taskTypeId) {
+              console.warn(`⚠️ SEED: Task type ${task.taskTypeName} not found for template ${template.name}`);
+              continue;
+            }
+
+            // Check if template task already exists
+            const { data: existingTemplateTask } = await supabaseAdmin
+              .from("task_templates_tasks")
+              .select("template_id")
+              .eq("template_id", templateData.id)
+              .eq("task_type_id", taskTypeId)
+              .eq("sequence_order", task.sequenceOrder)
+              .single();
+
+            if (existingTemplateTask) {
+              console.log(`⚠️ SEED: Template task ${task.taskTypeName} already exists for ${template.name}, skipping...`);
+              continue;
+            }
+
+            const { error: templateTaskError } = await supabaseAdmin
+              .from("task_templates_tasks")
+              .insert({
+                template_id: templateData.id,
+                task_type_id: taskTypeId,
+                sequence_order: task.sequenceOrder,
+                is_required: task.isRequired,
+                custom_instructions: task.customInstructions,
+              });
+
+            if (templateTaskError) {
+              console.error(`❌ SEED: Failed to create template task ${task.taskTypeName}:`, templateTaskError);
+            }
+          }
+
+          results.push(`  ↳ Thêm ${template.tasks.length} tasks vào template ${template.name}`);
+        } catch (error: any) {
+          console.error(`❌ SEED: Error creating template ${template.name}:`, error);
+          results.push(`❌ Lỗi tạo template ${template.name}: ${error.message}`);
+        }
+      }
+
+      console.log("\n✅ SEED: Mock data seeding completed successfully");
+      results.push("✅ Hoàn tất tạo dữ liệu test!");
+
+      return {
+        success: true,
+        message: "Mock data seeded successfully",
+        results,
+      };
+    } catch (error: any) {
+      console.error("❌ SEED: Fatal error during seeding:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to seed mock data: ${error.message}`,
+      });
+    }
+  }),
 });

@@ -18,14 +18,7 @@ export const issuesRouter = router({
           .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
           .optional(),
         issueType: z
-          .enum([
-            "warranty_return",
-            "parts_usage",
-            "rma_out",
-            "transfer_out",
-            "disposal",
-            "adjustment_out",
-          ])
+          .enum(["normal", "adjustment"]) // REDESIGNED: Simplified to 2 types
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
@@ -87,11 +80,11 @@ export const issuesRouter = router({
               physical_product:physical_products(serial_number, warranty_end_date)
             )
           ),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
           created_by:profiles!created_by_id(id, full_name),
           approved_by:profiles!approved_by_id(id, full_name),
           completed_by:profiles!completed_by_id(id, full_name),
-          ticket:service_tickets(id, ticket_number),
-          attachments:stock_document_attachments(*)
+          ticket:service_tickets(id, ticket_number)
         `
         )
         .eq("id", input.id)
@@ -104,7 +97,17 @@ export const issuesRouter = router({
         throw new Error(`Failed to get issue: ${error.message}`);
       }
 
-      return data as StockIssueWithRelations;
+      // Query attachments separately (polymorphic relationship)
+      const { data: attachments } = await ctx.supabaseAdmin
+        .from("stock_document_attachments")
+        .select("*")
+        .eq("document_type", "issue")
+        .eq("document_id", input.id);
+
+      return {
+        ...data,
+        attachments: attachments || []
+      } as StockIssueWithRelations;
     }),
 
   /**
@@ -113,16 +116,8 @@ export const issuesRouter = router({
   create: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
-        issueType: z.enum([
-          "warranty_return",
-          "parts_usage",
-          "rma_out",
-          "transfer_out",
-          "disposal",
-          "adjustment_out",
-        ]),
-        virtualWarehouseType: z.string(),
-        physicalWarehouseId: z.string().optional(),
+        issueType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
+        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
         issueDate: z.string(),
         ticketId: z.string().optional(),
         rmaBatchId: z.string().optional(),
@@ -133,12 +128,24 @@ export const issuesRouter = router({
         items: z.array(
           z.object({
             productId: z.string(),
-            quantity: z.number().int().min(1),
+            quantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
             unitPrice: z.number().optional(),
             notes: z.string().optional(),
           })
-        ),
-      })
+        ).min(1),
+      }).refine(
+        (data) => {
+          // Validate: normal issues must have positive quantities
+          if (data.issueType === "normal") {
+            return data.items.every((item) => item.quantity > 0);
+          }
+          // Adjustment issues: allow negative but not zero
+          return data.items.every((item) => item.quantity !== 0);
+        },
+        {
+          message: "Normal issues require positive quantities. Adjustments cannot have zero quantity.",
+        }
+      )
     )
     .mutation(async ({ ctx, input }) => {
       // Get user profile ID
@@ -157,8 +164,7 @@ export const issuesRouter = router({
         .from("stock_issues")
         .insert({
           issue_type: input.issueType,
-          virtual_warehouse_type: input.virtualWarehouseType,
-          physical_warehouse_id: input.physicalWarehouseId,
+          virtual_warehouse_id: input.virtualWarehouseId, // REDESIGNED: Direct warehouse reference
           issue_date: input.issueDate,
           ticket_id: input.ticketId,
           rma_batch_id: input.rmaBatchId,
@@ -308,7 +314,7 @@ export const issuesRouter = router({
       // Get issue to check warehouse
       const { data: issue } = await ctx.supabaseAdmin
         .from("stock_issues")
-        .select("virtual_warehouse_type, physical_warehouse_id")
+        .select("virtual_warehouse_id, physical_warehouse_id")
         .eq("id", issueItem.issue_id)
         .single();
 
@@ -319,7 +325,7 @@ export const issuesRouter = router({
       // Validate physical products exist and belong to correct warehouse/product
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_type, physical_warehouse_id")
+        .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
         .in("id", input.physicalProductIds);
 
       if (validateError) {
@@ -334,7 +340,7 @@ export const issuesRouter = router({
       const invalid = physicalProducts.filter(
         (p) =>
           p.product_id !== issueItem.product_id ||
-          p.virtual_warehouse_type !== issue.virtual_warehouse_type ||
+          p.virtual_warehouse_id !== issue.virtual_warehouse_id ||
           (issue.physical_warehouse_id && p.physical_warehouse_id !== issue.physical_warehouse_id)
       );
 
@@ -417,22 +423,18 @@ export const issuesRouter = router({
     .input(
       z.object({
         productId: z.string(),
-        virtualWarehouseType: z.string(),
-        physicalWarehouseId: z.string().optional(),
+        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
         search: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
+      // Query physical_products directly by virtual_warehouse_id
       let query = ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, warranty_end_date, created_at")
         .eq("product_id", input.productId)
-        .eq("virtual_warehouse_type", input.virtualWarehouseType)
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
         .is("issued_at", null); // Not issued yet
-
-      if (input.physicalWarehouseId) {
-        query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
-      }
 
       if (input.search) {
         query = query.ilike("serial_number", `%${input.search}%`);

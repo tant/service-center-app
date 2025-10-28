@@ -38,6 +38,7 @@ import {
 } from "@/hooks/use-warehouse";
 import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 import type { PhysicalProduct } from "@/types/warehouse";
+import type { ProductCondition } from "@/types/enums";
 
 interface ProductRegistrationModalProps {
   open: boolean;
@@ -58,14 +59,11 @@ export function ProductRegistrationModal({
   onClose,
   product,
 }: ProductRegistrationModalProps) {
-  type WarehouseType = "main" | "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
-  type ProductCondition = "new" | "refurbished" | "used" | "faulty" | "for_parts";
-
   const [formData, setFormData] = useState<{
     serial_number: string;
     product_id: string;
     physical_warehouse_id: string;
-    virtual_warehouse_type: WarehouseType;
+    virtual_warehouse_id: string;
     condition: ProductCondition;
     warranty_start_date: string;
     warranty_months: number;
@@ -78,7 +76,7 @@ export function ProductRegistrationModal({
     serial_number: "",
     product_id: "",
     physical_warehouse_id: "",
-    virtual_warehouse_type: "warranty_stock",
+    virtual_warehouse_id: "",
     condition: "new",
     warranty_start_date: "",
     warranty_months: 0,
@@ -94,6 +92,9 @@ export function ProductRegistrationModal({
   const { createProductAsync, isCreating } = useCreatePhysicalProduct();
   const { updateProductAsync, isUpdating } = useUpdatePhysicalProduct();
   const { warehouses: physicalWarehouses } = usePhysicalWarehouses({ is_active: true });
+
+  // Fetch virtual warehouses
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
 
   // Fetch products for selection
   const { data: products } = trpc.products.getProducts.useQuery();
@@ -125,7 +126,7 @@ export function ProductRegistrationModal({
         serial_number: product.serial_number,
         product_id: product.product_id,
         physical_warehouse_id: product.physical_warehouse_id || "",
-        virtual_warehouse_type: product.virtual_warehouse_type,
+        virtual_warehouse_id: product.virtual_warehouse_id || "",
         condition: product.condition,
         warranty_start_date: product.warranty_start_date || "",
         warranty_months: product.warranty_months || 0,
@@ -141,7 +142,7 @@ export function ProductRegistrationModal({
         serial_number: "",
         product_id: "",
         physical_warehouse_id: "",
-        virtual_warehouse_type: "main",
+        virtual_warehouse_id: "",
         condition: "new",
         warranty_start_date: "",
         warranty_months: 0,
@@ -172,6 +173,11 @@ export function ProductRegistrationModal({
       newErrors.product_id = "Vui lòng chọn sản phẩm";
     }
 
+    // Virtual warehouse validation
+    if (!formData.virtual_warehouse_id) {
+      newErrors.virtual_warehouse_id = "Vui lòng chọn kho ảo";
+    }
+
     // Warranty validation
     if (formData.warranty_start_date && formData.warranty_months < 0) {
       newErrors.warranty_months = "Số tháng bảo hành không được âm";
@@ -189,7 +195,7 @@ export function ProductRegistrationModal({
         serial_number: formData.serial_number.toUpperCase(),
         product_id: formData.product_id,
         physical_warehouse_id: formData.physical_warehouse_id || undefined,
-        virtual_warehouse_type: formData.virtual_warehouse_type,
+        virtual_warehouse_id: formData.virtual_warehouse_id,
         condition: formData.condition,
         warranty_start_date: formData.warranty_start_date || undefined,
         warranty_months: formData.warranty_months > 0 ? formData.warranty_months : undefined,
@@ -278,22 +284,26 @@ export function ProductRegistrationModal({
                 Kho Ảo <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={formData.virtual_warehouse_type}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, virtual_warehouse_type: value })
-                }
+                value={formData.virtual_warehouse_id}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, virtual_warehouse_id: value });
+                  if (errors.virtual_warehouse_id) setErrors({ ...errors, virtual_warehouse_id: "" });
+                }}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className={errors.virtual_warehouse_id ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Chọn kho ảo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(WAREHOUSE_TYPE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
+                  {virtualWarehouses?.map((vw) => (
+                    <SelectItem key={vw.id} value={vw.id}>
+                      {vw.name} ({WAREHOUSE_TYPE_LABELS[vw.warehouse_type as keyof typeof WAREHOUSE_TYPE_LABELS]})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {errors.virtual_warehouse_id && (
+                <p className="text-sm text-destructive">{errors.virtual_warehouse_id}</p>
+              )}
             </div>
 
             <div className="grid gap-2">

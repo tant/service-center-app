@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useBulkProductImport } from "@/hooks/use-warehouse";
+import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 
 interface BulkImportModalProps {
@@ -40,12 +41,15 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
 
   const { bulkImportAsync, isImporting, result } = useBulkProductImport();
 
+  // Fetch virtual warehouses for name to ID resolution
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+
   const downloadTemplate = () => {
     const headers = [
       "serial_number",
       "product_id",
       "physical_warehouse_id",
-      "virtual_warehouse_type",
+      "virtual_warehouse_name",
       "condition",
       "warranty_start_date",
       "warranty_months",
@@ -60,7 +64,7 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
         "ABC12345",
         "uuid-of-product",
         "uuid-of-warehouse",
-        "warranty_stock",
+        "Kho Bảo Hành",
         "new",
         "2024-01-01",
         "12",
@@ -73,7 +77,7 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
         "DEF67890",
         "uuid-of-product",
         "",
-        "rma_staging",
+        "Kho RMA - Chờ Trả",
         "refurbished",
         "2024-02-15",
         "6",
@@ -161,28 +165,54 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
       return;
     }
 
+    if (!virtualWarehouses || virtualWarehouses.length === 0) {
+      toast.error("Không thể tải danh sách kho ảo");
+      return;
+    }
+
     try {
+      // Create warehouse name to ID map
+      const warehouseNameMap = new Map<string, string>();
+      virtualWarehouses.forEach((vw) => {
+        warehouseNameMap.set(vw.name.toLowerCase().trim(), vw.id);
+      });
+
       // Transform parsed data to match API schema
-      const products = parsedData.map((row) => ({
-        serial_number: row.serial_number.toUpperCase(),
-        product_id: row.product_id,
-        physical_warehouse_id: row.physical_warehouse_id || undefined,
-        virtual_warehouse_type: row.virtual_warehouse_type,
-        condition: row.condition,
-        warranty_start_date: row.warranty_start_date || undefined,
-        warranty_months: row.warranty_months ? parseInt(row.warranty_months) : undefined,
-        supplier_name: row.supplier_name || undefined,
-        purchase_date: row.purchase_date || undefined,
-        purchase_price: row.purchase_price ? parseFloat(row.purchase_price) : undefined,
-        notes: row.notes || undefined,
-      }));
+      const products = parsedData.map((row, index) => {
+        const warehouseName = row.virtual_warehouse_name?.toLowerCase().trim();
+        const warehouseId = warehouseNameMap.get(warehouseName);
+
+        if (!warehouseId) {
+          throw new Error(
+            `Dòng ${index + 2}: Không tìm thấy kho ảo với tên "${row.virtual_warehouse_name}"`
+          );
+        }
+
+        return {
+          serial_number: row.serial_number.toUpperCase(),
+          product_id: row.product_id,
+          physical_warehouse_id: row.physical_warehouse_id || undefined,
+          virtual_warehouse_id: warehouseId,
+          condition: row.condition,
+          warranty_start_date: row.warranty_start_date || undefined,
+          warranty_months: row.warranty_months ? parseInt(row.warranty_months) : undefined,
+          supplier_name: row.supplier_name || undefined,
+          purchase_date: row.purchase_date || undefined,
+          purchase_price: row.purchase_price ? parseFloat(row.purchase_price) : undefined,
+          notes: row.notes || undefined,
+        };
+      });
 
       await bulkImportAsync({ products });
 
       // Don't close immediately - show results
     } catch (error) {
       // Error handling is done in the hook
-      console.error("Bulk import error:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        console.error("Bulk import error:", error);
+      }
     }
   };
 
@@ -256,7 +286,7 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
                     <TableRow>
                       <TableHead>Serial</TableHead>
                       <TableHead>Product ID</TableHead>
-                      <TableHead>Warehouse Type</TableHead>
+                      <TableHead>Kho Ảo</TableHead>
                       <TableHead>Condition</TableHead>
                       <TableHead>Warranty</TableHead>
                     </TableRow>
@@ -268,7 +298,7 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
                           {row.serial_number}
                         </TableCell>
                         <TableCell className="text-xs">{row.product_id}</TableCell>
-                        <TableCell className="text-xs">{row.virtual_warehouse_type}</TableCell>
+                        <TableCell className="text-xs">{row.virtual_warehouse_name}</TableCell>
                         <TableCell className="text-xs">{row.condition}</TableCell>
                         <TableCell className="text-xs">
                           {row.warranty_months ? `${row.warranty_months} tháng` : "—"}

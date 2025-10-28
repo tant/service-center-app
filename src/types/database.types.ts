@@ -348,9 +348,13 @@ export type Database = {
           condition: Database["public"]["Enums"]["product_condition"]
           created_at: string
           current_ticket_id: string | null
+          end_user_warranty_end: string | null
+          end_user_warranty_months: number | null
+          end_user_warranty_start: string | null
           id: string
           notes: string | null
           physical_warehouse_id: string | null
+          previous_virtual_warehouse_id: string | null
           product_id: string
           purchase_date: string | null
           purchase_price: number | null
@@ -360,7 +364,7 @@ export type Database = {
           serial_number: string
           supplier_id: string | null
           updated_at: string
-          virtual_warehouse_type: Database["public"]["Enums"]["warehouse_type"]
+          virtual_warehouse_id: string
           warranty_end_date: string | null
           warranty_months: number | null
           warranty_start_date: string | null
@@ -369,9 +373,13 @@ export type Database = {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
           current_ticket_id?: string | null
+          end_user_warranty_end?: string | null
+          end_user_warranty_months?: number | null
+          end_user_warranty_start?: string | null
           id?: string
           notes?: string | null
           physical_warehouse_id?: string | null
+          previous_virtual_warehouse_id?: string | null
           product_id: string
           purchase_date?: string | null
           purchase_price?: number | null
@@ -381,7 +389,7 @@ export type Database = {
           serial_number: string
           supplier_id?: string | null
           updated_at?: string
-          virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
+          virtual_warehouse_id: string
           warranty_end_date?: string | null
           warranty_months?: number | null
           warranty_start_date?: string | null
@@ -390,9 +398,13 @@ export type Database = {
           condition?: Database["public"]["Enums"]["product_condition"]
           created_at?: string
           current_ticket_id?: string | null
+          end_user_warranty_end?: string | null
+          end_user_warranty_months?: number | null
+          end_user_warranty_start?: string | null
           id?: string
           notes?: string | null
           physical_warehouse_id?: string | null
+          previous_virtual_warehouse_id?: string | null
           product_id?: string
           purchase_date?: string | null
           purchase_price?: number | null
@@ -402,7 +414,7 @@ export type Database = {
           serial_number?: string
           supplier_id?: string | null
           updated_at?: string
-          virtual_warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
+          virtual_warehouse_id?: string
           warranty_end_date?: string | null
           warranty_months?: number | null
           warranty_start_date?: string | null
@@ -437,6 +449,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "physical_products_previous_virtual_warehouse_id_fkey"
+            columns: ["previous_virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "physical_products_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -448,6 +467,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "physical_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
             referencedColumns: ["product_id"]
           },
           {
@@ -469,6 +495,13 @@ export type Database = {
             columns: ["rma_batch_id"]
             isOneToOne: false
             referencedRelation: "rma_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_products_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -576,6 +609,13 @@ export type Database = {
             foreignKeyName: "product_parts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_parts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -651,6 +691,13 @@ export type Database = {
             foreignKeyName: "product_stock_thresholds_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_stock_thresholds_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -663,11 +710,86 @@ export type Database = {
           },
         ]
       }
+      product_warehouse_stock: {
+        Row: {
+          created_at: string
+          declared_quantity: number
+          id: string
+          initial_stock_entry: number
+          product_id: string
+          updated_at: string
+          virtual_warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          declared_quantity?: number
+          id?: string
+          initial_stock_entry?: number
+          product_id: string
+          updated_at?: string
+          virtual_warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          declared_quantity?: number
+          id?: string
+          initial_stock_entry?: number
+          product_id?: string
+          updated_at?: string
+          virtual_warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand_id: string | null
           created_at: string
           created_by: string | null
+          default_warranty_months: number | null
+          end_user_warranty_months: number | null
           id: string
           is_active: boolean
           model: string | null
@@ -684,6 +806,8 @@ export type Database = {
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          default_warranty_months?: number | null
+          end_user_warranty_months?: number | null
           id?: string
           is_active?: boolean
           model?: string | null
@@ -700,6 +824,8 @@ export type Database = {
           brand_id?: string | null
           created_at?: string
           created_by?: string | null
+          default_warranty_months?: number | null
+          end_user_warranty_months?: number | null
           id?: string
           is_active?: boolean
           model?: string | null
@@ -803,6 +929,7 @@ export type Database = {
           shipping_date: string | null
           status: string
           supplier_id: string | null
+          supplier_name: string | null
           tracking_number: string | null
           updated_at: string
         }
@@ -815,6 +942,7 @@ export type Database = {
           shipping_date?: string | null
           status?: string
           supplier_id?: string | null
+          supplier_name?: string | null
           tracking_number?: string | null
           updated_at?: string
         }
@@ -827,6 +955,7 @@ export type Database = {
           shipping_date?: string | null
           status?: string
           supplier_id?: string | null
+          supplier_name?: string | null
           tracking_number?: string | null
           updated_at?: string
         }
@@ -1398,6 +1527,13 @@ export type Database = {
             foreignKeyName: "service_tickets_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -1445,13 +1581,310 @@ export type Database = {
           },
         ]
       }
+      stock_document_attachments: {
+        Row: {
+          created_at: string
+          document_id: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          uploaded_by_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          uploaded_by_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          uploaded_by_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_document_attachments_uploaded_by_id_fkey"
+            columns: ["uploaded_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_issue_items: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          total_price: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_issue_items_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      stock_issue_serials: {
+        Row: {
+          created_at: string
+          id: string
+          issue_item_id: string
+          physical_product_id: string
+          serial_number: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_item_id: string
+          physical_product_id: string
+          serial_number: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_item_id?: string
+          physical_product_id?: string
+          serial_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_issue_serials_issue_item_id_fkey"
+            columns: ["issue_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issue_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "physical_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issue_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_movement_history"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["physical_product_id"]
+          },
+        ]
+      }
+      stock_issues: {
+        Row: {
+          approved_at: string | null
+          approved_by_id: string | null
+          auto_approve_threshold: number | null
+          auto_generated: boolean
+          completed_at: string | null
+          completed_by_id: string | null
+          created_at: string
+          created_by_id: string
+          id: string
+          issue_date: string
+          issue_number: string
+          issue_type: Database["public"]["Enums"]["stock_issue_type"]
+          notes: string | null
+          reference_document_number: string | null
+          rejection_reason: string | null
+          rma_batch_id: string | null
+          status: Database["public"]["Enums"]["stock_document_status"]
+          ticket_id: string | null
+          updated_at: string
+          virtual_warehouse_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          auto_approve_threshold?: number | null
+          auto_generated?: boolean
+          completed_at?: string | null
+          completed_by_id?: string | null
+          created_at?: string
+          created_by_id: string
+          id?: string
+          issue_date?: string
+          issue_number: string
+          issue_type?: Database["public"]["Enums"]["stock_issue_type"]
+          notes?: string | null
+          reference_document_number?: string | null
+          rejection_reason?: string | null
+          rma_batch_id?: string | null
+          status?: Database["public"]["Enums"]["stock_document_status"]
+          ticket_id?: string | null
+          updated_at?: string
+          virtual_warehouse_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          auto_approve_threshold?: number | null
+          auto_generated?: boolean
+          completed_at?: string | null
+          completed_by_id?: string | null
+          created_at?: string
+          created_by_id?: string
+          id?: string
+          issue_date?: string
+          issue_number?: string
+          issue_type?: Database["public"]["Enums"]["stock_issue_type"]
+          notes?: string | null
+          reference_document_number?: string | null
+          rejection_reason?: string | null
+          rma_batch_id?: string | null
+          status?: Database["public"]["Enums"]["stock_document_status"]
+          ticket_id?: string | null
+          updated_at?: string
+          virtual_warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_issues_approved_by_id_fkey"
+            columns: ["approved_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_completed_by_id_fkey"
+            columns: ["completed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_rma_batch_id_fkey"
+            columns: ["rma_batch_id"]
+            isOneToOne: false
+            referencedRelation: "rma_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "service_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["ticket_id"]
+          },
+          {
+            foreignKeyName: "stock_issues_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["current_ticket_id"]
+          },
+          {
+            foreignKeyName: "stock_issues_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
           from_physical_warehouse_id: string | null
-          from_virtual_warehouse:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          from_virtual_warehouse_id: string | null
           id: string
           moved_by_id: string
           movement_type: Database["public"]["Enums"]["movement_type"]
@@ -1460,16 +1893,12 @@ export type Database = {
           reason: string | null
           ticket_id: string | null
           to_physical_warehouse_id: string | null
-          to_virtual_warehouse:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          to_virtual_warehouse_id: string | null
         }
         Insert: {
           created_at?: string
           from_physical_warehouse_id?: string | null
-          from_virtual_warehouse?:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          from_virtual_warehouse_id?: string | null
           id?: string
           moved_by_id: string
           movement_type: Database["public"]["Enums"]["movement_type"]
@@ -1478,16 +1907,12 @@ export type Database = {
           reason?: string | null
           ticket_id?: string | null
           to_physical_warehouse_id?: string | null
-          to_virtual_warehouse?:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          to_virtual_warehouse_id?: string | null
         }
         Update: {
           created_at?: string
           from_physical_warehouse_id?: string | null
-          from_virtual_warehouse?:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          from_virtual_warehouse_id?: string | null
           id?: string
           moved_by_id?: string
           movement_type?: Database["public"]["Enums"]["movement_type"]
@@ -1496,9 +1921,7 @@ export type Database = {
           reason?: string | null
           ticket_id?: string | null
           to_physical_warehouse_id?: string | null
-          to_virtual_warehouse?:
-            | Database["public"]["Enums"]["warehouse_type"]
-            | null
+          to_virtual_warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -1506,6 +1929,13 @@ export type Database = {
             columns: ["from_physical_warehouse_id"]
             isOneToOne: false
             referencedRelation: "physical_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_from_virtual_warehouse_id_fkey"
+            columns: ["from_virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
             referencedColumns: ["id"]
           },
           {
@@ -1564,7 +1994,520 @@ export type Database = {
             referencedRelation: "physical_warehouses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_movements_to_virtual_warehouse_id_fkey"
+            columns: ["to_virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      stock_receipt_items: {
+        Row: {
+          created_at: string
+          declared_quantity: number
+          id: string
+          notes: string | null
+          product_id: string
+          receipt_id: string
+          serial_count: number
+          total_price: number | null
+          unit_price: number | null
+          updated_at: string
+          warranty_months: number | null
+          warranty_start_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          declared_quantity: number
+          id?: string
+          notes?: string | null
+          product_id: string
+          receipt_id: string
+          serial_count?: number
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          warranty_months?: number | null
+          warranty_start_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          declared_quantity?: number
+          id?: string
+          notes?: string | null
+          product_id?: string
+          receipt_id?: string
+          serial_count?: number
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          warranty_months?: number | null
+          warranty_start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "stock_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_receipt_serials: {
+        Row: {
+          created_at: string
+          id: string
+          physical_product_id: string | null
+          receipt_item_id: string
+          serial_number: string
+          warranty_months: number | null
+          warranty_start_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          physical_product_id?: string | null
+          receipt_item_id: string
+          serial_number: string
+          warranty_months?: number | null
+          warranty_start_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          physical_product_id?: string | null
+          receipt_item_id?: string
+          serial_number?: string
+          warranty_months?: number | null
+          warranty_start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_receipt_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "physical_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_movement_history"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_serials_receipt_item_id_fkey"
+            columns: ["receipt_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_receipt_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_receipts: {
+        Row: {
+          approved_at: string | null
+          approved_by_id: string | null
+          completed_at: string | null
+          completed_by_id: string | null
+          created_at: string
+          created_by_id: string
+          expected_date: string | null
+          id: string
+          notes: string | null
+          receipt_date: string
+          receipt_number: string
+          receipt_type: Database["public"]["Enums"]["stock_receipt_type"]
+          reference_document_number: string | null
+          rejection_reason: string | null
+          rma_batch_id: string | null
+          status: Database["public"]["Enums"]["stock_document_status"]
+          supplier_id: string | null
+          updated_at: string
+          virtual_warehouse_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          created_at?: string
+          created_by_id: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          receipt_date?: string
+          receipt_number: string
+          receipt_type?: Database["public"]["Enums"]["stock_receipt_type"]
+          reference_document_number?: string | null
+          rejection_reason?: string | null
+          rma_batch_id?: string | null
+          status?: Database["public"]["Enums"]["stock_document_status"]
+          supplier_id?: string | null
+          updated_at?: string
+          virtual_warehouse_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          created_at?: string
+          created_by_id?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          receipt_date?: string
+          receipt_number?: string
+          receipt_type?: Database["public"]["Enums"]["stock_receipt_type"]
+          reference_document_number?: string | null
+          rejection_reason?: string | null
+          rma_batch_id?: string | null
+          status?: Database["public"]["Enums"]["stock_document_status"]
+          supplier_id?: string | null
+          updated_at?: string
+          virtual_warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_receipts_approved_by_id_fkey"
+            columns: ["approved_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_completed_by_id_fkey"
+            columns: ["completed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_rma_batch_id_fkey"
+            columns: ["rma_batch_id"]
+            isOneToOne: false
+            referencedRelation: "rma_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfer_items: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          transfer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          transfer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          transfer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfer_serials: {
+        Row: {
+          created_at: string
+          id: string
+          physical_product_id: string
+          serial_number: string
+          transfer_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          physical_product_id: string
+          serial_number: string
+          transfer_item_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          physical_product_id?: string
+          serial_number?: string
+          transfer_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfer_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "physical_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_movement_history"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_serials_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_serials_transfer_item_id_fkey"
+            columns: ["transfer_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfer_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfers: {
+        Row: {
+          approved_at: string | null
+          approved_by_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by_id: string
+          expected_delivery_date: string | null
+          from_virtual_warehouse_id: string
+          generated_issue_id: string | null
+          generated_receipt_id: string | null
+          id: string
+          notes: string | null
+          received_by_id: string | null
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["transfer_status"]
+          to_virtual_warehouse_id: string
+          transfer_date: string
+          transfer_number: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by_id: string
+          expected_delivery_date?: string | null
+          from_virtual_warehouse_id: string
+          generated_issue_id?: string | null
+          generated_receipt_id?: string | null
+          id?: string
+          notes?: string | null
+          received_by_id?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["transfer_status"]
+          to_virtual_warehouse_id: string
+          transfer_date?: string
+          transfer_number: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by_id?: string
+          expected_delivery_date?: string | null
+          from_virtual_warehouse_id?: string
+          generated_issue_id?: string | null
+          generated_receipt_id?: string | null
+          id?: string
+          notes?: string | null
+          received_by_id?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["transfer_status"]
+          to_virtual_warehouse_id?: string
+          transfer_date?: string
+          transfer_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfers_approved_by_id_fkey"
+            columns: ["approved_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_virtual_warehouse_id_fkey"
+            columns: ["from_virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_generated_issue_id_fkey"
+            columns: ["generated_issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_generated_receipt_id_fkey"
+            columns: ["generated_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "stock_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_received_by_id_fkey"
+            columns: ["received_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_virtual_warehouse_id_fkey"
+            columns: ["to_virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_settings: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       task_history: {
         Row: {
@@ -1692,6 +2635,13 @@ export type Database = {
             columns: ["product_type"]
             isOneToOne: false
             referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "task_templates_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
             referencedColumns: ["product_id"]
           },
           {
@@ -1895,7 +2845,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
-          physical_warehouse_id: string | null
+          physical_warehouse_id: string
           updated_at: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -1905,7 +2855,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
-          physical_warehouse_id?: string | null
+          physical_warehouse_id: string
           updated_at?: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -1915,7 +2865,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
-          physical_warehouse_id?: string | null
+          physical_warehouse_id?: string
           updated_at?: string
           warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -2000,6 +2950,22 @@ export type Database = {
           threshold_created_at: string | null
           threshold_updated_at: string | null
           warehouse_type: Database["public"]["Enums"]["warehouse_type"] | null
+        }
+        Relationships: []
+      }
+      v_pending_approvals: {
+        Row: {
+          created_at: string | null
+          created_by_id: string | null
+          created_by_name: string | null
+          document_date: string | null
+          document_number: string | null
+          document_type: string | null
+          id: string | null
+          status: string | null
+          sub_type: string | null
+          total_quantity: number | null
+          total_value: number | null
         }
         Relationships: []
       }
@@ -2127,6 +3093,43 @@ export type Database = {
           },
         ]
       }
+      v_stock_summary: {
+        Row: {
+          actual_serial_count: number | null
+          created_at: string | null
+          declared_quantity: number | null
+          initial_stock_entry: number | null
+          minimum_quantity: number | null
+          physical_warehouse_id: string | null
+          physical_warehouse_name: string | null
+          product_id: string | null
+          product_name: string | null
+          reorder_quantity: number | null
+          serial_gap: number | null
+          sku: string | null
+          stock_status: string | null
+          updated_at: string | null
+          virtual_warehouse_id: string | null
+          virtual_warehouse_name: string | null
+          warehouse_type: Database["public"]["Enums"]["warehouse_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_warehouse_stock_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_warehouses_physical_warehouse_id_fkey"
+            columns: ["physical_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "physical_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_task_progress_summary: {
         Row: {
           blocked_tasks: number | null
@@ -2219,6 +3222,28 @@ export type Database = {
         Returns: boolean
       }
       generate_ticket_number: { Args: never; Returns: string }
+      get_aggregated_stock: {
+        Args: { search_term?: string }
+        Returns: {
+          product_id: string
+          product_name: string
+          serial_gap: number
+          sku: string
+          stock_status: string
+          total_actual: number
+          total_declared: number
+        }[]
+      }
+      get_inventory_stats: {
+        Args: never
+        Returns: {
+          critical_count: number
+          total_actual: number
+          total_declared: number
+          total_skus: number
+          warning_count: number
+        }[]
+      }
       get_my_role: { Args: never; Returns: string }
       get_warranty_status: {
         Args: { p_warranty_end_date: string }
@@ -2275,6 +3300,14 @@ export type Database = {
         | "completed"
         | "cancelled"
       service_type: "warranty" | "paid" | "replacement"
+      stock_document_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "completed"
+        | "cancelled"
+      stock_issue_type: "normal" | "adjustment"
+      stock_receipt_type: "normal" | "adjustment"
       task_status:
         | "pending"
         | "in_progress"
@@ -2282,6 +3315,13 @@ export type Database = {
         | "blocked"
         | "skipped"
       ticket_status: "pending" | "in_progress" | "completed" | "cancelled"
+      transfer_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "in_transit"
+        | "completed"
+        | "cancelled"
       user_role: "admin" | "manager" | "technician" | "reception"
       warehouse_type:
         | "warranty_stock"
@@ -2440,6 +3480,15 @@ export const Constants = {
         "cancelled",
       ],
       service_type: ["warranty", "paid", "replacement"],
+      stock_document_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "completed",
+        "cancelled",
+      ],
+      stock_issue_type: ["normal", "adjustment"],
+      stock_receipt_type: ["normal", "adjustment"],
       task_status: [
         "pending",
         "in_progress",
@@ -2448,6 +3497,14 @@ export const Constants = {
         "skipped",
       ],
       ticket_status: ["pending", "in_progress", "completed", "cancelled"],
+      transfer_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "in_transit",
+        "completed",
+        "cancelled",
+      ],
       user_role: ["admin", "manager", "technician", "reception"],
       warehouse_type: [
         "warranty_stock",

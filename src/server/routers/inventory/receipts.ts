@@ -18,13 +18,7 @@ export const receiptsRouter = router({
           .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
           .optional(),
         receiptType: z
-          .enum([
-            "supplier_receipt",
-            "rma_return",
-            "transfer_in",
-            "breakdown",
-            "adjustment_in",
-          ])
+          .enum(["normal", "adjustment"]) // REDESIGNED: Simplified to 2 types
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
@@ -83,10 +77,10 @@ export const receiptsRouter = router({
             product:products(id, name, sku),
             serials:stock_receipt_serials(*)
           ),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
           created_by:profiles!created_by_id(id, full_name),
           approved_by:profiles!approved_by_id(id, full_name),
-          completed_by:profiles!completed_by_id(id, full_name),
-          attachments:stock_document_attachments(*)
+          completed_by:profiles!completed_by_id(id, full_name)
         `
         )
         .eq("id", input.id)
@@ -99,7 +93,17 @@ export const receiptsRouter = router({
         throw new Error(`Failed to get receipt: ${error.message}`);
       }
 
-      return data as StockReceiptWithRelations;
+      // Query attachments separately (polymorphic relationship)
+      const { data: attachments } = await ctx.supabaseAdmin
+        .from("stock_document_attachments")
+        .select("*")
+        .eq("document_type", "receipt")
+        .eq("document_id", input.id);
+
+      return {
+        ...data,
+        attachments: attachments || []
+      } as StockReceiptWithRelations;
     }),
 
   /**
@@ -108,15 +112,8 @@ export const receiptsRouter = router({
   create: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
-        receiptType: z.enum([
-          "supplier_receipt",
-          "rma_return",
-          "transfer_in",
-          "breakdown",
-          "adjustment_in",
-        ]),
-        virtualWarehouseType: z.string(),
-        physicalWarehouseId: z.string().optional(),
+        receiptType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
+        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
         receiptDate: z.string(),
         expectedDate: z.string().optional(),
         supplierId: z.string().optional(),
@@ -126,14 +123,26 @@ export const receiptsRouter = router({
         items: z.array(
           z.object({
             productId: z.string(),
-            declaredQuantity: z.number().int().min(1),
+            declaredQuantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
             unitPrice: z.number().optional(),
             warrantyStartDate: z.string().optional(),
             warrantyMonths: z.number().int().optional(),
             notes: z.string().optional(),
           })
-        ),
-      })
+        ).min(1),
+      }).refine(
+        (data) => {
+          // Validate: normal receipts must have positive quantities
+          if (data.receiptType === "normal") {
+            return data.items.every((item) => item.declaredQuantity > 0);
+          }
+          // Adjustment receipts: allow negative but not zero
+          return data.items.every((item) => item.declaredQuantity !== 0);
+        },
+        {
+          message: "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
+        }
+      )
     )
     .mutation(async ({ ctx, input }) => {
       // Get user profile ID
@@ -152,8 +161,7 @@ export const receiptsRouter = router({
         .from("stock_receipts")
         .insert({
           receipt_type: input.receiptType,
-          virtual_warehouse_type: input.virtualWarehouseType,
-          physical_warehouse_id: input.physicalWarehouseId,
+          virtual_warehouse_id: input.virtualWarehouseId, // REDESIGNED: Direct warehouse reference
           receipt_date: input.receiptDate,
           expected_date: input.expectedDate,
           supplier_id: input.supplierId,

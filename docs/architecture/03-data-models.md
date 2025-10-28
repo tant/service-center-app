@@ -542,11 +542,9 @@ graph TB
 
 ---
 
-## 3.7 Phase 2 Schema Expansion (✅ Complete - Oct 2025)
+## 3.7 Current Database Schema
 
-**Status:** All Phase 2 tables implemented (18/21 stories complete - 86%)
-
-### 3.7.1 New ENUMs Added
+### 3.7.1 ENUMs Defined
 
 ```sql
 -- Task workflow management
@@ -580,7 +578,7 @@ create type public.delivery_method as enum (
 );
 ```
 
-### 3.7.2 RBAC Helper Functions (Story 01.00)
+### 3.7.2 RBAC Helper Functions
 
 ```sql
 -- Role-based access control helpers
@@ -615,9 +613,9 @@ returns boolean as $$
 $$ language sql security definer;
 ```
 
-### 3.7.3 Phase 2 Tables Added
+### 3.7.3 Table Categories
 
-**Task Workflow System (Stories 01.02-01.05, 01.17):**
+**Task Workflow System:**
 - `task_templates` - Workflow templates for different service types
 - `task_types` - Library of pre-defined task types
 - `task_templates_tasks` - Junction table linking templates to tasks
@@ -625,7 +623,7 @@ $$ language sql security definer;
 - `task_history` - Audit trail for task execution
 - `ticket_template_changes` - Log of dynamic template switches
 
-**Warehouse Management (Stories 01.06-01.10):**
+**Warehouse & Inventory Management:**
 - `physical_warehouses` - Physical warehouse locations.
   ```sql
   create table "physical_warehouses" (
@@ -657,13 +655,28 @@ $$ language sql security definer;
 - `physical_products` - Physical products with serial numbers
 - `stock_movements` - Product movement history
 - `product_stock_thresholds` - Low-stock alert thresholds
+- `product_warehouse_stock` - Stock levels by warehouse
+- `rma_batches` - Return merchandise authorization batches
 
-**Service Requests (Stories 01.11-01.13):**
+**Stock Documents:**
+- `stock_receipts` - Incoming stock documents (Phiếu Nhập Kho)
+- `stock_receipt_items` - Receipt line items
+- `stock_receipt_serials` - Receipt serial tracking
+- `stock_issues` - Outgoing stock documents (Phiếu Xuất Kho)
+- `stock_issue_items` - Issue line items
+- `stock_issue_serials` - Issue serial tracking
+- `stock_transfers` - Internal transfer documents (Phiếu Chuyển Kho)
+- `stock_transfer_items` - Transfer line items
+- `stock_transfer_serials` - Transfer serial tracking
+- `stock_document_attachments` - Document file uploads
+
+**Public Portal & Communication:**
 - `service_requests` - Public service requests with tracking tokens
 - `email_notifications` - Email notification queue and log
 
-**Audit Logging (Story 01.00):**
+**Security & System:**
 - `audit_logs` - Immutable audit trail for all permission-sensitive operations
+- `system_settings` - Global application configuration
 
 ---
 
@@ -714,43 +727,76 @@ create trigger "after_update_physical_warehouse_name"
 
 ---
 
-## 3.8 All Database Tables
+## 3.8 Complete Table Listing
 
-**Phase 1 - Core System (10 tables):**
+### Core Tables (10)
 
-| Table | Rows | Purpose | Key Features |
-|-------|------|---------|--------------|
-| **profiles** | ~10-100 | User profiles & roles | Links to auth.users, role-based access |
+| Table | Est. Rows | Purpose | Key Features |
+|-------|-----------|---------|--------------|
+| **profiles** | ~10-100 | User profiles & roles | Links to auth.users, RBAC |
 | **customers** | ~1000+ | Customer records | Name, phone, email, address |
 | **brands** | ~20-50 | Product brands | Manufacturer information |
-| **products** | ~100-500 | Product catalog | Brand, model, category |
+| **products** | ~100-500 | Product catalog (SKU) | Brand, model, warranty period |
 | **parts** | ~500-2000 | Parts inventory | Stock tracking, pricing |
 | **product_parts** | ~1000+ | Product-parts compatibility | Junction table |
-| **service_tickets** | ~5000+ | Main service tickets | Auto-numbering, workflow |
-| **service_ticket_parts** | ~10000+ | Parts used in tickets | Quantity, pricing |
-| **service_ticket_comments** | ~20000+ | Ticket comments/notes | Status changes, notes |
+| **service_tickets** | ~5000+ | Main service tickets | Auto-numbering, one-way status flow |
+| **service_ticket_parts** | ~10000+ | Parts used in tickets | Quantity, cost tracking |
+| **service_ticket_comments** | ~20000+ | Ticket audit trail | Auto-logged status changes |
 | **service_ticket_attachments** | ~5000+ | Ticket file uploads | Images, documents |
 
-**Phase 2 - Enhanced Features (14 tables) - ✅ Complete:**
+### Workflow Tables (6)
 
-| Table | Rows | Purpose | Story |
-|-------|------|---------|-------|
-| **task_templates** | ~20-50 | Workflow templates | 01.02 |
-| **task_types** | ~15-30 | Task library | 01.02 |
-| **task_templates_tasks** | ~200-500 | Template-task junction | 01.02 |
-| **service_ticket_tasks** | ~50000+ | Task instances | 01.03-01.05 |
-| **task_history** | ~100000+ | Task execution audit | 01.04 |
-| **ticket_template_changes** | ~1000+ | Template switch log | 01.17 |
-| **physical_warehouses** | ~5-20 | Warehouse locations | 01.06 |
-| **virtual_warehouses** | ~20-100 | Virtual zones | 01.06 |
-| **physical_products** | ~5000+ | Serial-tracked products | 01.07 |
-| **stock_movements** | ~50000+ | Movement history | 01.08 |
-| **product_stock_thresholds** | ~100-500 | Low-stock alerts | 01.09 |
-| **service_requests** | ~2000+ | Public service requests | 01.11-01.13 |
-| **email_notifications** | ~10000+ | Email queue/log | 01.15 |
-| **audit_logs** | ~50000+ | Security audit trail | 01.00 |
+| Table | Est. Rows | Purpose |
+|-------|-----------|---------|
+| **task_templates** | ~20-50 | Workflow templates |
+| **task_types** | ~15-30 | Task library |
+| **task_templates_tasks** | ~200-500 | Template-task junction |
+| **service_ticket_tasks** | ~50000+ | Task instances per ticket |
+| **task_history** | ~100000+ | Immutable task execution audit |
+| **ticket_template_changes** | ~1000+ | Template switch log with reason |
 
-**Total Tables:** 24 (10 Phase 1 + 14 Phase 2)
+### Warehouse & Inventory Tables (7)
+
+| Table | Est. Rows | Purpose |
+|-------|-----------|---------|
+| **physical_warehouses** | ~5-20 | Physical warehouse locations |
+| **virtual_warehouses** | ~20-100 | Virtual zones within warehouses |
+| **physical_products** | ~5000+ | Serialized product tracking |
+| **stock_movements** | ~50000+ | Product movement audit trail |
+| **product_stock_thresholds** | ~100-500 | Low-stock alert configuration |
+| **product_warehouse_stock** | ~5000+ | Stock levels by warehouse |
+| **rma_batches** | ~500+ | Return merchandise batches |
+
+### Stock Document Tables (10)
+
+| Table | Est. Rows | Purpose |
+|-------|-----------|---------|
+| **stock_receipts** | ~2000+ | Incoming stock documents |
+| **stock_receipt_items** | ~10000+ | Receipt line items |
+| **stock_receipt_serials** | ~50000+ | Receipt serial tracking |
+| **stock_issues** | ~2000+ | Outgoing stock documents |
+| **stock_issue_items** | ~10000+ | Issue line items |
+| **stock_issue_serials** | ~50000+ | Issue serial tracking |
+| **stock_transfers** | ~1000+ | Internal transfer documents |
+| **stock_transfer_items** | ~5000+ | Transfer line items |
+| **stock_transfer_serials** | ~25000+ | Transfer serial tracking |
+| **stock_document_attachments** | ~5000+ | Document file uploads |
+
+### Public Portal & Communication Tables (2)
+
+| Table | Est. Rows | Purpose |
+|-------|-----------|---------|
+| **service_requests** | ~2000+ | Public service requests with tracking tokens |
+| **email_notifications** | ~10000+ | Email queue and delivery tracking |
+
+### Security & System Tables (2)
+
+| Table | Est. Rows | Purpose |
+|-------|-----------|---------|
+| **audit_logs** | ~50000+ | Immutable security audit trail |
+| **system_settings** | ~1 | Global application configuration |
+
+**Total Tables:** 37 (10 Core + 6 Workflow + 7 Warehouse + 10 Stock Documents + 2 Portal + 2 System)
 
 ---
 

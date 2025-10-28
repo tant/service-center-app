@@ -193,7 +193,7 @@ export function usePhysicalProducts(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const { data, isLoading, error } = trpc.inventory.listProducts.useQuery(filters ?? {});
+  const { data, isLoading, error } = trpc.physicalProducts.listProducts.useQuery(filters ?? {});
 
   return {
     products: data?.products ?? [],
@@ -207,7 +207,7 @@ export function usePhysicalProducts(filters?: {
  * Hook for getting a single physical product by ID or serial
  */
 export function usePhysicalProduct(params: { id?: string; serial_number?: string }) {
-  const { data: product, isLoading, error } = trpc.inventory.getProduct.useQuery(params, {
+  const { data: product, isLoading, error } = trpc.physicalProducts.getProduct.useQuery(params, {
     enabled: !!(params.id || params.serial_number),
   });
 
@@ -224,9 +224,9 @@ export function usePhysicalProduct(params: { id?: string; serial_number?: string
  */
 export function useCreatePhysicalProduct() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.createProduct.useMutation({
+  const mutation = trpc.physicalProducts.createProduct.useMutation({
     onSuccess: () => {
-      utils.inventory.listProducts.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
       toast.success('Sản phẩm đã được đăng ký thành công');
     },
     onError: (error) => {
@@ -247,10 +247,10 @@ export function useCreatePhysicalProduct() {
  */
 export function useUpdatePhysicalProduct() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.updateProduct.useMutation({
+  const mutation = trpc.physicalProducts.updateProduct.useMutation({
     onSuccess: () => {
-      utils.inventory.listProducts.invalidate();
-      utils.inventory.getProduct.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
+      utils.physicalProducts.getProduct.invalidate();
       toast.success('Thông tin sản phẩm đã được cập nhật');
     },
     onError: (error) => {
@@ -276,7 +276,7 @@ export function useStockLevels(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const { data, isLoading, error } = trpc.inventory.getStockLevels.useQuery(filters ?? {});
+  const { data, isLoading, error } = trpc.physicalProducts.getStockLevels.useQuery(filters ?? {});
 
   return {
     stockLevels: data?.stockLevels ?? [],
@@ -291,10 +291,10 @@ export function useStockLevels(filters?: {
  */
 export function useSetThreshold() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.setThreshold.useMutation({
+  const mutation = trpc.physicalProducts.setThreshold.useMutation({
     onSuccess: () => {
-      utils.inventory.getStockLevels.invalidate();
-      utils.inventory.getLowStockAlerts.invalidate();
+      utils.physicalProducts.getStockLevels.invalidate();
+      utils.physicalProducts.getLowStockAlerts.invalidate();
       toast.success('Đã cập nhật ngưỡng tồn kho');
     },
     onError: (error) => {
@@ -314,7 +314,7 @@ export function useSetThreshold() {
  * Hook for serial number verification
  */
 export function useSerialVerification() {
-  const mutation = trpc.inventory.verifySerial.useMutation();
+  const mutation = trpc.physicalProducts.verifySerial.useMutation();
 
   return {
     verifySerial: mutation.mutate,
@@ -332,11 +332,11 @@ export function useSerialVerification() {
  */
 export function useRecordMovement() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.recordMovement.useMutation({
+  const mutation = trpc.physicalProducts.recordMovement.useMutation({
     onSuccess: () => {
-      utils.inventory.listProducts.invalidate();
-      utils.inventory.getProduct.invalidate();
-      utils.inventory.getMovementHistory.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
+      utils.physicalProducts.getProduct.invalidate();
+      utils.physicalProducts.getMovementHistory.invalidate();
       toast.success('Đã ghi nhận di chuyển sản phẩm');
     },
     onError: (error) => {
@@ -355,7 +355,7 @@ export function useRecordMovement() {
  * Hook for getting product movement history
  */
 export function useMovementHistory(params: { product_id: string; limit?: number; offset?: number }) {
-  const { data, isLoading, error } = trpc.inventory.getMovementHistory.useQuery(params, {
+  const { data, isLoading, error } = trpc.physicalProducts.getMovementHistory.useQuery(params, {
     enabled: !!params.product_id,
   });
 
@@ -373,11 +373,11 @@ export function useMovementHistory(params: { product_id: string; limit?: number;
  */
 export function useAssignToTicket() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.assignToTicket.useMutation({
+  const mutation = trpc.physicalProducts.assignToTicket.useMutation({
     onSuccess: () => {
-      utils.inventory.listProducts.invalidate();
-      utils.inventory.getProduct.invalidate();
-      utils.inventory.getMovementHistory.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
+      utils.physicalProducts.getProduct.invalidate();
+      utils.physicalProducts.getMovementHistory.invalidate();
       toast.success('Đã gán sản phẩm vào phiếu');
     },
     onError: (error) => {
@@ -414,7 +414,7 @@ export function useStockMovements(productId?: string) {
  * Story 1.9: Hook for low stock alerts
  */
 export function useLowStockAlerts() {
-  const { data, isLoading, error } = trpc.inventory.getLowStockAlerts.useQuery();
+  const { data, isLoading, error } = trpc.physicalProducts.getLowStockAlerts.useQuery();
 
   return {
     alerts: data?.alerts ?? [],
@@ -429,7 +429,7 @@ export function useLowStockAlerts() {
  * Hook for exporting stock report
  */
 export function useExportStockReport() {
-  const mutation = trpc.inventory.exportStockReport.useMutation({
+  const mutation = trpc.physicalProducts.exportStockReport.useMutation({
     onSuccess: (result) => {
       // Trigger download
       const blob = new Blob([result.csv], { type: 'text/csv' });
@@ -461,9 +461,9 @@ export function useExportStockReport() {
  */
 export function useBulkProductImport() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.bulkImport.useMutation({
+  const mutation = trpc.physicalProducts.bulkImport.useMutation({
     onSuccess: (result) => {
-      utils.inventory.listProducts.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
       if (result.error_count === 0) {
         toast.success(`Đã nhập thành công ${result.success_count} sản phẩm`);
       } else {
@@ -513,7 +513,7 @@ export function useRMABatches(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const { data, isLoading, error } = trpc.inventory.getRMABatches.useQuery(filters ?? {});
+  const { data, isLoading, error } = trpc.physicalProducts.getRMABatches.useQuery(filters ?? {});
 
   return {
     batches: data?.batches ?? [],
@@ -527,7 +527,7 @@ export function useRMABatches(filters?: {
  * Hook for getting RMA batch details
  */
 export function useRMABatchDetails(batchId: string) {
-  const { data, isLoading, error } = trpc.inventory.getRMABatchDetails.useQuery(
+  const { data, isLoading, error } = trpc.physicalProducts.getRMABatchDetails.useQuery(
     { batch_id: batchId },
     { enabled: !!batchId }
   );
@@ -546,9 +546,9 @@ export function useRMABatchDetails(batchId: string) {
  */
 export function useCreateRMABatch() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.createRMABatch.useMutation({
+  const mutation = trpc.physicalProducts.createRMABatch.useMutation({
     onSuccess: () => {
-      utils.inventory.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatches.invalidate();
       toast.success('Đã tạo lô RMA mới');
     },
     onError: (error) => {
@@ -568,7 +568,7 @@ export function useCreateRMABatch() {
  * Admin/Manager only
  */
 export function useValidateRMASerials() {
-  const mutation = trpc.inventory.validateRMASerials.useMutation();
+  const mutation = trpc.physicalProducts.validateRMASerials.useMutation();
 
   return {
     validate: mutation.mutate,
@@ -585,11 +585,11 @@ export function useValidateRMASerials() {
  */
 export function useAddProductsToRMA() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.addProductsToRMA.useMutation({
+  const mutation = trpc.physicalProducts.addProductsToRMA.useMutation({
     onSuccess: (result) => {
-      utils.inventory.getRMABatches.invalidate();
-      utils.inventory.getRMABatchDetails.invalidate();
-      utils.inventory.listProducts.invalidate();
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
 
       if (result.errors && result.errors.length > 0) {
         toast.warning(`Đã thêm ${result.added} sản phẩm, ${result.errors.length} lỗi`);
@@ -615,11 +615,11 @@ export function useAddProductsToRMA() {
  */
 export function useRemoveProductFromRMA() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.removeProductFromRMA.useMutation({
+  const mutation = trpc.physicalProducts.removeProductFromRMA.useMutation({
     onSuccess: () => {
-      utils.inventory.getRMABatches.invalidate();
-      utils.inventory.getRMABatchDetails.invalidate();
-      utils.inventory.listProducts.invalidate();
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
       toast.success('Đã xóa sản phẩm khỏi lô RMA');
     },
     onError: (error) => {
@@ -640,10 +640,10 @@ export function useRemoveProductFromRMA() {
  */
 export function useFinalizeRMABatch() {
   const utils = trpc.useUtils();
-  const mutation = trpc.inventory.finalizeRMABatch.useMutation({
+  const mutation = trpc.physicalProducts.finalizeRMABatch.useMutation({
     onSuccess: () => {
-      utils.inventory.getRMABatches.invalidate();
-      utils.inventory.getRMABatchDetails.invalidate();
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
       toast.success('Đã hoàn tất lô RMA');
     },
     onError: (error) => {

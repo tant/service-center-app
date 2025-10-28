@@ -28,7 +28,7 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
     verifySerial(
       { serial_number: serial },
       {
-        onSuccess: (result) => {
+        onSuccess: (result: any) => {
           if (result.found && "product" in result && result.product && onVerified) {
             onVerified(result.product.product_id, result.product.serial_number);
           }

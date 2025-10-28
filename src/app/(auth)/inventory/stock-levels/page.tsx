@@ -185,7 +185,7 @@ export default function StockLevelsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stockLevels.map((level) => (
+                {stockLevels.map((level: any) => (
                   <TableRow key={`${level.product_id}-${level.virtual_warehouse_type}`}>
                     <TableCell className="font-medium">
                       {level.product_name}

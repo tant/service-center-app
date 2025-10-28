@@ -79,33 +79,25 @@ graph LR
         Core[Core Features<br/>✅ Complete]
         DB[Database Schema<br/>✅ Complete]
         Deploy[Deployment<br/>✅ Automated]
-    end
-
-    subgraph "In Progress"
-        Docs[Documentation<br/>🟡 Expanding]
-    end
-
-    subgraph "Planned"
-        Tests[Testing<br/>⏳ Planned]
-        Monitor[Monitoring<br/>⏳ Planned]
+        Docs[Documentation<br/>✅ Complete]
+        Tests[E2E Testing<br/>✅ Active]
     end
 
     style Core fill:#50C878
     style DB fill:#50C878
     style Deploy fill:#50C878
-    style Docs fill:#FFD700
-    style Tests fill:#B0B0B0
-    style Monitor fill:#B0B0B0
+    style Docs fill:#50C878
+    style Tests fill:#50C878
 ```
 
 ### Available Documentation
 
 | Document | Location | Status | Purpose |
 |----------|----------|--------|---------|
+| **Product Requirements** | `docs/prd.md` | ✅ Complete | Complete product requirements and features |
 | **Frontend Architecture** | `docs/ui-architecture.md` | ✅ Complete | React/Next.js patterns, component standards |
 | **Deployment Guide** | `DEPLOYMENT.md` | ✅ Complete (Vietnamese) | Docker deployment, multi-instance setup |
 | **Development Guide** | `DEVELOPMENT.md` | ✅ Complete | Local development workflow |
-| **PRD** | `docs/prd/` | ✅ Complete (Sharded) | Product requirements |
 | **Database Schemas** | `docs/data/schemas/` | ✅ Complete | SQL schema files (source of truth) |
 | **Architecture** | `docs/architecture/` | ✅ Complete (Sharded) | This document |
 
@@ -151,7 +143,7 @@ mindmap
 - ✅ Component architecture and patterns
 
 **Does NOT Cover:**
-- ❌ Business requirements (see PRD in `docs/prd/`)
+- ❌ Business requirements (see PRD at `docs/prd.md`)
 - ❌ UI/UX specifications (see Frontend Architecture)
 - ❌ Marketing or sales strategy
 - ❌ End-user documentation
@@ -291,52 +283,7 @@ graph TD
 
 ---
 
-## 1.5 Architecture Evolution
-
-### Version History
-
-```mermaid
-timeline
-    title Architecture Evolution
-    2024-Early : Initial Development
-              : Next.js 14 + Supabase
-              : Basic CRUD operations
-    2024-Mid : Production Launch
-             : tRPC integration
-             : Multi-tenant support
-    2024-Late : Current State (v0.2.1)
-              : Next.js 15.5.4
-              : Full Docker deployment
-              : Automated scripts
-    2025 : Planned Enhancements
-         : Testing infrastructure
-         : Monitoring & observability
-         : Performance optimization
-```
-
-### Future Considerations
-
-**Short-term (Next 3 months):**
-- Implement testing infrastructure (Vitest + Playwright)
-- Add monitoring and observability (Sentry, DataDog)
-- Enhance error handling and logging
-- Document API with OpenAPI/Swagger
-
-**Medium-term (6-12 months):**
-- Multi-language support (i18n)
-- Mobile app (React Native)
-- Advanced reporting and analytics
-- Automated backup and disaster recovery
-
-**Long-term (12+ months):**
-- Microservices architecture (if needed)
-- Kubernetes orchestration for scaling
-- Machine learning for predictive maintenance
-- Real-time collaboration features
-
----
-
-## 1.6 How to Read This Document
+## 1.5 How to Read This Document
 
 ### Document Navigation
 
@@ -382,7 +329,7 @@ docs/architecture/
 
 ---
 
-## 1.7 Key Architectural Principles
+## 1.6 Key Architectural Principles
 
 ### Core Principles
 

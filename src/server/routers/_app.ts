@@ -10,6 +10,7 @@ import { brandsRouter } from "./brands";
 import { workflowRouter } from "./workflow";
 import { warehouseRouter } from "./warehouse";
 import { inventoryRouter } from "./inventory";
+import { inventoryRouter as physicalProductsRouter } from "./physical-products";
 import { serviceRequestRouter } from "./service-request";
 import { notificationsRouter } from "./notifications";
 
@@ -25,6 +26,7 @@ export const appRouter = router({
   workflow: workflowRouter,
   warehouse: warehouseRouter,
   inventory: inventoryRouter,
+  physicalProducts: physicalProductsRouter,
   serviceRequest: serviceRequestRouter,
   notifications: notificationsRouter,
 });

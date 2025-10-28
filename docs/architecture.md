@@ -1,9 +1,9 @@
 # Service Center - Architecture Documentation
 
-**Version:** 2.0 (Phase 2 Complete)
-**Last Updated:** 2025-10-25
+**Version:** 1.0
+**Last Updated:** 2025-10-28
 **Document Type:** Brownfield Architecture
-**Author:** Winston (Architect Agent) + BMad Orchestrator Team
+**Status:** Production (v0.2.1)
 
 ---
 
@@ -51,7 +51,7 @@ graph TB
 | **2. Technology Stack** | [02-technology-stack.md](architecture/02-technology-stack.md) | Complete tech stack with rationale | ✅ Complete |
 | **3. Data Models** | [03-data-models.md](architecture/03-data-models.md) | Database schema, ENUMs, triggers, RLS, ER diagrams | ✅ Complete |
 | **4. Component Architecture** | [04-component-architecture.md](architecture/04-component-architecture.md) | Three-layer architecture, Supabase clients, state management | ✅ Complete |
-| **5. API Design** | [05-api-design.md](architecture/05-api-design.md) | tRPC routers, 50+ procedures, type safety flow | ✅ Complete |
+| **5. API Design** | [05-api-design.md](architecture/05-api-design.md) | tRPC routers, procedures, type safety flow | ✅ Complete |
 
 ### Implementation Details
 
@@ -60,7 +60,7 @@ graph TB
 | **6. Source Tree** | [06-source-tree.md](architecture/06-source-tree.md) | Project structure, naming conventions, import patterns | ✅ Complete |
 | **7. Infrastructure** | [07-infrastructure.md](architecture/07-infrastructure.md) | Docker deployment, multi-tenant architecture, operations | ✅ Complete |
 | **8. Coding Standards** | [08-coding-standards.md](architecture/08-coding-standards.md) | Type enforcement, naming, error handling, security | ✅ Complete |
-| **9. Testing Strategy** | [09-testing-strategy.md](architecture/09-testing-strategy.md) | Testing stack, phased implementation, coverage goals | ✅ Complete |
+| **9. Testing Strategy** | [09-testing-strategy.md](architecture/09-testing-strategy.md) | Testing stack, implementation, coverage goals | ✅ Complete |
 | **10. Security** | [10-security.md](architecture/10-security.md) | Three-layer security model, authentication, RLS | ✅ Complete |
 
 ---
@@ -221,19 +221,20 @@ graph LR
 
 ## 📊 System Metrics
 
-### Current State (Phase 2 - Oct 2025)
+### Current State
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | **Version** | 0.2.1 | ✅ Production |
 | **Framework** | Next.js 15.5.4 | ✅ Latest |
-| **Database Tables** | 24 tables (10 Phase 1 + 14 Phase 2) | ✅ Complete |
-| **tRPC Routers** | 13 routers (8 Phase 1 + 5 Phase 2) | ✅ Complete |
-| **tRPC Procedures** | ~95 endpoints | ✅ Complete |
+| **Database Tables** | 37 tables | ✅ Complete |
+| **tRPC Routers** | 14 main routers + 6 inventory sub-routers | ✅ Complete |
+| **tRPC Procedures** | 160+ procedures | ✅ Complete |
+| **React Components** | 138 components | ✅ Complete |
+| **Pages** | 45+ pages (authenticated + public) | ✅ Complete |
 | **Test Coverage** | E2E Tests (Playwright) | ✅ Active |
-| **Documentation** | 100% | ✅ Complete |
-| **RBAC Implementation** | 50+ protected endpoints | ✅ Complete |
-| **Phase 2 Progress** | 18/21 stories (86%) | 🟡 In Progress |
+| **Documentation** | Architecture (10 shards) + PRD | ✅ Complete |
+| **RBAC Implementation** | 4 roles with granular permissions | ✅ Complete |
 
 ### Resource Requirements
 
@@ -326,11 +327,11 @@ Code examples follow the project's coding standards:
 
 | Document | Location | Purpose |
 |----------|----------|---------|
+| **Product Requirements** | `docs/prd.md` | Complete product requirements and features |
 | **Frontend Architecture** | `docs/ui-architecture.md` | React/Next.js patterns |
 | **Deployment Guide** | `DEPLOYMENT.md` | Vietnamese deployment guide |
 | **Development Guide** | `DEVELOPMENT.md` | Local setup instructions |
 | **Project Instructions** | `CLAUDE.md` | Claude Code instructions |
-| **PRD** | `docs/prd/` | Product requirements |
 
 ### External Resources
 
@@ -349,17 +350,8 @@ When updating this documentation:
 1. **Update the relevant shard file** in `docs/architecture/`
 2. **Maintain consistency** with existing style and format
 3. **Add diagrams** where they improve understanding
-4. **Update version numbers** and change log
+4. **Update metrics** to reflect current state
 5. **Keep the index synchronized** with shard changes
-
----
-
-## 📅 Version History
-
-| Date | Version | Description | Author |
-|------|---------|-------------|--------|
-| 2025-10-25 | 2.0 | Updated for Phase 2 completion (18/21 stories) - Added 14 tables, 5 routers, RBAC, Playwright tests | BMad Team |
-| 2025-10-23 | 1.0 | Initial sharded architecture documentation with comprehensive diagrams | Winston |
 
 ---
 
@@ -368,7 +360,7 @@ When updating this documentation:
 **For Questions:**
 - Review relevant section in this documentation
 - Check `CLAUDE.md` for project-specific guidelines
-- Consult related documentation (Frontend Architecture, Deployment Guide)
+- Consult related documentation (PRD, Frontend Architecture, Deployment Guide)
 
 **For Issues:**
 - Report at GitHub repository issues

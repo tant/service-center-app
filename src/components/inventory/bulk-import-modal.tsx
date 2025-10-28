@@ -311,7 +311,7 @@ export function BulkImportModal({ open, onClose }: BulkImportModalProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {result.errors.map((error, index) => (
+                        {result.errors.map((error: any, index: number) => (
                           <TableRow key={index}>
                             <TableCell>{error.row}</TableCell>
                             <TableCell className="font-mono text-xs">

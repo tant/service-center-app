@@ -16,6 +16,7 @@ import {
   IconBuildingWarehouse,
   IconPackage,
   IconInbox,
+  IconFileText,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -74,6 +75,19 @@ const baseData = {
   ],
   // Inventory section - Stock & warehouse management
   inventory: [
+    {
+      title: "Tổng quan kho hàng",
+      url: "/inventory/overview",
+      icon: IconReport,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      readOnly: ["technician"] as UserRole[],
+    },
+    {
+      title: "Phiếu xuất nhập kho",
+      url: "/inventory/documents",
+      icon: IconFileText,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+    },
     {
       title: "Sản phẩm vật lý",
       url: "/inventory/products",

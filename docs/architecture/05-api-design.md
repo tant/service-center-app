@@ -53,7 +53,7 @@ graph TB
 graph TB
     AppRouter[appRouter<br/>Main Router]
 
-    subgraph "Phase 1 Routers"
+    subgraph "Core Routers"
         Admin[admin<br/>Setup & Config]
         Profile[profile<br/>User Management]
         Tickets[tickets<br/>Service Tickets]
@@ -64,11 +64,12 @@ graph TB
         Revenue[revenue<br/>Analytics]
     end
 
-    subgraph "Phase 2 Routers - ✅ Complete"
+    subgraph "Advanced Feature Routers"
         Workflow[workflow<br/>Task Templates & Execution]
         Warehouse[warehouse<br/>Physical/Virtual Warehouses]
-        Inventory[inventory<br/>Physical Products & RMA]
-        ServiceRequest[serviceRequest<br/>Public Portal & Staff Mgmt]
+        Inventory[inventory<br/>Stock Documents + Serials<br/>6 Sub-Routers]
+        PhysicalProducts[physicalProducts<br/>Serialized Products]
+        ServiceRequest[serviceRequest<br/>Public Portal]
         Notifications[notifications<br/>Email System]
     end
 
@@ -83,17 +84,21 @@ graph TB
     AppRouter --> Workflow
     AppRouter --> Warehouse
     AppRouter --> Inventory
+    AppRouter --> PhysicalProducts
     AppRouter --> ServiceRequest
     AppRouter --> Notifications
 
+    Inventory --> Inv1[stock<br/>receipts<br/>issues]
+    Inventory --> Inv2[transfers<br/>serials<br/>approvals]
+
     Workflow --> W1[createTemplate<br/>updateTemplate<br/>switchTemplate]
-    Workflow --> W2[createTask<br/>updateTask<br/>completeTask]
 
     ServiceRequest --> SR1[createRequest<br/>trackRequest<br/>convertToTicket]
 
     style AppRouter fill:#FFD700
     style Tickets fill:#4A90E2
     style Workflow fill:#50C878
+    style Inventory fill:#FF6B6B
     style ServiceRequest fill:#9370DB
 ```
 
@@ -109,14 +114,22 @@ src/server/routers/
 ├── parts.ts             # Parts inventory
 ├── brands.ts            # Brand management
 ├── revenue.ts           # Revenue analytics
-├── workflow.ts          # ✅ Task templates & execution (43KB) - Stories 01.02-01.05, 01.17
-├── warehouse.ts         # ✅ Physical/virtual warehouses (4KB) - Story 01.06
-├── inventory.ts         # ✅ Physical products & RMA (40KB) - Stories 01.07-01.10
-├── serviceRequest.ts    # ✅ Public portal & staff mgmt (28KB) - Stories 01.11-01.13
-└── notifications.ts     # ✅ Email notification system (11KB) - Story 01.15
+├── workflow.ts          # Task templates & execution (43KB)
+├── warehouse.ts         # Physical/virtual warehouses (4KB)
+├── inventory/           # Stock management with 6 sub-routers:
+│   ├── index.ts         #   - Main inventory router
+│   ├── stock.ts         #   - Stock queries
+│   ├── receipts.ts      #   - Stock receipts (Phiếu Nhập Kho)
+│   ├── issues.ts        #   - Stock issues (Phiếu Xuất Kho)
+│   ├── transfers.ts     #   - Stock transfers (Phiếu Chuyển Kho)
+│   ├── serials.ts       #   - Serial number operations
+│   └── approvals.ts     #   - Approval workflow
+├── physical-products.ts # Serialized product tracking
+├── service-request.ts   # Public portal & staff management (28KB)
+└── notifications.ts     # Email notification system (11KB)
 ```
 
-**Total Routers:** 13 (8 Phase 1 + 5 Phase 2)
+**Total Routers:** 14 main routers + 6 inventory sub-routers = 20 total
 
 ---
 
@@ -747,59 +760,52 @@ const updateStatus = trpc.tickets.updateStatus.useMutation({
 
 ## 5.11 API Summary
 
-**Phase 1 Routers (Original):**
+### Core Routers (8)
 
 | Router | Procedures | Primary Use Case |
 |--------|-----------|------------------|
-| **admin** | 1 | Initial setup |
-| **profile** | 6 | User management |
-| **tickets** | 15+ | Core workflow |
-| **customers** | 5 | Customer CRUD |
-| **products** | 7 | Catalog management |
-| **parts** | 6 | Inventory tracking |
-| **brands** | 5 | Brand management |
-| **revenue** | 4 | Analytics & reporting |
-| **Subtotal** | **~50** | Phase 1 coverage |
+| **admin** | ~8 | Setup and system configuration |
+| **profile** | ~6 | User profile management |
+| **tickets** | ~18 | Service ticket lifecycle |
+| **customers** | ~6 | Customer CRUD operations |
+| **products** | ~6 | Product catalog management |
+| **parts** | ~6 | Parts inventory tracking |
+| **brands** | ~5 | Brand management |
+| **revenue** | ~8 | Revenue analytics |
 
-**Phase 2 Routers (✅ Complete - Oct 2025):**
+### Advanced Feature Routers (6)
 
-| Router | Procedures | Primary Use Case | Stories |
-|--------|-----------|------------------|---------|
-| **workflow** | 14+ | Task templates & execution | 01.02-01.05, 01.17 |
-| **warehouse** | 8+ | Warehouse hierarchy | 01.06 |
-| **inventory** | 15+ | Physical products & RMA | 01.07-01.10 |
-| **serviceRequest** | 8+ | Public portal & staff mgmt | 01.11-01.13 |
-| **notifications** | 6+ | Email notification system | 01.15 |
-| **Subtotal** | **~47** | Phase 2 coverage |
+| Router | Procedures | Primary Use Case |
+|--------|-----------|------------------|
+| **workflow** | ~32 | Task templates, types, and execution |
+| **warehouse** | ~10 | Physical and virtual warehouse management |
+| **inventory** | ~40 | Stock documents (receipts/issues/transfers) + serials |
+| **physicalProducts** | ~8 | Serialized product tracking |
+| **serviceRequest** | ~8 | Public service request portal |
+| **notifications** | ~5 | Email notification system |
 
-**Workflow Router Procedures (Latest - Oct 27, 2025):**
-- **Task Type Management**:
-  - `taskType.list` - **Enhanced with optional filter**
-    - Input: `{ is_active?: boolean }` (optional)
-    - Returns: All task types (undefined), active only (true), or inactive only (false)
-  - `taskType.create`, `taskType.update`, `taskType.toggleActive`
-    - Update validation: prevents duplicate names
-    - Toggle validation: prevents deactivation if used in active templates
-- **Task Template Management**: `template.list`, `template.create`, `template.update`, `template.delete`, `template.switchTemplate`
-- **Task Execution**: `task.list`, `task.getById`, `task.start`, `task.complete`, `task.updateStatus`, `task.listByTechnician`
-- **Task Analytics**: `task.getProgressSummary`, `task.getBlockedTasks`, `task.getTechnicianWorkload`
+### Inventory Sub-Routers (6)
 
-**Total API Surface:**
+Nested under `inventory.*`:
+
+| Sub-Router | Procedures | Purpose |
+|-----------|-----------|---------|
+| **stock** | ~8 | Stock level queries and movements |
+| **receipts** | ~6 | Stock receipt operations (Phiếu Nhập Kho) |
+| **issues** | ~6 | Stock issue operations (Phiếu Xuất Kho) |
+| **transfers** | ~6 | Stock transfer operations (Phiếu Chuyển Kho) |
+| **serials** | ~7 | Serial number entry and validation |
+| **approvals** | ~5 | Document approval workflow |
+
+### Total API Surface
 
 | Metric | Count |
 |--------|-------|
-| **Total Routers** | 13 (8 + 5) |
-| **Total Procedures** | **~97** |
-| **Protected Endpoints** | 50+ (RBAC middleware) |
-| **Public Endpoints** | 3 (service request portal) |
-
-**Latest Updates (Oct 27, 2025):**
-- **Morning:** Added `taskType.update` and `taskType.toggleActive` procedures with comprehensive validation
-- **Afternoon:** Enhanced `taskType.list` with optional `is_active` filter parameter
-  - Supports filtering: all (undefined), active (true), inactive (false)
-  - Enables viewing deactivated task types for audit and reactivation
-- Implemented Tabs system UI per UI_CODING_GUIDE.md section 3
-- Added form-based UI with react-hook-form integration and Vietnamese validation messages
+| **Main Routers** | 14 |
+| **Sub-Routers** | 6 (inventory/*) |
+| **Total Procedures** | **160+** |
+| **Protected Endpoints** | 155+ (RBAC middleware) |
+| **Public Endpoints** | 5 (service request portal, tracking) |
 
 ---
 

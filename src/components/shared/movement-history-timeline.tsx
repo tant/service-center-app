@@ -48,7 +48,7 @@ export function MovementHistoryTimeline({ productId }: MovementHistoryTimelinePr
 
   return (
     <div className="space-y-6">
-      {movements.map((movement, index) => (
+      {movements.map((movement: any, index: number) => (
         <div key={movement.id} className="flex gap-4">
           {/* Timeline dot and line */}
           <div className="flex flex-col items-center">

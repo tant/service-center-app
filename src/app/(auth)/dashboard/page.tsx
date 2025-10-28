@@ -2,6 +2,7 @@ import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { EmployeePerformanceTable } from "@/components/employee-performance-table";
 import { PageHeader } from "@/components/page-header";
 import { SectionCards } from "@/components/section-cards";
+import { SerialComplianceSection } from "@/components/dashboard/serial-compliance-section";
 import { getEmployeePerformance } from "./actions";
 
 export default async function Page() {
@@ -17,6 +18,7 @@ export default async function Page() {
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive />
             </div>
+            <SerialComplianceSection />
             <div className="px-4 lg:px-6">
               <EmployeePerformanceTable data={employeePerformance} />
             </div>

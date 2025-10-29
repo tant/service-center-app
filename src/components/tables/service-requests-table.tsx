@@ -21,6 +21,7 @@ import {
   IconLoader,
   IconAlertCircle,
   IconRefresh,
+  IconPlus,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -69,6 +70,7 @@ import { RequestDetailModal } from "@/components/modals/request-detail-modal";
 import { RejectRequestModal } from "@/components/modals/reject-request-modal";
 import { ConvertToTicketModal } from "@/components/modals/convert-to-ticket-modal";
 import { ConfirmIncomingModal } from "@/components/modals/confirm-incoming-modal";
+import { CreateServiceRequestModal } from "@/components/modals/create-service-request-modal";
 import { usePendingIncomingRequests } from "@/hooks/use-service-request";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +121,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
   const [showDetailModal, setShowDetailModal] = React.useState(false);
   const [showRejectModal, setShowRejectModal] = React.useState(false);
   const [showConvertModal, setShowConvertModal] = React.useState(false);
+  const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -328,8 +331,11 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
           </TabsTrigger>
         </TabsList>
 
-        {/* Empty space for alignment */}
-        <div />
+        {/* Action buttons */}
+        <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+          <IconPlus className="h-4 w-4" />
+          <span className="ml-2">Tạo phiếu yêu cầu</span>
+        </Button>
       </div>
 
       {/* Tab 1: Service Requests */}
@@ -789,6 +795,12 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
         open={showConfirmIncomingModal}
         onOpenChange={setShowConfirmIncomingModal}
         onSuccess={handleIncomingModalClose}
+      />
+
+      {/* Create Service Request Modal */}
+      <CreateServiceRequestModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
       />
     </Tabs>
   );

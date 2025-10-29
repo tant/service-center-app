@@ -1,6 +1,7 @@
 /**
  * Story 1.13: Service Requests Page
  * AC 2: Staff request queue with filters and search
+ * Updated 2025-10-29: Add create request button for staff
  */
 
 import type { z } from "zod";

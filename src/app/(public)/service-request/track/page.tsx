@@ -133,20 +133,33 @@ function TrackingContent() {
                         <CardHeader>
                           <CardTitle className="text-sm flex items-center gap-2">
                             <IconPackage className="h-4 w-4" />
-                            Thông tin sản phẩm
+                            Sản phẩm ({trackingData.request.items.length})
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                          <div>
-                            <p className="font-medium">{trackingData.request.product.model}</p>
-                            <p className="text-muted-foreground">
-                              {trackingData.request.product.brand}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Serial:</p>
-                            <p className="font-mono text-xs">{trackingData.request.product.serial}</p>
-                          </div>
+                        <CardContent className="space-y-3 text-sm">
+                          {trackingData.request.items.map((item, index) => (
+                            <div key={item.id} className={index > 0 ? "pt-3 border-t" : ""}>
+                              <div className="space-y-1">
+                                <p className="font-medium">{item.product_model}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  {item.product_brand}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-muted-foreground text-xs">Serial:</p>
+                                  <p className="font-mono text-xs">{item.serial_number}</p>
+                                </div>
+                                {item.linked_ticket && (
+                                  <div className="mt-2 px-2 py-1 bg-muted rounded text-xs">
+                                    <p className="text-muted-foreground">Phiếu dịch vụ:</p>
+                                    <p className="font-medium">{item.linked_ticket.ticket_number}</p>
+                                    <p className="text-muted-foreground capitalize">
+                                      {item.linked_ticket.status}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </CardContent>
                       </Card>
 
@@ -207,12 +220,13 @@ function TrackingContent() {
                       </CardContent>
                     </Card>
 
-                    {/* AC 7: Linked Ticket */}
-                    {trackingData.request.linked_ticket && (
+                    {/* AC 7: Linked Tickets */}
+                    {trackingData.request.items.some((item) => item.linked_ticket) && (
                       <Alert>
                         <AlertDescription>
-                          Yêu cầu của bạn đang được xử lý như phiếu dịch vụ{" "}
-                          <strong>{trackingData.request.linked_ticket.ticket_number}</strong>
+                          {trackingData.request.items.filter((item) => item.linked_ticket).length === 1
+                            ? `Yêu cầu của bạn đang được xử lý như phiếu dịch vụ ${trackingData.request.items.find((item) => item.linked_ticket)?.linked_ticket?.ticket_number}`
+                            : `${trackingData.request.items.filter((item) => item.linked_ticket).length} phiếu dịch vụ đã được tạo cho các sản phẩm của bạn`}
                         </AlertDescription>
                       </Alert>
                     )}

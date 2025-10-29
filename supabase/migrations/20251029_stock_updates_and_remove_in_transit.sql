@@ -9,14 +9,19 @@
 -- PART 1: REMOVE IN_TRANSIT STATUS
 -- =====================================================
 
--- Update any existing in_transit transfers to approved
-UPDATE public.stock_transfers
-SET status = 'in_transit'::text
-WHERE status = 'in_transit'::public.transfer_status;
+-- Update any existing in_transit transfers to approved (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'stock_transfers') THEN
+    UPDATE public.stock_transfers
+    SET status = 'in_transit'::text
+    WHERE status = 'in_transit'::public.transfer_status;
 
--- Drop the column constraint temporarily
-ALTER TABLE public.stock_transfers
-  ALTER COLUMN status TYPE TEXT;
+    -- Drop the column constraint temporarily
+    ALTER TABLE public.stock_transfers
+      ALTER COLUMN status TYPE TEXT;
+  END IF;
+END $$;
 
 -- Drop and recreate the enum without in_transit
 DROP TYPE IF EXISTS public.transfer_status CASCADE;
@@ -29,10 +34,15 @@ CREATE TYPE public.transfer_status AS ENUM (
   'cancelled'
 );
 
--- Restore the column with new enum
-ALTER TABLE public.stock_transfers
-  ALTER COLUMN status TYPE public.transfer_status
-  USING status::public.transfer_status;
+-- Restore the column with new enum (only if table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'stock_transfers') THEN
+    ALTER TABLE public.stock_transfers
+      ALTER COLUMN status TYPE public.transfer_status
+      USING status::public.transfer_status;
+  END IF;
+END $$;
 
 COMMENT ON TYPE public.transfer_status IS 'Simplified workflow status for stock transfers (removed in_transit)';
 

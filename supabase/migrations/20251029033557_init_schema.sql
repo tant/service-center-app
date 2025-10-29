@@ -1434,6 +1434,7 @@ with check ((EXISTS ( SELECT 1
   WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
 
 
+DROP TRIGGER IF EXISTS trigger_physical_products_warranty_calculation ON public.physical_products;
 CREATE TRIGGER trigger_physical_products_warranty_calculation BEFORE INSERT OR UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.calculate_physical_product_warranty_end_date();
 
 

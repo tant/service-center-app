@@ -7,6 +7,7 @@
 
 -- =====================================================
 -- SERVICE REQUESTS TABLE (from 15_service_request_tables.sql)
+-- Updated: 2025-10-29 - Support multiple products via service_request_items
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.service_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -14,12 +15,7 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255) NOT NULL,
   customer_phone VARCHAR(50),
-  product_brand VARCHAR(255) NOT NULL,
-  product_model VARCHAR(255) NOT NULL,
-  serial_number VARCHAR(255),
-  purchase_date DATE,
   issue_description TEXT NOT NULL,
-  issue_photos JSONB DEFAULT '[]'::jsonb,
   service_type public.service_type NOT NULL DEFAULT 'warranty',
   delivery_method public.delivery_method NOT NULL DEFAULT 'pickup',
   delivery_address TEXT,
@@ -27,20 +23,48 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
   rejection_reason TEXT,
-  ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
   converted_at TIMESTAMPTZ,
   submitted_ip VARCHAR(45),
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL),
-  CONSTRAINT service_requests_converted_requires_ticket CHECK (status != 'completed' OR ticket_id IS NOT NULL),
   CONSTRAINT service_requests_delivery_requires_address CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL)
 );
 
-COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal';
+COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
+COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue description for the entire request (specific issues per product in service_request_items)';
+
 CREATE TRIGGER trigger_generate_service_request_tracking_token BEFORE INSERT ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.generate_tracking_token();
 CREATE TRIGGER trigger_service_requests_updated_at BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER trigger_auto_create_tickets BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.auto_create_tickets_on_received();
+
+-- =====================================================
+-- SERVICE REQUEST ITEMS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.service_request_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
+  product_brand VARCHAR(255) NOT NULL,
+  product_model VARCHAR(255) NOT NULL,
+  serial_number VARCHAR(255),
+  purchase_date DATE,
+  issue_description TEXT,
+  issue_photos JSONB DEFAULT '[]'::jsonb,
+  ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT service_request_items_serial_format CHECK (serial_number IS NULL OR length(serial_number) >= 5)
+);
+
+CREATE INDEX idx_service_request_items_request_id ON public.service_request_items(request_id);
+CREATE INDEX idx_service_request_items_serial_number ON public.service_request_items(serial_number);
+CREATE INDEX idx_service_request_items_ticket_id ON public.service_request_items(ticket_id);
+
+COMMENT ON TABLE public.service_request_items IS 'Individual products within a service request (1:N relationship)';
+COMMENT ON COLUMN public.service_request_items.ticket_id IS 'Links to the service ticket created for this specific product';
+
+CREATE TRIGGER trigger_service_request_items_updated_at BEFORE UPDATE ON public.service_request_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
 -- EMAIL NOTIFICATIONS TABLE (from 15_service_request_tables.sql)

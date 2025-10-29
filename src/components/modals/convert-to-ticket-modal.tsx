@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRequestDetails, useConvertToTicket } from "@/hooks/use-service-request";
+import { useRequestDetails } from "@/hooks/use-service-request";
+// useConvertToTicket is deprecated - tickets are auto-created via trigger
 import { IconLoader2, IconUser, IconPackage, IconAlertCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,34 +28,38 @@ interface ConvertToTicketModalProps {
 export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertToTicketModalProps) {
   const router = useRouter();
   const { data: request, isLoading } = useRequestDetails(requestId);
-  const { convertToTicket, isConverting } = useConvertToTicket();
+  // const { convertToTicket, isConverting } = useConvertToTicket(); // DEPRECATED
+  const isConverting = false; // Placeholder
 
   const [serviceType, setServiceType] = useState<"warranty" | "paid">("warranty");
   const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
   const handleConvert = () => {
-    if (!requestId) return;
+    // DEPRECATED: This functionality is no longer available
+    // Tickets are auto-created when staff updates request status to 'received'
+    toast.error("This feature is deprecated. Please update request status to 'received' instead.");
+    onOpenChange(false);
 
-    convertToTicket(
-      {
-        request_id: requestId,
-        service_type: serviceType,
-        priority,
-        additional_notes: additionalNotes || undefined,
-      },
-      {
-        onSuccess: (data) => {
-          toast.success(`Đã tạo phiếu dịch vụ ${data.ticket.ticket_number}`);
-          onOpenChange(false);
-          // Navigate to ticket detail page
-          router.push(`/tickets/${data.ticket.id}`);
-        },
-        onError: (error) => {
-          toast.error(`Lỗi: ${error.message}`);
-        },
-      }
-    );
+    // convertToTicket(
+    //   {
+    //     request_id: requestId,
+    //     service_type: serviceType,
+    //     priority,
+    //     additional_notes: additionalNotes || undefined,
+    //   },
+    //   {
+    //     onSuccess: (data: any) => {
+    //       toast.success(`Đã tạo phiếu dịch vụ ${data.ticket.ticket_number}`);
+    //       onOpenChange(false);
+    //       // Navigate to ticket detail page
+    //       router.push(`/tickets/${data.ticket.id}`);
+    //     },
+    //     onError: (error: any) => {
+    //       toast.error(`Lỗi: ${error.message}`);
+    //     },
+    //   }
+    // );
   };
 
   const handleCancel = () => {

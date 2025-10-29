@@ -79,11 +79,16 @@ export default function ServiceRequestPage() {
 
     submitRequest(
       {
-        serial_number: serial,
         customer_name: customerName,
         customer_email: email,
         customer_phone: phone,
-        problem_description: problemDescription,
+        issue_description: problemDescription,
+        items: [
+          {
+            serial_number: serial,
+          },
+        ],
+        service_type: "warranty",
         preferred_delivery_method: deliveryMethod,
         delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
         honeypot, // AC 12: Spam protection

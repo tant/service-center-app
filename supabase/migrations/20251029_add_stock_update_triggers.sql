@@ -65,13 +65,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_update_stock_on_receipt_approval ON public.stock_receipts;
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'stock_receipts') THEN
+    DROP TRIGGER IF EXISTS trigger_update_stock_on_receipt_approval ON public.stock_receipts;
 
-CREATE TRIGGER trigger_update_stock_on_receipt_approval
-  AFTER UPDATE ON public.stock_receipts
-  FOR EACH ROW
-  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
-  EXECUTE FUNCTION public.update_stock_on_receipt_approval();
+    CREATE TRIGGER trigger_update_stock_on_receipt_approval
+      AFTER UPDATE ON public.stock_receipts
+      FOR EACH ROW
+      WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+      EXECUTE FUNCTION public.update_stock_on_receipt_approval();
+  END IF;
+END $$;
 
 COMMENT ON FUNCTION public.update_stock_on_receipt_approval IS 'Increment stock when receipt is approved';
 
@@ -104,13 +109,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_update_stock_on_issue_approval ON public.stock_issues;
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'stock_issues') THEN
+    DROP TRIGGER IF EXISTS trigger_update_stock_on_issue_approval ON public.stock_issues;
 
-CREATE TRIGGER trigger_update_stock_on_issue_approval
-  AFTER UPDATE ON public.stock_issues
-  FOR EACH ROW
-  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
-  EXECUTE FUNCTION public.update_stock_on_issue_approval();
+    CREATE TRIGGER trigger_update_stock_on_issue_approval
+      AFTER UPDATE ON public.stock_issues
+      FOR EACH ROW
+      WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+      EXECUTE FUNCTION public.update_stock_on_issue_approval();
+  END IF;
+END $$;
 
 COMMENT ON FUNCTION public.update_stock_on_issue_approval IS 'Decrement stock when issue is approved';
 

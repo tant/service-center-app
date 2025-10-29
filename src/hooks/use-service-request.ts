@@ -148,29 +148,30 @@ export function useUpdateRequestStatus() {
 }
 
 /**
- * Story 1.13: Convert service request to service ticket
- * Staff mutation to create ticket from request
+ * DEPRECATED 2025-10-29: convertToTicket procedure is deprecated
+ * Tickets are now auto-created when request status changes to 'received'
+ * This hook is kept for backward compatibility but should not be used.
  */
-export function useConvertToTicket() {
-  const utils = trpc.useUtils();
-  const mutation = trpc.serviceRequest.convertToTicket.useMutation({
-    onSuccess: () => {
-      // Invalidate pending requests queries
-      utils.serviceRequest.listPending.invalidate();
-      utils.serviceRequest.getPendingCount.invalidate();
-      // Note: Ticket list will be refreshed when user navigates to tickets page
-    },
-  });
+// export function useConvertToTicket() {
+//   const utils = trpc.useUtils();
+//   const mutation = trpc.serviceRequest.convertToTicket.useMutation({
+//     onSuccess: () => {
+//       // Invalidate pending requests queries
+//       utils.serviceRequest.listPending.invalidate();
+//       utils.serviceRequest.getPendingCount.invalidate();
+//       // Note: Ticket list will be refreshed when user navigates to tickets page
+//     },
+//   });
 
-  return {
-    convertToTicket: mutation.mutate,
-    convertToTicketAsync: mutation.mutateAsync,
-    isConverting: mutation.isPending,
-    data: mutation.data,
-    error: mutation.error,
-    reset: mutation.reset,
-  };
-}
+//   return {
+//     convertToTicket: mutation.mutate,
+//     convertToTicketAsync: mutation.mutateAsync,
+//     isConverting: mutation.isPending,
+//     data: mutation.data,
+//     error: mutation.error,
+//     reset: mutation.reset,
+//   };
+// }
 
 /**
  * Story 1.13: Reject service request

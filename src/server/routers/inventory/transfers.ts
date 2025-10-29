@@ -71,7 +71,7 @@ export const transfersRouter = router({
             product:products(id, name, sku),
             serials:stock_transfer_serials(
               *,
-              physical_product:physical_products(serial_number, warranty_end_date)
+              physical_product:physical_products(serial_number, manufacturer_warranty_end_date, user_warranty_end_date)
             )
           ),
           from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name),
@@ -720,7 +720,7 @@ export const transfersRouter = router({
     .query(async ({ ctx, input }) => {
       let query = ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, warranty_end_date, created_at")
+        .select("id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at")
         .eq("product_id", input.productId)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
         .is("issued_at", null); // Not issued

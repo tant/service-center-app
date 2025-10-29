@@ -77,7 +77,7 @@ export const issuesRouter = router({
             product:products(id, name, sku),
             serials:stock_issue_serials(
               *,
-              physical_product:physical_products(serial_number, warranty_end_date)
+              physical_product:physical_products(serial_number, manufacturer_warranty_end_date, user_warranty_end_date)
             )
           ),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
@@ -687,7 +687,7 @@ export const issuesRouter = router({
       // Query physical_products directly by virtual_warehouse_id
       let query = ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, warranty_end_date, created_at")
+        .select("id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at")
         .eq("product_id", input.productId)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
         .is("issued_at", null); // Not issued yet

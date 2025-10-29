@@ -474,7 +474,6 @@ export const serialsRouter = router({
         product: physicalProduct.product,
         warranty: {
           manufacturerEndDate: physicalProduct.manufacturer_warranty_end_date,
-          endDate: physicalProduct.warranty_end_date,
           userEndDate: physicalProduct.user_warranty_end_date,
         },
         history: history.sort(

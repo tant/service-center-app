@@ -19,3 +19,5 @@ export { SerialProgressBar } from "./serial-progress-bar";
 export type { ProgressVariant } from "./serial-progress-bar";
 
 export { SerialEntryDrawer } from "./serial-entry-drawer";
+
+export { UnifiedSerialInputDrawer } from "./unified-serial-input-drawer";

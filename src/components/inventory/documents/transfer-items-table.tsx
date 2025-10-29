@@ -5,6 +5,7 @@
  * Displays items in a transfer with serial selection functionality
  */
 
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
 import { Plus } from "lucide-react";
 
 interface TransferItemsTableProps {
@@ -24,9 +26,32 @@ interface TransferItemsTableProps {
 }
 
 export function TransferItemsTable({ transfer, onSerialsSelected }: TransferItemsTableProps) {
-  const canEdit = transfer.status === "draft" || transfer.status === "approved" || transfer.status === "in_transit";
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Allow editing when: draft, pending_approval, or approved
+  const canEdit = transfer.status === "draft" || transfer.status === "pending_approval" || transfer.status === "approved";
+
+  const handleSelectSerials = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setIsDrawerOpen(true);
+  };
+
+  const handleSuccess = () => {
+    onSerialsSelected();
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDrawerOpen(open);
+    if (!open) {
+      setSelectedItemId(null);
+    }
+  };
+
+  const selectedItem = transfer.items?.find((item: any) => item.id === selectedItemId);
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Danh sách sản phẩm</CardTitle>
@@ -83,10 +108,7 @@ export function TransferItemsTable({ transfer, onSerialsSelected }: TransferItem
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            // TODO: Implement serial selection
-                            alert("Chức năng chọn serial đang được phát triển");
-                          }}
+                          onClick={() => handleSelectSerials(item.id)}
                           disabled={isComplete}
                         >
                           <Plus className="h-4 w-4" />
@@ -104,5 +126,20 @@ export function TransferItemsTable({ transfer, onSerialsSelected }: TransferItem
         </Table>
       </CardContent>
     </Card>
+
+    {selectedItem && transfer.from_virtual_warehouse_id && (
+      <UnifiedSerialInputDrawer
+        open={isDrawerOpen}
+        onOpenChange={handleOpenChange}
+        type="transfer"
+        itemId={selectedItem.id}
+        productName={selectedItem.product?.name || ""}
+        quantity={selectedItem.quantity}
+        currentSerialCount={selectedItem.serials?.length || 0}
+        warehouseId={transfer.from_virtual_warehouse_id}
+        onSuccess={handleSuccess}
+      />
+    )}
+  </>
   );
 }

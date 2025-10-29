@@ -5,6 +5,7 @@
  * Displays items in an issue with serial selection functionality
  */
 
+import { useState } from "react";
 import { StockIssueWithRelations } from "@/types/inventory";
 import {
   Table,
@@ -17,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
 import { Plus } from "lucide-react";
 
 interface IssueItemsTableProps {
@@ -25,9 +27,32 @@ interface IssueItemsTableProps {
 }
 
 export function IssueItemsTable({ issue, onSerialsSelected }: IssueItemsTableProps) {
-  const canEdit = issue.status === "draft" || issue.status === "approved";
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Allow editing when: draft, pending_approval, or approved
+  const canEdit = issue.status === "draft" || issue.status === "pending_approval" || issue.status === "approved";
+
+  const handleSelectSerials = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setIsDrawerOpen(true);
+  };
+
+  const handleSuccess = () => {
+    onSerialsSelected();
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDrawerOpen(open);
+    if (!open) {
+      setSelectedItemId(null);
+    }
+  };
+
+  const selectedItem = issue.items?.find((item) => item.id === selectedItemId);
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Danh sách sản phẩm</CardTitle>
@@ -88,10 +113,7 @@ export function IssueItemsTable({ issue, onSerialsSelected }: IssueItemsTablePro
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            // TODO: Implement serial selection
-                            alert("Chức năng chọn serial đang được phát triển");
-                          }}
+                          onClick={() => handleSelectSerials(item.id)}
                           disabled={isComplete}
                         >
                           <Plus className="h-4 w-4" />
@@ -109,5 +131,20 @@ export function IssueItemsTable({ issue, onSerialsSelected }: IssueItemsTablePro
         </Table>
       </CardContent>
     </Card>
+
+    {selectedItem && issue.virtual_warehouse_id && (
+      <UnifiedSerialInputDrawer
+        open={isDrawerOpen}
+        onOpenChange={handleOpenChange}
+        type="issue"
+        itemId={selectedItem.id}
+        productName={selectedItem.product?.name || ""}
+        quantity={selectedItem.quantity}
+        currentSerialCount={selectedItem.serials?.length || 0}
+        warehouseId={issue.virtual_warehouse_id}
+        onSuccess={handleSuccess}
+      />
+    )}
+  </>
   );
 }

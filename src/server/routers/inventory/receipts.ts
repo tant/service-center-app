@@ -283,6 +283,69 @@ export const receiptsRouter = router({
     }),
 
   /**
+   * Approve receipt - Manager/Admin only
+   */
+  approve: publicProcedure.use(requireManagerOrAbove)
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Get user profile ID
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile || !["admin", "manager"].includes(profile.role)) {
+        throw new Error("Unauthorized: Only admin and manager can approve receipts");
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_receipts")
+        .update({
+          status: "approved",
+          approved_by_id: profile.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq("id", input.id)
+        .eq("status", "pending_approval")
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to approve receipt: ${error.message}`);
+      }
+
+      return data;
+    }),
+
+  /**
+   * Reject receipt - Manager/Admin only
+   */
+  reject: publicProcedure.use(requireManagerOrAbove)
+    .input(z.object({
+      id: z.string(),
+      reason: z.string().min(1, "Rejection reason is required")
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_receipts")
+        .update({
+          status: "cancelled",
+          rejection_reason: input.reason
+        })
+        .eq("id", input.id)
+        .eq("status", "pending_approval")
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to reject receipt: ${error.message}`);
+      }
+
+      return data;
+    }),
+
+  /**
    * Add serials to receipt item
    */
   addSerials: publicProcedure.use(requireManagerOrAbove)
@@ -342,6 +405,53 @@ export const receiptsRouter = router({
 
       if (error) {
         throw new Error(`Failed to add serials: ${error.message}`);
+      }
+
+      // Auto-complete: Check if all serials are complete
+      // Get receipt item to know declared_quantity
+      const { data: receiptItem } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("declared_quantity, receipt_id")
+        .eq("id", input.receiptItemId)
+        .single();
+
+      if (receiptItem) {
+        // Get receipt status
+        const { data: receipt } = await ctx.supabaseAdmin
+          .from("stock_receipts")
+          .select("status")
+          .eq("id", receiptItem.receipt_id)
+          .single();
+
+        if (receipt && receipt.status === "approved") {
+          // Get current serial count for this receipt
+          const { data: allItems } = await ctx.supabaseAdmin
+            .from("stock_receipt_items")
+            .select(`
+              id,
+              declared_quantity,
+              stock_receipt_serials(id)
+            `)
+            .eq("receipt_id", receiptItem.receipt_id);
+
+          if (allItems) {
+            const totalDeclared = allItems.reduce((sum, item) => sum + item.declared_quantity, 0);
+            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_receipt_serials?.length || 0), 0);
+
+            // Auto-complete if all serials are entered
+            if (totalSerials >= totalDeclared) {
+              await ctx.supabaseAdmin
+                .from("stock_receipts")
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  completed_by_id: ctx.user?.id
+                })
+                .eq("id", receiptItem.receipt_id)
+                .eq("status", "approved");
+            }
+          }
+        }
       }
 
       return data;

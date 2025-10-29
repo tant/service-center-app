@@ -15,7 +15,7 @@ export const transfersRouter = router({
     .input(
       z.object({
         status: z
-          .enum(["draft", "pending_approval", "approved", "in_transit", "completed", "cancelled"])
+          .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
@@ -268,8 +268,8 @@ export const transfersRouter = router({
     }),
 
   /**
-   * Approve transfer (changes status to in_transit)
-   * Note: This is different from typical approval - approved transfers automatically become in_transit
+   * Approve transfer (changes status to approved)
+   * Stock updates happen immediately via database triggers
    */
   approve: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
@@ -288,7 +288,7 @@ export const transfersRouter = router({
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .update({
-          status: "in_transit",
+          status: "approved",
           approved_by_id: profile.id,
           approved_at: new Date().toISOString(),
         })
@@ -451,6 +451,199 @@ export const transfersRouter = router({
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
+      // Auto-complete: Check if all serials are complete
+      // Get transfer item to know transfer_id
+      const { data: transferItemForComplete } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("quantity, transfer_id")
+        .eq("id", input.transferItemId)
+        .single();
+
+      if (transferItemForComplete) {
+        // Get transfer status
+        const { data: transferForComplete } = await ctx.supabaseAdmin
+          .from("stock_transfers")
+          .select("status")
+          .eq("id", transferItemForComplete.transfer_id)
+          .single();
+
+        if (transferForComplete && transferForComplete.status === "approved") {
+          // Get current serial count for this transfer
+          const { data: allItemsForComplete } = await ctx.supabaseAdmin
+            .from("stock_transfer_items")
+            .select(`
+              id,
+              quantity,
+              stock_transfer_serials(id)
+            `)
+            .eq("transfer_id", transferItemForComplete.transfer_id);
+
+          if (allItemsForComplete) {
+            const totalQuantity = allItemsForComplete.reduce((sum, item) => sum + item.quantity, 0);
+            const totalSerials = allItemsForComplete.reduce((sum, item) => sum + (item.stock_transfer_serials?.length || 0), 0);
+
+            // Auto-complete if all serials are selected
+            if (totalSerials >= totalQuantity) {
+              await ctx.supabaseAdmin
+                .from("stock_transfers")
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  received_by_id: ctx.user?.id
+                })
+                .eq("id", transferItemForComplete.transfer_id)
+                .eq("status", "approved");
+            }
+          }
+        }
+      }
+
+      return data;
+    }),
+
+  /**
+   * Select serials by serial numbers (for manual input)
+   * Accepts serial numbers as strings and finds matching physical products
+   */
+  selectSerialsByNumbers: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        transferItemId: z.string(),
+        serialNumbers: z.array(z.string()),
+        virtualWarehouseId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.serialNumbers.length === 0) {
+        throw new Error("No serial numbers provided");
+      }
+
+      // Get transfer item details
+      const { data: transferItem } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("transfer_id, product_id, quantity")
+        .eq("id", input.transferItemId)
+        .single();
+
+      if (!transferItem) {
+        throw new Error("Transfer item not found");
+      }
+
+      // Find physical products by serial numbers in source warehouse
+      const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select("id, serial_number, product_id, virtual_warehouse_id, issued_at")
+        .eq("product_id", transferItem.product_id)
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .in("serial_number", input.serialNumbers);
+
+      if (findError) {
+        throw new Error(`Failed to find serial numbers: ${findError.message}`);
+      }
+
+      // Check all serials were found
+      const foundSerials = new Set(physicalProducts?.map(p => p.serial_number) || []);
+      const notFound = input.serialNumbers.filter(sn => !foundSerials.has(sn));
+
+      if (notFound.length > 0) {
+        throw new Error(`Serial không tồn tại trong kho nguồn: ${notFound.join(", ")}`);
+      }
+
+      // Check none are already issued
+      const alreadyIssued = physicalProducts.filter(p => p.issued_at !== null);
+      if (alreadyIssued.length > 0) {
+        const serials = alreadyIssued.map(p => p.serial_number).join(", ");
+        throw new Error(`Serial đã được xuất kho: ${serials}`);
+      }
+
+      // Check not already in another transfer
+      const productIds = physicalProducts.map(p => p.id);
+      const { data: existingTransfers } = await ctx.supabaseAdmin
+        .from("stock_transfer_serials")
+        .select("physical_product_id, serial_number")
+        .in("physical_product_id", productIds);
+
+      if (existingTransfers && existingTransfers.length > 0) {
+        const duplicates = existingTransfers.map(e => e.serial_number).join(", ");
+        throw new Error(`Serial đã có trong phiếu chuyển khác: ${duplicates}`);
+      }
+
+      // Check quantity doesn't exceed declared quantity
+      const { data: currentSerials } = await ctx.supabaseAdmin
+        .from("stock_transfer_serials")
+        .select("id")
+        .eq("transfer_item_id", input.transferItemId);
+
+      const currentCount = currentSerials?.length || 0;
+      if (currentCount + input.serialNumbers.length > transferItem.quantity) {
+        throw new Error(
+          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng khai báo ${transferItem.quantity}`
+        );
+      }
+
+      // Insert transfer serials
+      const serialsToInsert = physicalProducts.map((pp) => ({
+        transfer_item_id: input.transferItemId,
+        physical_product_id: pp.id,
+        serial_number: pp.serial_number,
+      }));
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_transfer_serials")
+        .insert(serialsToInsert)
+        .select();
+
+      if (error) {
+        throw new Error(`Failed to add serials: ${error.message}`);
+      }
+
+      // Auto-complete: Check if all serials are complete
+      // Get transfer item to know transfer_id
+      const { data: transferItemData } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("quantity, transfer_id")
+        .eq("id", input.transferItemId)
+        .single();
+
+      if (transferItemData) {
+        // Get transfer status
+        const { data: transferData } = await ctx.supabaseAdmin
+          .from("stock_transfers")
+          .select("status")
+          .eq("id", transferItemData.transfer_id)
+          .single();
+
+        if (transferData && transferData.status === "approved") {
+          // Get current serial count for this transfer
+          const { data: allItems } = await ctx.supabaseAdmin
+            .from("stock_transfer_items")
+            .select(`
+              id,
+              quantity,
+              stock_transfer_serials(id)
+            `)
+            .eq("transfer_id", transferItemData.transfer_id);
+
+          if (allItems) {
+            const totalQuantity = allItems.reduce((sum, item) => sum + item.quantity, 0);
+            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_transfer_serials?.length || 0), 0);
+
+            // Auto-complete if all serials are selected
+            if (totalSerials >= totalQuantity) {
+              await ctx.supabaseAdmin
+                .from("stock_transfers")
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  received_by_id: ctx.user?.id
+                })
+                .eq("id", transferItemData.transfer_id)
+                .eq("status", "approved");
+            }
+          }
+        }
+      }
+
       return data;
     }),
 
@@ -474,7 +667,8 @@ export const transfersRouter = router({
 
   /**
    * Confirm received (completes the transfer)
-   * This moves the physical products to destination warehouse
+   * NOTE: This mutation is now deprecated since transfers auto-complete when serials reach 100%
+   * Stock updates happen immediately on approval via database triggers
    */
   confirmReceived: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
@@ -490,55 +684,8 @@ export const transfersRouter = router({
         throw new Error("Unauthorized: Only admin and manager can confirm receipt");
       }
 
-      // Get transfer details
-      const { data: transfer } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .select(
-          `
-          *,
-          items:stock_transfer_items(
-            id,
-            product_id,
-            quantity,
-            serials:stock_transfer_serials(physical_product_id)
-          )
-        `
-        )
-        .eq("id", input.id)
-        .eq("status", "in_transit")
-        .single();
-
-      if (!transfer) {
-        throw new Error("Transfer not found or not in transit");
-      }
-
-      // Validate all items have serials equal to quantity
-      for (const item of transfer.items) {
-        if (item.serials.length !== item.quantity) {
-          throw new Error(
-            `Item for product ${item.product_id} has ${item.serials.length} serials but declared quantity is ${item.quantity}`
-          );
-        }
-      }
-
-      // Update physical products to new warehouse location
-      const allPhysicalProductIds = transfer.items.flatMap((item: any) =>
-        item.serials.map((s: { physical_product_id: string }) => s.physical_product_id)
-      );
-
-      const { error: updateError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .update({
-          virtual_warehouse_id: transfer.to_virtual_warehouse_id,
-          physical_warehouse_id: transfer.to_physical_warehouse_id,
-        })
-        .in("id", allPhysicalProductIds);
-
-      if (updateError) {
-        throw new Error(`Failed to update physical product locations: ${updateError.message}`);
-      }
-
-      // Update transfer status
+      // This mutation is now essentially a manual completion trigger
+      // The transfer should already be approved, and auto-complete will handle it when serials are done
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .update({
@@ -547,6 +694,7 @@ export const transfersRouter = router({
           completed_at: new Date().toISOString(),
         })
         .eq("id", input.id)
+        .eq("status", "approved")
         .select()
         .single();
 

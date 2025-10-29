@@ -107,44 +107,65 @@ stock_transfers (
 
 ---
 
-## 🔄 Workflow Changes
+## 🔄 Workflow Changes (Updated 2025-10-29)
 
 ### Receipt Workflow
 
 ```
-Draft → Pending Approval → Approved → Completed
-  ↓
-Cancelled
+Draft → Submit → Pending Approval → Approve → Approved
+  ↓                                              ↓
+Cancelled                                 ✅ STOCK UPDATED (via trigger)
+                                                  ↓
+                                          Serial Entry (0-100%)
+                                                  ↓
+                                          100% Complete → Auto-transition to Completed
 ```
 
 - **Normal receipts**: Standard intake (supplier, RMA return, etc.)
 - **Adjustment receipts**: Inventory corrections from stocktake
+- **Stock update**: Happens IMMEDIATELY on approval, regardless of serial entry status
+- **Auto-complete**: When serials reach 100% of declared quantity
 
 ### Issue Workflow
 
 ```
-Draft → Pending Approval → Approved → Completed
-  ↓
-Cancelled
+Draft → Submit → Pending Approval → Approve → Approved
+  ↓                                              ↓
+Cancelled                                 ✅ STOCK UPDATED (via trigger)
+                                                  ↓
+                                          Serial Selection (0-100%)
+                                                  ↓
+                                          100% Complete → Auto-transition to Completed
 ```
 
 - **Normal issues**: Standard outbound (warranty, parts usage, disposal, etc.)
 - **Adjustment issues**: Inventory corrections from stocktake
+- **Stock update**: Happens IMMEDIATELY on approval, regardless of serial selection status
+- **Auto-complete**: When serials reach 100% of declared quantity
 
-### Transfer Workflow (NEW)
+### Transfer Workflow (Updated - Removed in_transit)
 
 ```
-Draft → Pending Approval → Approved → In Transit → Completed
-  ↓                          ↓
-Cancelled              Auto-generate Issue + Receipt
-                              ↓
-                         Completed → Auto-complete Issue + Receipt
+Draft → Submit → Pending Approval → Approve → Approved
+  ↓                                              ↓
+Cancelled                              Auto-generate Issue + Receipt (both approved)
+                                                  ↓
+                                          ✅ STOCK UPDATED (source -qty, dest +qty)
+                                                  ↓
+                                          Serial Selection (0-100%)
+                                                  ↓
+                                          100% Complete → Auto-transition to Completed
+                                                  ↓
+                                          Auto-complete generated Issue + Receipt
 ```
 
-**Key Points:**
-- Transfer approval triggers automatic document creation
-- Transfer completion triggers automatic document completion
-- Stock updates happen when auto-generated documents complete
+**Key Changes (2025-10-29):**
+- ❌ **Removed "in_transit" state** - Simplified to match receipt/issue workflow
+- ✅ **Stock updates on approval** - No longer waits for completion
+- ✅ **Auto-complete at 100% serials** - Automatic transition to completed status
+- Transfer approval triggers automatic document creation (both status='approved')
+- Stock updates happen immediately via issue/receipt triggers
+- Serial entry can happen before or after approval (non-blocking)
 
 ---
 
@@ -179,9 +200,9 @@ CREATE TYPE stock_document_status AS ENUM (
   'draft', 'pending_approval', 'approved', 'completed', 'cancelled'
 );
 
--- Transfer Status
+-- Transfer Status (Updated 2025-10-29: Removed in_transit)
 CREATE TYPE transfer_status AS ENUM (
-  'draft', 'pending_approval', 'approved', 'in_transit', 'completed', 'cancelled'
+  'draft', 'pending_approval', 'approved', 'completed', 'cancelled'
 );
 ```
 
@@ -312,12 +333,73 @@ No configuration changes required. All behavior is controlled by database schema
 
 ---
 
+## 🔥 Database Triggers (Added 2025-10-29)
+
+### Stock Update Triggers
+
+**Migration:** `supabase/migrations/20251029_add_stock_update_triggers.sql`
+
+Three new functions and triggers to handle automatic stock updates:
+
+#### 1. Helper Function: `upsert_product_stock()`
+```sql
+CREATE FUNCTION public.upsert_product_stock(
+  p_product_id UUID,
+  p_warehouse_id UUID,
+  p_quantity_delta INT
+)
+```
+- Updates or creates stock record with quantity delta
+- Handles both positive and negative adjustments
+- Used by receipt and issue approval triggers
+
+#### 2. Receipt Approval Trigger: `update_stock_on_receipt_approval()`
+```sql
+CREATE TRIGGER trigger_update_stock_on_receipt_approval
+  AFTER UPDATE ON public.stock_receipts
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+```
+- **Fires when:** Receipt transitions to 'approved' status
+- **Action:** Increments stock by `declared_quantity` for each item
+- **Warehouse:** Uses `virtual_warehouse_id` from receipt
+
+#### 3. Issue Approval Trigger: `update_stock_on_issue_approval()`
+```sql
+CREATE TRIGGER trigger_update_stock_on_issue_approval
+  AFTER UPDATE ON public.stock_issues
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+```
+- **Fires when:** Issue transitions to 'approved' status
+- **Action:** Decrements stock by `quantity` for each item
+- **Warehouse:** Uses `virtual_warehouse_id` from issue
+
+### How Transfers Work with Triggers
+
+When a transfer is approved:
+1. `auto_generate_transfer_documents()` creates Issue + Receipt (both status='approved')
+2. The above triggers fire automatically:
+   - Issue trigger → Decrements stock from source warehouse
+   - Receipt trigger → Increments stock in destination warehouse
+3. Result: Immediate stock transfer between warehouses
+
+### Schema Files
+
+**New files:**
+- `docs/data/schemas/17_stock_update_triggers.sql` - Stock trigger definitions
+- `docs/data/schemas/18_remove_in_transit_status.sql` - Remove in_transit enum value
+
+---
+
 ## 📚 References
 
 - Schema source: `docs/data/schemas/16_inventory_documents.sql`
+- Triggers source: `docs/data/schemas/17_stock_update_triggers.sql`
 - Migration folder: `supabase/migrations/20251028160000_*`
+- Stock triggers migration: `supabase/migrations/20251029_add_stock_update_triggers.sql`
 - CLAUDE.md updated with inventory redesign notes
 
 ---
 
-**Status:** ✅ **COMPLETED** - Ready for frontend/backend development
+**Status:** ✅ **COMPLETED** - Stock updates on approval implemented (2025-10-29)

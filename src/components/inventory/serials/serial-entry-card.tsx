@@ -162,16 +162,26 @@ export function SerialEntryCard({
           )}
         </div>
 
-        {/* Action Button */}
-        {canEdit && status !== "complete" && onContinue && (
-          <Button
-            onClick={onContinue}
-            className="w-full"
-            size="lg"
-            variant={status === "overdue" ? "destructive" : "default"}
-          >
-            {status === "pending" ? "Bắt đầu nhập serial" : "Tiếp tục nhập serial"} →
-          </Button>
+        {/* Action Section - Different display based on edit permission */}
+        {status !== "complete" && (
+          <>
+            {canEdit && onContinue ? (
+              // Editable: Show clickable button
+              <Button
+                onClick={onContinue}
+                className="w-full"
+                size="lg"
+                variant="default"
+              >
+                {status === "pending" ? "Bắt đầu nhập serial" : "Tiếp tục nhập serial"} →
+              </Button>
+            ) : (
+              // Not editable: Show informational text instead of button
+              <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground text-center">
+                <p>Người phụ trách: <span className="font-medium text-foreground">{assignedTo.full_name}</span></p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Stock Update Info */}

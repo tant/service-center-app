@@ -289,6 +289,69 @@ export const issuesRouter = router({
     }),
 
   /**
+   * Approve issue - Manager/Admin only
+   */
+  approve: publicProcedure.use(requireManagerOrAbove)
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Get user profile ID
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile || !["admin", "manager"].includes(profile.role)) {
+        throw new Error("Unauthorized: Only admin and manager can approve issues");
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .update({
+          status: "approved",
+          approved_by_id: profile.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq("id", input.id)
+        .eq("status", "pending_approval")
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to approve issue: ${error.message}`);
+      }
+
+      return data;
+    }),
+
+  /**
+   * Reject issue - Manager/Admin only
+   */
+  reject: publicProcedure.use(requireManagerOrAbove)
+    .input(z.object({
+      id: z.string(),
+      reason: z.string().min(1, "Rejection reason is required")
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .update({
+          status: "cancelled",
+          rejection_reason: input.reason
+        })
+        .eq("id", input.id)
+        .eq("status", "pending_approval")
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to reject issue: ${error.message}`);
+      }
+
+      return data;
+    }),
+
+  /**
    * Select serials for issue item
    * This selects existing physical products rather than creating new ones
    */
@@ -392,6 +455,199 @@ export const issuesRouter = router({
 
       if (error) {
         throw new Error(`Failed to add serials: ${error.message}`);
+      }
+
+      // Auto-complete: Check if all serials are complete
+      // Get issue item to know issue_id
+      const { data: issueItemForComplete } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("quantity, issue_id")
+        .eq("id", input.issueItemId)
+        .single();
+
+      if (issueItemForComplete) {
+        // Get issue status
+        const { data: issueForComplete } = await ctx.supabaseAdmin
+          .from("stock_issues")
+          .select("status")
+          .eq("id", issueItemForComplete.issue_id)
+          .single();
+
+        if (issueForComplete && issueForComplete.status === "approved") {
+          // Get current serial count for this issue
+          const { data: allItemsForComplete } = await ctx.supabaseAdmin
+            .from("stock_issue_items")
+            .select(`
+              id,
+              quantity,
+              stock_issue_serials(id)
+            `)
+            .eq("issue_id", issueItemForComplete.issue_id);
+
+          if (allItemsForComplete) {
+            const totalQuantity = allItemsForComplete.reduce((sum, item) => sum + item.quantity, 0);
+            const totalSerials = allItemsForComplete.reduce((sum, item) => sum + (item.stock_issue_serials?.length || 0), 0);
+
+            // Auto-complete if all serials are selected
+            if (totalSerials >= totalQuantity) {
+              await ctx.supabaseAdmin
+                .from("stock_issues")
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  completed_by_id: ctx.user?.id
+                })
+                .eq("id", issueItemForComplete.issue_id)
+                .eq("status", "approved");
+            }
+          }
+        }
+      }
+
+      return data;
+    }),
+
+  /**
+   * Select serials by serial numbers (for manual input)
+   * Accepts serial numbers as strings and finds matching physical products
+   */
+  selectSerialsByNumbers: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        issueItemId: z.string(),
+        serialNumbers: z.array(z.string()),
+        virtualWarehouseId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.serialNumbers.length === 0) {
+        throw new Error("No serial numbers provided");
+      }
+
+      // Get issue item details
+      const { data: issueItem } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("issue_id, product_id, quantity")
+        .eq("id", input.issueItemId)
+        .single();
+
+      if (!issueItem) {
+        throw new Error("Issue item not found");
+      }
+
+      // Find physical products by serial numbers
+      const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select("id, serial_number, product_id, virtual_warehouse_id, issued_at")
+        .eq("product_id", issueItem.product_id)
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .in("serial_number", input.serialNumbers);
+
+      if (findError) {
+        throw new Error(`Failed to find serial numbers: ${findError.message}`);
+      }
+
+      // Check all serials were found
+      const foundSerials = new Set(physicalProducts?.map(p => p.serial_number) || []);
+      const notFound = input.serialNumbers.filter(sn => !foundSerials.has(sn));
+
+      if (notFound.length > 0) {
+        throw new Error(`Serial không tồn tại trong kho: ${notFound.join(", ")}`);
+      }
+
+      // Check none are already issued
+      const alreadyIssued = physicalProducts.filter(p => p.issued_at !== null);
+      if (alreadyIssued.length > 0) {
+        const serials = alreadyIssued.map(p => p.serial_number).join(", ");
+        throw new Error(`Serial đã được xuất kho: ${serials}`);
+      }
+
+      // Check not already in this or another issue
+      const productIds = physicalProducts.map(p => p.id);
+      const { data: existingIssues } = await ctx.supabaseAdmin
+        .from("stock_issue_serials")
+        .select("physical_product_id, serial_number")
+        .in("physical_product_id", productIds);
+
+      if (existingIssues && existingIssues.length > 0) {
+        const duplicates = existingIssues.map(e => e.serial_number).join(", ");
+        throw new Error(`Serial đã có trong phiếu xuất khác: ${duplicates}`);
+      }
+
+      // Check quantity doesn't exceed declared quantity
+      const { data: currentSerials } = await ctx.supabaseAdmin
+        .from("stock_issue_serials")
+        .select("id")
+        .eq("issue_item_id", input.issueItemId);
+
+      const currentCount = currentSerials?.length || 0;
+      if (currentCount + input.serialNumbers.length > issueItem.quantity) {
+        throw new Error(
+          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng khai báo ${issueItem.quantity}`
+        );
+      }
+
+      // Insert issue serials
+      const serialsToInsert = physicalProducts.map((pp) => ({
+        issue_item_id: input.issueItemId,
+        physical_product_id: pp.id,
+        serial_number: pp.serial_number,
+      }));
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("stock_issue_serials")
+        .insert(serialsToInsert)
+        .select();
+
+      if (error) {
+        throw new Error(`Failed to add serials: ${error.message}`);
+      }
+
+      // Auto-complete: Check if all serials are complete
+      // Get issue item to know issue_id
+      const { data: issueItemData } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("quantity, issue_id")
+        .eq("id", input.issueItemId)
+        .single();
+
+      if (issueItemData) {
+        // Get issue status
+        const { data: issueData } = await ctx.supabaseAdmin
+          .from("stock_issues")
+          .select("status")
+          .eq("id", issueItemData.issue_id)
+          .single();
+
+        if (issueData && issueData.status === "approved") {
+          // Get current serial count for this issue
+          const { data: allItems } = await ctx.supabaseAdmin
+            .from("stock_issue_items")
+            .select(`
+              id,
+              quantity,
+              stock_issue_serials(id)
+            `)
+            .eq("issue_id", issueItemData.issue_id);
+
+          if (allItems) {
+            const totalQuantity = allItems.reduce((sum, item) => sum + item.quantity, 0);
+            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_issue_serials?.length || 0), 0);
+
+            // Auto-complete if all serials are selected
+            if (totalSerials >= totalQuantity) {
+              await ctx.supabaseAdmin
+                .from("stock_issues")
+                .update({
+                  status: "completed",
+                  completed_at: new Date().toISOString(),
+                  completed_by_id: ctx.user?.id
+                })
+                .eq("id", issueItemData.issue_id)
+                .eq("status", "approved");
+            }
+          }
+        }
       }
 
       return data;

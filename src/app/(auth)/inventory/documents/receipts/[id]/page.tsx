@@ -5,7 +5,7 @@
  * Allows viewing and editing stock receipt details
  */
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +13,11 @@ import { ReceiptDetailHeader } from "@/components/inventory/documents/receipt-de
 import { ReceiptItemsTable } from "@/components/inventory/documents/receipt-items-table";
 import { SerialEntryCard, SerialEntryStatus } from "@/components/inventory/serials";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, CheckCircle, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Send, CheckCircle, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -24,9 +28,13 @@ interface ReceiptDetailPageProps {
 export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
   const router = useRouter();
   const { id } = use(params);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const { data: receipt, isLoading, refetch } = trpc.inventory.receipts.getById.useQuery({ id });
   const submitForApproval = trpc.inventory.receipts.submitForApproval.useMutation();
+  const approveReceipt = trpc.inventory.receipts.approve.useMutation();
+  const rejectReceipt = trpc.inventory.receipts.reject.useMutation();
   const deleteReceipt = trpc.inventory.receipts.delete.useMutation();
 
   const utils = trpc.useUtils();
@@ -38,6 +46,37 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
       refetch();
     } catch (error: any) {
       toast.error(error.message || "Không thể gửi phiếu nhập");
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!confirm("Bạn có chắc chắn muốn duyệt phiếu nhập này?")) {
+      return;
+    }
+
+    try {
+      await approveReceipt.mutateAsync({ id });
+      toast.success("Đã duyệt phiếu nhập");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể duyệt phiếu nhập");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error("Vui lòng nhập lý do từ chối");
+      return;
+    }
+
+    try {
+      await rejectReceipt.mutateAsync({ id, reason: rejectionReason });
+      toast.success("Đã từ chối phiếu nhập");
+      setIsRejectDialogOpen(false);
+      setRejectionReason("");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể từ chối phiếu nhập");
     }
   };
 
@@ -101,6 +140,8 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
   // Allow submission even with partial serials (business requirement change)
   const canSubmitForApproval = receipt.status === "draft";
   const canDelete = receipt.status === "draft";
+  const canApprove = receipt.status === "pending_approval";
+  const canReject = receipt.status === "pending_approval";
 
   // Determine serial entry status
   const getSerialEntryStatus = (): SerialEntryStatus => {
@@ -155,6 +196,30 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
                     <span className="hidden lg:inline">Gửi duyệt</span>
                   </Button>
                 )}
+
+                {canReject && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setIsRejectDialogOpen(true)}
+                    disabled={rejectReceipt.isPending}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="hidden lg:inline">Từ chối</span>
+                  </Button>
+                )}
+
+                {canApprove && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApprove}
+                    disabled={approveReceipt.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="hidden lg:inline">Duyệt phiếu</span>
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -202,6 +267,48 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Reject Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Từ chối phiếu nhập</DialogTitle>
+            <DialogDescription>
+              Vui lòng nhập lý do từ chối phiếu nhập này. Lý do sẽ được lưu lại để tham khảo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Lý do từ chối *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Nhập lý do từ chối..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRejectDialogOpen(false);
+                setRejectionReason("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={rejectReceipt.isPending || !rejectionReason.trim()}
+            >
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

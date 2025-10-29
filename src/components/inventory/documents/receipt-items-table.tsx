@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Trash2 } from "lucide-react";
-import { SerialEntryDrawer } from "../serials/serial-entry-drawer";
+import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
 
 interface ReceiptItemsTableProps {
   receipt: StockReceiptWithRelations;
@@ -48,7 +48,8 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
 
   const selectedItem = receipt.items?.find((item) => item.id === selectedItemId);
 
-  const canEdit = receipt.status === "draft" || receipt.status === "approved";
+  // Allow editing when: draft, pending_approval, or approved
+  const canEdit = receipt.status === "draft" || receipt.status === "pending_approval" || receipt.status === "approved";
 
   return (
     <>
@@ -132,12 +133,13 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
       </Card>
 
       {selectedItem && (
-        <SerialEntryDrawer
+        <UnifiedSerialInputDrawer
           open={isDrawerOpen}
           onOpenChange={handleOpenChange}
-          receiptItemId={selectedItem.id}
+          type="receipt"
+          itemId={selectedItem.id}
           productName={selectedItem.product?.name || ""}
-          declaredQuantity={selectedItem.declared_quantity}
+          quantity={selectedItem.declared_quantity}
           currentSerialCount={selectedItem.serials?.length || 0}
           onSuccess={handleSuccess}
         />

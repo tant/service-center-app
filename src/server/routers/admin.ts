@@ -583,12 +583,27 @@ export const adminRouter = router({
         }
       }
 
-      // Step 2b: Create Virtual Warehouses (separate entities)
-      console.log("\n🗂️ SEED STEP 2b: Creating virtual warehouses...");
-      results.push("🗂️ Bước 2b: Tạo Virtual Warehouses...");
+      // Step 2b: Query auto-created virtual warehouses + Create additional ones
+      console.log("\n🗂️ SEED STEP 2b: Managing virtual warehouses...");
+      results.push("🗂️ Bước 2b: Quản lý Virtual Warehouses...");
 
       const virtualWarehouseMap = new Map<string, string>(); // name -> id mapping
 
+      // First, query all auto-created virtual warehouses from Step 2
+      const { data: autoCreatedVWs } = await supabaseAdmin
+        .from("virtual_warehouses")
+        .select("id, name");
+
+      if (autoCreatedVWs && autoCreatedVWs.length > 0) {
+        console.log(`✅ SEED: Found ${autoCreatedVWs.length} auto-created virtual warehouses`);
+        for (const vw of autoCreatedVWs) {
+          virtualWarehouseMap.set(vw.name, vw.id);
+          console.log(`  → ${vw.name} (auto-created)`);
+        }
+        results.push(`✅ Tìm thấy ${autoCreatedVWs.length} kho ảo tự động`);
+      }
+
+      // Then, create additional virtual warehouses from mockData
       for (const vw of mockData.virtualWarehouses) {
         try {
           // Check if virtual warehouse already exists

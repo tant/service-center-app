@@ -92,11 +92,42 @@ CREATE POLICY email_notifications_system_update ON public.email_notifications FO
 
 -- Warehouse Stock Levels View
 CREATE OR REPLACE VIEW public.v_warehouse_stock_levels AS
-SELECT p.id AS product_id, p.name AS product_name, p.sku AS product_sku, b.name AS brand_name, pp.virtual_warehouse_type AS warehouse_type, pp.condition, COUNT(*) AS quantity, COUNT(*) FILTER (WHERE pp.warranty_end_date IS NOT NULL AND pp.warranty_end_date > CURRENT_DATE + INTERVAL '30 days') AS active_warranty_count, COUNT(*) FILTER (WHERE pp.warranty_end_date IS NOT NULL AND pp.warranty_end_date > CURRENT_DATE AND pp.warranty_end_date <= CURRENT_DATE + INTERVAL '30 days') AS expiring_soon_count, COUNT(*) FILTER (WHERE pp.warranty_end_date IS NOT NULL AND pp.warranty_end_date <= CURRENT_DATE) AS expired_count, SUM(pp.purchase_price) AS total_purchase_value, AVG(pp.purchase_price) AS avg_purchase_price, pst.minimum_quantity, pst.reorder_quantity, pst.maximum_quantity, pst.alert_enabled, CASE WHEN pst.minimum_quantity IS NOT NULL AND COUNT(*) < pst.minimum_quantity THEN true ELSE false END AS is_below_minimum, MIN(pp.created_at) AS oldest_stock_date, MAX(pp.created_at) AS newest_stock_date
-FROM public.physical_products pp JOIN public.products p ON pp.product_id = p.id JOIN public.brands b ON p.brand_id = b.id LEFT JOIN public.product_stock_thresholds pst ON pst.product_id = p.id AND pst.warehouse_type = pp.virtual_warehouse_type
+SELECT
+  p.id AS product_id,
+  p.name AS product_name,
+  p.sku AS product_sku,
+  b.name AS brand_name,
+  pp.virtual_warehouse_type AS warehouse_type,
+  pp.condition,
+  COUNT(*) AS quantity,
+  COUNT(*) FILTER (WHERE
+    (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date > CURRENT_DATE + INTERVAL '30 days') OR
+    (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date > CURRENT_DATE + INTERVAL '30 days')
+  ) AS active_warranty_count,
+  COUNT(*) FILTER (WHERE
+    (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date > CURRENT_DATE AND pp.user_warranty_end_date <= CURRENT_DATE + INTERVAL '30 days') OR
+    (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date > CURRENT_DATE AND pp.manufacturer_warranty_end_date <= CURRENT_DATE + INTERVAL '30 days')
+  ) AS expiring_soon_count,
+  COUNT(*) FILTER (WHERE
+    (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= CURRENT_DATE) OR
+    (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= CURRENT_DATE)
+  ) AS expired_count,
+  SUM(pp.purchase_price) AS total_purchase_value,
+  AVG(pp.purchase_price) AS avg_purchase_price,
+  pst.minimum_quantity,
+  pst.reorder_quantity,
+  pst.maximum_quantity,
+  pst.alert_enabled,
+  CASE WHEN pst.minimum_quantity IS NOT NULL AND COUNT(*) < pst.minimum_quantity THEN true ELSE false END AS is_below_minimum,
+  MIN(pp.created_at) AS oldest_stock_date,
+  MAX(pp.created_at) AS newest_stock_date
+FROM public.physical_products pp
+JOIN public.products p ON pp.product_id = p.id
+JOIN public.brands b ON p.brand_id = b.id
+LEFT JOIN public.product_stock_thresholds pst ON pst.product_id = p.id AND pst.warehouse_type = pp.virtual_warehouse_type
 GROUP BY p.id, p.name, p.sku, b.name, pp.virtual_warehouse_type, pp.condition, pst.minimum_quantity, pst.reorder_quantity, pst.maximum_quantity, pst.alert_enabled
 ORDER BY b.name, p.name, pp.virtual_warehouse_type;
-COMMENT ON VIEW public.v_warehouse_stock_levels IS 'Real-time stock levels by product, warehouse type, and condition with threshold alerts';
+COMMENT ON VIEW public.v_warehouse_stock_levels IS 'Real-time stock levels by product, warehouse type, and condition with threshold alerts (prioritizes user warranty over manufacturer warranty)';
 
 -- Task Progress Summary View
 CREATE OR REPLACE VIEW public.v_task_progress_summary AS
@@ -108,18 +139,73 @@ COMMENT ON VIEW public.v_task_progress_summary IS 'Task completion progress summ
 
 -- Warranty Expiring Soon View
 CREATE OR REPLACE VIEW public.v_warranty_expiring_soon AS
-SELECT pp.id AS physical_product_id, pp.serial_number, pp.condition, pp.virtual_warehouse_type, p.id AS product_id, p.name AS product_name, p.sku AS product_sku, b.name AS brand_name, pp.warranty_start_date, pp.warranty_months, pp.warranty_end_date, CASE WHEN pp.warranty_end_date IS NULL THEN 'unknown'::TEXT WHEN pp.warranty_end_date <= CURRENT_DATE THEN 'expired'::TEXT WHEN pp.warranty_end_date <= CURRENT_DATE + INTERVAL '30 days' THEN 'expiring_soon'::TEXT ELSE 'active'::TEXT END AS warranty_status, pp.warranty_end_date - CURRENT_DATE AS days_remaining, pw.name AS physical_warehouse_name, pw.code AS physical_warehouse_code, st.id AS current_ticket_id, st.ticket_number AS current_ticket_number, st.status AS current_ticket_status, pp.created_at, pp.updated_at
-FROM public.physical_products pp JOIN public.products p ON pp.product_id = p.id JOIN public.brands b ON p.brand_id = b.id LEFT JOIN public.physical_warehouses pw ON pp.physical_warehouse_id = pw.id LEFT JOIN public.service_tickets st ON pp.current_ticket_id = st.id
-WHERE pp.warranty_end_date IS NOT NULL AND pp.warranty_end_date > CURRENT_DATE AND pp.warranty_end_date <= CURRENT_DATE + INTERVAL '30 days'
-ORDER BY pp.warranty_end_date ASC;
-COMMENT ON VIEW public.v_warranty_expiring_soon IS 'Products with warranty expiring within 30 days';
+SELECT
+  pp.id AS physical_product_id,
+  pp.serial_number,
+  pp.condition,
+  pp.virtual_warehouse_type,
+  p.id AS product_id,
+  p.name AS product_name,
+  p.sku AS product_sku,
+  b.name AS brand_name,
+  pp.manufacturer_warranty_end_date,
+  pp.user_warranty_end_date,
+  CASE
+    WHEN pp.user_warranty_end_date IS NOT NULL THEN 'user'
+    WHEN pp.manufacturer_warranty_end_date IS NOT NULL THEN 'manufacturer'
+    ELSE 'none'
+  END AS warranty_type,
+  CASE
+    WHEN pp.user_warranty_end_date IS NOT NULL THEN pp.user_warranty_end_date - CURRENT_DATE
+    WHEN pp.manufacturer_warranty_end_date IS NOT NULL THEN pp.manufacturer_warranty_end_date - CURRENT_DATE
+    ELSE NULL
+  END AS days_remaining,
+  CASE
+    WHEN pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= CURRENT_DATE THEN 'expired'
+    WHEN pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= CURRENT_DATE THEN 'expired'
+    WHEN pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= (CURRENT_DATE + '30 days'::interval) THEN 'expiring_soon'
+    WHEN pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= (CURRENT_DATE + '30 days'::interval) THEN 'expiring_soon'
+    ELSE 'active'
+  END AS warranty_status,
+  pw.name AS physical_warehouse_name,
+  pw.code AS physical_warehouse_code,
+  st.id AS current_ticket_id,
+  st.ticket_number AS current_ticket_number,
+  st.status AS current_ticket_status,
+  pp.created_at,
+  pp.updated_at
+FROM public.physical_products pp
+JOIN public.products p ON pp.product_id = p.id
+JOIN public.brands b ON p.brand_id = b.id
+LEFT JOIN public.physical_warehouses pw ON pp.physical_warehouse_id = pw.id
+LEFT JOIN public.service_tickets st ON pp.current_ticket_id = st.id
+WHERE (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')
+   OR (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')
+ORDER BY
+  CASE
+    WHEN pp.user_warranty_end_date IS NOT NULL THEN pp.user_warranty_end_date
+    ELSE pp.manufacturer_warranty_end_date
+  END;
+COMMENT ON VIEW public.v_warranty_expiring_soon IS 'Physical products with warranty expiring within 30 days (prioritizes user warranty over manufacturer warranty)';
 
 -- Service Request Summary View
-CREATE OR REPLACE VIEW public.v_service_request_summary AS
-SELECT sr.id, sr.tracking_token, sr.status, sr.customer_name, sr.customer_email, sr.customer_phone, sr.product_brand, sr.product_model, sr.serial_number, sr.purchase_date, sr.issue_description, jsonb_array_length(COALESCE(sr.issue_photos, '[]'::jsonb)) AS photo_count, sr.service_type, sr.delivery_method, sr.delivery_address, sr.reviewed_by_id, prof.full_name AS reviewed_by_name, sr.reviewed_at, sr.rejection_reason, sr.ticket_id, st.ticket_number, st.status AS ticket_status, sr.converted_at, sr.created_at AS submitted_at, sr.updated_at, CASE WHEN sr.reviewed_at IS NOT NULL THEN EXTRACT(EPOCH FROM (sr.reviewed_at - sr.created_at)) / 3600 ELSE NULL END AS hours_to_review, CASE WHEN sr.converted_at IS NOT NULL THEN EXTRACT(EPOCH FROM (sr.converted_at - sr.created_at)) / 3600 ELSE NULL END AS hours_to_conversion, sr.submitted_ip, sr.user_agent
-FROM public.service_requests sr LEFT JOIN public.profiles prof ON sr.reviewed_by_id = prof.id LEFT JOIN public.service_tickets st ON sr.ticket_id = st.id
-ORDER BY sr.created_at DESC;
-COMMENT ON VIEW public.v_service_request_summary IS 'Service requests with customer info, conversion status, and time metrics';
+-- TODO: This view needs redesign for 1:N relationship (service_requests -> service_request_items)
+-- Commented out until redesigned
+-- CREATE OR REPLACE VIEW public.v_service_request_summary AS
+-- SELECT sr.id, sr.tracking_token, sr.status, sr.customer_name, sr.customer_email, sr.customer_phone,
+--   sr.issue_description, sr.service_type, sr.delivery_method, sr.delivery_address,
+--   sr.reviewed_by_id, prof.full_name AS reviewed_by_name, sr.reviewed_at, sr.rejection_reason,
+--   sr.converted_at, sr.created_at AS submitted_at, sr.updated_at,
+--   CASE WHEN sr.reviewed_at IS NOT NULL THEN EXTRACT(EPOCH FROM (sr.reviewed_at - sr.created_at)) / 3600 ELSE NULL END AS hours_to_review,
+--   CASE WHEN sr.converted_at IS NOT NULL THEN EXTRACT(EPOCH FROM (sr.converted_at - sr.created_at)) / 3600 ELSE NULL END AS hours_to_conversion,
+--   sr.submitted_ip, sr.user_agent,
+--   COUNT(sri.id) AS item_count
+-- FROM public.service_requests sr
+-- LEFT JOIN public.profiles prof ON sr.reviewed_by_id = prof.id
+-- LEFT JOIN public.service_request_items sri ON sr.id = sri.request_id
+-- GROUP BY sr.id, prof.full_name
+-- ORDER BY sr.created_at DESC;
+-- COMMENT ON VIEW public.v_service_request_summary IS 'Service requests with customer info, conversion status, and time metrics';
 
 -- Stock Movement History View
 CREATE OR REPLACE VIEW public.v_stock_movement_history AS

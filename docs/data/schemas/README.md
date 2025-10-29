@@ -1,9 +1,9 @@
 # Service Center Database Schema
 
-**Version:** 2.0 (Phase 2 Complete)
-**Last Updated:** 2025-10-25
-**Total Schema Files:** 13 (00-12) + seed.sql
-**Total Tables:** 25
+**Version:** 3.0 (Inventory Redesign Complete)
+**Last Updated:** 2025-10-29
+**Total Schema Files:** 16 (00-12, 15-17) + seed.sql
+**Total Tables:** 31
 
 This directory contains the **complete source of truth** for the Service Center database schema, designed for use with Supabase PostgreSQL.
 
@@ -13,23 +13,26 @@ This directory contains the **complete source of truth** for the Service Center 
 
 All schema files are numbered to ensure proper execution order due to dependencies:
 
-### Core Schema Files (00-12)
+### Core Schema Files (00-12, 15-17)
 
 | File | Purpose | Key Objects | Size |
 |------|---------|-------------|------|
-| **00_base_schema.sql** | ENUMs, domains, base functions | 12 ENUMs, `is_admin()`, `is_admin_or_manager()` | 9.9KB |
+| **00_base_schema.sql** | ENUMs, domains, base functions | 12 ENUMs, `is_admin()`, `is_admin_or_manager()` | 10KB |
 | **01_users_and_customers.sql** | User profiles and customers | `profiles`, `customers` tables | 3.6KB |
-| **02_products_and_inventory.sql** | Products and parts | `products`, `brands`, `parts` tables | 6.8KB |
-| **03_service_tickets.sql** | Core ticket workflow | `service_tickets` + related tables | 13KB |
-| **04_task_and_warehouse.sql** | Tasks & warehouses | `task_templates`, `warehouses`, RMA | 12KB |
-| **05_service_requests.sql** | Public portal + FK constraints | `service_requests`, FK constraints | 3.5KB |
+| **02_products_and_inventory.sql** | Products and parts | `products`, `brands`, `parts` tables | 6.9KB |
+| **03_service_tickets.sql** | Core ticket workflow | `service_tickets` + related tables | 12.7KB |
+| **04_task_and_warehouse.sql** | Tasks & warehouses | `task_templates`, `physical_warehouses`, RMA | 12KB |
+| **05_service_requests.sql** | Public portal + FK constraints | `service_requests`, FK constraints | 6.2KB |
 | **06_policies_and_views.sql** | RLS policies and views | Base RLS policies, helper views | 20KB |
-| **07_storage.sql** | File upload storage | Storage buckets and policies | 6.2KB |
+| **07_storage.sql** | File upload storage | Storage buckets and policies | 6.3KB |
 | **08_inventory_functions.sql** | Inventory helpers | Stock movement functions | 1.9KB |
-| **09_role_helpers.sql** | RBAC functions | `get_my_role()`, `has_role()`, etc. | 5.2KB |
-| **10_audit_logs.sql** | Audit logging system | `audit_logs` table + functions | 11KB |
-| **11_rls_policy_updates.sql** | Updated RBAC policies | Role-based RLS policies | 13KB |
-| **12_seed_test_users.sql** | Test user documentation | Comments only (no SQL) | 8.2KB |
+| **09_role_helpers.sql** | RBAC functions | `get_my_role()`, `has_role()`, etc. | 5.3KB |
+| **10_audit_logs.sql** | Audit logging system | `audit_logs` table + functions | 10.7KB |
+| **11_rls_policy_updates.sql** | Updated RBAC policies | Role-based RLS policies | 12.6KB |
+| **12_seed_test_users.sql** | Test user documentation | Comments only (no SQL) | 8.3KB |
+| **15_virtual_warehouse_physical_link.sql** | Virtual ↔ Physical link | Auto-create virtual warehouses | 4.8KB |
+| **16_inventory_documents.sql** | Inventory management | Receipts, issues, transfers, serials | 22.8KB |
+| **17_stock_update_triggers.sql** | Stock automation | Triggers for stock updates on approval | 4.3KB |
 
 ### Seed Data
 
@@ -37,7 +40,7 @@ All schema files are numbered to ensure proper execution order due to dependenci
 |------|---------|----------------|
 | **seed.sql** | Default task types | 27+ task types (Intake, Diagnosis, Repair, QA, Closing) |
 
-**Total:** 115KB across 13 schema files + 6KB seed data
+**Total:** 147KB across 16 schema files + 6KB seed data
 
 ---
 
@@ -51,13 +54,13 @@ The simplest way to set up the database:
 ```
 
 This script automatically:
-1. ✅ Copies all 13 schema files to `supabase/schemas/`
+1. ✅ Copies all 16 schema files to `supabase/schemas/`
 2. ✅ Copies `seed.sql` to `supabase/` folder
 3. ✅ Creates storage buckets
 4. ✅ Generates migration via `db diff`
 5. ✅ Applies migration and storage policies
 6. ✅ **Loads seed data automatically** (27+ task types)
-7. ✅ Verifies database setup (25 tables, RBAC functions)
+7. ✅ Verifies database setup (31 tables, RBAC functions)
 8. ✅ Cleans up temporary files
 
 **Time:** 2-3 minutes
@@ -67,36 +70,42 @@ This script automatically:
 
 ## 📋 Schema Execution Order
 
-**CRITICAL:** Schemas must be applied in numerical order (00 → 12) due to dependencies.
+**CRITICAL:** Schemas must be applied in numerical order (00 → 12, then 15 → 17) due to dependencies.
 
 ```
-00_base_schema.sql           # ENUMs and base functions FIRST
+00_base_schema.sql                        # ENUMs and base functions FIRST
   ↓
-01_users_and_customers.sql   # Users and customer tables
+01_users_and_customers.sql                # Users and customer tables
   ↓
-02_products_and_inventory.sql # Products, brands, parts
+02_products_and_inventory.sql             # Products, brands, parts
   ↓
-03_service_tickets.sql       # Service tickets (without FKs to 04, 05)
+03_service_tickets.sql                    # Service tickets (without FKs to 04, 05)
   ↓
-04_task_and_warehouse.sql    # Creates task_templates and warehouses
+04_task_and_warehouse.sql                 # Creates task_templates and physical_warehouses
   ↓
-05_service_requests.sql      # Creates service_requests + adds FK constraints to 03
+05_service_requests.sql                   # Creates service_requests + adds FK constraints to 03
   ↓
-06_policies_and_views.sql    # Base RLS policies and views
+06_policies_and_views.sql                 # Base RLS policies and views
   ↓
-07_storage.sql               # Storage buckets and policies
+07_storage.sql                            # Storage buckets and policies
   ↓
-08_inventory_functions.sql   # Inventory management functions
+08_inventory_functions.sql                # Inventory management functions
   ↓
-09_role_helpers.sql          # RBAC helper functions
+09_role_helpers.sql                       # RBAC helper functions
   ↓
-10_audit_logs.sql            # Audit logging system
+10_audit_logs.sql                         # Audit logging system
   ↓
-11_rls_policy_updates.sql    # Updated RLS policies (uses functions from 09)
+11_rls_policy_updates.sql                 # Updated RLS policies (uses functions from 09)
   ↓
-12_seed_test_users.sql       # Documentation only
+12_seed_test_users.sql                    # Documentation only
   ↓
-seed.sql                     # Task types (REQUIRED for workflow system)
+15_virtual_warehouse_physical_link.sql    # Links virtual warehouses to physical warehouses
+  ↓
+16_inventory_documents.sql                # Stock receipts, issues, transfers, serials
+  ↓
+17_stock_update_triggers.sql              # Auto-update stock on document approval
+  ↓
+seed.sql                                  # Task types (REQUIRED for workflow system)
 ```
 
 ### Why Order Matters

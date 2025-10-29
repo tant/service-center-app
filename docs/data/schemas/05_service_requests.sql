@@ -35,6 +35,136 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
 COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue description for the entire request (specific issues per product in service_request_items)';
 
+-- =====================================================
+-- AUTO-CREATE TICKETS FUNCTION
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.auto_create_tickets_on_received()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_customer_id UUID;
+  v_product_id UUID;
+  v_ticket_id UUID;
+  v_item RECORD;
+BEGIN
+  -- Only trigger when status changes to 'received'
+  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status = 'submitted') THEN
+
+    -- Find or create customer
+    SELECT id INTO v_customer_id
+    FROM public.customers
+    WHERE email = NEW.customer_email
+    LIMIT 1;
+
+    -- If customer doesn't exist, create one
+    IF v_customer_id IS NULL THEN
+      INSERT INTO public.customers (
+        name,
+        email,
+        phone,
+        created_by_id
+      ) VALUES (
+        NEW.customer_name,
+        NEW.customer_email,
+        NEW.customer_phone,
+        NEW.reviewed_by_id
+      )
+      RETURNING id INTO v_customer_id;
+    END IF;
+
+    -- Create a ticket for each item in the request
+    FOR v_item IN
+      SELECT * FROM public.service_request_items
+      WHERE request_id = NEW.id AND ticket_id IS NULL
+    LOOP
+      -- Find product_id from serial_number
+      v_product_id := NULL;
+
+      IF v_item.serial_number IS NOT NULL THEN
+        SELECT product_id INTO v_product_id
+        FROM public.physical_products
+        WHERE serial_number = v_item.serial_number
+        LIMIT 1;
+      END IF;
+
+      -- If no physical product found, try to find by brand/model
+      IF v_product_id IS NULL THEN
+        SELECT p.id INTO v_product_id
+        FROM public.products p
+        JOIN public.brands b ON p.brand_id = b.id
+        WHERE b.name ILIKE v_item.product_brand
+          AND p.name ILIKE v_item.product_model
+        LIMIT 1;
+      END IF;
+
+      -- Skip if product not found
+      IF v_product_id IS NULL THEN
+        RAISE NOTICE 'Product not found for item %: brand=%, model=%',
+          v_item.id, v_item.product_brand, v_item.product_model;
+        CONTINUE;
+      END IF;
+
+      -- Create service ticket
+      INSERT INTO public.service_tickets (
+        customer_id,
+        product_id,
+        issue_description,
+        status,
+        service_type,
+        delivery_method,
+        delivery_address,
+        request_id,
+        created_by_id
+      ) VALUES (
+        v_customer_id,
+        v_product_id,
+        COALESCE(v_item.issue_description, NEW.issue_description),
+        'pending',
+        NEW.service_type,
+        NEW.delivery_method,
+        NEW.delivery_address,
+        NEW.id,
+        NEW.reviewed_by_id
+      )
+      RETURNING id INTO v_ticket_id;
+
+      -- Link ticket back to item
+      UPDATE public.service_request_items
+      SET ticket_id = v_ticket_id
+      WHERE id = v_item.id;
+
+      -- Add initial comment
+      INSERT INTO public.service_ticket_comments (
+        ticket_id,
+        comment,
+        created_by_id
+      ) VALUES (
+        v_ticket_id,
+        format('Auto-created from service request %s - Product: %s %s (SN: %s)',
+          NEW.tracking_token,
+          v_item.product_brand,
+          v_item.product_model,
+          COALESCE(v_item.serial_number, 'N/A')
+        ),
+        NEW.reviewed_by_id
+      );
+
+    END LOOP;
+
+    -- Update request status to processing
+    NEW.status := 'processing';
+    NEW.converted_at := NOW();
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when request status changes to received';
+
+-- =====================================================
+-- TRIGGERS
+-- =====================================================
 CREATE TRIGGER trigger_generate_service_request_tracking_token BEFORE INSERT ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.generate_tracking_token();
 CREATE TRIGGER trigger_service_requests_updated_at BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER trigger_auto_create_tickets BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.auto_create_tickets_on_received();

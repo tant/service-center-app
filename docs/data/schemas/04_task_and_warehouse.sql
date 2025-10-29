@@ -146,15 +146,15 @@ CREATE TRIGGER trigger_physical_warehouses_updated_at BEFORE UPDATE ON public.ph
 -- VIRTUAL WAREHOUSES
 CREATE TABLE IF NOT EXISTS public.virtual_warehouses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  warehouse_type public.warehouse_type NOT NULL UNIQUE,
-  display_name VARCHAR(255) NOT NULL,
+  warehouse_type public.warehouse_type NOT NULL,
+  name VARCHAR(255) NOT NULL,
   description TEXT,
-  color_code VARCHAR(7),
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 COMMENT ON TABLE public.virtual_warehouses IS 'Virtual warehouse categories for product state management';
+COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (primary display name)';
 CREATE TRIGGER trigger_virtual_warehouses_updated_at BEFORE UPDATE ON public.virtual_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- PHYSICAL PRODUCTS
@@ -165,9 +165,9 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   condition public.product_condition NOT NULL DEFAULT 'new',
   virtual_warehouse_type public.warehouse_type NOT NULL DEFAULT 'warranty_stock',
   physical_warehouse_id UUID REFERENCES public.physical_warehouses(id) ON DELETE SET NULL,
-  warranty_start_date DATE,
-  warranty_months INT,
-  warranty_end_date DATE,
+  previous_virtual_warehouse_type public.warehouse_type,
+  manufacturer_warranty_end_date DATE,
+  user_warranty_end_date DATE,
   current_ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   rma_reason TEXT,
@@ -181,18 +181,9 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   CONSTRAINT physical_products_serial_unique UNIQUE(serial_number)
 );
 COMMENT ON TABLE public.physical_products IS 'Serialized product instances with warranty and location tracking';
-CREATE OR REPLACE FUNCTION public.calculate_physical_product_warranty_end_date()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.warranty_start_date IS NOT NULL AND NEW.warranty_months IS NOT NULL THEN
-    NEW.warranty_end_date := NEW.warranty_start_date + (NEW.warranty_months || ' months')::INTERVAL;
-  ELSE
-    NEW.warranty_end_date := NULL;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-CREATE TRIGGER trigger_physical_products_warranty_calculation BEFORE INSERT OR UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.calculate_physical_product_warranty_end_date();
+COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_type IS 'Stores warehouse type before RMA - used to restore location when removed from RMA batch';
+COMMENT ON COLUMN public.physical_products.manufacturer_warranty_end_date IS 'Manufacturer warranty end date (nullable - managed separately at /inventory/products)';
+COMMENT ON COLUMN public.physical_products.user_warranty_end_date IS 'Extended warranty for end user (nullable - managed separately at /inventory/products)';
 CREATE TRIGGER trigger_physical_products_updated_at BEFORE UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- STOCK MOVEMENTS

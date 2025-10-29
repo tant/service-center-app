@@ -48,6 +48,7 @@ echo -e "${BLUE}📁 Copying schema files in proper order...${NC}"
 # Order of execution matters due to dependencies
 # 00_base_schema.sql must be first (defines ENUMs, DOMAINs, and base functions)
 # Core tables follow, then Phase 2 extensions, then RBAC helpers, then policies and views
+# Files 15-17 are inventory redesign (virtual warehouses, documents, triggers)
 SCHEMA_FILES=(
     "00_base_schema.sql"
     "01_users_and_customers.sql"
@@ -62,6 +63,9 @@ SCHEMA_FILES=(
     "10_audit_logs.sql"
     "11_rls_policy_updates.sql"
     "12_seed_test_users.sql"
+    "15_virtual_warehouse_physical_link.sql"
+    "16_inventory_documents.sql"
+    "17_stock_update_triggers.sql"
 )
 
 # Copy each file in order

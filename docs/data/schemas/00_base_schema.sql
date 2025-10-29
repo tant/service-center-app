@@ -80,13 +80,14 @@ COMMENT ON TYPE public.task_status IS 'Task execution status within service tick
 -- Warehouse Type Enum
 DROP TYPE IF EXISTS public.warehouse_type CASCADE;
 CREATE TYPE public.warehouse_type AS ENUM (
+  'main',
   'warranty_stock',
   'rma_staging',
   'dead_stock',
   'in_service',
   'parts'
 );
-COMMENT ON TYPE public.warehouse_type IS 'Virtual warehouse categories for physical product organization';
+COMMENT ON TYPE public.warehouse_type IS 'Virtual warehouse categories: main (primary storage), warranty_stock, rma_staging, dead_stock, in_service, parts';
 
 -- Service Request Status Enum
 DROP TYPE IF EXISTS public.request_status CASCADE;

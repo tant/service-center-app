@@ -66,13 +66,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RequestDetailModal } from "@/components/modals/request-detail-modal";
-import { RejectRequestModal } from "@/components/modals/reject-request-modal";
-import { ConvertToTicketModal } from "@/components/modals/convert-to-ticket-modal";
 import { ConfirmIncomingModal } from "@/components/modals/confirm-incoming-modal";
-import { CreateServiceRequestModal } from "@/components/modals/create-service-request-modal";
 import { usePendingIncomingRequests } from "@/hooks/use-service-request";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 // Schema
 export const serviceRequestSchema = z.object({
@@ -117,11 +114,6 @@ interface ServiceRequestsTableProps {
 }
 
 export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
-  const [selectedRequest, setSelectedRequest] = React.useState<string | null>(null);
-  const [showDetailModal, setShowDetailModal] = React.useState(false);
-  const [showRejectModal, setShowRejectModal] = React.useState(false);
-  const [showConvertModal, setShowConvertModal] = React.useState(false);
-  const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -131,21 +123,6 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
   const { data: incomingData, isLoading: isLoadingIncoming, refetch: refetchIncoming } = usePendingIncomingRequests();
   const [selectedIncomingRequest, setSelectedIncomingRequest] = React.useState<any | null>(null);
   const [showConfirmIncomingModal, setShowConfirmIncomingModal] = React.useState(false);
-
-  const handleViewDetails = (requestId: string) => {
-    setSelectedRequest(requestId);
-    setShowDetailModal(true);
-  };
-
-  const handleAccept = (requestId: string) => {
-    setSelectedRequest(requestId);
-    setShowConvertModal(true);
-  };
-
-  const handleReject = (requestId: string) => {
-    setSelectedRequest(requestId);
-    setShowRejectModal(true);
-  };
 
   const handleConfirmIncoming = (request: any) => {
     setSelectedIncomingRequest(request);
@@ -228,31 +205,13 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleViewDetails(request.id)}
+              asChild
             >
-              <IconEye className="h-4 w-4 mr-1" />
-              Xem
+              <Link href={`/operations/service-requests/${request.id}`}>
+                <IconEye className="h-4 w-4 mr-1" />
+                Xem
+              </Link>
             </Button>
-            {(request.status === "submitted" || request.status === "received") && (
-              <>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleAccept(request.id)}
-                >
-                  <IconCheck className="h-4 w-4 mr-1" />
-                  Chấp nhận
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleReject(request.id)}
-                >
-                  <IconX className="h-4 w-4 mr-1" />
-                  Từ chối
-                </Button>
-              </>
-            )}
           </div>
         );
       },
@@ -332,9 +291,11 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
         </TabsList>
 
         {/* Action buttons */}
-        <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
-          <IconPlus className="h-4 w-4" />
-          <span className="ml-2">Tạo phiếu yêu cầu</span>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/operations/service-requests/new">
+            <IconPlus className="h-4 w-4" />
+            <span className="ml-2">Tạo phiếu yêu cầu</span>
+          </Link>
         </Button>
       </div>
 
@@ -728,10 +689,12 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleViewDetails(request.id)}
+                              asChild
                             >
-                              <IconEye className="h-4 w-4 mr-1" />
-                              Xem
+                              <Link href={`/operations/service-requests/${request.id}`}>
+                                <IconEye className="h-4 w-4 mr-1" />
+                                Xem
+                              </Link>
                             </Button>
                             <Button
                               size="sm"
@@ -763,44 +726,12 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
       </TabsContent>
 
       {/* Modals */}
-      <RequestDetailModal
-        requestId={selectedRequest}
-        open={showDetailModal}
-        onOpenChange={setShowDetailModal}
-        onConvert={() => {
-          setShowDetailModal(false);
-          setShowConvertModal(true);
-        }}
-        onReject={() => {
-          setShowDetailModal(false);
-          setShowRejectModal(true);
-        }}
-      />
-
-      <ConvertToTicketModal
-        requestId={selectedRequest}
-        open={showConvertModal}
-        onOpenChange={setShowConvertModal}
-      />
-
-      <RejectRequestModal
-        requestId={selectedRequest}
-        open={showRejectModal}
-        onOpenChange={setShowRejectModal}
-      />
-
       {/* Confirm Incoming Modal */}
       <ConfirmIncomingModal
         request={selectedIncomingRequest}
         open={showConfirmIncomingModal}
         onOpenChange={setShowConfirmIncomingModal}
         onSuccess={handleIncomingModalClose}
-      />
-
-      {/* Create Service Request Modal */}
-      <CreateServiceRequestModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
       />
     </Tabs>
   );

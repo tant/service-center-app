@@ -48,14 +48,14 @@ export function FormDrawer({
   const isMobile = useIsMobile();
 
   const drawerContent = (
-    <DrawerContent>
+    <DrawerContent className="overflow-visible">
       <DrawerHeader className={headerClassName}>
         <DrawerTitle>{titleElement || title}</DrawerTitle>
         {description && <DrawerDescription>{description}</DrawerDescription>}
       </DrawerHeader>
 
-      {/* Form Content - Scrollable */}
-      <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+      {/* Form Content - Scrollable with better overflow handling for date pickers */}
+      <div className="flex flex-col gap-4 px-4 text-sm max-h-[60vh] overflow-y-auto">
         {children}
       </div>
 

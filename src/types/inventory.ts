@@ -71,8 +71,6 @@ export interface StockReceiptItem {
   product_id: string;
   declared_quantity: number;
   serial_count: number;
-  warranty_start_date: string | null;
-  warranty_months: number | null;
   unit_price: number | null;
   total_price: number | null;
   notes: string | null;
@@ -85,8 +83,8 @@ export interface StockReceiptSerial {
   receipt_item_id: string;
   serial_number: string;
   physical_product_id: string | null;
-  warranty_start_date: string | null;
-  warranty_months: number | null;
+  manufacturer_warranty_end_date: string | null;
+  user_warranty_end_date: string | null;
   created_at: string;
 }
 

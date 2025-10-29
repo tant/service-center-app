@@ -906,8 +906,6 @@ export const adminRouter = router({
                 receipt_id: receiptData.id,
                 product_id: productId,
                 declared_quantity: item.quantity,
-                warranty_start_date: item.warrantyStartDate,
-                warranty_months: item.warrantyMonths,
               })
               .select()
               .single();
@@ -921,8 +919,8 @@ export const adminRouter = router({
             const serialsToInsert = item.serials.map((serial: string) => ({
               receipt_item_id: itemData.id,
               serial_number: serial,
-              warranty_start_date: item.warrantyStartDate,
-              warranty_months: item.warrantyMonths,
+              manufacturer_warranty_end_date: item.manufacturerWarrantyEndDate,
+              user_warranty_end_date: item.userWarrantyEndDate,
             }));
 
             const { error: serialsError } = await supabaseAdmin

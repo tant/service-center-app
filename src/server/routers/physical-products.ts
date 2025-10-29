@@ -19,8 +19,8 @@ const createProductSchema = z.object({
   physical_warehouse_id: z.string().uuid("Warehouse ID must be a valid UUID").optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID"),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]),
-  warranty_start_date: z.string().optional(),
-  warranty_months: z.number().int().min(0).optional(),
+  manufacturer_warranty_end_date: z.string().optional(),
+  user_warranty_end_date: z.string().optional(),
   purchase_date: z.string().optional(),
   supplier_id: z.string().uuid().optional(),
   supplier_name: z.string().optional(),
@@ -41,8 +41,8 @@ const updateProductSchema = z.object({
   physical_warehouse_id: z.string().uuid().nullable().optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
-  warranty_start_date: z.string().nullable().optional(),
-  warranty_months: z.number().int().min(0).nullable().optional(),
+  manufacturer_warranty_end_date: z.string().nullable().optional(),
+  user_warranty_end_date: z.string().nullable().optional(),
   purchase_date: z.string().nullable().optional(),
   supplier_id: z.string().uuid().nullable().optional(),
   supplier_name: z.string().nullable().optional(),
@@ -86,8 +86,6 @@ export const inventoryRouter = router({
         });
       }
 
-      // Warranty end date is auto-calculated by database trigger
-      // based on warranty_start_date + warranty_months
       const { data: product, error } = await ctx.supabaseAdmin
         .from("physical_products")
         .insert({
@@ -96,8 +94,8 @@ export const inventoryRouter = router({
           physical_warehouse_id: input.physical_warehouse_id,
           virtual_warehouse_id: input.virtual_warehouse_id,
           condition: input.condition,
-          warranty_start_date: input.warranty_start_date,
-          warranty_months: input.warranty_months,
+          manufacturer_warranty_end_date: input.manufacturer_warranty_end_date,
+          user_warranty_end_date: input.user_warranty_end_date,
           purchase_date: input.purchase_date,
           supplier_id: input.supplier_id,
           supplier_name: input.supplier_name,
@@ -160,6 +158,84 @@ export const inventoryRouter = router({
     }),
 
   /**
+   * Bulk update warranty dates from CSV upload
+   */
+  bulkUpdateWarranty: publicProcedure
+    .input(
+      z.object({
+        updates: z.array(
+          z.object({
+            serial_number: z.string().min(1, "Serial number is required"),
+            manufacturer_warranty_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Manufacturer warranty date must be in YYYY-MM-DD format"),
+            user_warranty_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "User warranty date must be in YYYY-MM-DD format"),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const results = {
+        success: [] as { serial_number: string; message: string }[],
+        errors: [] as { serial_number: string; error: string }[],
+      };
+
+      for (const update of input.updates) {
+        try {
+          const serialUpper = update.serial_number.toUpperCase().trim();
+
+          // Find product by serial
+          const { data: product, error: findError } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number")
+            .eq("serial_number", serialUpper)
+            .single();
+
+          if (findError || !product) {
+            results.errors.push({
+              serial_number: update.serial_number,
+              error: "Không tìm thấy sản phẩm với số serial này",
+            });
+            continue;
+          }
+
+          // Update warranty dates
+          const { error: updateError } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .update({
+              manufacturer_warranty_end_date: update.manufacturer_warranty_end_date,
+              user_warranty_end_date: update.user_warranty_end_date,
+            })
+            .eq("id", product.id);
+
+          if (updateError) {
+            results.errors.push({
+              serial_number: update.serial_number,
+              error: `Lỗi khi cập nhật: ${updateError.message}`,
+            });
+            continue;
+          }
+
+          results.success.push({
+            serial_number: update.serial_number,
+            message: "Cập nhật thành công",
+          });
+        } catch (error) {
+          results.errors.push({
+            serial_number: update.serial_number,
+            error: error instanceof Error ? error.message : "Lỗi không xác định",
+          });
+        }
+      }
+
+      return {
+        total: input.updates.length,
+        success_count: results.success.length,
+        error_count: results.errors.length,
+        success: results.success,
+        errors: results.errors,
+      };
+    }),
+
+  /**
    * AC 2.3: List products with filters and pagination
    */
   listProducts: publicProcedure
@@ -170,20 +246,10 @@ export const inventoryRouter = router({
         .select(
           `
           *,
-          product:products(
-            id,
-            name,
-            sku,
-            brand:brands(name)
-          ),
-          physical_warehouse:physical_warehouses(
-            id,
-            name,
-            code,
-            location
-          )
-        `,
-          { count: "exact" }
+          product:products(id, name, sku, brand:brands(name)),
+          physical_warehouse:physical_warehouses(id, name),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type)
+        `
         );
 
       // Apply filters
@@ -203,40 +269,8 @@ export const inventoryRouter = router({
         query = query.ilike("serial_number", `%${input.search}%`);
       }
 
-      // Warranty status filter - handled via date comparison
-      if (input.warranty_status) {
-        const today = new Date().toISOString().split("T")[0];
-
-        switch (input.warranty_status) {
-          case "active": {
-            // warranty_end_date is in the future
-            query = query.gt("warranty_end_date", today);
-            // Exclude products expiring in next 30 days
-            const thirtyDaysFromNow = new Date();
-            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-            query = query.gt("warranty_end_date", thirtyDaysFromNow.toISOString().split("T")[0]);
-            break;
-          }
-          case "expired":
-            // warranty_end_date is in the past
-            query = query.lt("warranty_end_date", today);
-            break;
-          case "expiring_soon": {
-            // warranty_end_date is between today and 30 days from now
-            const thirtyDaysFromNow = new Date();
-            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-            query = query
-              .gte("warranty_end_date", today)
-              .lte("warranty_end_date", thirtyDaysFromNow.toISOString().split("T")[0]);
-            break;
-          }
-          case "no_warranty":
-            query = query.is("warranty_end_date", null);
-            break;
-        }
-      }
-
-      const { data, error, count } = await query
+      // Get data
+      const { data, error } = await query
         .order("created_at", { ascending: false })
         .range(input.offset, input.offset + input.limit - 1);
 
@@ -246,6 +280,26 @@ export const inventoryRouter = router({
           message: `Failed to fetch physical products: ${error.message}`,
         });
       }
+
+      // Get count separately (simpler and faster)
+      let countQuery = ctx.supabaseAdmin
+        .from("physical_products")
+        .select("id", { count: "exact", head: true });
+
+      if (input.virtual_warehouse_id) {
+        countQuery = countQuery.eq("virtual_warehouse_id", input.virtual_warehouse_id);
+      }
+      if (input.physical_warehouse_id) {
+        countQuery = countQuery.eq("physical_warehouse_id", input.physical_warehouse_id);
+      }
+      if (input.condition) {
+        countQuery = countQuery.eq("condition", input.condition);
+      }
+      if (input.search) {
+        countQuery = countQuery.ilike("serial_number", `%${input.search}%`);
+      }
+
+      const { count } = await countQuery;
 
       return {
         products: data || [],
@@ -281,6 +335,11 @@ export const inventoryRouter = router({
           name,
           code,
           location
+        ),
+        virtual_warehouse:virtual_warehouses!virtual_warehouse_id(
+          id,
+          name,
+          warehouse_type
         ),
         current_ticket:service_tickets(
           id,
@@ -376,8 +435,8 @@ export const inventoryRouter = router({
               physical_warehouse_id: productData.physical_warehouse_id,
               virtual_warehouse_id: productData.virtual_warehouse_id,
               condition: productData.condition,
-              warranty_start_date: productData.warranty_start_date,
-              warranty_months: productData.warranty_months,
+              manufacturer_warranty_end_date: productData.manufacturer_warranty_end_date,
+              user_warranty_end_date: productData.user_warranty_end_date,
               purchase_date: productData.purchase_date,
               supplier_id: productData.supplier_id,
               supplier_name: productData.supplier_name,
@@ -445,10 +504,11 @@ export const inventoryRouter = router({
         });
       }
 
-      // Calculate warranty status
-      const warrantyStatus = getWarrantyStatus(product.warranty_end_date);
-      const daysRemaining = product.warranty_end_date
-        ? getRemainingDays(product.warranty_end_date)
+      // Calculate warranty status - prioritize user warranty, fallback to manufacturer
+      const warrantyEndDate = product.user_warranty_end_date || product.manufacturer_warranty_end_date || null;
+      const warrantyStatus = getWarrantyStatus(warrantyEndDate);
+      const daysRemaining = warrantyEndDate
+        ? getRemainingDays(warrantyEndDate)
         : null;
 
       // Virtual warehouse info is already included in the product relation
@@ -460,8 +520,10 @@ export const inventoryRouter = router({
         warranty: {
           status: warrantyStatus,
           daysRemaining,
-          startDate: product.warranty_start_date,
-          endDate: product.warranty_end_date,
+          manufacturerEndDate: product.manufacturer_warranty_end_date,
+          userEndDate: product.user_warranty_end_date,
+          // Deprecated fields for backward compatibility
+          endDate: warrantyEndDate,
         },
         location: {
           physical: product.physical_warehouse,

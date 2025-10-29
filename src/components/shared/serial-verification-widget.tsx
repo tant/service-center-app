@@ -84,7 +84,10 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
                     </p>
                   </div>
                 </div>
-                <WarrantyStatusBadge warrantyEndDate={data.product.warranty_end_date} />
+                <WarrantyStatusBadge
+                  userWarrantyEndDate={data.product.user_warranty_end_date}
+                  manufacturerWarrantyEndDate={data.product.manufacturer_warranty_end_date}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -107,16 +110,18 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
                 </div>
               </div>
 
-              {data.warranty.startDate && (
+              {(data.warranty.manufacturerEndDate || data.warranty.userEndDate) && (
                 <div className="text-sm">
                   <p className="text-muted-foreground mb-1">Thông tin bảo hành</p>
                   <div className="space-y-1">
-                    <p>
-                      Bắt đầu: {new Date(data.warranty.startDate).toLocaleDateString("vi-VN")}
-                    </p>
-                    {data.warranty.endDate && (
+                    {data.warranty.manufacturerEndDate && (
                       <p>
-                        Kết thúc: {new Date(data.warranty.endDate).toLocaleDateString("vi-VN")}
+                        BH Nhà máy: {new Date(data.warranty.manufacturerEndDate).toLocaleDateString("vi-VN")}
+                      </p>
+                    )}
+                    {data.warranty.userEndDate && (
+                      <p>
+                        BH User: {new Date(data.warranty.userEndDate).toLocaleDateString("vi-VN")}
                         {data.warranty.daysRemaining !== null && data.warranty.daysRemaining > 0 && (
                           <span className="text-muted-foreground">
                             {" "}

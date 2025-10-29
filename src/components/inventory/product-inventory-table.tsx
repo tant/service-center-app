@@ -7,15 +7,14 @@
 
 import * as React from "react";
 import {
-  IconPlus,
   IconEdit,
-  IconFileDownload,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
   IconLayoutColumns,
+  IconFileUpload,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -58,14 +57,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { usePhysicalProducts } from "@/hooks/use-warehouse";
 import { trpc } from "@/components/providers/trpc-provider";
-import { ProductRegistrationModal } from "./product-registration-modal";
-import { BulkImportModal } from "./bulk-import-modal";
-import { WarrantyStatusBadge } from "./warranty-status-badge";
+import { EditProductDrawer } from "./edit-product-drawer";
+import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
+import { createProductColumns, CONDITION_LABELS } from "./product-inventory-table-columns";
 import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 import type { PhysicalProduct } from "@/types/warehouse";
 
 // Extended type with relations from API
-type PhysicalProductWithRelations = PhysicalProduct & {
+export type PhysicalProductWithRelations = PhysicalProduct & {
   product?: {
     id: string;
     name: string;
@@ -85,110 +84,11 @@ type PhysicalProductWithRelations = PhysicalProduct & {
   };
 };
 
-const CONDITION_LABELS = {
-  new: "Mới",
-  refurbished: "Tân trang",
-  used: "Đã qua sử dụng",
-  faulty: "Lỗi",
-  for_parts: "Tháo linh kiện",
-};
-
-const CONDITION_COLORS = {
-  new: "default",
-  refurbished: "secondary",
-  used: "outline",
-  faulty: "destructive",
-  for_parts: "destructive",
-} as const;
-
-const columns: ColumnDef<PhysicalProductWithRelations>[] = [
-  {
-    accessorKey: "serial_number",
-    header: "Số Serial",
-    cell: ({ row }) => (
-      <div className="font-mono font-medium">
-        {row.original.serial_number}
-      </div>
-    ),
-    enableHiding: false,
-  },
-  {
-    accessorKey: "product",
-    header: "Sản Phẩm",
-    cell: ({ row }) => (
-      <div>
-        <div className="font-medium">{row.original.product?.name || "—"}</div>
-        <div className="text-xs text-muted-foreground">
-          {row.original.product?.sku
-            ? `SKU: ${row.original.product.sku}`
-            : row.original.product?.brand?.name || ""}
-        </div>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "virtual_warehouse",
-    header: "Kho",
-    cell: ({ row }) => (
-      <div>
-        <Badge variant="outline" className="mb-1">
-          {row.original.virtual_warehouse?.name || "Không xác định"}
-        </Badge>
-        {row.original.physical_warehouse && (
-          <div className="text-xs text-muted-foreground">
-            {row.original.physical_warehouse.name}
-          </div>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "condition",
-    header: "Tình Trạng",
-    cell: ({ row }) => (
-      <Badge variant={CONDITION_COLORS[row.original.condition as keyof typeof CONDITION_COLORS]}>
-        {CONDITION_LABELS[row.original.condition as keyof typeof CONDITION_LABELS]}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "warranty_end_date",
-    header: "Bảo Hành",
-    cell: ({ row }) => (
-      <WarrantyStatusBadge warrantyEndDate={row.original.warranty_end_date} />
-    ),
-  },
-  {
-    id: "actions",
-    header: () => <div className="text-right">Hành động</div>,
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as {
-        onEdit: (product: PhysicalProductWithRelations) => void;
-      };
-      
-      return (
-        <div className="flex items-center justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => meta.onEdit(row.original)}
-          >
-            <IconEdit className="h-4 w-4" />
-          </Button>
-        </div>
-      );
-    },
-  },
-];
-
 export function ProductInventoryTable() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [warehouseFilter, setWarehouseFilter] = React.useState<string>("all");
-  const [conditionFilter, setConditionFilter] = React.useState<string>("all");
-  const [warrantyFilter, setWarrantyFilter] = React.useState<string>("all");
-  const [showRegistrationModal, setShowRegistrationModal] = React.useState(false);
-  const [showBulkImportModal, setShowBulkImportModal] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<PhysicalProductWithRelations | null>(null);
+  const [showBulkWarrantyUpdate, setShowBulkWarrantyUpdate] = React.useState(false);
 
   // Table states
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -202,23 +102,51 @@ export function ProductInventoryTable() {
   // Fetch virtual warehouses for filter dropdown
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
 
-  // Build filters object
-  const filters: any = {};
-  if (warehouseFilter && warehouseFilter !== "all") filters.virtual_warehouse_id = warehouseFilter;
-  if (conditionFilter && conditionFilter !== "all") filters.condition = conditionFilter;
-  if (warrantyFilter && warrantyFilter !== "all") filters.warranty_status = warrantyFilter;
-  if (searchQuery) filters.search = searchQuery;
+  // Build filters object - use useMemo to prevent infinite re-renders
+  const filters = React.useMemo(() => {
+    const f: {
+      virtual_warehouse_id?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    } = {};
+
+    if (warehouseFilter && warehouseFilter !== "all") {
+      f.virtual_warehouse_id = warehouseFilter;
+    }
+    if (searchQuery && searchQuery.trim()) {
+      f.search = searchQuery.trim();
+    }
+
+    // Add pagination
+    f.limit = pagination.pageSize;
+    f.offset = pagination.pageIndex * pagination.pageSize;
+
+    return f;
+  }, [warehouseFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
 
   const { products, total, isLoading } = usePhysicalProducts(filters);
 
-  const handleEdit = (product: PhysicalProductWithRelations) => {
-    setEditingProduct(product);
-  };
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [warehouseFilter, searchQuery]);
 
-  const handleCloseModal = () => {
-    setShowRegistrationModal(false);
+  const handleEdit = React.useCallback((product: PhysicalProductWithRelations) => {
+    setEditingProduct(product);
+  }, []);
+
+  const handleCloseDrawer = React.useCallback(() => {
     setEditingProduct(null);
-  };
+  }, []);
+
+  // Memoize table meta to prevent re-renders
+  const tableMeta = React.useMemo(() => ({
+    onEdit: handleEdit,
+  }), [handleEdit]);
+
+  // Create columns
+  const columns = React.useMemo(() => createProductColumns(), []);
 
   const table = useReactTable({
     data: products,
@@ -234,14 +162,11 @@ export function ProductInventoryTable() {
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    meta: {
-      onEdit: handleEdit,
-    },
+    manualSorting: true, // Disable auto-sorting
+    manualFiltering: true, // Disable auto-filtering
+    manualPagination: true, // Disable auto-pagination
+    pageCount: Math.ceil(total / pagination.pageSize),
+    meta: tableMeta,
   });
 
   return (
@@ -250,8 +175,19 @@ export function ProductInventoryTable() {
         {/* Action Buttons Row */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1" />
-          
+
           <div className="flex items-center gap-2">
+            {/* Bulk Warranty Update Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBulkWarrantyUpdate(true)}
+            >
+              <IconFileUpload className="h-4 w-4" />
+              <span className="hidden lg:inline ml-2">Cập nhật bảo hành</span>
+              <span className="lg:hidden ml-2">BH</span>
+            </Button>
+
             {/* Column Visibility */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -282,23 +218,11 @@ export function ProductInventoryTable() {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Bulk Import */}
-            <Button variant="outline" size="sm" onClick={() => setShowBulkImportModal(true)}>
-              <IconFileDownload className="h-4 w-4" />
-              <span className="hidden lg:inline ml-2">Nhập Hàng Loạt</span>
-            </Button>
-
-            {/* Register Product */}
-            <Button variant="outline" size="sm" onClick={() => setShowRegistrationModal(true)}>
-              <IconPlus className="h-4 w-4" />
-              <span className="hidden lg:inline ml-2">Đăng Ký Sản Phẩm</span>
-            </Button>
           </div>
         </div>
 
         {/* Filters Row */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
             placeholder="Tìm kiếm theo số serial..."
             value={searchQuery}
@@ -319,33 +243,6 @@ export function ProductInventoryTable() {
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={conditionFilter} onValueChange={setConditionFilter}>
-            <SelectTrigger size="sm">
-              <SelectValue placeholder="Tất cả tình trạng" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả tình trạng</SelectItem>
-              {Object.entries(CONDITION_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={warrantyFilter} onValueChange={setWarrantyFilter}>
-            <SelectTrigger size="sm">
-              <SelectValue placeholder="Tất cả bảo hành" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả bảo hành</SelectItem>
-              <SelectItem value="active">Còn bảo hành</SelectItem>
-              <SelectItem value="expiring_soon">Sắp hết bảo hành</SelectItem>
-              <SelectItem value="expired">Hết bảo hành</SelectItem>
-              <SelectItem value="no_warranty">Không bảo hành</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Results count */}
@@ -360,10 +257,8 @@ export function ProductInventoryTable() {
           </div>
         ) : table.getRowModel().rows?.length === 0 ? (
           <div className="rounded-lg border py-8 text-center text-muted-foreground">
-            {searchQuery || 
-             (warehouseFilter && warehouseFilter !== "all") || 
-             (conditionFilter && conditionFilter !== "all") || 
-             (warrantyFilter && warrantyFilter !== "all")
+            {searchQuery ||
+             (warehouseFilter && warehouseFilter !== "all")
               ? "Không tìm thấy sản phẩm phù hợp"
               : "Chưa có sản phẩm nào"}
           </div>
@@ -493,16 +388,17 @@ export function ProductInventoryTable() {
         )}
       </div>
 
-      {/* Modals */}
-      <ProductRegistrationModal
-        open={showRegistrationModal || !!editingProduct}
-        onClose={handleCloseModal}
+      {/* Edit Drawer */}
+      <EditProductDrawer
+        open={!!editingProduct}
+        onClose={handleCloseDrawer}
         product={editingProduct}
       />
 
-      <BulkImportModal
-        open={showBulkImportModal}
-        onClose={() => setShowBulkImportModal(false)}
+      {/* Bulk Warranty Update Drawer */}
+      <BulkWarrantyUpdateDrawer
+        open={showBulkWarrantyUpdate}
+        onClose={() => setShowBulkWarrantyUpdate(false)}
       />
     </>
   );

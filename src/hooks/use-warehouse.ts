@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/components/providers/trpc-provider';
 import type {
@@ -193,12 +193,25 @@ export function usePhysicalProducts(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const { data, isLoading, error } = trpc.physicalProducts.listProducts.useQuery(filters ?? {});
+  // Normalize filters to avoid unnecessary re-renders
+  const normalizedFilters = filters ?? {};
 
+  const { data, isLoading, error, isFetching } = trpc.physicalProducts.listProducts.useQuery(
+    normalizedFilters,
+    {
+      staleTime: 30000, // Cache for 30 seconds
+      gcTime: 300000, // Keep in cache for 5 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+    }
+  );
+
+  // Return stable references - TanStack Query already handles this
   return {
     products: data?.products ?? [],
     total: data?.total ?? 0,
-    isLoading,
+    isLoading: isLoading || isFetching,
     error,
   };
 }

@@ -85,8 +85,8 @@ export interface PhysicalProductFormData {
   condition: ProductCondition;
   virtual_warehouse_id: string; // Changed to virtual warehouse ID
   physical_warehouse_id?: string;
-  warranty_start_date?: string;
-  warranty_months?: number;
+  manufacturer_warranty_end_date?: string;
+  user_warranty_end_date?: string;
   supplier_id?: string;
   supplier_name?: string;
   purchase_date?: string;
@@ -131,8 +131,8 @@ export interface BulkProductImportRow {
   condition: ProductCondition;
   virtual_warehouse_name: string; // Changed to virtual warehouse name (will be resolved to ID)
   physical_warehouse_code?: string;
-  warranty_start_date?: string;
-  warranty_months?: number;
+  manufacturer_warranty_end_date?: string;
+  user_warranty_end_date?: string;
   supplier_name?: string;
   purchase_date?: string;
   purchase_price?: number;

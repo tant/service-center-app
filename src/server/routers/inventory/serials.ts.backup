@@ -105,8 +105,8 @@ export const serialsRouter = router({
         serials: z.array(
           z.object({
             serialNumber: z.string(),
-            manufacturerWarrantyEndDate: z.string().optional(),
-            userWarrantyEndDate: z.string().optional(),
+            warrantyStartDate: z.string().optional(),
+            warrantyMonths: z.number().int().optional(),
           })
         ),
       })
@@ -167,8 +167,8 @@ export const serialsRouter = router({
       const serialsToInsert = input.serials.map((s) => ({
         receipt_item_id: input.receiptItemId,
         serial_number: s.serialNumber,
-        manufacturer_warranty_end_date: s.manufacturerWarrantyEndDate,
-        user_warranty_end_date: s.userWarrantyEndDate,
+        warranty_start_date: s.warrantyStartDate,
+        warranty_months: s.warrantyMonths,
       }));
 
       const { data, error } = await ctx.supabaseAdmin
@@ -188,8 +188,7 @@ export const serialsRouter = router({
 
   /**
    * Import serials from CSV data
-   * Expected format: serial_number (one per line or comma-separated)
-   * Note: Warranty information should be managed separately in Products page
+   * Expected format: serial_number, warranty_start_date (optional), warranty_months (optional)
    */
   bulkImportCSV: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -199,7 +198,7 @@ export const serialsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Parse CSV - each line is a serial number
+      // Parse CSV (simple parsing, assumes comma-separated with optional header)
       const lines = input.csvData.trim().split("\n");
 
       if (lines.length === 0) {
@@ -217,20 +216,24 @@ export const serialsRouter = router({
         const line = dataLines[i].trim();
         if (!line) continue;
 
-        // Support both newline-separated and comma-separated formats
-        const parts = line.includes(",") ? line.split(",").map((p) => p.trim()) : [line];
+        const parts = line.split(",").map((p) => p.trim());
 
         if (parts.length === 0 || !parts[0]) {
           errors.push(`Line ${i + 1}: Empty serial number`);
           continue;
         }
 
-        // Only take first column as serial number, ignore any other columns
         const serial = {
           serialNumber: parts[0],
-          manufacturerWarrantyEndDate: undefined, // Warranty managed separately
-          userWarrantyEndDate: undefined,
+          warrantyStartDate: parts[1] || undefined,
+          warrantyMonths: parts[2] ? parseInt(parts[2], 10) : undefined,
         };
+
+        // Validate warranty months if provided
+        if (serial.warrantyMonths !== undefined && isNaN(serial.warrantyMonths)) {
+          errors.push(`Line ${i + 1}: Invalid warranty months: ${parts[2]}`);
+          continue;
+        }
 
         serials.push(serial);
       }
@@ -295,8 +298,8 @@ export const serialsRouter = router({
       const serialsToInsert = serials.map((s) => ({
         receipt_item_id: input.receiptItemId,
         serial_number: s.serialNumber,
-        manufacturer_warranty_end_date: s.manufacturerWarrantyEndDate,
-        user_warranty_end_date: s.userWarrantyEndDate,
+        warranty_start_date: s.warrantyStartDate,
+        warranty_months: s.warrantyMonths,
       }));
 
       const { data, error } = await ctx.supabaseAdmin
@@ -473,9 +476,9 @@ export const serialsRouter = router({
         },
         product: physicalProduct.product,
         warranty: {
-          manufacturerEndDate: physicalProduct.manufacturer_warranty_end_date,
+          startDate: physicalProduct.warranty_start_date,
           endDate: physicalProduct.warranty_end_date,
-          userEndDate: physicalProduct.user_warranty_end_date,
+          months: physicalProduct.warranty_months,
         },
         history: history.sort(
           (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -506,8 +509,8 @@ export const serialsRouter = router({
           serial_number,
           virtual_warehouse_id,
           physical_warehouse_id,
-          manufacturer_warranty_end_date,
-          user_warranty_end_date,
+          warranty_start_date,
+          warranty_end_date,
           issued_at,
           created_at,
           product:products(id, name, sku),
@@ -561,8 +564,8 @@ export const serialsRouter = router({
           serial_number,
           virtual_warehouse_id,
           physical_warehouse_id,
-          manufacturer_warranty_end_date,
-          user_warranty_end_date,
+          warranty_start_date,
+          warranty_end_date,
           issued_at,
           created_at,
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
@@ -786,8 +789,8 @@ export const serialsRouter = router({
       z.object({
         receiptItemId: z.string(),
         serialNumber: z.string().min(1),
-        manufacturerWarrantyEndDate: z.string().optional(),
-        userWarrantyEndDate: z.string().optional(),
+        warrantyStartDate: z.string().optional(),
+        warrantyMonths: z.number().int().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -836,8 +839,8 @@ export const serialsRouter = router({
         .insert({
           receipt_item_id: input.receiptItemId,
           serial_number: input.serialNumber,
-          manufacturer_warranty_end_date: input.manufacturerWarrantyEndDate,
-          user_warranty_end_date: input.userWarrantyEndDate,
+          warranty_start_date: input.warrantyStartDate,
+          warranty_months: input.warrantyMonths,
         })
         .select()
         .single();

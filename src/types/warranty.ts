@@ -11,11 +11,12 @@ export type WarrantyStatus = 'active' | 'expiring_soon' | 'expired' | 'unknown';
 
 // Extended types
 export interface WarrantyInfo {
-  warranty_start_date: string | null;
-  warranty_months: number | null;
-  warranty_end_date: string | null;
+  manufacturer_warranty_end_date: string | null;
+  user_warranty_end_date: string | null;
   warranty_status: WarrantyStatus | null;
   days_remaining: number | null;
+  // Deprecated - for backward compatibility
+  warranty_end_date?: string | null;
 }
 
 export interface ProductWithWarranty {

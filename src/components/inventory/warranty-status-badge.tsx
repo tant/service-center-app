@@ -12,16 +12,21 @@ import {
 } from "@/utils/warranty";
 
 interface WarrantyStatusBadgeProps {
-  warrantyEndDate: string | Date | null;
+  userWarrantyEndDate?: string | Date | null;
+  manufacturerWarrantyEndDate?: string | Date | null;
   showRemainingDays?: boolean;
   className?: string;
 }
 
 export function WarrantyStatusBadge({
-  warrantyEndDate,
+  userWarrantyEndDate,
+  manufacturerWarrantyEndDate,
   showRemainingDays = true,
   className,
 }: WarrantyStatusBadgeProps) {
+  // Prioritize user warranty, fallback to manufacturer warranty
+  const warrantyEndDate = userWarrantyEndDate || manufacturerWarrantyEndDate || null;
+
   const status = getWarrantyStatus(warrantyEndDate);
   const label = formatWarrantyStatus(status);
 

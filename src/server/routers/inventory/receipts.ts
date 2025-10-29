@@ -125,8 +125,6 @@ export const receiptsRouter = router({
             productId: z.string(),
             declaredQuantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
             unitPrice: z.number().optional(),
-            warrantyStartDate: z.string().optional(),
-            warrantyMonths: z.number().int().optional(),
             notes: z.string().optional(),
           })
         ).min(1),
@@ -185,8 +183,6 @@ export const receiptsRouter = router({
           product_id: item.productId,
           declared_quantity: item.declaredQuantity,
           unit_price: item.unitPrice,
-          warranty_start_date: item.warrantyStartDate,
-          warranty_months: item.warrantyMonths,
           notes: item.notes,
         }));
 
@@ -296,8 +292,8 @@ export const receiptsRouter = router({
         serials: z.array(
           z.object({
             serialNumber: z.string(),
-            warrantyStartDate: z.string().optional(),
-            warrantyMonths: z.number().int().optional(),
+            manufacturerWarrantyEndDate: z.string().optional(),
+            userWarrantyEndDate: z.string().optional(),
           })
         ),
       })
@@ -335,8 +331,8 @@ export const receiptsRouter = router({
       const serialsToInsert = input.serials.map((s) => ({
         receipt_item_id: input.receiptItemId,
         serial_number: s.serialNumber,
-        warranty_start_date: s.warrantyStartDate,
-        warranty_months: s.warrantyMonths,
+        manufacturer_warranty_end_date: s.manufacturerWarrantyEndDate,
+        user_warranty_end_date: s.userWarrantyEndDate,
       }));
 
       const { data, error } = await ctx.supabaseAdmin

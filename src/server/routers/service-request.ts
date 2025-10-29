@@ -204,8 +204,8 @@ export const serviceRequestRouter = router({
         .select(
           `
           serial_number,
-          warranty_start_date,
-          warranty_months,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
           condition,
           product:products(
             id,
@@ -226,19 +226,15 @@ export const serviceRequestRouter = router({
         };
       }
 
-      // Calculate warranty end date
-      const warrantyEndDate = product.warranty_start_date && product.warranty_months
-        ? new Date(new Date(product.warranty_start_date).setMonth(
-            new Date(product.warranty_start_date).getMonth() + product.warranty_months
-          ))
-        : null;
+      // Use warranty end date - prioritize user warranty, fallback to manufacturer
+      const warrantyEndDate = product.user_warranty_end_date || product.manufacturer_warranty_end_date || null;
 
       const warrantyStatus = warrantyEndDate
-        ? getWarrantyStatus(warrantyEndDate.toISOString())
+        ? getWarrantyStatus(warrantyEndDate)
         : "no_warranty";
 
       const daysRemaining = warrantyEndDate
-        ? getRemainingDays(warrantyEndDate.toISOString())
+        ? getRemainingDays(warrantyEndDate)
         : null;
 
       // AC 8: Warranty verification - eligible if active or expiring soon
@@ -262,8 +258,9 @@ export const serviceRequestRouter = router({
         warranty: {
           status: warrantyStatus,
           daysRemaining,
-          startDate: product.warranty_start_date,
-          endDate: warrantyEndDate?.toISOString() || null,
+          manufacturerEndDate: product.manufacturer_warranty_end_date,
+          userEndDate: product.user_warranty_end_date,
+          endDate: warrantyEndDate,
         },
         message: eligible
           ? "Your product is eligible for warranty service."

@@ -264,7 +264,7 @@ export function SerialEntryDrawer({
                       />
                     </Label>
                     <p className="text-xs text-muted-foreground mt-2">
-                      CSV format: serial_number, warranty_start_date, warranty_months
+                      CSV format: serial_number (one per line)
                     </p>
                     {csvFile && (
                       <p className="text-sm text-green-600 mt-2">
@@ -283,11 +283,14 @@ export function SerialEntryDrawer({
                   <div className="rounded-md bg-muted p-4 text-sm">
                     <p className="font-medium mb-2">CSV Format Example:</p>
                     <pre className="font-mono text-xs bg-background p-2 rounded overflow-x-auto">
-{`serial_number,warranty_start_date,warranty_months
-SN001,2025-01-27,12
-SN002,2025-01-27,24
-SN003,,`}
+{`serial_number
+SN001
+SN002
+SN003`}
                     </pre>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Note: Warranty information will be managed separately in the Products page
+                    </p>
                   </div>
                 </div>
               )}

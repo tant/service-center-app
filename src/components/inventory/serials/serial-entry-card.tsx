@@ -150,9 +150,9 @@ export function SerialEntryCard({
                   <div className="flex items-start gap-2">
                     <Flame className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium">Task đã quá hạn!</p>
+                      <p className="font-medium">Đã quá hạn!</p>
                       <p className="text-xs mt-1">
-                        Manager đã được thông báo. Vui lòng hoàn thành sớm.
+                        Quản lý đã được thông báo. Vui lòng hoàn thành sớm.
                       </p>
                     </div>
                   </div>
@@ -190,7 +190,7 @@ export function SerialEntryCard({
             <p className="flex items-center gap-2">
               <span>💡</span>
               <span>
-                Stock đã được cập nhật. Serial entry đang tiếp tục để đảm bảo truy xuất nguồn gốc.
+                Tồn kho đã được cập nhật. Đang tiếp tục nhập serial để đảm bảo truy xuất nguồn gốc.
               </span>
             </p>
           </div>

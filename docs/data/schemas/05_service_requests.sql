@@ -8,6 +8,7 @@
 -- =====================================================
 -- SERVICE REQUESTS TABLE (from 15_service_request_tables.sql)
 -- Updated: 2025-10-29 - Support multiple products via service_request_items
+-- Status Flow: submitted → pickingup → received → processing → completed
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.service_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,10 +16,8 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   customer_name VARCHAR(255) NOT NULL,
   customer_email VARCHAR(255) NOT NULL,
   customer_phone VARCHAR(50),
+  customer_address TEXT,
   issue_description TEXT NOT NULL,
-  service_type public.service_type NOT NULL DEFAULT 'warranty',
-  delivery_method public.delivery_method NOT NULL DEFAULT 'pickup',
-  delivery_address TEXT,
   status public.request_status NOT NULL DEFAULT 'submitted',
   reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
@@ -28,8 +27,7 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL),
-  CONSTRAINT service_requests_delivery_requires_address CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL)
+  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL)
 );
 
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
@@ -47,7 +45,7 @@ DECLARE
   v_item RECORD;
 BEGIN
   -- Only trigger when status changes to 'received'
-  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status = 'submitted') THEN
+  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup')) THEN
 
     -- Find or create customer
     SELECT id INTO v_customer_id
@@ -79,27 +77,14 @@ BEGIN
       -- Find product_id from serial_number
       v_product_id := NULL;
 
-      IF v_item.serial_number IS NOT NULL THEN
-        SELECT product_id INTO v_product_id
-        FROM public.physical_products
-        WHERE serial_number = v_item.serial_number
-        LIMIT 1;
-      END IF;
-
-      -- If no physical product found, try to find by brand/model
-      IF v_product_id IS NULL THEN
-        SELECT p.id INTO v_product_id
-        FROM public.products p
-        JOIN public.brands b ON p.brand_id = b.id
-        WHERE b.name ILIKE v_item.product_brand
-          AND p.name ILIKE v_item.product_model
-        LIMIT 1;
-      END IF;
+      SELECT product_id INTO v_product_id
+      FROM public.physical_products
+      WHERE serial_number = v_item.serial_number
+      LIMIT 1;
 
       -- Skip if product not found
       IF v_product_id IS NULL THEN
-        RAISE NOTICE 'Product not found for item %: brand=%, model=%',
-          v_item.id, v_item.product_brand, v_item.product_model;
+        RAISE NOTICE 'Product not found for serial number: %', v_item.serial_number;
         CONTINUE;
       END IF;
 
@@ -109,9 +94,6 @@ BEGIN
         product_id,
         issue_description,
         status,
-        service_type,
-        delivery_method,
-        delivery_address,
         request_id,
         created_by_id
       ) VALUES (
@@ -119,9 +101,6 @@ BEGIN
         v_product_id,
         COALESCE(v_item.issue_description, NEW.issue_description),
         'pending',
-        NEW.service_type,
-        NEW.delivery_method,
-        NEW.delivery_address,
         NEW.id,
         NEW.reviewed_by_id
       )
@@ -139,11 +118,9 @@ BEGIN
         created_by_id
       ) VALUES (
         v_ticket_id,
-        format('Auto-created from service request %s - Product: %s %s (SN: %s)',
+        format('Auto-created from service request %s - Serial: %s',
           NEW.tracking_token,
-          v_item.product_brand,
-          v_item.product_model,
-          COALESCE(v_item.serial_number, 'N/A')
+          v_item.serial_number
         ),
         NEW.reviewed_by_id
       );
@@ -175,16 +152,14 @@ CREATE TRIGGER trigger_auto_create_tickets BEFORE UPDATE ON public.service_reque
 CREATE TABLE IF NOT EXISTS public.service_request_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
-  product_brand VARCHAR(255) NOT NULL,
-  product_model VARCHAR(255) NOT NULL,
-  serial_number VARCHAR(255),
+  serial_number VARCHAR(255) NOT NULL,
   purchase_date DATE,
   issue_description TEXT,
   issue_photos JSONB DEFAULT '[]'::jsonb,
   ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_request_items_serial_format CHECK (serial_number IS NULL OR length(serial_number) >= 5)
+  CONSTRAINT service_request_items_serial_format CHECK (length(serial_number) >= 5)
 );
 
 CREATE INDEX idx_service_request_items_request_id ON public.service_request_items(request_id);

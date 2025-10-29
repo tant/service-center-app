@@ -93,12 +93,13 @@ COMMENT ON TYPE public.warehouse_type IS 'Virtual warehouse categories: main (pr
 DROP TYPE IF EXISTS public.request_status CASCADE;
 CREATE TYPE public.request_status AS ENUM (
   'submitted',
+  'pickingup',
   'received',
   'processing',
   'completed',
   'cancelled'
 );
-COMMENT ON TYPE public.request_status IS 'Status flow for customer service requests from public portal';
+COMMENT ON TYPE public.request_status IS 'Status flow: submitted → pickingup → received (auto-creates tickets) → processing → completed';
 
 -- Product Condition Enum
 DROP TYPE IF EXISTS public.product_condition CASCADE;

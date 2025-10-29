@@ -155,6 +155,7 @@ export async function createTRPCContext(opts: { req: Request }) {
     supabaseAdmin,
     user: user || null,
     requestId,
+    req: opts.req,
   };
 }
 

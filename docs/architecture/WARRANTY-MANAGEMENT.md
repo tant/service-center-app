@@ -204,6 +204,49 @@ inventory.serials.bulkImportCSV({
 
 ---
 
+## Auto-Creation Triggers (NEW)
+
+### Physical Products Creation
+
+**When:** Serial is added to stock receipt
+**Action:** Physical product is automatically created
+
+```sql
+-- Trigger: create_physical_product_from_receipt_serial
+-- Fires: BEFORE INSERT on stock_receipt_serials
+
+CREATE OR REPLACE FUNCTION create_physical_product_from_receipt_serial()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Auto-create physical_products with:
+  -- - product_id from receipt_items
+  -- - serial_number from input
+  -- - virtual_warehouse_id from stock_receipts
+  -- - manufacturer_warranty_end_date (nullable)
+  -- - user_warranty_end_date (nullable)
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Benefits:**
+- ✅ Physical products created immediately when serial is entered
+- ✅ No manual sync needed
+- ✅ Warranty fields nullable (can be updated later)
+- ✅ Works for all document types (receipts, issues, transfers)
+
+### Issue and Transfer Triggers
+
+```sql
+-- Issue: DELETE physical_products when serial issued out
+-- Transfer: UPDATE virtual_warehouse_id when serial moved
+```
+
+**See:** `docs/data/schemas/17_stock_update_triggers.sql` for full implementation
+
+---
+
 ## Database Views
 
 ### v_warranty_expiring_soon

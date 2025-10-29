@@ -16,6 +16,9 @@ import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/utils/supabase/server";
 import { WarehouseContent } from "@/components/warehouse/warehouse-content";
 
+// Force dynamic rendering for authenticated pages
+export const dynamic = 'force-dynamic';
+
 export default async function WarehousesPage() {
   // Route guard: Only Admin and Manager can access warehouse management
   const supabase = await createClient();

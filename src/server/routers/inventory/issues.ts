@@ -538,7 +538,7 @@ export const issuesRouter = router({
       // Find physical products by serial numbers
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id, issued_at")
+        .select("id, serial_number, product_id, virtual_warehouse_id")
         .eq("product_id", issueItem.product_id)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
         .in("serial_number", input.serialNumbers);
@@ -555,12 +555,8 @@ export const issuesRouter = router({
         throw new Error(`Serial không tồn tại trong kho: ${notFound.join(", ")}`);
       }
 
-      // Check none are already issued
-      const alreadyIssued = physicalProducts.filter(p => p.issued_at !== null);
-      if (alreadyIssued.length > 0) {
-        const serials = alreadyIssued.map(p => p.serial_number).join(", ");
-        throw new Error(`Serial đã được xuất kho: ${serials}`);
-      }
+      // Note: No need to check if already issued - if physical_product exists in DB, it hasn't been issued yet
+      // (issued products are deleted by trigger)
 
       // Check not already in this or another issue
       const productIds = physicalProducts.map(p => p.id);
@@ -689,8 +685,8 @@ export const issuesRouter = router({
         .from("physical_products")
         .select("id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at")
         .eq("product_id", input.productId)
-        .eq("virtual_warehouse_id", input.virtualWarehouseId)
-        .is("issued_at", null); // Not issued yet
+        .eq("virtual_warehouse_id", input.virtualWarehouseId);
+        // Note: No need to filter by issued_at - if product exists in DB, it's available (not issued yet)
 
       if (input.search) {
         query = query.ilike("serial_number", `%${input.search}%`);

@@ -465,7 +465,7 @@ export const serialsRouter = router({
       }
 
       return {
-        status: physicalProduct.issued_at ? "issued" : "in_stock",
+        status: "in_stock", // If product exists in DB, it's in stock (issued products are deleted)
         serialNumber: input.serialNumber,
         currentLocation: {
           virtual: physicalProduct.virtual_warehouse?.warehouse_type,
@@ -507,7 +507,6 @@ export const serialsRouter = router({
           physical_warehouse_id,
           manufacturer_warranty_end_date,
           user_warranty_end_date,
-          issued_at,
           created_at,
           product:products(id, name, sku),
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
@@ -523,9 +522,8 @@ export const serialsRouter = router({
         query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
       }
 
-      if (input.onlyAvailable) {
-        query = query.is("issued_at", null);
-      }
+      // Note: onlyAvailable filter is now redundant - if product exists in DB, it's available
+      // (issued products are deleted by trigger)
 
       const { data, error } = await query
         .order("created_at", { ascending: false })
@@ -562,7 +560,6 @@ export const serialsRouter = router({
           physical_warehouse_id,
           manufacturer_warranty_end_date,
           user_warranty_end_date,
-          issued_at,
           created_at,
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
         `
@@ -577,9 +574,8 @@ export const serialsRouter = router({
         query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
       }
 
-      if (input.onlyAvailable) {
-        query = query.is("issued_at", null);
-      }
+      // Note: onlyAvailable filter is now redundant - if product exists in DB, it's available
+      // (issued products are deleted by trigger)
 
       const { data, error } = await query.order("created_at", { ascending: false });
 

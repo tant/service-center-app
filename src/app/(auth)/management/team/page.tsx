@@ -4,6 +4,9 @@ import { PageHeader } from "@/components/page-header";
 import { TeamTable, type teamSchema } from "@/components/team-table";
 import { createClient } from "@/utils/supabase/server";
 
+// Force dynamic rendering for authenticated pages
+export const dynamic = 'force-dynamic';
+
 async function getTeamData(): Promise<z.infer<typeof teamSchema>[]> {
   const supabase = await createClient();
 

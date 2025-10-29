@@ -678,7 +678,6 @@ alter table "public"."ticket_template_changes" enable row level security;
   create table "public"."virtual_warehouses" (
     "id" uuid not null default gen_random_uuid(),
     "warehouse_type" public.warehouse_type not null,
-    "display_name" character varying(255) not null,
     "description" text,
     "color_code" character varying(7),
     "is_active" boolean not null default true,

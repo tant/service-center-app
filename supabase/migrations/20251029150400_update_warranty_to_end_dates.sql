@@ -108,7 +108,8 @@ SELECT
   pp.id AS physical_product_id,
   pp.serial_number,
   pp.condition,
-  pp.virtual_warehouse_type,
+  vw.warehouse_type AS virtual_warehouse_type,
+  vw.name AS virtual_warehouse_name,
   p.id AS product_id,
   p.name AS product_name,
   p.sku AS product_sku,
@@ -142,6 +143,7 @@ SELECT
 FROM public.physical_products pp
 JOIN public.products p ON pp.product_id = p.id
 JOIN public.brands b ON p.brand_id = b.id
+JOIN public.virtual_warehouses vw ON pp.virtual_warehouse_id = vw.id
 LEFT JOIN public.physical_warehouses pw ON pp.physical_warehouse_id = pw.id
 LEFT JOIN public.service_tickets st ON pp.current_ticket_id = st.id
 WHERE (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')

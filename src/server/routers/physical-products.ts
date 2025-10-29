@@ -477,7 +477,7 @@ export const inventoryRouter = router({
   verifySerial: publicProcedure
     .input(z.object({ serial_number: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const { data: product, error } = await ctx.supabaseAdmin
+      const { data: product, error} = await ctx.supabaseAdmin
         .from("physical_products")
         .select(
           `
@@ -511,9 +511,6 @@ export const inventoryRouter = router({
         ? getRemainingDays(warrantyEndDate)
         : null;
 
-      // Virtual warehouse info is already included in the product relation
-      const virtualWarehouse = product.virtual_warehouse;
-
       return {
         found: true,
         product,
@@ -527,7 +524,7 @@ export const inventoryRouter = router({
         },
         location: {
           physical: product.physical_warehouse,
-          virtual: virtualWarehouse,
+          virtual: product.virtual_warehouse,
         },
         inService: product.current_ticket
           ? ["pending", "in_progress"].includes(product.current_ticket.status)

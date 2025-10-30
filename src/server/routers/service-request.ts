@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
+import type { ServiceRequest } from "@/types/service-request";
 
 /**
  * Helper function to get authenticated user with role
@@ -672,26 +673,7 @@ export const serviceRequestRouter = router({
           message: "Service request not found",
         });
       }
-      const { items: rawItems, linked_ticket: rawLinkedTicket, ...rest } = data as {
-        items?: Array<{
-          id: string;
-          product_brand: string | null;
-          product_model: string | null;
-          serial_number: string | null;
-          purchase_date: string | null;
-          issue_description: string | null;
-          ticket?:
-            | {
-                id: string;
-                ticket_number: string;
-                status: string;
-              }
-            | Array<{
-                id: string;
-                ticket_number: string;
-                status: string;
-              }>;
-        }>;
+      type ServiceRequestDetailsRow = ServiceRequest & {
         linked_ticket?:
           | {
               id: string;
@@ -702,9 +684,37 @@ export const serviceRequestRouter = router({
               id: string;
               ticket_number: string;
               status: string;
-            }>;
-        [key: string]: unknown;
+            }>
+          | null;
+        items?:
+          | Array<{
+              id: string;
+              product_brand: string | null;
+              product_model: string | null;
+              serial_number: string | null;
+              purchase_date: string | null;
+              issue_description: string | null;
+              ticket?:
+                | {
+                    id: string;
+                    ticket_number: string;
+                    status: string;
+                  }
+                | Array<{
+                    id: string;
+                    ticket_number: string;
+                    status: string;
+                  }>
+                | null;
+            }>
+          | null;
       };
+
+      const {
+        items: rawItems,
+        linked_ticket: rawLinkedTicket,
+        ...requestBase
+      } = data as ServiceRequestDetailsRow;
 
       const linkedTicket = Array.isArray(rawLinkedTicket)
         ? rawLinkedTicket[0]
@@ -730,7 +740,7 @@ export const serviceRequestRouter = router({
       const primaryItem = items[0];
 
       return {
-        ...rest,
+        ...requestBase,
         linked_ticket: linkedTicket,
         linked_ticket_id: linkedTicket?.id ?? null,
         items,

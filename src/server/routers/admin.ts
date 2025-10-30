@@ -587,17 +587,20 @@ export const adminRouter = router({
       console.log("\n🗂️ SEED STEP 2b: Managing virtual warehouses...");
       results.push("🗂️ Bước 2b: Quản lý Virtual Warehouses...");
 
-      const virtualWarehouseMap = new Map<string, string>(); // name -> id mapping
+      const virtualWarehouseMap = new Map<string, string>(); // name/type -> id mapping
 
       // First, query all auto-created virtual warehouses from Step 2
       const { data: autoCreatedVWs } = await supabaseAdmin
         .from("virtual_warehouses")
-        .select("id, name");
+        .select("id, name, warehouse_type");
 
       if (autoCreatedVWs && autoCreatedVWs.length > 0) {
         console.log(`✅ SEED: Found ${autoCreatedVWs.length} auto-created virtual warehouses`);
         for (const vw of autoCreatedVWs) {
           virtualWarehouseMap.set(vw.name, vw.id);
+          if (vw.warehouse_type) {
+            virtualWarehouseMap.set(vw.warehouse_type, vw.id);
+          }
           console.log(`  → ${vw.name} (auto-created)`);
         }
         results.push(`✅ Tìm thấy ${autoCreatedVWs.length} kho ảo tự động`);
@@ -609,7 +612,7 @@ export const adminRouter = router({
           // Check if virtual warehouse already exists
           const { data: existingVW } = await supabaseAdmin
             .from("virtual_warehouses")
-            .select("id, name")
+            .select("id, name, warehouse_type")
             .eq("name", vw.name)
             .single();
 
@@ -617,6 +620,7 @@ export const adminRouter = router({
             console.log(`⚠️ SEED: Virtual warehouse ${vw.name} already exists, skipping...`);
             results.push(`⚠️ Kho ảo ${vw.name} đã tồn tại, bỏ qua`);
             virtualWarehouseMap.set(vw.name, existingVW.id);
+            virtualWarehouseMap.set(vw.warehouseType, existingVW.id);
             continue;
           }
 
@@ -646,6 +650,7 @@ export const adminRouter = router({
             results.push(`❌ Lỗi tạo kho ảo ${vw.name}: ${vwError.message}`);
           } else {
             virtualWarehouseMap.set(vw.name, vwData.id);
+            virtualWarehouseMap.set(vw.warehouseType, vwData.id);
             console.log(`✅ SEED: Created virtual warehouse ${vw.name}`);
             results.push(`✅ Tạo kho ảo ${vw.name}`);
           }
@@ -874,11 +879,19 @@ export const adminRouter = router({
         for (const receipt of mockData.physicalProducts.receipts) {
         try {
           // Get virtual warehouse ID by name
-          const virtualWarehouseId = virtualWarehouseMap.get(receipt.toVirtualWarehouseName);
+          const virtualWarehouseId =
+            virtualWarehouseMap.get(receipt.toVirtualWarehouseName) ??
+            (receipt.toVirtualWarehouseType
+              ? virtualWarehouseMap.get(receipt.toVirtualWarehouseType)
+              : undefined);
 
           if (!virtualWarehouseId) {
-            console.error(`❌ SEED: Virtual warehouse ${receipt.toVirtualWarehouseName} not found`);
-            results.push(`❌ Không tìm thấy kho ảo ${receipt.toVirtualWarehouseName}`);
+            console.error(
+              `❌ SEED: Virtual warehouse ${receipt.toVirtualWarehouseName} (${receipt.toVirtualWarehouseType ?? "unknown type"}) not found`,
+            );
+            results.push(
+              `❌ Không tìm thấy kho ảo ${receipt.toVirtualWarehouseName}`,
+            );
             continue;
           }
 

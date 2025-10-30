@@ -2029,7 +2029,7 @@ AS $function$
 BEGIN
   IF NEW.issue_number IS NULL THEN
     NEW.issue_number := 'PX-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
-      LPAD(NEXTVAL('issue_number_seq')::TEXT, 4, '0');
+      LPAD(NEXTVAL('public.issue_number_seq')::TEXT, 4, '0');
   END IF;
   RETURN NEW;
 END;
@@ -2044,7 +2044,7 @@ AS $function$
 BEGIN
   IF NEW.receipt_number IS NULL THEN
     NEW.receipt_number := 'PN-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
-      LPAD(NEXTVAL('receipt_number_seq')::TEXT, 4, '0');
+      LPAD(NEXTVAL('public.receipt_number_seq')::TEXT, 4, '0');
   END IF;
   RETURN NEW;
 END;
@@ -2145,7 +2145,7 @@ AS $function$
 BEGIN
   IF NEW.transfer_number IS NULL THEN
     NEW.transfer_number := 'PC-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
-      LPAD(NEXTVAL('transfer_number_seq')::TEXT, 4, '0');
+      LPAD(NEXTVAL('public.transfer_number_seq')::TEXT, 4, '0');
   END IF;
   RETURN NEW;
 END;
@@ -5318,5 +5318,4 @@ CREATE TRIGGER trigger_task_templates_updated_at BEFORE UPDATE ON public.task_te
 CREATE TRIGGER trigger_task_types_updated_at BEFORE UPDATE ON public.task_types FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER trigger_virtual_warehouses_updated_at BEFORE UPDATE ON public.virtual_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
 

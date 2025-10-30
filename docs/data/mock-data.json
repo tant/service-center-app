@@ -63,42 +63,42 @@
 
   "virtualWarehouses": [
     {
-      "name": "Hàng hỏng - Kho nhà cũ",
+      "name": "Dead Stock",
       "warehouseType": "dead_stock",
       "physicalWarehouseCode": "WH-OLD-HOUSE",
       "description": "Sản phẩm hỏng không sửa được, chờ thanh lý",
       "colorCode": "#dc2626"
     },
     {
-      "name": "Kho bảo hành - SSTC",
+      "name": "Warranty Stock",
       "warehouseType": "warranty_stock",
       "physicalWarehouseCode": "WH-SSTC-MAIN",
       "description": "Sản phẩm bảo hành mới, sẵn sàng thay thế cho khách",
       "colorCode": "#16a34a"
     },
     {
-      "name": "Kho RMA - SSTC",
+      "name": "RMA Staging Area",
       "warehouseType": "rma_staging",
       "physicalWarehouseCode": "WH-SSTC-MAIN",
       "description": "Sản phẩm lỗi chờ trả về nhà cung cấp (ZOTAC, SSTC)",
       "colorCode": "#ea580c"
     },
     {
-      "name": "Hàng hỏng - SSTC",
+      "name": "Dead Stock",
       "warehouseType": "dead_stock",
       "physicalWarehouseCode": "WH-SSTC-MAIN",
       "description": "Sản phẩm hỏng không RMA được, chờ thanh lý",
       "colorCode": "#dc2626"
     },
     {
-      "name": "Đang sửa chữa - SSTC",
+      "name": "In Service",
       "warehouseType": "in_service",
       "physicalWarehouseCode": "WH-SSTC-MAIN",
       "description": "Sản phẩm đang được sử dụng trong service tickets",
       "colorCode": "#2563eb"
     },
     {
-      "name": "Kho linh kiện - SSTC",
+      "name": "Parts Inventory",
       "warehouseType": "parts",
       "physicalWarehouseCode": "WH-SSTC-MAIN",
       "description": "Linh kiện thay thế (fan, thermal pad, capacitor...)",
@@ -272,7 +272,8 @@
       {
         "receiptType": "normal",
         "supplier": "ZOTAC Supplier",
-        "toVirtualWarehouseName": "Kho bảo hành - SSTC",
+        "toVirtualWarehouseName": "Warranty Stock",
+        "toVirtualWarehouseType": "warranty_stock",
         "receiptDate": "2025-01-01",
         "notes": "Nhập hàng bảo hành VGA tháng 01/2025",
         "items": [
@@ -305,7 +306,8 @@
       {
         "receiptType": "normal",
         "supplier": "SSTC Supplier",
-        "toVirtualWarehouseName": "Kho bảo hành - SSTC",
+        "toVirtualWarehouseName": "Warranty Stock",
+        "toVirtualWarehouseType": "warranty_stock",
         "receiptDate": "2025-01-01",
         "notes": "Nhập hàng bảo hành SSD & RAM tháng 01/2025",
         "items": [

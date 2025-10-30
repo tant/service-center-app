@@ -14,7 +14,8 @@ export type EmailNotificationInsert = Database['public']['Tables']['email_notifi
 export type EmailNotificationUpdate = Database['public']['Tables']['email_notifications']['Update'];
 
 // View types
-export type ServiceRequestSummary = Database['public']['Views']['v_service_request_summary']['Row'];
+// TODO: Re-enable when v_service_request_summary view is recreated in migrations
+// export type ServiceRequestSummary = Database['public']['Views']['v_service_request_summary']['Row'];
 
 // Extended types
 export interface ServiceRequestWithDetails extends ServiceRequest {

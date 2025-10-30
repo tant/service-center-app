@@ -14,6 +14,7 @@ export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
   dead_stock: 'Kho Hàng Hỏng',
   in_service: 'Đang Sử Dụng',
   parts: 'Kho Linh Kiện',
+  customer_installed: 'Hàng Đã Bán',
 };
 
 // Warehouse type colors for UI
@@ -24,6 +25,7 @@ export const WAREHOUSE_TYPE_COLORS: Record<WarehouseType, string> = {
   dead_stock: '#EF4444', // Red
   in_service: '#3B82F6', // Blue
   parts: '#8B5CF6', // Purple
+  customer_installed: '#06B6D4', // Cyan
 };
 
 // Product condition colors for UI
@@ -52,6 +54,7 @@ export const WAREHOUSE_TYPE_DESCRIPTIONS: Record<WarehouseType, string> = {
   dead_stock: 'Non-functional products for disposal',
   in_service: 'Products currently in service tickets',
   parts: 'Individual parts and components',
+  customer_installed: 'Products sold and installed at customer sites',
 };
 
 // Product condition descriptions

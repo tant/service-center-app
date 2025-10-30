@@ -117,6 +117,7 @@ export const transfersRouter = router({
         transferDate: z.string(),
         expectedDeliveryDate: z.string().optional(),
         notes: z.string().optional(),
+        customerId: z.string().uuid().optional(), // Required when transferring to customer_installed
         items: z.array(
           z.object({
             productId: z.string(),
@@ -143,6 +144,17 @@ export const transfersRouter = router({
         throw new Error("Cannot transfer to the same warehouse");
       }
 
+      // Validate: Check if destination is customer_installed and require customer_id
+      const { data: toWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("warehouse_type")
+        .eq("id", input.toVirtualWarehouseId)
+        .single();
+
+      if (toWarehouse?.warehouse_type === "customer_installed" && !input.customerId) {
+        throw new Error("Customer ID is required when transferring to customer_installed warehouse");
+      }
+
       // Insert transfer
       const { data: transfer, error: transferError } = await ctx.supabaseAdmin
         .from("stock_transfers")
@@ -152,6 +164,7 @@ export const transfersRouter = router({
           transfer_date: input.transferDate,
           expected_delivery_date: input.expectedDeliveryDate,
           notes: input.notes,
+          customer_id: input.customerId, // Track customer for customer_installed transfers
           status: "draft",
           created_by_id: profile.id,
         })
@@ -451,6 +464,28 @@ export const transfersRouter = router({
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
+      // Update last_known_customer_id if transferring to customer_installed
+      const { data: transferForCustomer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("to_virtual_warehouse_id, customer_id")
+        .eq("id", transferItem.transfer_id)
+        .single();
+
+      if (transferForCustomer?.to_virtual_warehouse_id && transferForCustomer.customer_id) {
+        const { data: toWarehouse } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("warehouse_type")
+          .eq("id", transferForCustomer.to_virtual_warehouse_id)
+          .single();
+
+        if (toWarehouse?.warehouse_type === "customer_installed") {
+          await ctx.supabaseAdmin
+            .from("physical_products")
+            .update({ last_known_customer_id: transferForCustomer.customer_id })
+            .in("id", input.physicalProductIds);
+        }
+      }
+
       // Auto-complete: Check if all serials are complete
       // Get transfer item to know transfer_id
       const { data: transferItemForComplete } = await ctx.supabaseAdmin
@@ -591,6 +626,28 @@ export const transfersRouter = router({
 
       if (error) {
         throw new Error(`Failed to add serials: ${error.message}`);
+      }
+
+      // Update last_known_customer_id if transferring to customer_installed
+      const { data: transferForCustomer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("to_virtual_warehouse_id, customer_id")
+        .eq("id", transferItem.transfer_id)
+        .single();
+
+      if (transferForCustomer?.to_virtual_warehouse_id && transferForCustomer.customer_id) {
+        const { data: toWarehouse } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("warehouse_type")
+          .eq("id", transferForCustomer.to_virtual_warehouse_id)
+          .single();
+
+        if (toWarehouse?.warehouse_type === "customer_installed") {
+          await ctx.supabaseAdmin
+            .from("physical_products")
+            .update({ last_known_customer_id: transferForCustomer.customer_id })
+            .in("id", productIds); // productIds already defined at line 583
+        }
       }
 
       // Auto-complete: Check if all serials are complete

@@ -42,7 +42,7 @@ const listPhysicalWarehousesSchema = z
 const createVirtualWarehouseSchema = z.object({
   name: z.string().min(1, "Warehouse name is required"),
   physical_warehouse_id: z.string().uuid("Physical warehouse ID must be a valid UUID"),
-  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]).default("main"),
+  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts", "customer_installed"]).default("main"),
   description: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
 });
@@ -50,7 +50,7 @@ const createVirtualWarehouseSchema = z.object({
 const updateVirtualWarehouseSchema = z.object({
   id: z.string().uuid("Virtual warehouse ID must be a valid UUID"),
   name: z.string().min(1, "Warehouse name is required").optional(),
-  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts"]).optional(),
+  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts", "customer_installed"]).optional(),
   description: z.string().nullable().optional(),
   is_active: z.boolean().optional(),
 });
@@ -139,11 +139,29 @@ export const warehouseRouter = router({
 
   /**
    * AC 3.4: Delete a physical warehouse (soft delete via is_active)
+   * NEW: Blocks deletion of system default warehouse
    */
   deletePhysicalWarehouse: publicProcedure
     .use(requireManagerOrAbove)
     .input(deletePhysicalWarehouseSchema)
     .mutation(async ({ ctx, input }) => {
+      // Check if this is the system default warehouse
+      const { data: existingWarehouse, error: fetchError } = await ctx.supabaseAdmin
+        .from("physical_warehouses")
+        .select("is_system_default, name")
+        .eq("id", input.id)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch warehouse: ${fetchError.message}`);
+      }
+
+      if (existingWarehouse?.is_system_default) {
+        throw new Error(
+          `Không thể xóa kho mặc định "${existingWarehouse.name}". Kho này được yêu cầu cho hoạt động hệ thống.`
+        );
+      }
+
       // Soft delete by setting is_active to false
       const { data: warehouse, error } = await ctx.supabaseAdmin
         .from("physical_warehouses")

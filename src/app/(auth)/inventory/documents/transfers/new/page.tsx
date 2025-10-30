@@ -30,11 +30,17 @@ export default function CreateTransferPage() {
   const [toWarehouseId, setToWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [transferDate, setTransferDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
+  const [customerId, setCustomerId] = useState(""); // Customer tracking for customer_installed
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createTransfer = trpc.inventory.transfers.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch virtual warehouses
+  const { data: customers } = trpc.customers.getCustomers.useQuery();
+
+  // Check if destination warehouse is customer_installed
+  const toWarehouse = virtualWarehouses?.find((w) => w.id === toWarehouseId);
+  const isCustomerInstalled = toWarehouse?.warehouse_type === "customer_installed";
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -61,6 +67,12 @@ export default function CreateTransferPage() {
       return;
     }
 
+    // Validate customer selection for customer_installed transfers
+    if (isCustomerInstalled && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi chuyển đến kho Hàng Đã Bán");
+      return;
+    }
+
     const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
     if (invalidItems.length > 0) {
       toast.error("Vui lòng chọn sản phẩm và số lượng hợp lệ cho tất cả dòng");
@@ -73,6 +85,7 @@ export default function CreateTransferPage() {
         toVirtualWarehouseId: toWarehouseId,     // REDESIGNED: Use warehouse ID
         transferDate,
         notes: notes || undefined,
+        customerId: customerId || undefined, // Track customer for customer_installed
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -141,6 +154,28 @@ export default function CreateTransferPage() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Customer selection - shown only for customer_installed transfers */}
+                    {isCustomerInstalled && (
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label className="text-primary">Khách hàng nhận hàng *</Label>
+                        <Select value={customerId} onValueChange={setCustomerId}>
+                          <SelectTrigger className="border-primary">
+                            <SelectValue placeholder="Chọn khách hàng..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers?.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.name} {customer.phone && `- ${customer.phone}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Hệ thống sẽ tự động cập nhật thông tin khách hàng cho các sản phẩm được chuyển
+                        </p>
+                      </div>
+                    )}
 
                     <div className="grid gap-2">
                       <Label>Ngày chuyển *</Label>

@@ -10,7 +10,7 @@ import type {
   PhysicalWarehouse,
   VirtualWarehouse,
   PhysicalProduct,
-  WarehouseStockLevel,
+  // WarehouseStockLevel, // TODO: Re-enable when view is recreated
   StockMovement,
   SerialVerification,
 } from '@/types/warehouse';

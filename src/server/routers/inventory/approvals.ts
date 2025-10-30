@@ -351,9 +351,8 @@ export const approvalsRouter = router({
       }
 
       // Update receipt to completed
-      // This will trigger process_stock_receipt_completion() which:
-      // 1. Creates/updates product_warehouse_stock records
-      // 2. Converts stock_receipt_serials to physical_products
+      // Note: Stock was already updated by update_stock_on_receipt_approval() trigger on approval
+      // This completion marks the document as finalized after serial entry
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_receipts")
         .update({
@@ -421,9 +420,8 @@ export const approvalsRouter = router({
       }
 
       // Update issue to completed
-      // This will trigger process_stock_issue_completion() which:
-      // 1. Decreases product_warehouse_stock.declared_quantity
-      // 2. Marks physical_products as issued
+      // Note: Stock was already decreased by update_stock_on_issue_approval() trigger on approval
+      // This completion marks the document as finalized after serial entry
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_issues")
         .update({

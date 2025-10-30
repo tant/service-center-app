@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VirtualWarehouse } from "@/types/warehouse";
+import type { WarehouseType } from "@/types/enums";
 
 // Extended type to include new fields from migration
 type VirtualWarehouseWithPhysical = VirtualWarehouse & {
@@ -50,7 +51,7 @@ export function VirtualWarehouseFormModal({
   const [formData, setFormData] = useState<{
     name: string;
     physical_warehouse_id: string;
-    warehouse_type: "main" | "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts";
+    warehouse_type: WarehouseType;
     description: string;
   }>({
     name: "",

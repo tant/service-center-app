@@ -58,6 +58,13 @@ QWEN.md
 volumes/db/data/
 volumes/storage/
 
+# Supabase local storage (ignore uploaded files but keep directory structure)
+supabase/storage/*
+!supabase/storage/.gitkeep
+!supabase/storage/avatars/.gitkeep
+!supabase/storage/product_images/.gitkeep
+!supabase/storage/service_media/.gitkeep
+
 # linh tinh AI
 .bmad-core
 .claude

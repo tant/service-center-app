@@ -35,6 +35,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -61,7 +67,12 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
       return (
         <div className="flex items-center gap-2 font-medium">
           <IconBuildingWarehouse className="h-4 w-4 text-muted-foreground" />
-          {row.original.name}
+          <span>{row.original.name}</span>
+          {(row.original as any).is_system_default && (
+            <Badge variant="outline" className="ml-1 bg-primary/10 text-primary border-primary/30">
+              Mặc Định
+            </Badge>
+          )}
         </div>
       );
     },
@@ -103,7 +114,8 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
         onEdit: (warehouse: PhysicalWarehouse) => void;
         onDelete: (id: string) => void;
       };
-      
+      const isSystemDefault = (row.original as any).is_system_default;
+
       return (
         <div className="flex items-center justify-end gap-2">
           <Button
@@ -113,13 +125,27 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
           >
             <IconEdit className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => meta.onDelete(row.original.id)}
-          >
-            <IconTrash className="h-4 w-4 text-destructive" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSystemDefault}
+                    onClick={() => meta.onDelete(row.original.id)}
+                  >
+                    <IconTrash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isSystemDefault && (
+                <TooltipContent>
+                  <p>Không thể xóa kho mặc định của hệ thống</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       );
     },

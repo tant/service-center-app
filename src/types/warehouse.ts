@@ -29,9 +29,10 @@ export type RMABatchInsert = Database['public']['Tables']['rma_batches']['Insert
 export type RMABatchUpdate = Database['public']['Tables']['rma_batches']['Update'];
 
 // View types
-export type WarehouseStockLevel = Database['public']['Views']['v_warehouse_stock_levels']['Row'];
-export type StockMovementHistory = Database['public']['Views']['v_stock_movement_history']['Row'];
-export type LowStockAlert = Database['public']['Views']['v_low_stock_alerts']['Row'];
+// TODO: Re-enable when views are recreated in migrations
+// export type WarehouseStockLevel = Database['public']['Views']['v_warehouse_stock_levels']['Row'];
+// export type StockMovementHistory = Database['public']['Views']['v_stock_movement_history']['Row'];
+// export type LowStockAlert = Database['public']['Views']['v_low_stock_alerts']['Row'];
 
 // Extended types with relations
 export interface PhysicalProductWithDetails extends PhysicalProduct {

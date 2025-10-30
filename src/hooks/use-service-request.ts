@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 import { trpc } from '@/components/providers/trpc-provider';
 import type {
   ServiceRequest,
-  ServiceRequestSummary,
+  // ServiceRequestSummary, // TODO: Re-enable when view is recreated
   TrackingTokenLookup,
   ServiceRequestFormData,
 } from '@/types/service-request';

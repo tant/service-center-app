@@ -3,14 +3,14 @@
 # Service Center Database Schema Setup Script
 # This script helps copy schema files and seed data to Supabase folder and generate migrations
 #
-# Updated: 2025-10-25
+# Updated: 2025-10-30
 # Changes:
-# - Added support for files 09-12 (RBAC and audit logging)
-# - Added seed.sql copy from docs/data/schemas/ (source of truth)
-# - Automatic seed data loading (REQUIRED for workflow system)
-# - Improved error handling for seed files
-# - Added validation for generated migrations
-# - Enhanced cleanup process
+# - Added file 18 (Default Warehouse System with customer_installed type)
+# - Updated seed.sql to include default warehouse seed data
+# - Fixed storage_buckets.sql to be idempotent (ON CONFLICT DO NOTHING)
+# - Fixed 04_task_and_warehouse.sql partial unique index syntax
+# - Schema now creates 36 tables, 26 task types, 1 default warehouse, 7 virtual warehouses
+# - Migration cleanup now preserves existing migrations (manual cleanup only)
 
 set -e
 
@@ -48,7 +48,7 @@ echo -e "${BLUE}📁 Copying schema files in proper order...${NC}"
 # Order of execution matters due to dependencies
 # 00_base_schema.sql must be first (defines ENUMs, DOMAINs, and base functions)
 # Core tables follow, then Phase 2 extensions, then RBAC helpers, then policies and views
-# Files 15-17 are inventory redesign (virtual warehouses, documents, triggers)
+# Files 15-18 are inventory redesign (virtual warehouses, documents, triggers, default warehouse)
 SCHEMA_FILES=(
     "00_base_schema.sql"
     "01_users_and_customers.sql"
@@ -66,6 +66,7 @@ SCHEMA_FILES=(
     "15_virtual_warehouse_physical_link.sql"
     "16_inventory_documents.sql"
     "17_stock_update_triggers.sql"
+    "18_default_warehouse_system.sql"
 )
 
 # Copy each file in order
@@ -202,22 +203,22 @@ else
     exit 1
 fi
 
-# Cleanup: remove SQL files from migrations and schemas (no backup)
-echo -e "${BLUE}🧹 Removing SQL files from supabase/migrations and supabase/schemas (no backup)...${NC}"
-# Remove any .sql files directly
-rm -f supabase/migrations/*.sql 2>/dev/null || true
+# Cleanup: remove SQL files from schemas (keep migrations!)
+echo -e "${BLUE}🧹 Cleaning up supabase/schemas...${NC}"
+# Remove schema files from supabase/schemas (they're just temp copies)
 rm -f supabase/schemas/*.sql 2>/dev/null || true
 
-echo -e "${GREEN}✅ Cleanup completed. SQL files removed from supabase/migrations and supabase/schemas${NC}"
+echo -e "${GREEN}✅ Cleanup completed. Schema files removed from supabase/schemas${NC}"
+echo -e "${YELLOW}   Note: Migrations in supabase/migrations/ are preserved${NC}"
 
 # Final verification
 echo -e "${BLUE}🔍 Verifying database setup...${NC}"
 TABLE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" 2>/dev/null || echo "0")
 
-if [ "$TABLE_COUNT" -ge 25 ]; then
+if [ "$TABLE_COUNT" -ge 36 ]; then
     echo -e "${GREEN}   ✓ Database verified: $TABLE_COUNT tables created${NC}"
 else
-    echo -e "${YELLOW}   ⚠️  Warning: Only $TABLE_COUNT tables found (expected 25+)${NC}"
+    echo -e "${YELLOW}   ⚠️  Warning: Only $TABLE_COUNT tables found (expected 36+)${NC}"
 fi
 
 # Check for RBAC functions
@@ -232,9 +233,9 @@ echo
 echo -e "${GREEN}🎉 Schema setup completed successfully!${NC}"
 echo
 
-# Load seed data (REQUIRED for workflow system)
+# Load seed data (REQUIRED for workflow and warehouse system)
 echo -e "${BLUE}🌱 Loading seed data...${NC}"
-echo -e "   Seed data creates 27+ task types required for the workflow system."
+echo -e "   Seed data creates 26 task types and default warehouse system."
 if psql "$DB_URL" -f supabase/seed.sql > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Seed data loaded successfully${NC}"
 
@@ -243,9 +244,18 @@ if psql "$DB_URL" -f supabase/seed.sql > /dev/null 2>&1; then
     if [ "$TASK_TYPE_COUNT" -gt 0 ]; then
         echo -e "${GREEN}   ✓ $TASK_TYPE_COUNT task types created${NC}"
     fi
+
+    # Verify default warehouse system
+    WAREHOUSE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.physical_warehouses WHERE is_system_default = true" 2>/dev/null || echo "0")
+    VIRTUAL_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.virtual_warehouses" 2>/dev/null || echo "0")
+    if [ "$WAREHOUSE_COUNT" -eq 1 ] && [ "$VIRTUAL_COUNT" -eq 7 ]; then
+        echo -e "${GREEN}   ✓ Default warehouse system created (1 physical, 7 virtual)${NC}"
+    else
+        echo -e "${YELLOW}   ⚠️  Warning: Warehouse counts unexpected (physical: $WAREHOUSE_COUNT, virtual: $VIRTUAL_COUNT)${NC}"
+    fi
 else
     echo -e "${RED}❌ Failed to load seed data${NC}"
-    echo -e "${RED}   This is REQUIRED for the workflow system to function!${NC}"
+    echo -e "${RED}   This is REQUIRED for the workflow and warehouse system to function!${NC}"
     exit 1
 fi
 

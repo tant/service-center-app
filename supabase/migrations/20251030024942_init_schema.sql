@@ -1657,6 +1657,7 @@ set check_function_bodies = off;
 CREATE OR REPLACE FUNCTION public.auto_complete_service_request()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_request_id UUID;
@@ -1692,6 +1693,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.auto_complete_transfer_documents()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
@@ -1716,6 +1718,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.auto_create_tickets_on_received()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_customer_id UUID;
@@ -1820,6 +1823,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.auto_generate_transfer_documents()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_issue_id UUID;
@@ -1891,6 +1895,7 @@ CREATE OR REPLACE FUNCTION public.calculate_warranty_end_date(p_start_date date,
  RETURNS date
  LANGUAGE plpgsql
  IMMUTABLE
+ SET search_path TO ''
 AS $function$
 BEGIN
   IF p_start_date IS NULL OR p_warranty_months IS NULL THEN
@@ -1904,6 +1909,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.create_default_virtual_warehouse()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   -- Create a default "Main Storage" virtual warehouse for the new physical warehouse
@@ -1929,6 +1935,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.create_physical_product_from_receipt_serial()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_product_id UUID;
@@ -2002,6 +2009,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.delete_physical_product_on_issue()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   -- Delete the physical product (it's being issued out)
@@ -2016,6 +2024,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_issue_number()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   IF NEW.issue_number IS NULL THEN
@@ -2030,6 +2039,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_receipt_number()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   IF NEW.receipt_number IS NULL THEN
@@ -2045,6 +2055,7 @@ CREATE OR REPLACE FUNCTION public.generate_rma_batch_number()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_year VARCHAR(4);
@@ -2072,7 +2083,7 @@ CREATE OR REPLACE FUNCTION public.generate_ticket_number()
  RETURNS text
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
+ SET search_path TO ''
 AS $function$
 declare
   current_year text;
@@ -2094,6 +2105,7 @@ CREATE OR REPLACE FUNCTION public.generate_tracking_token()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_token VARCHAR(15);
@@ -2128,6 +2140,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_transfer_number()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   IF NEW.transfer_number IS NULL THEN
@@ -2155,6 +2168,7 @@ CREATE OR REPLACE FUNCTION public.get_warranty_status(p_warranty_end_date date)
  RETURNS text
  LANGUAGE plpgsql
  IMMUTABLE
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_days_remaining INT;
@@ -2481,18 +2495,19 @@ $function$
 CREATE OR REPLACE FUNCTION public.update_default_virtual_warehouse_name()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   -- Update the default virtual warehouse name when physical warehouse name changes
   IF OLD.name IS DISTINCT FROM NEW.name THEN
     UPDATE public.virtual_warehouses
-    SET 
+    SET
       name = NEW.name || ' - Kho Chính',
       description = 'Kho chính của ' || NEW.name
     WHERE physical_warehouse_id = NEW.id
       AND name = OLD.name || ' - Kho Chính'; -- Only update the default one
   END IF;
-  
+
   RETURN NEW;
 END;
 $function$
@@ -2501,6 +2516,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.update_physical_product_warehouse_on_transfer()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_from_warehouse_id UUID;
@@ -2552,6 +2568,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.update_stock_on_issue_approval()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_item RECORD;
@@ -2583,6 +2600,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.update_stock_on_receipt_approval()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_item RECORD;
@@ -2626,6 +2644,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.upsert_product_stock(p_product_id uuid, p_warehouse_id uuid, p_quantity_delta integer)
  RETURNS void
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   -- Insert or update stock record

@@ -137,16 +137,24 @@ CREATE TABLE IF NOT EXISTS public.physical_warehouses (
   location TEXT,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_system_default BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Partial unique index: only one warehouse can be system default
+CREATE UNIQUE INDEX IF NOT EXISTS physical_warehouses_system_default_unique
+ON public.physical_warehouses(is_system_default)
+WHERE is_system_default = true;
+
 COMMENT ON TABLE public.physical_warehouses IS 'Physical locations for storing products (shelves, rooms, buildings)';
+COMMENT ON COLUMN public.physical_warehouses.is_system_default IS 'Indicates if this is the system-managed default warehouse that cannot be deleted';
 CREATE TRIGGER trigger_physical_warehouses_updated_at BEFORE UPDATE ON public.physical_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- VIRTUAL WAREHOUSES
 CREATE TABLE IF NOT EXISTS public.virtual_warehouses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  warehouse_type public.warehouse_type NOT NULL,
+  warehouse_type public.warehouse_type NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -175,6 +183,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   supplier_id UUID,
   purchase_date DATE,
   purchase_price DECIMAL(10,2),
+  last_known_customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -184,7 +193,10 @@ COMMENT ON TABLE public.physical_products IS 'Serialized product instances with 
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_type IS 'Stores warehouse type before RMA - used to restore location when removed from RMA batch';
 COMMENT ON COLUMN public.physical_products.manufacturer_warranty_end_date IS 'Manufacturer warranty end date (nullable - managed separately at /inventory/products)';
 COMMENT ON COLUMN public.physical_products.user_warranty_end_date IS 'Extended warranty for end user (nullable - managed separately at /inventory/products)';
+COMMENT ON COLUMN public.physical_products.last_known_customer_id IS 'Last known customer who owns/received this product. Updated when product moves to customer_installed warehouse.';
 CREATE TRIGGER trigger_physical_products_updated_at BEFORE UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_physical_products_last_customer ON public.physical_products(last_known_customer_id) WHERE last_known_customer_id IS NOT NULL;
 
 -- STOCK MOVEMENTS
 CREATE TABLE IF NOT EXISTS public.stock_movements (

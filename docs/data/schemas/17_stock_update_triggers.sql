@@ -17,7 +17,10 @@ CREATE OR REPLACE FUNCTION public.upsert_product_stock(
   p_warehouse_id UUID,
   p_quantity_delta INT
 )
-RETURNS VOID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   -- Insert or update stock record
   INSERT INTO public.product_warehouse_stock (
@@ -36,7 +39,7 @@ BEGIN
     declared_quantity = public.product_warehouse_stock.declared_quantity + p_quantity_delta,
     updated_at = NOW();
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION public.upsert_product_stock IS 'Update or create stock record with quantity delta';
 
@@ -45,7 +48,10 @@ COMMENT ON FUNCTION public.upsert_product_stock IS 'Update or create stock recor
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.update_stock_on_receipt_approval()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_item RECORD;
 BEGIN
@@ -70,7 +76,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_update_stock_on_receipt_approval
   AFTER UPDATE ON public.stock_receipts
@@ -86,7 +92,10 @@ COMMENT ON FUNCTION public.update_stock_on_receipt_approval IS 'Increment stock 
 
 -- 1. RECEIPT SERIALS: Create physical product when serial is added
 CREATE OR REPLACE FUNCTION public.create_physical_product_from_receipt_serial()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_product_id UUID;
   v_virtual_warehouse_id UUID;
@@ -126,7 +135,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_create_physical_product_from_receipt_serial
   BEFORE INSERT ON public.stock_receipt_serials
@@ -137,7 +146,10 @@ COMMENT ON FUNCTION public.create_physical_product_from_receipt_serial IS 'Creat
 
 -- 2. ISSUE SERIALS: Delete physical product when issued
 CREATE OR REPLACE FUNCTION public.delete_physical_product_on_issue()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   -- Delete the physical product (it's being issued out)
   DELETE FROM public.physical_products
@@ -145,7 +157,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_delete_physical_product_on_issue
   AFTER INSERT ON public.stock_issue_serials
@@ -156,7 +168,10 @@ COMMENT ON FUNCTION public.delete_physical_product_on_issue IS 'Delete physical 
 
 -- 3. TRANSFER SERIALS: Update warehouse location when transferred
 CREATE OR REPLACE FUNCTION public.update_physical_product_warehouse_on_transfer()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_from_warehouse_id UUID;
   v_to_warehouse_id UUID;
@@ -182,7 +197,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_update_physical_product_warehouse_on_transfer
   AFTER INSERT ON public.stock_transfer_serials
@@ -196,7 +211,10 @@ COMMENT ON FUNCTION public.update_physical_product_warehouse_on_transfer IS 'Upd
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.update_stock_on_issue_approval()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_item RECORD;
 BEGIN
@@ -221,7 +239,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_update_stock_on_issue_approval
   AFTER UPDATE ON public.stock_issues

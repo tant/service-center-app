@@ -1,7 +1,7 @@
 # 2. Requirements
 
-**✅ IMPLEMENTATION STATUS: 30/30 Functional Requirements COMPLETE (100%)**
-**Note**: All feature requirements (FR1-FR30) have been implemented. Only QA phase remains (Stories 01.18-01.20).
+**✅ IMPLEMENTATION STATUS: 30/31 Functional Requirements COMPLETE (97%)**
+**Note**: FR1-FR30 have been implemented. FR31 (Default Warehouse Seeding) requires implementation. Only QA phase remains (Stories 01.18-01.20).
 
 ## 2.1 Functional Requirements
 
@@ -21,7 +21,7 @@
 
 **FR8**: The system shall provide warehouse hierarchy management with physical warehouses containing virtual warehouses.
 
-**FR9**: The system shall support 5 virtual warehouse types: Warranty Stock, RMA Staging, Dead Stock, In-Service, and Parts.
+**FR9**: The system shall support 7 virtual warehouse types: Main (default), Warranty Stock, RMA Staging, Dead Stock, In-Service, Parts, and Customer Installed (tracks sold products currently with customers).
 
 **FR10**: The system shall track physical products with serial numbers, product relationships, warranty dates (manufacturer + company), condition, and current location.
 
@@ -65,6 +65,8 @@
 
 **FR30**: The system shall support dynamic template switching when service type changes mid-workflow (preserve completed tasks, append new required tasks).
 
+**FR31**: The system shall automatically create a default physical warehouse named "Công ty" (Company) with all 7 virtual warehouse types linked on initial database setup, and these defaults shall be recreated on database reset and cannot be deleted by users.
+
 ---
 
 ### 2.1.1 Functional Requirements Implementation Mapping
@@ -74,8 +76,8 @@
 - FR4: Story 01.03 (Automatic Task Generation)
 - FR5-FR7: Stories 01.04-01.05 (Task Execution & Dependencies)
 
-**Warehouse Requirements (FR8-FR11, FR15-FR17, FR19)** - ✅ Stories 01.06-01.10:
-- FR8-FR9: Story 01.06 (Warehouse Hierarchy)
+**Warehouse Requirements (FR8-FR11, FR15-FR17, FR19, FR31)** - ✅ Stories 01.06-01.10:
+- FR8-FR9, FR31: Story 01.06 (Warehouse Hierarchy & Default Warehouse Seeding)
 - FR10-FR11: Story 01.07 (Physical Product Master Data)
 - FR15-FR17: Stories 01.08-01.09 (Stock Movements & Alerts)
 - FR19: Story 01.10 (RMA Batch Operations - includes CSV import)

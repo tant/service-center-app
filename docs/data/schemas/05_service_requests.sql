@@ -37,7 +37,10 @@ COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue de
 -- AUTO-CREATE TICKETS FUNCTION
 -- =====================================================
 CREATE OR REPLACE FUNCTION public.auto_create_tickets_on_received()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_customer_id UUID;
   v_product_id UUID;
@@ -135,7 +138,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when request status changes to received';
 
@@ -224,3 +227,55 @@ ALTER TABLE public.service_tickets
 
 COMMENT ON CONSTRAINT service_tickets_template_id_fkey ON public.service_tickets IS 'Links ticket to task template used for workflow';
 COMMENT ON CONSTRAINT service_tickets_request_id_fkey ON public.service_tickets IS 'Links ticket to originating service request from public portal';
+
+-- =====================================================
+-- FUNCTION: Auto-complete service request when all tickets are done
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.auto_complete_service_request()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_request_id UUID;
+  v_all_completed BOOLEAN;
+BEGIN
+  -- Get the request_id from the ticket
+  v_request_id := NEW.request_id;
+
+  -- If ticket is not linked to a request, skip
+  IF v_request_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- Check if all tickets for this request are completed or cancelled
+  SELECT bool_and(st.status IN ('completed', 'cancelled'))
+  INTO v_all_completed
+  FROM public.service_request_items sri
+  LEFT JOIN public.service_tickets st ON st.id = sri.ticket_id
+  WHERE sri.request_id = v_request_id;
+
+  -- If all tickets are done, mark request as completed
+  IF v_all_completed THEN
+    UPDATE public.service_requests
+    SET status = 'completed'
+    WHERE id = v_request_id AND status != 'completed';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.auto_complete_service_request() IS
+  'Auto-completes service request when all its tickets are completed or cancelled';
+
+-- =====================================================
+-- TRIGGER: Auto-complete service request
+-- =====================================================
+DROP TRIGGER IF EXISTS trigger_auto_complete_request ON public.service_tickets;
+
+CREATE TRIGGER trigger_auto_complete_request
+  AFTER UPDATE OF status ON public.service_tickets
+  FOR EACH ROW
+  WHEN (NEW.status IN ('completed', 'cancelled'))
+  EXECUTE FUNCTION public.auto_complete_service_request();

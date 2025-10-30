@@ -423,24 +423,65 @@ Approve → Stock update immediately → Serial entry (parallel)
 
 ---
 
+## 📎 Document Attachments
+
+### Purpose
+
+Staff can attach scanned documents or photos to inventory documents (receipts, issues, transfers) for audit trail and verification.
+
+### Implementation
+
+**Table:** `stock_document_attachments`
+
+```sql
+CREATE TABLE stock_document_attachments (
+  id UUID PRIMARY KEY,
+  document_type VARCHAR(50) NOT NULL,  -- 'receipt', 'issue', 'transfer'
+  document_id UUID NOT NULL,           -- FK to the document
+  file_name VARCHAR(255) NOT NULL,
+  file_path TEXT NOT NULL,             -- Storage bucket path
+  file_size INT,
+  mime_type VARCHAR(100),
+  uploaded_by_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+```
+
+### Permissions
+
+- **Admin/Manager:** Full access (upload, view, delete)
+- **Technician:** View all, upload own
+- **Reception:** No access
+
+### Use Cases
+
+- Scanned delivery notes for receipts
+- Photos of damaged items for issues
+- Authorization documents for transfers
+- Proof of delivery for customer_installed warehouse transfers
+
+---
+
 ## 📝 Migration History
 
 | Date | Migration | Description |
 |------|-----------|-------------|
 | 2025-10-28 | 20251028160000_* | Initial inventory redesign |
 | 2025-10-29 | 20251029_add_stock_update_triggers.sql | **Stock update triggers** |
+| 2025-10-30 | 20251030014845_init_schema.sql | Added stock_document_attachments, auto_complete_service_request |
 
 ---
 
 ## 🔗 Related Documentation
 
-- **Schema:** `docs/data/schemas/16_inventory_documents.sql`
+- **Schema:** `docs/data/schemas/16_inventory_documents.sql` (includes stock_document_attachments)
+- **Schema:** `docs/data/schemas/05_service_requests.sql` (includes auto_complete_service_request)
 - **Triggers:** `docs/data/schemas/17_stock_update_triggers.sql`
 - **Summary:** `docs/INVENTORY-REDESIGN-SUMMARY.md`
 - **CLAUDE.md:** Updated with new workflow notes
 
 ---
 
-**Last Updated:** 2025-10-29
-**Version:** 2.0
+**Last Updated:** 2025-10-30
+**Version:** 2.1
 **Status:** ✅ Implemented and Tested

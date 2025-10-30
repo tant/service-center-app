@@ -108,7 +108,10 @@ COMMENT ON COLUMN public.stock_receipts.virtual_warehouse_id IS 'Virtual warehou
 COMMENT ON COLUMN public.stock_receipts.receipt_type IS 'normal (default) or adjustment (kiểm kê)';
 
 CREATE OR REPLACE FUNCTION public.generate_receipt_number()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   IF NEW.receipt_number IS NULL THEN
     NEW.receipt_number := 'PN-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
@@ -116,7 +119,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_generate_receipt_number
   BEFORE INSERT ON public.stock_receipts
@@ -240,7 +243,10 @@ COMMENT ON COLUMN public.stock_issues.virtual_warehouse_id IS 'Virtual warehouse
 COMMENT ON COLUMN public.stock_issues.issue_type IS 'normal (default) or adjustment (kiểm kê)';
 
 CREATE OR REPLACE FUNCTION public.generate_issue_number()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   IF NEW.issue_number IS NULL THEN
     NEW.issue_number := 'PX-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
@@ -248,7 +254,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_generate_issue_number
   BEFORE INSERT ON public.stock_issues
@@ -331,6 +337,8 @@ CREATE TABLE IF NOT EXISTS public.stock_transfers (
   generated_issue_id UUID REFERENCES public.stock_issues(id) ON DELETE SET NULL,
   generated_receipt_id UUID REFERENCES public.stock_receipts(id) ON DELETE SET NULL,
 
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+
   notes TEXT,
   rejection_reason TEXT,
 
@@ -348,15 +356,20 @@ CREATE INDEX idx_stock_transfers_from ON public.stock_transfers(from_virtual_war
 CREATE INDEX idx_stock_transfers_to ON public.stock_transfers(to_virtual_warehouse_id);
 CREATE INDEX idx_stock_transfers_generated_issue ON public.stock_transfers(generated_issue_id);
 CREATE INDEX idx_stock_transfers_generated_receipt ON public.stock_transfers(generated_receipt_id);
+CREATE INDEX idx_stock_transfers_customer ON public.stock_transfers(customer_id) WHERE customer_id IS NOT NULL;
 
 COMMENT ON TABLE public.stock_transfers IS 'Stock transfer documents (Phiếu Chuyển Kho)';
 COMMENT ON COLUMN public.stock_transfers.from_virtual_warehouse_id IS 'Source virtual warehouse';
 COMMENT ON COLUMN public.stock_transfers.to_virtual_warehouse_id IS 'Destination virtual warehouse';
 COMMENT ON COLUMN public.stock_transfers.generated_issue_id IS 'Auto-generated issue document';
 COMMENT ON COLUMN public.stock_transfers.generated_receipt_id IS 'Auto-generated receipt document';
+COMMENT ON COLUMN public.stock_transfers.customer_id IS 'Customer receiving the products when transferring to customer_installed warehouse. Required for customer_installed transfers.';
 
 CREATE OR REPLACE FUNCTION public.generate_transfer_number()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   IF NEW.transfer_number IS NULL THEN
     NEW.transfer_number := 'PC-' || TO_CHAR(NOW(), 'YYYY') || '-' ||
@@ -364,7 +377,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_generate_transfer_number
   BEFORE INSERT ON public.stock_transfers
@@ -461,7 +474,10 @@ CREATE TRIGGER trigger_product_warehouse_stock_updated_at
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION public.auto_generate_transfer_documents()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 DECLARE
   v_issue_id UUID;
   v_receipt_id UUID;
@@ -525,7 +541,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_auto_generate_transfer_documents
   BEFORE UPDATE ON public.stock_transfers
@@ -534,7 +550,10 @@ CREATE TRIGGER trigger_auto_generate_transfer_documents
   EXECUTE FUNCTION public.auto_generate_transfer_documents();
 
 CREATE OR REPLACE FUNCTION public.auto_complete_transfer_documents()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
     IF NEW.generated_issue_id IS NOT NULL THEN
@@ -552,10 +571,71 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER trigger_auto_complete_transfer_documents
   AFTER UPDATE ON public.stock_transfers
   FOR EACH ROW
   WHEN (NEW.status = 'completed' AND OLD.status != 'completed')
   EXECUTE FUNCTION public.auto_complete_transfer_documents();
+
+-- =====================================================
+-- STOCK DOCUMENT ATTACHMENTS
+-- =====================================================
+-- File attachments for stock documents (receipts, issues, transfers)
+
+CREATE TABLE IF NOT EXISTS public.stock_document_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_type VARCHAR(50) NOT NULL,
+  document_id UUID NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size INT,
+  mime_type VARCHAR(100),
+  uploaded_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT stock_document_attachments_type_check CHECK (document_type IN ('receipt', 'issue', 'transfer'))
+);
+
+CREATE INDEX idx_stock_document_attachments_document
+  ON public.stock_document_attachments(document_type, document_id);
+CREATE INDEX idx_stock_document_attachments_uploader
+  ON public.stock_document_attachments(uploaded_by_id);
+
+COMMENT ON TABLE public.stock_document_attachments IS 'File attachments for stock documents (receipts, issues, transfers)';
+COMMENT ON COLUMN public.stock_document_attachments.document_type IS 'Type of document: receipt, issue, or transfer';
+COMMENT ON COLUMN public.stock_document_attachments.document_id IS 'UUID of the stock document (receipt_id, issue_id, or transfer_id)';
+COMMENT ON COLUMN public.stock_document_attachments.file_path IS 'Path to the uploaded file in storage bucket';
+
+-- RLS Policies for stock_document_attachments
+ALTER TABLE public.stock_document_attachments ENABLE ROW LEVEL SECURITY;
+
+-- Admins and Managers can do everything
+CREATE POLICY stock_document_attachments_admin_all ON public.stock_document_attachments
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.user_id = auth.uid()
+      AND profiles.role IN ('admin', 'manager')
+  ));
+
+-- Technicians can view and upload their own
+CREATE POLICY stock_document_attachments_technician_view ON public.stock_document_attachments
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.user_id = auth.uid()
+      AND profiles.role = 'technician'
+  ));
+
+CREATE POLICY stock_document_attachments_technician_insert ON public.stock_document_attachments
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    uploaded_by_id = (SELECT id FROM public.profiles WHERE user_id = auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.user_id = auth.uid()
+        AND profiles.role = 'technician'
+    )
+  );

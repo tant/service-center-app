@@ -70,7 +70,7 @@ create trigger "service_tickets_updated_at_trigger"
 
 -- Functions & Triggers for Ticket Number Generation
 create or replace function public.generate_ticket_number()
-returns text language plpgsql security definer set search_path = pg_catalog, public as $$
+returns text language plpgsql security definer set search_path = '' as $$
 declare
   current_year text;
   next_number integer;

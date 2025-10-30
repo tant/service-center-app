@@ -85,9 +85,10 @@ CREATE TYPE public.warehouse_type AS ENUM (
   'rma_staging',
   'dead_stock',
   'in_service',
-  'parts'
+  'parts',
+  'customer_installed'
 );
-COMMENT ON TYPE public.warehouse_type IS 'Virtual warehouse categories: main (primary storage), warranty_stock, rma_staging, dead_stock, in_service, parts';
+COMMENT ON TYPE public.warehouse_type IS 'Virtual warehouse categories: main (primary storage), warranty_stock, rma_staging, dead_stock, in_service, parts, customer_installed (products sold to customers)';
 
 -- Service Request Status Enum
 DROP TYPE IF EXISTS public.request_status CASCADE;
@@ -208,6 +209,7 @@ CREATE OR REPLACE FUNCTION public.generate_tracking_token()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
   v_token VARCHAR(15);
@@ -247,6 +249,7 @@ CREATE OR REPLACE FUNCTION public.calculate_warranty_end_date(
 RETURNS DATE
 LANGUAGE plpgsql
 IMMUTABLE
+SET search_path = ''
 AS $$
 BEGIN
   IF p_start_date IS NULL OR p_warranty_months IS NULL THEN
@@ -262,6 +265,7 @@ CREATE OR REPLACE FUNCTION public.get_warranty_status(p_warranty_end_date DATE)
 RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
+SET search_path = ''
 AS $$
 DECLARE
   v_days_remaining INT;
@@ -286,6 +290,7 @@ CREATE OR REPLACE FUNCTION public.generate_rma_batch_number()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
   v_year VARCHAR(4);

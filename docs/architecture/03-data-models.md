@@ -108,13 +108,16 @@ create type public.payment_status as enum (
   'unpaid', 'partial', 'paid', 'refunded'
 );
 
--- Warehouse type enum (updated Oct 26, 2025)
+-- Warehouse type enum (updated Oct 30, 2025)
 -- NOTE: A new value 'main' was added to support default virtual warehouses
 -- and simplify UI mappings. Two redundant fields were removed from
 -- `virtual_warehouses`: `display_name` and `color_code` (migrations
--- applied: 202510260014, 202510260015, 202510260016). Developer follow-ups:
+-- applied: 202510260014, 202510260015, 202510260016).
+-- UPDATE Oct 30, 2025: Added 'customer_installed' to track sold products
+-- currently installed at customer sites.
+-- Developer follow-ups:
 --  * Regenerate TypeScript DB types (supabase gen types)
---  * Update Zod schemas and frontend dropdowns to include 'main'
+--  * Update Zod schemas and frontend dropdowns to include 'main' and 'customer_installed'
 --  * Update any code paths that referenced display_name or color_code
 create type public.warehouse_type as enum (
   'main', -- Kho Chính (Main storage)
@@ -122,7 +125,8 @@ create type public.warehouse_type as enum (
   'rma_staging',
   'dead_stock',
   'in_service',
-  'parts'
+  'parts',
+  'customer_installed' -- Hàng đã bán (Products sold and installed at customer sites)
 );
 ```
 
@@ -554,11 +558,13 @@ create type public.task_status as enum (
 
 -- Warehouse management
 -- NOTE: 'main' added Oct 26, 2025
+-- UPDATE: 'customer_installed' added Oct 30, 2025 to track sold products
 create type public.warehouse_type as enum (
-  'main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts'
+  'main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts', 'customer_installed'
 );
 
 -- Migrations applied: 202510260014, 202510260015, 202510260016 (added 'main', removed `display_name` and `color_code` from virtual_warehouses)
+-- Migration pending: Add 'customer_installed' enum value and seed default physical warehouse "Công ty"
 
 create type public.product_condition as enum (
   'new', 'refurbished', 'defective', 'parts_only'
@@ -782,21 +788,26 @@ create trigger "after_update_physical_warehouse_name"
 | **stock_transfer_serials** | ~25000+ | Transfer serial tracking |
 | **stock_document_attachments** | ~5000+ | Document file uploads |
 
-### Public Portal & Communication Tables (2)
+### Public Portal & Communication Tables (3)
 
 | Table | Est. Rows | Purpose |
 |-------|-----------|---------|
 | **service_requests** | ~2000+ | Public service requests with tracking tokens |
+| **service_request_items** | ~5000+ | Individual products per service request (1:N relationship) |
 | **email_notifications** | ~10000+ | Email queue and delivery tracking |
 
-### Security & System Tables (2)
+### Security & Audit Tables (1)
 
 | Table | Est. Rows | Purpose |
 |-------|-----------|---------|
 | **audit_logs** | ~50000+ | Immutable security audit trail |
-| **system_settings** | ~1 | Global application configuration |
 
-**Total Tables:** 37 (10 Core + 6 Workflow + 7 Warehouse + 10 Stock Documents + 2 Portal + 2 System)
+**Total Tables:** 37 (10 Core + 6 Workflow + 7 Warehouse + 10 Stock Documents + 3 Portal + 1 Audit)
+
+**Updated:** 2025-10-30
+- Added `stock_document_attachments` for file uploads on inventory documents
+- Added `service_request_items` for multiple products per service request
+- Added `auto_complete_service_request()` trigger for automatic completion
 
 ---
 

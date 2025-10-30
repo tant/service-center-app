@@ -34,6 +34,9 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
   const [serviceType, setServiceType] = useState<"warranty" | "paid">("warranty");
   const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
   const [additionalNotes, setAdditionalNotes] = useState("");
+  const itemList = Array.isArray(request?.items) ? (request?.items as any[]) : [];
+  const primaryItem = itemList[0] ?? null;
+  const hasMultipleItems = itemList.length > 1;
 
   const handleConvert = () => {
     // DEPRECATED: This functionality is no longer available
@@ -127,19 +130,30 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
                   <IconPackage className="h-4 w-4" />
                   Thông tin sản phẩm
                 </CardTitle>
+                {hasMultipleItems && (
+                  <CardDescription className="text-xs">
+                    Hiển thị sản phẩm đầu tiên trong {itemList.length} sản phẩm gửi đến
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div>
                   <p className="text-muted-foreground">Sản phẩm</p>
-                  <p className="font-medium">{request.product_model}</p>
+                  <p className="font-medium">
+                    {primaryItem?.product_model || "Không xác định"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Serial Number</p>
-                  <p className="font-mono text-xs font-medium">{request.serial_number}</p>
+                  <p className="font-mono text-xs font-medium">
+                    {primaryItem?.serial_number || "Không có"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Mô tả vấn đề</p>
-                  <p className="text-xs whitespace-pre-wrap">{request.issue_description}</p>
+                  <p className="text-xs whitespace-pre-wrap">
+                    {primaryItem?.issue_description || request.issue_description}
+                  </p>
                 </div>
               </CardContent>
             </Card>

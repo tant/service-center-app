@@ -110,6 +110,7 @@ export default function ServiceRequestDetailPage() {
 
   const status = request.status as keyof typeof STATUS_MAP;
   const statusConfig = STATUS_MAP[status];
+  const items = Array.isArray(request.items) ? request.items : [];
 
   return (
     <>
@@ -167,22 +168,62 @@ export default function ServiceRequestDetailPage() {
                   Thông tin sản phẩm
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Sản phẩm</p>
-                  <p className="font-medium">{request.product_model}</p>
-                </div>
-                {request.product_brand && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Thương hiệu</p>
-                    <p className="font-medium">{request.product_brand}</p>
-                  </div>
-                )}
-                {request.serial_number && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Serial Number</p>
-                    <p className="font-mono text-sm font-medium">{request.serial_number}</p>
-                  </div>
+              <CardContent className="space-y-3">
+                {items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Không có thông tin sản phẩm cho yêu cầu này.
+                  </p>
+                ) : (
+                  items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="rounded-md border p-3 space-y-2 bg-muted/30"
+                    >
+                      {items.length > 1 && (
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Sản phẩm {index + 1}
+                        </p>
+                      )}
+                      <div>
+                        <p className="text-xs text-muted-foreground">Model</p>
+                        <p className="font-medium">{item.product_model || "Không xác định"}</p>
+                      </div>
+                      {item.product_brand && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Thương hiệu</p>
+                          <p className="font-medium">{item.product_brand}</p>
+                        </div>
+                      )}
+                      {item.serial_number && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Serial Number</p>
+                          <p className="font-mono text-xs font-medium">{item.serial_number}</p>
+                        </div>
+                      )}
+                      {item.issue_description && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {item.issue_description}
+                          </p>
+                        </div>
+                      )}
+                      {item.purchase_date && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Ngày mua</p>
+                          <p className="text-sm">{item.purchase_date}</p>
+                        </div>
+                      )}
+                      {item.ticket && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
+                          <p className="text-sm font-mono">
+                            {item.ticket.ticket_number} · {item.ticket.status}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>

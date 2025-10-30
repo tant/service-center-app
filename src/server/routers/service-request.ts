@@ -651,7 +651,16 @@ export const serviceRequestRouter = router({
         .select(
           `
           *,
-          linked_ticket:service_tickets(id, ticket_number, status)
+          linked_ticket:service_tickets(id, ticket_number, status),
+          items:service_request_items(
+            id,
+            product_brand,
+            product_model,
+            serial_number,
+            purchase_date,
+            issue_description,
+            ticket:service_tickets(id, ticket_number, status)
+          )
         `
         )
         .eq("id", input.request_id)
@@ -663,8 +672,72 @@ export const serviceRequestRouter = router({
           message: "Service request not found",
         });
       }
+      const { items: rawItems, linked_ticket: rawLinkedTicket, ...rest } = data as {
+        items?: Array<{
+          id: string;
+          product_brand: string | null;
+          product_model: string | null;
+          serial_number: string | null;
+          purchase_date: string | null;
+          issue_description: string | null;
+          ticket?:
+            | {
+                id: string;
+                ticket_number: string;
+                status: string;
+              }
+            | Array<{
+                id: string;
+                ticket_number: string;
+                status: string;
+              }>;
+        }>;
+        linked_ticket?:
+          | {
+              id: string;
+              ticket_number: string;
+              status: string;
+            }
+          | Array<{
+              id: string;
+              ticket_number: string;
+              status: string;
+            }>;
+        [key: string]: unknown;
+      };
 
-      return data;
+      const linkedTicket = Array.isArray(rawLinkedTicket)
+        ? rawLinkedTicket[0]
+        : rawLinkedTicket ?? null;
+
+      const items =
+        rawItems?.map((item) => {
+          const ticket = Array.isArray(item.ticket)
+            ? item.ticket[0]
+            : item.ticket ?? null;
+
+          return {
+            id: item.id,
+            product_brand: item.product_brand,
+            product_model: item.product_model,
+            serial_number: item.serial_number,
+            purchase_date: item.purchase_date,
+            issue_description: item.issue_description,
+            ticket,
+          };
+        }) ?? [];
+
+      const primaryItem = items[0];
+
+      return {
+        ...rest,
+        linked_ticket: linkedTicket,
+        linked_ticket_id: linkedTicket?.id ?? null,
+        items,
+        product_brand: primaryItem?.product_brand ?? null,
+        product_model: primaryItem?.product_model ?? null,
+        serial_number: primaryItem?.serial_number ?? null,
+      };
     }),
 
   /**

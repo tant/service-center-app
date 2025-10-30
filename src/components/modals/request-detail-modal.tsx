@@ -33,6 +33,7 @@ export function RequestDetailModal({
 }: RequestDetailModalProps) {
   const { data: request, isLoading } = useRequestDetails(requestId);
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
+  const items = Array.isArray(request?.items) ? (request.items as any[]) : [];
 
   const handleMarkReceived = () => {
     if (!requestId) return;
@@ -127,19 +128,46 @@ export function RequestDetailModal({
                   Thông tin sản phẩm
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Sản phẩm</p>
-                  <p className="font-medium">{request.product_model}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Thương hiệu</p>
-                  <p className="font-medium">{request.product_brand}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Serial Number</p>
-                  <p className="font-mono text-xs font-medium">{request.serial_number}</p>
-                </div>
+              <CardContent className="space-y-3 text-sm">
+                {items.length > 0 ? (
+                  items.map((item: any, index: number) => (
+                    <div key={item.id} className="rounded border p-3 space-y-2 bg-muted/30">
+                      {items.length > 1 && (
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                          Sản phẩm {index + 1}
+                        </p>
+                      )}
+                      <div>
+                        <p className="text-muted-foreground text-xs">Model</p>
+                        <p className="font-medium">
+                          {item.product_model || "Không xác định"}
+                        </p>
+                      </div>
+                      {item.product_brand && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Thương hiệu</p>
+                          <p className="font-medium">{item.product_brand}</p>
+                        </div>
+                      )}
+                      {item.serial_number && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Serial Number</p>
+                          <p className="font-mono text-xs font-medium">{item.serial_number}</p>
+                        </div>
+                      )}
+                      {item.issue_description && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Mô tả riêng của sản phẩm</p>
+                          <p className="text-xs whitespace-pre-wrap">{item.issue_description}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">
+                    Không có thông tin sản phẩm chi tiết.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

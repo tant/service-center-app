@@ -8,7 +8,7 @@ create type "public"."priority_level" as enum ('low', 'normal', 'high', 'urgent'
 
 create type "public"."product_condition" as enum ('new', 'refurbished', 'used', 'faulty', 'for_parts');
 
-create type "public"."request_status" as enum ('submitted', 'received', 'processing', 'completed', 'cancelled');
+create type "public"."request_status" as enum ('submitted', 'pickingup', 'received', 'processing', 'completed', 'cancelled');
 
 create type "public"."service_type" as enum ('warranty', 'paid', 'replacement');
 
@@ -26,7 +26,7 @@ create type "public"."transfer_status" as enum ('draft', 'pending_approval', 'ap
 
 create type "public"."user_role" as enum ('admin', 'manager', 'technician', 'reception');
 
-create type "public"."warehouse_type" as enum ('warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts');
+create type "public"."warehouse_type" as enum ('main', 'warranty_stock', 'rma_staging', 'dead_stock', 'in_service', 'parts', 'customer_installed');
 
 create type "public"."warranty_type" as enum ('warranty', 'paid', 'goodwill');
 
@@ -152,9 +152,9 @@ alter table "public"."parts" enable row level security;
     "condition" public.product_condition not null default 'new'::public.product_condition,
     "virtual_warehouse_type" public.warehouse_type not null default 'warranty_stock'::public.warehouse_type,
     "physical_warehouse_id" uuid,
-    "warranty_start_date" date,
-    "warranty_months" integer,
-    "warranty_end_date" date,
+    "previous_virtual_warehouse_type" public.warehouse_type,
+    "manufacturer_warranty_end_date" date,
+    "user_warranty_end_date" date,
     "current_ticket_id" uuid,
     "rma_batch_id" uuid,
     "rma_reason" text,
@@ -162,6 +162,7 @@ alter table "public"."parts" enable row level security;
     "supplier_id" uuid,
     "purchase_date" date,
     "purchase_price" numeric(10,2),
+    "last_known_customer_id" uuid,
     "notes" text,
     "created_at" timestamp with time zone not null default now(),
     "updated_at" timestamp with time zone not null default now()
@@ -178,6 +179,7 @@ alter table "public"."physical_products" enable row level security;
     "location" text,
     "description" text,
     "is_active" boolean not null default true,
+    "is_system_default" boolean not null default false,
     "created_at" timestamp with time zone not null default now(),
     "updated_at" timestamp with time zone not null default now()
       );
@@ -291,9 +293,7 @@ alter table "public"."rma_batches" enable row level security;
   create table "public"."service_request_items" (
     "id" uuid not null default gen_random_uuid(),
     "request_id" uuid not null,
-    "product_brand" character varying(255) not null,
-    "product_model" character varying(255) not null,
-    "serial_number" character varying(255),
+    "serial_number" character varying(255) not null,
     "purchase_date" date,
     "issue_description" text,
     "issue_photos" jsonb default '[]'::jsonb,
@@ -310,10 +310,8 @@ alter table "public"."rma_batches" enable row level security;
     "customer_name" character varying(255) not null,
     "customer_email" character varying(255) not null,
     "customer_phone" character varying(50),
+    "customer_address" text,
     "issue_description" text not null,
-    "service_type" public.service_type not null default 'warranty'::public.service_type,
-    "delivery_method" public.delivery_method not null default 'pickup'::public.delivery_method,
-    "delivery_address" text,
     "status" public.request_status not null default 'submitted'::public.request_status,
     "reviewed_by_id" uuid,
     "reviewed_at" timestamp with time zone,
@@ -434,6 +432,22 @@ alter table "public"."service_ticket_tasks" enable row level security;
 alter table "public"."service_tickets" enable row level security;
 
 
+  create table "public"."stock_document_attachments" (
+    "id" uuid not null default gen_random_uuid(),
+    "document_type" character varying(50) not null,
+    "document_id" uuid not null,
+    "file_name" character varying(255) not null,
+    "file_path" text not null,
+    "file_size" integer,
+    "mime_type" character varying(100),
+    "uploaded_by_id" uuid not null,
+    "created_at" timestamp with time zone not null default now()
+      );
+
+
+alter table "public"."stock_document_attachments" enable row level security;
+
+
   create table "public"."stock_issue_items" (
     "id" uuid not null default gen_random_uuid(),
     "issue_id" uuid not null,
@@ -507,8 +521,6 @@ alter table "public"."stock_movements" enable row level security;
     "product_id" uuid not null,
     "declared_quantity" integer not null,
     "serial_count" integer not null default 0,
-    "warranty_start_date" date,
-    "warranty_months" integer,
     "unit_price" numeric(12,2),
     "total_price" numeric(12,2) generated always as (((declared_quantity)::numeric * COALESCE(unit_price, (0)::numeric))) stored,
     "notes" text,
@@ -523,8 +535,8 @@ alter table "public"."stock_movements" enable row level security;
     "receipt_item_id" uuid not null,
     "serial_number" character varying(255) not null,
     "physical_product_id" uuid,
-    "warranty_start_date" date,
-    "warranty_months" integer,
+    "manufacturer_warranty_end_date" date,
+    "user_warranty_end_date" date,
     "created_at" timestamp with time zone not null default now()
       );
 
@@ -590,6 +602,7 @@ alter table "public"."stock_movements" enable row level security;
     "received_by_id" uuid,
     "generated_issue_id" uuid,
     "generated_receipt_id" uuid,
+    "customer_id" uuid,
     "notes" text,
     "rejection_reason" text,
     "created_at" timestamp with time zone not null default now(),
@@ -678,13 +691,12 @@ alter table "public"."ticket_template_changes" enable row level security;
   create table "public"."virtual_warehouses" (
     "id" uuid not null default gen_random_uuid(),
     "warehouse_type" public.warehouse_type not null,
+    "name" character varying(255) not null,
     "description" text,
-    "color_code" character varying(7),
     "is_active" boolean not null default true,
     "created_at" timestamp with time zone not null default now(),
     "updated_at" timestamp with time zone not null default now(),
-    "physical_warehouse_id" uuid not null,
-    "name" character varying(255)
+    "physical_warehouse_id" uuid not null
       );
 
 
@@ -730,6 +742,8 @@ CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id) W
 
 CREATE INDEX idx_audit_logs_user_role ON public.audit_logs USING btree (user_role);
 
+CREATE INDEX idx_physical_products_last_customer ON public.physical_products USING btree (last_known_customer_id) WHERE (last_known_customer_id IS NOT NULL);
+
 CREATE INDEX idx_product_warehouse_stock_product ON public.product_warehouse_stock USING btree (product_id);
 
 CREATE INDEX idx_product_warehouse_stock_virtual_warehouse ON public.product_warehouse_stock USING btree (virtual_warehouse_id);
@@ -745,6 +759,10 @@ CREATE INDEX idx_service_tickets_delivery_method ON public.service_tickets USING
 CREATE INDEX idx_service_tickets_request ON public.service_tickets USING btree (request_id) WHERE (request_id IS NOT NULL);
 
 CREATE INDEX idx_service_tickets_template ON public.service_tickets USING btree (template_id) WHERE (template_id IS NOT NULL);
+
+CREATE INDEX idx_stock_document_attachments_document ON public.stock_document_attachments USING btree (document_type, document_id);
+
+CREATE INDEX idx_stock_document_attachments_uploader ON public.stock_document_attachments USING btree (uploaded_by_id);
 
 CREATE INDEX idx_stock_issue_items_issue ON public.stock_issue_items USING btree (issue_id);
 
@@ -788,6 +806,8 @@ CREATE INDEX idx_stock_transfer_items_transfer ON public.stock_transfer_items US
 
 CREATE INDEX idx_stock_transfer_serials_item ON public.stock_transfer_serials USING btree (transfer_item_id);
 
+CREATE INDEX idx_stock_transfers_customer ON public.stock_transfers USING btree (customer_id) WHERE (customer_id IS NOT NULL);
+
 CREATE INDEX idx_stock_transfers_from ON public.stock_transfers USING btree (from_virtual_warehouse_id);
 
 CREATE INDEX idx_stock_transfers_generated_issue ON public.stock_transfers USING btree (generated_issue_id);
@@ -821,6 +841,8 @@ CREATE UNIQUE INDEX physical_products_serial_unique ON public.physical_products 
 CREATE UNIQUE INDEX physical_warehouses_code_key ON public.physical_warehouses USING btree (code);
 
 CREATE UNIQUE INDEX physical_warehouses_pkey ON public.physical_warehouses USING btree (id);
+
+CREATE UNIQUE INDEX physical_warehouses_system_default_unique ON public.physical_warehouses USING btree (is_system_default) WHERE (is_system_default = true);
 
 CREATE INDEX product_parts_part_id_idx ON public.product_parts USING btree (part_id);
 
@@ -922,6 +944,8 @@ CREATE INDEX service_tickets_ticket_number_idx ON public.service_tickets USING b
 
 CREATE UNIQUE INDEX service_tickets_ticket_number_key ON public.service_tickets USING btree (ticket_number);
 
+CREATE UNIQUE INDEX stock_document_attachments_pkey ON public.stock_document_attachments USING btree (id);
+
 CREATE UNIQUE INDEX stock_issue_items_pkey ON public.stock_issue_items USING btree (id);
 
 CREATE UNIQUE INDEX stock_issue_serials_pkey ON public.stock_issue_serials USING btree (id);
@@ -968,6 +992,8 @@ CREATE UNIQUE INDEX transfer_serials_unique ON public.stock_transfer_serials USI
 
 CREATE UNIQUE INDEX virtual_warehouses_pkey ON public.virtual_warehouses USING btree (id);
 
+CREATE UNIQUE INDEX virtual_warehouses_warehouse_type_unique ON public.virtual_warehouses USING btree (warehouse_type);
+
 alter table "public"."audit_logs" add constraint "audit_logs_pkey" PRIMARY KEY using index "audit_logs_pkey";
 
 alter table "public"."brands" add constraint "brands_pkey" PRIMARY KEY using index "brands_pkey";
@@ -1007,6 +1033,8 @@ alter table "public"."service_ticket_parts" add constraint "service_ticket_parts
 alter table "public"."service_ticket_tasks" add constraint "service_ticket_tasks_pkey" PRIMARY KEY using index "service_ticket_tasks_pkey";
 
 alter table "public"."service_tickets" add constraint "service_tickets_pkey" PRIMARY KEY using index "service_tickets_pkey";
+
+alter table "public"."stock_document_attachments" add constraint "stock_document_attachments_pkey" PRIMARY KEY using index "stock_document_attachments_pkey";
 
 alter table "public"."stock_issue_items" add constraint "stock_issue_items_pkey" PRIMARY KEY using index "stock_issue_items_pkey";
 
@@ -1097,6 +1125,10 @@ alter table "public"."parts" validate constraint "parts_updated_by_fkey";
 alter table "public"."physical_products" add constraint "physical_products_current_ticket_id_fkey" FOREIGN KEY (current_ticket_id) REFERENCES public.service_tickets(id) ON DELETE SET NULL not valid;
 
 alter table "public"."physical_products" validate constraint "physical_products_current_ticket_id_fkey";
+
+alter table "public"."physical_products" add constraint "physical_products_last_known_customer_id_fkey" FOREIGN KEY (last_known_customer_id) REFERENCES public.customers(id) ON DELETE SET NULL not valid;
+
+alter table "public"."physical_products" validate constraint "physical_products_last_known_customer_id_fkey";
 
 alter table "public"."physical_products" add constraint "physical_products_physical_warehouse_id_fkey" FOREIGN KEY (physical_warehouse_id) REFERENCES public.physical_warehouses(id) ON DELETE SET NULL not valid;
 
@@ -1204,17 +1236,13 @@ alter table "public"."service_request_items" add constraint "service_request_ite
 
 alter table "public"."service_request_items" validate constraint "service_request_items_request_id_fkey";
 
-alter table "public"."service_request_items" add constraint "service_request_items_serial_format" CHECK (((serial_number IS NULL) OR (length((serial_number)::text) >= 5))) not valid;
+alter table "public"."service_request_items" add constraint "service_request_items_serial_format" CHECK ((length((serial_number)::text) >= 5)) not valid;
 
 alter table "public"."service_request_items" validate constraint "service_request_items_serial_format";
 
 alter table "public"."service_request_items" add constraint "service_request_items_ticket_id_fkey" FOREIGN KEY (ticket_id) REFERENCES public.service_tickets(id) ON DELETE SET NULL not valid;
 
 alter table "public"."service_request_items" validate constraint "service_request_items_ticket_id_fkey";
-
-alter table "public"."service_requests" add constraint "service_requests_delivery_requires_address" CHECK (((delivery_method <> 'delivery'::public.delivery_method) OR (delivery_address IS NOT NULL))) not valid;
-
-alter table "public"."service_requests" validate constraint "service_requests_delivery_requires_address";
 
 alter table "public"."service_requests" add constraint "service_requests_rejected_requires_reason" CHECK (((status <> 'cancelled'::public.request_status) OR (rejection_reason IS NOT NULL))) not valid;
 
@@ -1355,6 +1383,14 @@ alter table "public"."service_tickets" add constraint "service_tickets_ticket_nu
 alter table "public"."service_tickets" add constraint "service_tickets_updated_by_fkey" FOREIGN KEY (updated_by) REFERENCES public.profiles(user_id) not valid;
 
 alter table "public"."service_tickets" validate constraint "service_tickets_updated_by_fkey";
+
+alter table "public"."stock_document_attachments" add constraint "stock_document_attachments_type_check" CHECK (((document_type)::text = ANY ((ARRAY['receipt'::character varying, 'issue'::character varying, 'transfer'::character varying])::text[]))) not valid;
+
+alter table "public"."stock_document_attachments" validate constraint "stock_document_attachments_type_check";
+
+alter table "public"."stock_document_attachments" add constraint "stock_document_attachments_uploaded_by_id_fkey" FOREIGN KEY (uploaded_by_id) REFERENCES public.profiles(id) ON DELETE RESTRICT not valid;
+
+alter table "public"."stock_document_attachments" validate constraint "stock_document_attachments_uploaded_by_id_fkey";
 
 alter table "public"."stock_issue_items" add constraint "issue_items_quantity_not_zero" CHECK ((quantity <> 0)) not valid;
 
@@ -1522,6 +1558,10 @@ alter table "public"."stock_transfers" add constraint "stock_transfers_created_b
 
 alter table "public"."stock_transfers" validate constraint "stock_transfers_created_by_id_fkey";
 
+alter table "public"."stock_transfers" add constraint "stock_transfers_customer_id_fkey" FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE SET NULL not valid;
+
+alter table "public"."stock_transfers" validate constraint "stock_transfers_customer_id_fkey";
+
 alter table "public"."stock_transfers" add constraint "stock_transfers_from_virtual_warehouse_id_fkey" FOREIGN KEY (from_virtual_warehouse_id) REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT not valid;
 
 alter table "public"."stock_transfers" validate constraint "stock_transfers_from_virtual_warehouse_id_fkey";
@@ -1610,7 +1650,44 @@ alter table "public"."virtual_warehouses" add constraint "virtual_warehouses_phy
 
 alter table "public"."virtual_warehouses" validate constraint "virtual_warehouses_physical_warehouse_id_fkey";
 
+alter table "public"."virtual_warehouses" add constraint "virtual_warehouses_warehouse_type_unique" UNIQUE using index "virtual_warehouses_warehouse_type_unique";
+
 set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.auto_complete_service_request()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_request_id UUID;
+  v_all_completed BOOLEAN;
+BEGIN
+  -- Get the request_id from the ticket
+  v_request_id := NEW.request_id;
+
+  -- If ticket is not linked to a request, skip
+  IF v_request_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- Check if all tickets for this request are completed or cancelled
+  SELECT bool_and(st.status IN ('completed', 'cancelled'))
+  INTO v_all_completed
+  FROM public.service_request_items sri
+  LEFT JOIN public.service_tickets st ON st.id = sri.ticket_id
+  WHERE sri.request_id = v_request_id;
+
+  -- If all tickets are done, mark request as completed
+  IF v_all_completed THEN
+    UPDATE public.service_requests
+    SET status = 'completed'
+    WHERE id = v_request_id AND status != 'completed';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$
+;
 
 CREATE OR REPLACE FUNCTION public.auto_complete_transfer_documents()
  RETURNS trigger
@@ -1647,7 +1724,7 @@ DECLARE
   v_item RECORD;
 BEGIN
   -- Only trigger when status changes to 'received'
-  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status = 'submitted') THEN
+  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup')) THEN
 
     -- Find or create customer
     SELECT id INTO v_customer_id
@@ -1679,27 +1756,14 @@ BEGIN
       -- Find product_id from serial_number
       v_product_id := NULL;
 
-      IF v_item.serial_number IS NOT NULL THEN
-        SELECT product_id INTO v_product_id
-        FROM public.physical_products
-        WHERE serial_number = v_item.serial_number
-        LIMIT 1;
-      END IF;
-
-      -- If no physical product found, try to find by brand/model
-      IF v_product_id IS NULL THEN
-        SELECT p.id INTO v_product_id
-        FROM public.products p
-        JOIN public.brands b ON p.brand_id = b.id
-        WHERE b.name ILIKE v_item.product_brand
-          AND p.name ILIKE v_item.product_model
-        LIMIT 1;
-      END IF;
+      SELECT product_id INTO v_product_id
+      FROM public.physical_products
+      WHERE serial_number = v_item.serial_number
+      LIMIT 1;
 
       -- Skip if product not found
       IF v_product_id IS NULL THEN
-        RAISE NOTICE 'Product not found for item %: brand=%, model=%',
-          v_item.id, v_item.product_brand, v_item.product_model;
+        RAISE NOTICE 'Product not found for serial number: %', v_item.serial_number;
         CONTINUE;
       END IF;
 
@@ -1709,9 +1773,6 @@ BEGIN
         product_id,
         issue_description,
         status,
-        service_type,
-        delivery_method,
-        delivery_address,
         request_id,
         created_by_id
       ) VALUES (
@@ -1719,9 +1780,6 @@ BEGIN
         v_product_id,
         COALESCE(v_item.issue_description, NEW.issue_description),
         'pending',
-        NEW.service_type,
-        NEW.delivery_method,
-        NEW.delivery_address,
         NEW.id,
         NEW.reviewed_by_id
       )
@@ -1739,11 +1797,9 @@ BEGIN
         created_by_id
       ) VALUES (
         v_ticket_id,
-        format('Auto-created from service request %s - Product: %s %s (SN: %s)',
+        format('Auto-created from service request %s - Serial: %s',
           NEW.tracking_token,
-          v_item.product_brand,
-          v_item.product_model,
-          COALESCE(v_item.serial_number, 'N/A')
+          v_item.serial_number
         ),
         NEW.reviewed_by_id
       );
@@ -1831,21 +1887,6 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.calculate_physical_product_warranty_end_date()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  IF NEW.warranty_start_date IS NOT NULL AND NEW.warranty_months IS NOT NULL THEN
-    NEW.warranty_end_date := NEW.warranty_start_date + (NEW.warranty_months || ' months')::INTERVAL;
-  ELSE
-    NEW.warranty_end_date := NULL;
-  END IF;
-  RETURN NEW;
-END;
-$function$
-;
-
 CREATE OR REPLACE FUNCTION public.calculate_warranty_end_date(p_start_date date, p_warranty_months integer)
  RETURNS date
  LANGUAGE plpgsql
@@ -1873,13 +1914,59 @@ BEGIN
     physical_warehouse_id,
     is_active
   ) VALUES (
-    'warranty_stock', -- Default type for main storage
+    'main', -- Default type for main storage (updated 2025-10-29 - Gap 1 fix)
     NEW.name || ' - Kho Chính',
     'Kho chính của ' || NEW.name,
     NEW.id,
     NEW.is_active
   );
-  
+
+  RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.create_physical_product_from_receipt_serial()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_product_id UUID;
+  v_virtual_warehouse_id UUID;
+  v_physical_product_id UUID;
+BEGIN
+  -- Get product_id and virtual_warehouse_id from receipt
+  SELECT
+    sri.product_id,
+    sr.virtual_warehouse_id
+  INTO
+    v_product_id,
+    v_virtual_warehouse_id
+  FROM stock_receipt_items sri
+  JOIN stock_receipts sr ON sri.receipt_id = sr.id
+  WHERE sri.id = NEW.receipt_item_id;
+
+  -- Create physical product
+  INSERT INTO public.physical_products (
+    product_id,
+    serial_number,
+    virtual_warehouse_id,
+    condition,
+    manufacturer_warranty_end_date,
+    user_warranty_end_date
+  ) VALUES (
+    v_product_id,
+    NEW.serial_number,
+    v_virtual_warehouse_id,
+    'new',
+    NEW.manufacturer_warranty_end_date,
+    NEW.user_warranty_end_date
+  )
+  RETURNING id INTO v_physical_product_id;
+
+  -- Update serial record with physical_product_id
+  NEW.physical_product_id := v_physical_product_id;
+
   RETURN NEW;
 END;
 $function$
@@ -1908,6 +1995,20 @@ BEGIN
   END IF;
 
   RETURN TRUE;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.delete_physical_product_on_issue()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  -- Delete the physical product (it's being issued out)
+  DELETE FROM public.physical_products
+  WHERE id = NEW.physical_product_id;
+
+  RETURN NEW;
 END;
 $function$
 ;
@@ -2397,6 +2498,38 @@ END;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.update_physical_product_warehouse_on_transfer()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_from_warehouse_id UUID;
+  v_to_warehouse_id UUID;
+BEGIN
+  -- Get source and destination warehouse IDs
+  SELECT
+    st.from_virtual_warehouse_id,
+    st.to_virtual_warehouse_id
+  INTO
+    v_from_warehouse_id,
+    v_to_warehouse_id
+  FROM stock_transfer_items sti
+  JOIN stock_transfers st ON sti.transfer_id = st.id
+  WHERE sti.id = NEW.transfer_item_id;
+
+  -- Update physical product location
+  UPDATE public.physical_products
+  SET
+    previous_virtual_warehouse_id = v_from_warehouse_id,
+    virtual_warehouse_id = v_to_warehouse_id,
+    updated_at = NOW()
+  WHERE id = NEW.physical_product_id;
+
+  RETURN NEW;
+END;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.update_service_ticket_parts_total()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -2622,9 +2755,9 @@ create or replace view "public"."v_warehouse_stock_levels" as  SELECT p.id AS pr
     pp.virtual_warehouse_type AS warehouse_type,
     pp.condition,
     count(*) AS quantity,
-    count(*) FILTER (WHERE ((pp.warranty_end_date IS NOT NULL) AND (pp.warranty_end_date > (CURRENT_DATE + '30 days'::interval)))) AS active_warranty_count,
-    count(*) FILTER (WHERE ((pp.warranty_end_date IS NOT NULL) AND (pp.warranty_end_date > CURRENT_DATE) AND (pp.warranty_end_date <= (CURRENT_DATE + '30 days'::interval)))) AS expiring_soon_count,
-    count(*) FILTER (WHERE ((pp.warranty_end_date IS NOT NULL) AND (pp.warranty_end_date <= CURRENT_DATE))) AS expired_count,
+    count(*) FILTER (WHERE (((pp.user_warranty_end_date IS NOT NULL) AND (pp.user_warranty_end_date > (CURRENT_DATE + '30 days'::interval))) OR ((pp.user_warranty_end_date IS NULL) AND (pp.manufacturer_warranty_end_date IS NOT NULL) AND (pp.manufacturer_warranty_end_date > (CURRENT_DATE + '30 days'::interval))))) AS active_warranty_count,
+    count(*) FILTER (WHERE (((pp.user_warranty_end_date IS NOT NULL) AND (pp.user_warranty_end_date > CURRENT_DATE) AND (pp.user_warranty_end_date <= (CURRENT_DATE + '30 days'::interval))) OR ((pp.user_warranty_end_date IS NULL) AND (pp.manufacturer_warranty_end_date IS NOT NULL) AND (pp.manufacturer_warranty_end_date > CURRENT_DATE) AND (pp.manufacturer_warranty_end_date <= (CURRENT_DATE + '30 days'::interval))))) AS expiring_soon_count,
+    count(*) FILTER (WHERE (((pp.user_warranty_end_date IS NOT NULL) AND (pp.user_warranty_end_date <= CURRENT_DATE)) OR ((pp.user_warranty_end_date IS NULL) AND (pp.manufacturer_warranty_end_date IS NOT NULL) AND (pp.manufacturer_warranty_end_date <= CURRENT_DATE)))) AS expired_count,
     sum(pp.purchase_price) AS total_purchase_value,
     avg(pp.purchase_price) AS avg_purchase_price,
     pst.minimum_quantity,
@@ -2653,16 +2786,25 @@ create or replace view "public"."v_warranty_expiring_soon" as  SELECT pp.id AS p
     p.name AS product_name,
     p.sku AS product_sku,
     b.name AS brand_name,
-    pp.warranty_start_date,
-    pp.warranty_months,
-    pp.warranty_end_date,
+    pp.manufacturer_warranty_end_date,
+    pp.user_warranty_end_date,
         CASE
-            WHEN (pp.warranty_end_date IS NULL) THEN 'unknown'::text
-            WHEN (pp.warranty_end_date <= CURRENT_DATE) THEN 'expired'::text
-            WHEN (pp.warranty_end_date <= (CURRENT_DATE + '30 days'::interval)) THEN 'expiring_soon'::text
+            WHEN (pp.user_warranty_end_date IS NOT NULL) THEN 'user'::text
+            WHEN (pp.manufacturer_warranty_end_date IS NOT NULL) THEN 'manufacturer'::text
+            ELSE 'none'::text
+        END AS warranty_type,
+        CASE
+            WHEN (pp.user_warranty_end_date IS NOT NULL) THEN (pp.user_warranty_end_date - CURRENT_DATE)
+            WHEN (pp.manufacturer_warranty_end_date IS NOT NULL) THEN (pp.manufacturer_warranty_end_date - CURRENT_DATE)
+            ELSE NULL::integer
+        END AS days_remaining,
+        CASE
+            WHEN ((pp.user_warranty_end_date IS NOT NULL) AND (pp.user_warranty_end_date <= CURRENT_DATE)) THEN 'expired'::text
+            WHEN ((pp.manufacturer_warranty_end_date IS NOT NULL) AND (pp.manufacturer_warranty_end_date <= CURRENT_DATE)) THEN 'expired'::text
+            WHEN ((pp.user_warranty_end_date IS NOT NULL) AND (pp.user_warranty_end_date <= (CURRENT_DATE + '30 days'::interval))) THEN 'expiring_soon'::text
+            WHEN ((pp.manufacturer_warranty_end_date IS NOT NULL) AND (pp.manufacturer_warranty_end_date <= (CURRENT_DATE + '30 days'::interval))) THEN 'expiring_soon'::text
             ELSE 'active'::text
         END AS warranty_status,
-    (pp.warranty_end_date - CURRENT_DATE) AS days_remaining,
     pw.name AS physical_warehouse_name,
     pw.code AS physical_warehouse_code,
     st.id AS current_ticket_id,
@@ -2675,8 +2817,12 @@ create or replace view "public"."v_warranty_expiring_soon" as  SELECT pp.id AS p
      JOIN public.brands b ON ((p.brand_id = b.id)))
      LEFT JOIN public.physical_warehouses pw ON ((pp.physical_warehouse_id = pw.id)))
      LEFT JOIN public.service_tickets st ON ((pp.current_ticket_id = st.id)))
-  WHERE ((pp.warranty_end_date IS NOT NULL) AND (pp.warranty_end_date > CURRENT_DATE) AND (pp.warranty_end_date <= (CURRENT_DATE + '30 days'::interval)))
-  ORDER BY pp.warranty_end_date;
+  WHERE (((pp.user_warranty_end_date IS NOT NULL) AND ((pp.user_warranty_end_date >= CURRENT_DATE) AND (pp.user_warranty_end_date <= (CURRENT_DATE + '30 days'::interval)))) OR ((pp.user_warranty_end_date IS NULL) AND (pp.manufacturer_warranty_end_date IS NOT NULL) AND ((pp.manufacturer_warranty_end_date >= CURRENT_DATE) AND (pp.manufacturer_warranty_end_date <= (CURRENT_DATE + '30 days'::interval)))))
+  ORDER BY
+        CASE
+            WHEN (pp.user_warranty_end_date IS NOT NULL) THEN pp.user_warranty_end_date
+            ELSE pp.manufacturer_warranty_end_date
+        END;
 
 
 grant delete on table "public"."audit_logs" to "anon";
@@ -3518,6 +3664,48 @@ grant trigger on table "public"."service_tickets" to "service_role";
 grant truncate on table "public"."service_tickets" to "service_role";
 
 grant update on table "public"."service_tickets" to "service_role";
+
+grant delete on table "public"."stock_document_attachments" to "anon";
+
+grant insert on table "public"."stock_document_attachments" to "anon";
+
+grant references on table "public"."stock_document_attachments" to "anon";
+
+grant select on table "public"."stock_document_attachments" to "anon";
+
+grant trigger on table "public"."stock_document_attachments" to "anon";
+
+grant truncate on table "public"."stock_document_attachments" to "anon";
+
+grant update on table "public"."stock_document_attachments" to "anon";
+
+grant delete on table "public"."stock_document_attachments" to "authenticated";
+
+grant insert on table "public"."stock_document_attachments" to "authenticated";
+
+grant references on table "public"."stock_document_attachments" to "authenticated";
+
+grant select on table "public"."stock_document_attachments" to "authenticated";
+
+grant trigger on table "public"."stock_document_attachments" to "authenticated";
+
+grant truncate on table "public"."stock_document_attachments" to "authenticated";
+
+grant update on table "public"."stock_document_attachments" to "authenticated";
+
+grant delete on table "public"."stock_document_attachments" to "service_role";
+
+grant insert on table "public"."stock_document_attachments" to "service_role";
+
+grant references on table "public"."stock_document_attachments" to "service_role";
+
+grant select on table "public"."stock_document_attachments" to "service_role";
+
+grant trigger on table "public"."stock_document_attachments" to "service_role";
+
+grant truncate on table "public"."stock_document_attachments" to "service_role";
+
+grant update on table "public"."stock_document_attachments" to "service_role";
 
 grant delete on table "public"."stock_issue_items" to "anon";
 
@@ -4832,6 +5020,41 @@ using ((public.is_admin() OR (public.has_role('manager'::text) AND (status <> 'c
 
 
 
+  create policy "stock_document_attachments_admin_all"
+  on "public"."stock_document_attachments"
+  as permissive
+  for all
+  to authenticated
+using ((EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+
+
+
+  create policy "stock_document_attachments_technician_insert"
+  on "public"."stock_document_attachments"
+  as permissive
+  for insert
+  to authenticated
+with check (((uploaded_by_id = ( SELECT profiles.id
+   FROM public.profiles
+  WHERE (profiles.user_id = auth.uid()))) AND (EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))));
+
+
+
+  create policy "stock_document_attachments_technician_view"
+  on "public"."stock_document_attachments"
+  as permissive
+  for select
+  to authenticated
+using ((EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = 'technician'::public.user_role)))));
+
+
+
   create policy "stock_movements_authenticated_read"
   on "public"."stock_movements"
   as permissive
@@ -4999,8 +5222,6 @@ CREATE TRIGGER parts_updated_at_trigger BEFORE UPDATE ON public.parts FOR EACH R
 
 CREATE TRIGGER trigger_physical_products_updated_at BEFORE UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER trigger_physical_products_warranty_calculation BEFORE INSERT OR UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.calculate_physical_product_warranty_end_date();
-
 CREATE TRIGGER trigger_create_default_virtual_warehouse AFTER INSERT ON public.physical_warehouses FOR EACH ROW EXECUTE FUNCTION public.create_default_virtual_warehouse();
 
 CREATE TRIGGER trigger_physical_warehouses_updated_at BEFORE UPDATE ON public.physical_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -5043,6 +5264,10 @@ CREATE TRIGGER service_tickets_set_number_trigger BEFORE INSERT ON public.servic
 
 CREATE TRIGGER service_tickets_updated_at_trigger BEFORE UPDATE ON public.service_tickets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER trigger_auto_complete_request AFTER UPDATE OF status ON public.service_tickets FOR EACH ROW WHEN ((new.status = ANY (ARRAY['completed'::public.ticket_status, 'cancelled'::public.ticket_status]))) EXECUTE FUNCTION public.auto_complete_service_request();
+
+CREATE TRIGGER trigger_delete_physical_product_on_issue AFTER INSERT ON public.stock_issue_serials FOR EACH ROW EXECUTE FUNCTION public.delete_physical_product_on_issue();
+
 CREATE TRIGGER trigger_generate_issue_number BEFORE INSERT ON public.stock_issues FOR EACH ROW WHEN ((new.issue_number IS NULL)) EXECUTE FUNCTION public.generate_issue_number();
 
 CREATE TRIGGER trigger_stock_issues_updated_at BEFORE UPDATE ON public.stock_issues FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -5051,11 +5276,15 @@ CREATE TRIGGER trigger_update_stock_on_issue_approval AFTER UPDATE ON public.sto
 
 CREATE TRIGGER trigger_stock_receipt_items_updated_at BEFORE UPDATE ON public.stock_receipt_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER trigger_create_physical_product_from_receipt_serial BEFORE INSERT ON public.stock_receipt_serials FOR EACH ROW EXECUTE FUNCTION public.create_physical_product_from_receipt_serial();
+
 CREATE TRIGGER trigger_generate_receipt_number BEFORE INSERT ON public.stock_receipts FOR EACH ROW WHEN ((new.receipt_number IS NULL)) EXECUTE FUNCTION public.generate_receipt_number();
 
 CREATE TRIGGER trigger_stock_receipts_updated_at BEFORE UPDATE ON public.stock_receipts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 CREATE TRIGGER trigger_update_stock_on_receipt_approval AFTER UPDATE ON public.stock_receipts FOR EACH ROW WHEN (((new.status = 'approved'::public.stock_document_status) AND (old.status <> 'approved'::public.stock_document_status))) EXECUTE FUNCTION public.update_stock_on_receipt_approval();
+
+CREATE TRIGGER trigger_update_physical_product_warehouse_on_transfer AFTER INSERT ON public.stock_transfer_serials FOR EACH ROW EXECUTE FUNCTION public.update_physical_product_warehouse_on_transfer();
 
 CREATE TRIGGER trigger_auto_complete_transfer_documents AFTER UPDATE ON public.stock_transfers FOR EACH ROW WHEN (((new.status = 'completed'::public.transfer_status) AND (old.status <> 'completed'::public.transfer_status))) EXECUTE FUNCTION public.auto_complete_transfer_documents();
 

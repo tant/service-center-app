@@ -62,6 +62,7 @@ export interface WizardDelivery {
 
 export interface ServiceRequestWizardState {
   activeStep: WizardStep;
+  maxVisitedStep: WizardStep;
   products: WizardProduct[];
   requestIssueOverview: string;
   customer: WizardCustomer;
@@ -137,6 +138,7 @@ const createInitialDelivery = (): WizardDelivery => ({
 
 const createInitialState = (): ServiceRequestWizardState => ({
   activeStep: 0,
+  maxVisitedStep: 0,
   products: [],
   requestIssueOverview: "",
   customer: createInitialCustomer(),
@@ -151,7 +153,11 @@ const WizardDispatchContext = createContext<React.Dispatch<WizardAction> | undef
 function wizardReducer(state: ServiceRequestWizardState, action: WizardAction): ServiceRequestWizardState {
   switch (action.type) {
     case "SET_ACTIVE_STEP":
-      return { ...state, activeStep: action.step };
+      return {
+        ...state,
+        activeStep: action.step,
+        maxVisitedStep: (action.step > state.maxVisitedStep ? action.step : state.maxVisitedStep) as WizardStep,
+      };
     case "RESET":
       return createInitialState();
     case "SET_CONSENT":

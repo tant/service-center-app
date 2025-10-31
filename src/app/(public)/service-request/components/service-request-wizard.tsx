@@ -43,6 +43,13 @@ function WizardNavigator() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
 
+  const handleStepClick = (stepId: WizardStep) => {
+    if (stepId > state.maxVisitedStep) {
+      return;
+    }
+    setActiveStep(dispatch, stepId);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -50,8 +57,9 @@ function WizardNavigator() {
           <Fragment key={step.id}>
             <button
               type="button"
-              className="flex flex-col items-start gap-1 rounded-md border border-transparent bg-muted/50 p-3 text-left transition hover:border-muted-foreground/20"
-              onClick={() => setActiveStep(dispatch, step.id)}
+              disabled={step.id > state.maxVisitedStep}
+              className="flex flex-col items-start gap-1 rounded-md border border-transparent bg-muted/50 p-3 text-left transition hover:border-muted-foreground/20 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => handleStepClick(step.id)}
             >
               <div className="flex items-center gap-2">
                 <Badge variant={state.activeStep === step.id ? "default" : "outline"}>Bước {index + 1}</Badge>

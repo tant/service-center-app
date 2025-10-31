@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -130,10 +129,6 @@ export function StepReview() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
 
-  const handleBackToCustomer = () => {
-    setActiveStep(dispatch, 2);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -201,14 +196,6 @@ export function StepReview() {
           value={state.honeypot}
           onChange={(event) => setWizardHoneypot(dispatch, event.target.value)}
         />
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={handleBackToCustomer}>
-            Quay lại bước khách hàng
-          </Button>
-          <Button type="button" disabled>
-            Gửi yêu cầu (sẽ cập nhật)
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

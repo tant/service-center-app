@@ -16,6 +16,57 @@
 -- DATABASE VIEWS (from 18_phase2_views.sql)
 -- =====================================================
 
+-- =====================================================
+-- Stock Summary View
+-- =====================================================
+-- Complete stock overview with declared vs actual tracking
+-- Used by inventory overview page tabs and filters
+CREATE OR REPLACE VIEW public.v_stock_summary AS
+SELECT
+  p.id as product_id,
+  p.name as product_name,
+  p.sku,
+  pws.virtual_warehouse_id,
+  vw.name as virtual_warehouse_name,
+  vw.warehouse_type,
+  vw.physical_warehouse_id,
+  pw.name as physical_warehouse_name,
+  pws.declared_quantity,
+  COALESCE(
+    (SELECT COUNT(*)::INTEGER
+     FROM public.physical_products pp
+     WHERE pp.product_id = p.id
+       AND pp.virtual_warehouse_id = vw.id
+    ), 0
+  ) as actual_serial_count,
+  pws.declared_quantity - COALESCE(
+    (SELECT COUNT(*)::INTEGER
+     FROM public.physical_products pp
+     WHERE pp.product_id = p.id
+       AND pp.virtual_warehouse_id = vw.id
+    ), 0
+  ) as serial_gap,
+  pws.initial_stock_entry,
+  pst.minimum_quantity,
+  pst.reorder_quantity,
+  CASE
+    WHEN pws.declared_quantity = 0 THEN 'critical'
+    WHEN pst.minimum_quantity IS NOT NULL
+         AND pws.declared_quantity <= pst.minimum_quantity THEN 'warning'
+    ELSE 'ok'
+  END as stock_status,
+  pws.created_at,
+  pws.updated_at
+FROM public.product_warehouse_stock pws
+JOIN public.products p ON p.id = pws.product_id
+JOIN public.virtual_warehouses vw ON vw.id = pws.virtual_warehouse_id
+LEFT JOIN public.physical_warehouses pw ON pw.id = vw.physical_warehouse_id
+LEFT JOIN public.product_stock_thresholds pst
+  ON pst.product_id = pws.product_id
+  AND pst.warehouse_type = vw.warehouse_type;
+
+COMMENT ON VIEW public.v_stock_summary IS 'Complete stock overview with declared vs actual tracking (REDESIGNED)';
+
 -- Warehouse Stock Levels View
 -- MOVED TO: 19_fix_views_after_physical_warehouse_link.sql
 -- (Requires physical_warehouse_id column from file 15)

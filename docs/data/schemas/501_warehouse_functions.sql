@@ -89,35 +89,28 @@ BEGIN
     p.sku AS sku,
     COALESCE(SUM(pws.declared_quantity), 0)::BIGINT AS total_declared,
     COALESCE(
-      SUM(
-        (SELECT COUNT(*)::INTEGER
-         FROM public.physical_products pp
-         WHERE pp.product_id = p.id)
-      ), 0
+      (SELECT COUNT(*)::INTEGER
+       FROM public.physical_products pp
+       WHERE pp.product_id = p.id), 0
     )::BIGINT AS total_actual,
     (
+      COALESCE(SUM(pws.declared_quantity), 0) -
       COALESCE(
-        SUM(
-          (SELECT COUNT(*)::INTEGER
-           FROM public.physical_products pp
-           WHERE pp.product_id = p.id)
-        ), 0
-      ) - COALESCE(SUM(pws.declared_quantity), 0)
+        (SELECT COUNT(*)::INTEGER
+         FROM public.physical_products pp
+         WHERE pp.product_id = p.id), 0
+      )
     )::BIGINT AS serial_gap,
     CASE
       WHEN COALESCE(
-        SUM(
-          (SELECT COUNT(*)::INTEGER
-           FROM public.physical_products pp
-           WHERE pp.product_id = p.id)
-        ), 0
-      ) < (COALESCE(SUM(pws.declared_quantity), 0) * 0.1) THEN 'critical'
+        (SELECT COUNT(*)::INTEGER
+         FROM public.physical_products pp
+         WHERE pp.product_id = p.id), 0
+      ) = 0 THEN 'critical'
       WHEN COALESCE(
-        SUM(
-          (SELECT COUNT(*)::INTEGER
-           FROM public.physical_products pp
-           WHERE pp.product_id = p.id)
-        ), 0
+        (SELECT COUNT(*)::INTEGER
+         FROM public.physical_products pp
+         WHERE pp.product_id = p.id), 0
       ) < (COALESCE(SUM(pws.declared_quantity), 0) * 0.5) THEN 'warning'
       ELSE 'ok'
     END AS stock_status

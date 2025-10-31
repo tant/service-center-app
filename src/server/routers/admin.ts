@@ -917,12 +917,34 @@ export const adminRouter = router({
         }
       }
 
-      // Step 7: Create Task Types
-      console.log("\n📝 SEED STEP 7: Creating task types...");
-      results.push("📝 Bước 7: Tạo Task Types...");
+      // Step 7: Query existing Task Types (no longer created here - already in database)
+      console.log("\n📝 SEED STEP 7: Querying existing task types...");
+      results.push("📝 Bước 7: Lấy Task Types từ database...");
 
       const taskTypeMap = new Map<string, string>(); // name -> id mapping
 
+      // Query all existing task types instead of creating them
+      const { data: existingTaskTypes, error: taskTypesError } = await supabaseAdmin
+        .from("task_types")
+        .select("id, name");
+
+      if (taskTypesError) {
+        console.error("❌ SEED: Failed to query task types:", taskTypesError);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to query task types: ${taskTypesError.message}`,
+        });
+      }
+
+      for (const taskType of existingTaskTypes || []) {
+        taskTypeMap.set(taskType.name, taskType.id);
+      }
+
+      console.log(`✅ SEED: Found ${taskTypeMap.size} existing task types`);
+      results.push(`✅ Tìm thấy ${taskTypeMap.size} task types`);
+
+      // OLD CODE - no longer creates task types
+      /*
       for (const taskType of mockData.taskTypes) {
         try {
           // Check if task type already exists
@@ -967,11 +989,14 @@ export const adminRouter = router({
           results.push(`❌ Lỗi tạo task type ${taskType.name}: ${error.message}`);
         }
       }
+      */
 
-      // Step 8: Create Task Templates
-      console.log("\n📋 SEED STEP 8: Creating task templates...");
-      results.push("📋 Bước 8: Tạo Task Templates...");
+      // Step 8: Skip Task Templates (no longer in mock-data.json - already in database)
+      console.log("\n📋 SEED STEP 8: Skipping task templates (already exist in database)...");
+      results.push("📋 Bước 8: Bỏ qua Task Templates (đã tồn tại trong database)...");
 
+      // OLD CODE - no longer creates task templates
+      /*
       for (const template of mockData.taskTemplates) {
         try {
           // Check if template already exists
@@ -1062,6 +1087,7 @@ export const adminRouter = router({
           results.push(`❌ Lỗi tạo template ${template.name}: ${error.message}`);
         }
       }
+      */
 
       console.log("\n✅ SEED: Mock data seeding completed successfully");
       results.push("✅ Hoàn tất tạo dữ liệu test!");

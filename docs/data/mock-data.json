@@ -1,11 +1,12 @@
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Mock data for SSTC Service Center - 200 physical products distributed across default warehouses",
   "created": "2025-01-28",
   "updated": "2025-10-31",
-  "changelog": "v3.0.0 - Removed physical/virtual warehouse creation (use defaults); Added 200 physical products across 5 warehouses",
+  "changelog": "v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation; Fixed warehouse names to English",
 
-  "_note_warehouses": "No longer creates warehouses - uses system default warehouses created by seed.sql",
+  "_note_warehouses": "Uses system default warehouses created by seed.sql",
+  "_note_tasks": "taskTypes and taskTemplates are NOT in this file - they already exist from previous seed runs",
 
   "staffUsers": [
     {
@@ -203,17 +204,17 @@
   "physicalProducts": {
     "_note": "200 physical products distributed across 5 default virtual warehouses",
     "_distribution": {
-      "Kho Bảo Hành": 120,
-      "Khu Vực RMA": 30,
-      "Kho Hàng Hỏng": 20,
-      "Đang Sử Dụng": 15,
-      "Hàng Đã Bán": 15
+      "Warranty Stock": 120,
+      "RMA Staging Area": 30,
+      "Dead Stock": 20,
+      "In Service": 15,
+      "Customer Installed": 15
     },
     "receipts": [
       {
         "receiptType": "normal",
         "supplier": "ZOTAC Supplier - Nhập hàng tháng 1/2025",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "toVirtualWarehouseName": "Warranty Stock",
         "receiptDate": "2025-01-05",
         "notes": "Phiếu nhập kho bảo hành - Hàng mới 100%, sẵn sàng thay thế",
         "items": [
@@ -291,7 +292,7 @@
       {
         "receiptType": "normal",
         "supplier": "RMA Return - Sản phẩm lỗi chờ trả hãng",
-        "toVirtualWarehouseName": "Khu Vực RMA",
+        "toVirtualWarehouseName": "RMA Staging Area",
         "receiptDate": "2025-01-10",
         "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi nghiêm trọng chờ gửi về ZOTAC/SSTC",
         "items": [
@@ -333,7 +334,7 @@
       {
         "receiptType": "normal",
         "supplier": "Dead Stock - Không sửa được",
-        "toVirtualWarehouseName": "Kho Hàng Hỏng",
+        "toVirtualWarehouseName": "Dead Stock",
         "receiptDate": "2025-01-12",
         "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hỏng nặng không thể RMA, chờ thanh lý",
         "items": [
@@ -378,7 +379,7 @@
       {
         "receiptType": "normal",
         "supplier": "Service Tickets - Đang xử lý",
-        "toVirtualWarehouseName": "Đang Sử Dụng",
+        "toVirtualWarehouseName": "In Service",
         "receiptDate": "2025-01-15",
         "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang trong quá trình bảo hành",
         "items": [
@@ -420,7 +421,7 @@
       {
         "receiptType": "normal",
         "supplier": "Customer Sales - Đã bán",
-        "toVirtualWarehouseName": "Hàng Đã Bán",
+        "toVirtualWarehouseName": "Customer Installed",
         "receiptDate": "2025-01-20",
         "notes": "Phiếu nhập hàng đã bán - Sản phẩm đang ở địa điểm khách hàng",
         "items": [
@@ -465,390 +466,5 @@
         ]
       }
     ]
-  },
-
-  "taskTypes": [
-    {
-      "name": "Tiếp nhận sản phẩm",
-      "description": "Nhận sản phẩm từ khách, kiểm tra ngoại quan ban đầu",
-      "category": "Reception",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra ban đầu",
-      "description": "Kiểm tra tình trạng bên ngoài, phụ kiện đi kèm",
-      "category": "Inspection",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Chụp ảnh sản phẩm nhận",
-      "description": "Chụp ảnh sản phẩm lúc nhận để tránh tranh chấp",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": false,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra bảo hành",
-      "description": "Kiểm tra serial, ngày mua, tình trạng bảo hành",
-      "category": "Verification",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chẩn đoán lỗi",
-      "description": "Xác định nguyên nhân lỗi chính xác",
-      "category": "Diagnosis",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test phần cứng",
-      "description": "Test CPU, RAM, VGA, SSD... bằng công cụ",
-      "category": "Testing",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test phần mềm",
-      "description": "Kiểm tra driver, firmware, hệ điều hành",
-      "category": "Testing",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test stress",
-      "description": "Test sản phẩm dưới tải nặng kéo dài",
-      "category": "Testing",
-      "estimatedDurationMinutes": 60,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Báo giá sửa chữa",
-      "description": "Báo giá chi phí sửa chữa cho khách (nếu trả phí)",
-      "category": "Quotation",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Sửa chữa phần cứng",
-      "description": "Hàn, sửa chữa bo mạch, thay linh kiện điện tử",
-      "category": "Repair",
-      "estimatedDurationMinutes": 45,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Thay linh kiện VGA",
-      "description": "Thay fan, capacitor, HDMI port...",
-      "category": "Repair",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Cài đặt phần mềm",
-      "description": "Cài driver, firmware, cập nhật BIOS",
-      "category": "Software",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Backup dữ liệu",
-      "description": "Sao lưu dữ liệu khách trước khi sửa",
-      "category": "Data",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Restore dữ liệu",
-      "description": "Khôi phục dữ liệu sau khi sửa xong",
-      "category": "Data",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Vệ sinh sản phẩm",
-      "description": "Vệ sinh bụi bẩn, làm sạch sản phẩm",
-      "category": "Cleaning",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Thay keo tản nhiệt",
-      "description": "Thay thermal paste cho VGA, CPU",
-      "category": "Maintenance",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Thay thế sản phẩm",
-      "description": "Thay thế toàn bộ sản phẩm từ kho bảo hành",
-      "category": "Replacement",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Xuất kho bảo hành",
-      "description": "Xuất sản phẩm mới từ warranty_stock",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập kho RMA",
-      "description": "Chuyển sản phẩm lỗi đã được kỹ thuật viên xác định cần RMA vào kho rma_staging",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Tạo lô RMA",
-      "description": "Tạo một lô RMA mới để nhóm các sản phẩm lỗi chờ trả về nhà cung cấp",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chuẩn bị & Gửi lô RMA",
-      "description": "Vệ sinh, sắp xếp, đóng gói các sản phẩm vật lý trong lô RMA đã tạo và đánh dấu lô đã được gửi đi",
-      "category": "Logistics",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra sau sửa",
-      "description": "Test sản phẩm sau khi sửa chữa xong",
-      "category": "QC",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test ổn định",
-      "description": "Test sản phẩm chạy ổn định trong 30 phút",
-      "category": "QC",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Kiểm tra cuối cùng",
-      "description": "Kiểm tra toàn diện trước khi giao khách",
-      "category": "QC",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Chụp ảnh kết quả",
-      "description": "Chụp ảnh sản phẩm sau sửa, kết quả test",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": false,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Thông báo khách hàng",
-      "description": "Gọi điện/nhắn tin thông báo sản phẩm đã xong",
-      "category": "Communication",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Đóng gói sản phẩm",
-      "description": "Đóng gói cẩn thận, đính kèm phụ kiện",
-      "category": "Packaging",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Giao hàng",
-      "description": "Giao sản phẩm cho khách, thu tiền (nếu có)",
-      "category": "Delivery",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Hướng dẫn sử dụng",
-      "description": "Hướng dẫn khách cách sử dụng, bảo quản",
-      "category": "Support",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập kho hàng mới",
-      "description": "Tạo GRN, nhập sản phẩm bảo hành vào kho",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập serial number",
-      "description": "Nhập serial cho từng sản phẩm trong GRN",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 45,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Kiểm kê kho",
-      "description": "Kiểm kê định kỳ tồn kho, đối chiếu số liệu",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 120,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chuyển kho",
-      "description": "Chuyển sản phẩm giữa các kho vật lý",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phụ tùng",
-      "description": "Đánh dấu đang chờ linh kiện về",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phê duyệt",
-      "description": "Chờ manager phê duyệt báo giá/thay thế",
-      "category": "Approval",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Liên hệ nhà cung cấp",
-      "description": "Liên hệ ZOTAC, SSTC về bảo hành, RMA",
-      "category": "Communication",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ khách quyết định",
-      "description": "Chờ khách xác nhận có sửa/không sửa",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Yêu cầu thêm thông tin từ khách",
-      "description": "Gửi yêu cầu (email/tin nhắn) cho khách hàng để làm rõ thêm về tình trạng lỗi",
-      "category": "Communication",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phản hồi từ khách",
-      "description": "Đánh dấu ticket đang tạm dừng để chờ thông tin phản hồi từ khách hàng",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nâng cấp theo yêu cầu",
-      "description": "Thực hiện các yêu cầu nâng cấp (ví dụ: thêm RAM, đổi SSD) không nằm trong phạm vi bảo hành",
-      "category": "Service",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Tạo hóa đơn dịch vụ",
-      "description": "Tạo và xuất hóa đơn chi tiết cho các dịch vụ sửa chữa có tính phí hoặc chi phí nâng cấp",
-      "category": "Billing",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    }
-  ],
-
-  "taskTemplates": [
-    {
-      "name": "Sửa chữa VGA - Thay linh kiện",
-      "description": "Quy trình sửa chữa card đồ họa bằng cách thay thế linh kiện hỏng (fan, capacitor, HDMI port). Áp dụng cho các lỗi phần cứng nhỏ có thể sửa được.",
-      "productSku": "ZT-4070-G",
-      "serviceType": "warranty",
-      "strictSequence": false,
-      "tasks": [
-        { "taskTypeName": "Tiếp nhận sản phẩm", "sequenceOrder": 1, "isRequired": true, "customInstructions": "Kiểm tra số serial, phụ kiện đi kèm" },
-        { "taskTypeName": "Kiểm tra ban đầu", "sequenceOrder": 2, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chụp ảnh sản phẩm nhận", "sequenceOrder": 3, "isRequired": false, "customInstructions": "Chụp 6 mặt sản phẩm để tránh tranh chấp" },
-        { "taskTypeName": "Kiểm tra bảo hành", "sequenceOrder": 4, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chẩn đoán lỗi", "sequenceOrder": 5, "isRequired": true, "customInstructions": "Ghi rõ nguyên nhân lỗi, linh kiện hỏng" },
-        { "taskTypeName": "Test phần cứng", "sequenceOrder": 6, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Sửa chữa phần cứng", "sequenceOrder": 7, "isRequired": true, "customInstructions": "Hàn linh kiện điện tử, sửa chữa bo mạch" },
-        { "taskTypeName": "Thay linh kiện VGA", "sequenceOrder": 8, "isRequired": true, "customInstructions": "Cập nhật parts đã sử dụng vào ticket" },
-        { "taskTypeName": "Vệ sinh sản phẩm", "sequenceOrder": 9, "isRequired": false, "customInstructions": null },
-        { "taskTypeName": "Thay keo tản nhiệt", "sequenceOrder": 10, "isRequired": false, "customInstructions": "Chỉ thay nếu keo cũ khô/hỏng" },
-        { "taskTypeName": "Kiểm tra sau sửa", "sequenceOrder": 11, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Test ổn định", "sequenceOrder": 12, "isRequired": false, "customInstructions": "Chạy stress test 30 phút để đảm bảo ổn định" },
-        { "taskTypeName": "Kiểm tra cuối cùng", "sequenceOrder": 13, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chụp ảnh kết quả", "sequenceOrder": 14, "isRequired": false, "customInstructions": null },
-        { "taskTypeName": "Thông báo khách hàng", "sequenceOrder": 15, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Đóng gói sản phẩm", "sequenceOrder": 16, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Giao hàng", "sequenceOrder": 17, "isRequired": true, "customInstructions": null }
-      ]
-    },
-    {
-      "name": "Thay thế VGA - Xuất kho bảo hành",
-      "description": "Quy trình thay thế toàn bộ card đồ họa bằng sản phẩm mới từ kho bảo hành. Áp dụng khi lỗi quá nặng không thể sửa (chip chết, PCB cháy). Sản phẩm lỗi sẽ được chuyển vào kho RMA để trả về nhà cung cấp.",
-      "productSku": "ZT-4070-G",
-      "serviceType": "warranty",
-      "strictSequence": true,
-      "tasks": [
-        { "taskTypeName": "Tiếp nhận sản phẩm", "sequenceOrder": 1, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Kiểm tra ban đầu", "sequenceOrder": 2, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chụp ảnh sản phẩm nhận", "sequenceOrder": 3, "isRequired": true, "customInstructions": "Chụp chi tiết lỗi để phục vụ RMA" },
-        { "taskTypeName": "Kiểm tra bảo hành", "sequenceOrder": 4, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chẩn đoán lỗi", "sequenceOrder": 5, "isRequired": true, "customInstructions": "Xác định chính xác lỗi để yêu cầu RMA" },
-        { "taskTypeName": "Test phần cứng", "sequenceOrder": 6, "isRequired": true, "customInstructions": "Chạy đầy đủ test để có bằng chứng lỗi" },
-        { "taskTypeName": "Chờ phê duyệt", "sequenceOrder": 7, "isRequired": true, "customInstructions": "Manager phê duyệt thay thế và RMA" },
-        { "taskTypeName": "Thay thế sản phẩm", "sequenceOrder": 8, "isRequired": true, "customInstructions": "Chọn VGA mới từ kho warranty_stock" },
-        { "taskTypeName": "Xuất kho bảo hành", "sequenceOrder": 9, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Nhập kho RMA", "sequenceOrder": 10, "isRequired": true, "customInstructions": "Chuyển VGA lỗi vào rma_staging" },
-        { "taskTypeName": "Kiểm tra sau sửa", "sequenceOrder": 11, "isRequired": true, "customInstructions": "Test VGA mới trước khi giao khách" },
-        { "taskTypeName": "Kiểm tra cuối cùng", "sequenceOrder": 12, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Chụp ảnh kết quả", "sequenceOrder": 13, "isRequired": false, "customInstructions": null },
-        { "taskTypeName": "Thông báo khách hàng", "sequenceOrder": 14, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Đóng gói sản phẩm", "sequenceOrder": 15, "isRequired": true, "customInstructions": null },
-        { "taskTypeName": "Giao hàng", "sequenceOrder": 16, "isRequired": true, "customInstructions": null }
-      ]
-    }
-  ]
+  }
 }

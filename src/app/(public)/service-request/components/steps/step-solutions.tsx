@@ -144,10 +144,6 @@ export function StepSolutions() {
     }
   };
 
-  const toggleWarrantyRequested = (productId: string, requested: boolean) => {
-    updateWizardProduct(dispatch, productId, { warrantyRequested: requested });
-  };
-
   const updateServiceNotes = (productId: string, notes: string) => {
     updateWizardProduct(dispatch, productId, { serviceOptionNotes: notes });
   };
@@ -265,22 +261,6 @@ export function StepSolutions() {
                       ))}
                     </SelectContent>
                   </Select>
-
-                  <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-                    <div>
-                      <Label htmlFor={`warranty-toggle-${product.id}`} className="font-medium">
-                        Yêu cầu xử lý theo diện bảo hành
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Nếu không đủ điều kiện, sản phẩm vẫn sẽ được xử lý theo dịch vụ đã chọn.
-                      </p>
-                    </div>
-                    <Switch
-                      id={`warranty-toggle-${product.id}`}
-                      checked={product.warrantyRequested}
-                      onCheckedChange={(checked) => toggleWarrantyRequested(product.id, Boolean(checked))}
-                    />
-                  </div>
 
                   <div className="space-y-1">
                     <Label htmlFor={`service-notes-${product.id}`}>Ghi chú thêm (tuỳ chọn)</Label>

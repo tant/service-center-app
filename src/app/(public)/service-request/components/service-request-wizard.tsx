@@ -3,7 +3,6 @@
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   ServiceRequestWizardProvider,
   WizardStep,
@@ -17,6 +16,7 @@ import { StepCustomer, StepProducts, StepReview, StepSolutions } from "./steps";
 import { useSubmitServiceRequest } from "@/hooks/use-service-request";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const MIN_SERIAL_LENGTH = 5;
 const MIN_ISSUE_LENGTH = 10;
@@ -42,6 +42,9 @@ const STEP_COMPONENT_MAP: Record<WizardStep, React.ComponentType> = {
 function WizardNavigator() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
+  const totalSteps = STEP_CONFIG.length;
+  const currentStep = STEP_CONFIG[state.activeStep];
+  const progressPercent = ((state.activeStep + 1) / totalSteps) * 100;
 
   const handleStepClick = (stepId: WizardStep) => {
     if (stepId > state.maxVisitedStep) {
@@ -51,25 +54,97 @@ function WizardNavigator() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        {STEP_CONFIG.map((step, index) => (
-          <Fragment key={step.id}>
-            <button
-              type="button"
-              disabled={step.id > state.maxVisitedStep}
-              className="flex flex-col items-start gap-1 rounded-md border border-transparent bg-muted/50 p-3 text-left transition hover:border-muted-foreground/20 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => handleStepClick(step.id)}
-            >
-              <div className="flex items-center gap-2">
-                <Badge variant={state.activeStep === step.id ? "default" : "outline"}>Bước {index + 1}</Badge>
-                <span className="font-semibold">{step.title}</span>
-              </div>
-              <span className="text-sm text-muted-foreground">{step.description}</span>
-            </button>
-            {index < STEP_CONFIG.length - 1 ? <Separator /> : null}
-          </Fragment>
-        ))}
+    <div className="space-y-4">
+      <div className="space-y-3 md:hidden">
+        <div className="space-y-1">
+          <Badge variant="secondary">{`Bước ${state.activeStep + 1}/${totalSteps}`}</Badge>
+          <div className="text-base font-semibold">{currentStep.title}</div>
+          <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+        </div>
+        <div className="h-2 w-full rounded-full bg-muted" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+          {STEP_CONFIG.map((step, index) => {
+            const isActive = state.activeStep === step.id;
+            const isVisited = step.id <= state.maxVisitedStep;
+            const isComplete = step.id < state.activeStep;
+
+            return (
+              <button
+                key={step.id}
+                type="button"
+                disabled={!isVisited}
+                onClick={() => handleStepClick(step.id)}
+                aria-current={isActive ? "step" : undefined}
+                className={cn(
+                  "min-w-[160px] rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  isActive
+                    ? "border-primary bg-primary/10"
+                    : isComplete
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border/60 bg-muted/40 hover:border-border"
+                )}
+              >
+                <Badge variant={isActive ? "default" : "outline"} className="mb-1">
+                  Bước {index + 1}
+                </Badge>
+                <div className="text-sm font-semibold">{step.title}</div>
+                <p className="text-xs text-muted-foreground">{step.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="hidden md:flex items-center">
+        {STEP_CONFIG.map((step, index) => {
+          const isActive = state.activeStep === step.id;
+          const isVisited = step.id <= state.maxVisitedStep;
+          const isComplete = step.id < state.activeStep;
+
+          return (
+            <Fragment key={step.id}>
+              <button
+                type="button"
+                disabled={!isVisited}
+                onClick={() => handleStepClick(step.id)}
+                aria-current={isActive ? "step" : undefined}
+                className={cn(
+                  "flex min-w-[200px] flex-col gap-1 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  isActive
+                    ? "border-primary bg-primary/10"
+                    : isComplete
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border/60 bg-muted/40 hover:border-border"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold",
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : isComplete
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground"
+                    )}
+                  >
+                    {index + 1}
+                  </div>
+                  <span className="text-sm font-semibold">{step.title}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+              </button>
+              {index < STEP_CONFIG.length - 1 ? (
+                <div className="mx-2 flex-1 border-t border-dashed border-border" aria-hidden="true" />
+              ) : null}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
@@ -243,7 +318,7 @@ function StepNavigation() {
 
 function WizardLayout() {
   return (
-    <div className="grid gap-8 lg:grid-cols-[280px,1fr]">
+    <div className="space-y-4">
       <WizardNavigator />
       <WizardContent />
     </div>

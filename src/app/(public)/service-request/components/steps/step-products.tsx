@@ -51,12 +51,6 @@ function ProductCard({ index, productId }: ProductCardProps) {
     updateWizardProduct(dispatch, productId, { issueDescription: value });
   };
 
-  const handleFieldChange =
-    (field: "productBrand" | "productModel" | "purchaseDate") =>
-    (event: ChangeEvent<HTMLInputElement>) => {
-      updateWizardProduct(dispatch, productId, { [field]: event.target.value });
-    };
-
   const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -92,7 +86,9 @@ function ProductCard({ index, productId }: ProductCardProps) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
-          <Label htmlFor={`serial-${productId}`}>Serial *</Label>
+          <Label htmlFor={`serial-${productId}`}>
+            Serial <span className="text-destructive">*</span>
+          </Label>
           <Input
             id={`serial-${productId}`}
             value={product.serialNumber}
@@ -112,31 +108,17 @@ function ProductCard({ index, productId }: ProductCardProps) {
             id={`purchase-date-${productId}`}
             type="date"
             value={product.purchaseDate ?? ""}
-            onChange={handleFieldChange("purchaseDate")}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor={`brand-${productId}`}>Thương hiệu</Label>
-          <Input
-            id={`brand-${productId}`}
-            value={product.productBrand ?? ""}
-            placeholder="VD: ACME"
-            onChange={handleFieldChange("productBrand")}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor={`model-${productId}`}>Model</Label>
-          <Input
-            id={`model-${productId}`}
-            value={product.productModel ?? ""}
-            placeholder="VD: ZX-1000"
-            onChange={handleFieldChange("productModel")}
+            onChange={(event) =>
+              updateWizardProduct(dispatch, productId, { purchaseDate: event.target.value })
+            }
           />
         </div>
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor={`issue-${productId}`}>Mô tả vấn đề *</Label>
+        <div className="space-y-1">
+          <Label htmlFor={`issue-${productId}`}>
+            Mô tả vấn đề <span className="text-destructive">*</span>
+          </Label>
         <Textarea
           id={`issue-${productId}`}
           value={product.issueDescription}

@@ -50,13 +50,13 @@ SELECT
   v.description,
   (SELECT id FROM public.physical_warehouses WHERE code = 'COMPANY' LIMIT 1)
 FROM (VALUES
-  ('main'::warehouse_type, 'Main', 'Kho Chính — Default main virtual warehouse for a physical warehouse'),
-  ('warranty_stock'::warehouse_type, 'Warranty Stock', 'Products under active warranty available for replacement'),
-  ('rma_staging'::warehouse_type, 'RMA Staging Area', 'Products awaiting return to supplier or manufacturer'),
-  ('dead_stock'::warehouse_type, 'Dead Stock', 'Non-functional products for parts harvesting or disposal'),
-  ('in_service'::warehouse_type, 'In Service', 'Products currently being serviced or repaired'),
-  ('parts'::warehouse_type, 'Parts Inventory', 'Replacement parts and components inventory'),
-  ('customer_installed'::warehouse_type, 'Customer Installed', 'Hàng đã bán — Products sold and currently installed at customer sites')
+  ('main'::warehouse_type, 'Kho Chính', 'Kho hàng chính, quản lý hàng hóa tồn kho thông thường'),
+  ('warranty_stock'::warehouse_type, 'Kho Bảo Hành', 'Hàng hóa còn bảo hành, sẵn sàng để thay thế cho khách hàng'),
+  ('rma_staging'::warehouse_type, 'Kho Chờ Trả Hàng', 'Sản phẩm chờ trả lại nhà cung cấp hoặc nhà sản xuất'),
+  ('dead_stock'::warehouse_type, 'Kho Hàng Hỏng', 'Sản phẩm hỏng không sửa được, dùng để tháo linh kiện hoặc thanh lý'),
+  ('in_service'::warehouse_type, 'Kho Đang Sửa Chữa', 'Sản phẩm đang trong quá trình bảo hành hoặc sửa chữa'),
+  ('parts'::warehouse_type, 'Kho Linh Kiện', 'Linh kiện thay thế và phụ tùng'),
+  ('customer_installed'::warehouse_type, 'Hàng Đã Bán', 'Sản phẩm đã bán và đang lắp đặt tại địa điểm khách hàng')
 ) AS v(warehouse_type, name, description)
 ON CONFLICT (warehouse_type) DO NOTHING;
 

@@ -1,7 +1,14 @@
 -- =====================================================
--- 08_inventory_functions.sql
+-- 500_inventory_functions.sql
 -- =====================================================
--- Functions for managing inventory stock levels.
+-- Inventory Stock Management Functions
+--
+-- Functions for:
+-- - Part stock increase/decrease
+-- - Stock validation
+--
+-- ORDER: 500-599 (Functions)
+-- DEPENDENCIES: 200
 -- =====================================================
 
 -- Function to decrease part stock quantity safely

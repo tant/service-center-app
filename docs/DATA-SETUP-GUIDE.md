@@ -6,9 +6,9 @@ Hãy tạo dữ liệu theo thứ tự sau để hệ thống hoạt động đ�
 
 1. **Admin User** - Tài khoản quản trị
 2. **Staff Users** - Manager, Technicians, Reception
-3. **Physical Warehouses** - Kho vật lý và kho ảo
+3. **Physical Warehouses** - Kho vật lý và kho ảo (*tùy chọn* - hệ thống đã tạo sẵn kho mặc định)
 4. **Brands** - Nhãn hàng (ZOTAC, SSTC...)
-5. **Parts** - Linh kiện (Fan, Capacitor, HDMI Port...) 
+5. **Parts** - Linh kiện (Fan, Capacitor, HDMI Port...)
 6. **Products** - Sản phẩm (VGA, SSD, RAM...) - Bind parts vào products
 7. **Physical Products** - Nhập hàng bảo hành vào kho
 8. **Task Types** - Loại công việc (**BẮT BUỘC** để định nghĩa quy trình)
@@ -19,7 +19,8 @@ Hãy tạo dữ liệu theo thứ tự sau để hệ thống hoạt động đ�
 ---
 
 ### **Ghi chú**:
-- ✅ **Bước 1-9**: Bắt buộc phải tạo để hệ thống hoạt động
+- ✅ **Bước 1-2, 4-9**: Bắt buộc phải tạo để hệ thống hoạt động
+- ⚪ **Bước 3**: Kho mặc định đã được tạo tự động. Chỉ cần tạo thêm nếu có nhiều địa điểm.
 - 🟢 **Bước 10**: Có thể bắt đầu vận hành ngay sau bước 9
 - ⚪ **Bước 11**: Customers sẽ được tạo tự động khi tiếp nhận khách hàng thực tế. Chỉ cần import dữ liệu này nếu bạn có hệ thống cũ.
 
@@ -63,92 +64,50 @@ Hãy tạo dữ liệu theo thứ tự sau để hệ thống hoạt động đ�
 
 ---
 
-### **Bước 3: Physical Warehouses & Virtual Warehouses**
+### **Bước 3: Physical Warehouses & Virtual Warehouses** (TÙY CHỌN)
 
 **Trang**: `/inventory/warehouses`
 
-**Lưu ý quan trọng**: Trong hệ thống mới, **Virtual Warehouses** là các thực thể kho riêng biệt (database records) được tạo và liên kết với Physical Warehouses. Mỗi virtual warehouse có ID duy nhất và theo dõi tồn kho thực tế.
+**✅ Hệ thống đã tự động tạo sẵn:**
+- **Kho vật lý mặc định**: `Công ty` (Code: `COMPANY`) - Kho chính không thể xóa
+- **7 kho ảo (Virtual Warehouses)**:
+  - `Kho Chính` (main)
+  - `Kho Bảo Hành` (warranty_stock)
+  - `Khu Vực RMA` (rma_staging)
+  - `Kho Hàng Hỏng` (dead_stock)
+  - `Đang Sử Dụng` (in_service)
+  - `Kho Linh Kiện` (parts)
+  - `Hàng Đã Bán` (customer_installed)
 
-**Quy trình tạo kho**:
-1. Tạo Physical Warehouses trước (địa điểm vật lý)
-2. Sau đó tạo Virtual Warehouses cho mỗi Physical Warehouse (các khu vực logic trong kho)
+**Kho mặc định được tạo tự động** sau khi chạy `pnpx supabase db reset`.
 
 ---
 
-#### **Bước 3a: Tạo Physical Warehouses**
+#### **Bước 3a: Tùy chọn - Thêm kho vật lý (Physical Warehouses)**
 
-**Kho vật lý 1: Kho nhà cũ**
-- Name: `Kho nhà cũ`
-- Code: `WH-OLD-HOUSE`
-- Location: `69/18 Nguyễn Cửu Đàm, Phường Tân Sơn Nhì, TP.HCM`
-- Description: `Kho cũ dùng cho sản phẩm hỏng không còn giá trị`
+Nếu công ty bạn có nhiều địa điểm, bạn có thể tạo thêm kho vật lý:
 
-**Kho vật lý 2: SSTC** (Kho chính)
-- Name: `SSTC`
-- Code: `WH-SSTC-MAIN`
-- Location: `69/18 Nguyễn Cửu Đàm, Phường Tân Sơn Nhì, TP.HCM`
-- Description: `Kho chính SSTC Service Center`
-
-**Kho vật lý 3: Hà Nội**
+**Ví dụ - Kho chi nhánh Hà Nội**:
 - Name: `Hà Nội`
 - Code: `WH-HANOI`
 - Location: `123 Trần Duy Hưng, Quận Cầu Giấy, Hà Nội`
-- Description: `Chi nhánh Hà Nội - kho tạm thời`
+- Description: `Chi nhánh Hà Nội`
+
+**Sau khi tạo kho vật lý mới**, hệ thống sẽ tự động tạo sẵn 7 kho ảo liên kết với kho đó.
 
 ---
 
-#### **Bước 3b: Tạo Virtual Warehouses**
+#### **Bước 3b: Tùy chọn - Chỉnh sửa kho mặc định**
 
-**Sau khi tạo xong Physical Warehouses**, tạo các Virtual Warehouses như sau:
+Bạn có thể chỉnh sửa thông tin kho mặc định "Công ty":
+- ✅ Có thể sửa: Name, Location, Description
+- ❌ Không thể xóa: Kho mặc định được bảo vệ bởi hệ thống
 
-**Virtual Warehouses cho "Kho nhà cũ"**:
+**Gợi ý**: Cập nhật địa chỉ kho chính của công ty bạn vào trường "Location".
 
-1. **Hàng hỏng - Kho nhà cũ**
-   - Name: `Hàng hỏng - Kho nhà cũ`
-   - Warehouse Type: `dead_stock`
-   - Physical Warehouse: `Kho nhà cũ`
-   - Description: `Sản phẩm hỏng không sửa được, chờ thanh lý`
-   - Color Code: `#dc2626` (đỏ)
+---
 
-**Virtual Warehouses cho "SSTC" (Kho chính)**:
-
-1. **Kho bảo hành - SSTC**
-   - Name: `Kho bảo hành - SSTC`
-   - Warehouse Type: `warranty_stock`
-   - Physical Warehouse: `SSTC`
-   - Description: `Sản phẩm bảo hành mới, sẵn sàng thay thế cho khách`
-   - Color Code: `#16a34a` (xanh lá)
-
-2. **Kho RMA - SSTC**
-   - Name: `Kho RMA - SSTC`
-   - Warehouse Type: `rma_staging`
-   - Physical Warehouse: `SSTC`
-   - Description: `Sản phẩm lỗi chờ trả về nhà cung cấp (ZOTAC, SSTC)`
-   - Color Code: `#ea580c` (cam)
-
-3. **Hàng hỏng - SSTC**
-   - Name: `Hàng hỏng - SSTC`
-   - Warehouse Type: `dead_stock`
-   - Physical Warehouse: `SSTC`
-   - Description: `Sản phẩm hỏng không RMA được, chờ thanh lý`
-   - Color Code: `#dc2626` (đỏ)
-
-4. **Đang sửa chữa - SSTC**
-   - Name: `Đang sửa chữa - SSTC`
-   - Warehouse Type: `in_service`
-   - Physical Warehouse: `SSTC`
-   - Description: `Sản phẩm đang được sử dụng trong service tickets`
-   - Color Code: `#2563eb` (xanh dương)
-
-5. **Kho linh kiện - SSTC**
-   - Name: `Kho linh kiện - SSTC`
-   - Warehouse Type: `parts`
-   - Physical Warehouse: `SSTC`
-   - Description: `Linh kiện thay thế (fan, thermal pad, capacitor...)`
-   - Color Code: `#7c3aed` (tím)
-
-**Virtual Warehouses cho "Hà Nội"**:
-- Không cần tạo virtual warehouse cho kho này (tùy chọn)
+**Tham khảo**: Chi tiết về Default Warehouse System tại `docs/architecture/DEFAULT-WAREHOUSE-SYSTEM.md`
 
 ---
 

@@ -1,26 +1,15 @@
 -- =====================================================
--- 15_virtual_warehouse_physical_link.sql
+-- 601_default_warehouse_triggers.sql
 -- =====================================================
--- Migration to link virtual warehouses with physical warehouses
--- and auto-create default virtual warehouse for each physical warehouse
+-- Default Warehouse Auto-Creation Triggers
+--
+-- Triggers for:
+-- - Auto-create default virtual warehouse when physical warehouse created
+-- - Auto-update virtual warehouse name when physical warehouse renamed
+--
+-- ORDER: 600-699 (Triggers)
+-- DEPENDENCIES: 202, 300
 -- =====================================================
-
--- Step 1: Add new columns to virtual_warehouses
-ALTER TABLE public.virtual_warehouses
-  ADD COLUMN IF NOT EXISTS physical_warehouse_id UUID REFERENCES public.physical_warehouses(id) ON DELETE CASCADE,
-  ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-
--- Step 2: Drop UNIQUE constraint on warehouse_type (allow multiple warehouses per type)
-ALTER TABLE public.virtual_warehouses 
-  DROP CONSTRAINT IF EXISTS virtual_warehouses_warehouse_type_key;
-
--- Step 3: Update existing virtual warehouses to be system defaults (no physical warehouse link)
--- These are the global virtual warehouse types
--- Note: display_name column has been removed in migration 14, only name is used now
-UPDATE public.virtual_warehouses 
-SET physical_warehouse_id = NULL
-WHERE physical_warehouse_id IS NULL;
-
 -- Step 4: Create function to auto-create default virtual warehouse for physical warehouse
 CREATE OR REPLACE FUNCTION public.create_default_virtual_warehouse()
 RETURNS TRIGGER
@@ -87,43 +76,3 @@ CREATE TRIGGER trigger_update_default_virtual_warehouse_name
   WHEN (OLD.name IS DISTINCT FROM NEW.name)
   EXECUTE FUNCTION public.update_default_virtual_warehouse_name();
 
--- Step 8: Create default virtual warehouses for existing physical warehouses
-DO $$
-DECLARE
-  physical_wh RECORD;
-BEGIN
-  FOR physical_wh IN SELECT id, name, is_active FROM public.physical_warehouses
-  LOOP
-    -- Check if default virtual warehouse already exists
-    IF NOT EXISTS (
-      SELECT 1 FROM public.virtual_warehouses
-      WHERE physical_warehouse_id = physical_wh.id
-    ) THEN
-      INSERT INTO public.virtual_warehouses (
-        warehouse_type,
-        name,
-        description,
-        physical_warehouse_id,
-        is_active
-      ) VALUES (
-        'main',  -- Updated 2025-10-29 - Gap 1 fix: use 'main' instead of 'warranty_stock'
-        physical_wh.name || ' - Kho Chính',
-        'Kho chính của ' || physical_wh.name,
-        physical_wh.id,
-        physical_wh.is_active
-      );
-    END IF;
-  END LOOP;
-END $$;
-
--- Step 9: Make physical_warehouse_id NOT NULL (after data migration)
-ALTER TABLE public.virtual_warehouses
-ALTER COLUMN physical_warehouse_id SET NOT NULL;
-
--- Step 10: Add comment
-COMMENT ON COLUMN public.virtual_warehouses.physical_warehouse_id IS 'Physical warehouse that this virtual warehouse belongs to (required - every virtual warehouse must belong to a physical warehouse)';
-COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (auto-generated for default, custom for user-created)';
-
--- Display result
-SELECT 'Virtual Warehouse Migration Complete: ' || COUNT(*)::TEXT || ' virtual warehouses now exist'
-FROM public.virtual_warehouses;

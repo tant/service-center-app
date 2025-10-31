@@ -1,19 +1,17 @@
 -- =====================================================
--- 11_rls_policy_updates.sql
+-- 800_core_rls_policies.sql
 -- =====================================================
--- Updates RLS policies for role-based access control.
+-- Row Level Security Policies - Core Tables
 --
--- This file REPLACES overly permissive policies in:
--- - service_tickets (currently using `true`)
--- - customers (currently using `true`)
--- - service_ticket_parts (missing specific policies)
--- - service_ticket_comments (needs technician restrictions)
+-- Updated RLS policies for role-based access control:
+-- - service_tickets (technician restrictions)
+-- - customers (technician restrictions)
+-- - service_ticket_parts
+-- - service_ticket_comments
+-- - service_ticket_attachments
 --
--- IMPORTANT: These policies depend on functions from:
--- - 00_base_schema.sql (is_admin, is_admin_or_manager)
--- - 09_role_helpers.sql (has_any_role, is_technician, etc.)
---
--- Apply this AFTER running 09_role_helpers.sql
+-- ORDER: 800-899 (RLS Policies)
+-- DEPENDENCIES: All table files, 150 (role functions)
 -- =====================================================
 
 -- =====================================================

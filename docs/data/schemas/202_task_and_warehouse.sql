@@ -1,12 +1,21 @@
 -- =====================================================
--- 04_task_and_warehouse.sql
+-- 202_task_and_warehouse.sql
 -- =====================================================
--- Phase 2 tables for task management and warehouse/
--- inventory tracking.
+-- Task Management and Warehouse Tables
+--
+-- Phase 2 tables for:
+-- - Task workflow (templates, types, execution)
+-- - Warehouse management (physical/virtual)
+-- - Physical product tracking
+-- - RMA batch processing
+-- - Stock movements
+--
+-- ORDER: 200-299 (Tables)
+-- DEPENDENCIES: 100, 150, 200, 201
 -- =====================================================
 
 -- =====================================================
--- TASK WORKFLOW TABLES (from 13_task_tables.sql)
+-- TASK WORKFLOW TABLES
 -- =====================================================
 
 -- TASK TEMPLATES
@@ -126,7 +135,7 @@ CREATE TRIGGER trigger_generate_rma_batch_number BEFORE INSERT ON public.rma_bat
 CREATE TRIGGER trigger_rma_batches_updated_at BEFORE UPDATE ON public.rma_batches FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- WAREHOUSE TABLES (from 14_warehouse_tables.sql)
+-- WAREHOUSE TABLES
 -- =====================================================
 
 -- PHYSICAL WAREHOUSES

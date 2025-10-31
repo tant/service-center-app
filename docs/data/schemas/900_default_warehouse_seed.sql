@@ -1,9 +1,15 @@
 -- =====================================================
--- 18_default_warehouse_system.sql
+-- 900_default_warehouse_seed.sql
 -- =====================================================
--- Default Warehouse System
--- Creates system default "Công ty" physical warehouse
--- and 7 system virtual warehouses (one per type)
+-- Default Warehouse System Seed Data
+--
+-- Seeds:
+-- - Default "Công ty" physical warehouse (system-managed)
+-- - 7 system virtual warehouses (one per type)
+-- - Restore UNIQUE constraint on warehouse_type
+--
+-- ORDER: 900-999 (Seed Data)
+-- DEPENDENCIES: 202, 300
 -- =====================================================
 
 -- Step 1: Restore UNIQUE constraint on warehouse_type

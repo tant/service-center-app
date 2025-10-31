@@ -1,4 +1,19 @@
 -- =====================================================
+-- 205_audit_logs.sql
+-- =====================================================
+-- Audit Logging System
+--
+-- Immutable audit trail table for tracking:
+-- - Sensitive operations
+-- - Permission-related actions
+-- - Template switches
+-- - Role changes
+--
+-- ORDER: 200-299 (Tables)
+-- DEPENDENCIES: 100, 150
+-- NOTE: Audit functions are in 502_audit_functions.sql
+-- =====================================================
+-- =====================================================
 -- 10_audit_logs.sql
 -- =====================================================
 -- Audit logging system for tracking sensitive operations
@@ -349,4 +364,3 @@ GRANT EXECUTE ON FUNCTION public.log_template_switch(UUID, UUID, UUID, TEXT) TO 
 --   AND resource_id = 'ticket-uuid'
 -- ORDER BY created_at ASC;
 --
--- =====================================================

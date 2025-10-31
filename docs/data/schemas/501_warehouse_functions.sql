@@ -1,7 +1,15 @@
 -- =====================================================
--- 18_inventory_stock_functions.sql
+-- 501_warehouse_functions.sql
 -- =====================================================
--- Functions for inventory overview statistics
+-- Warehouse Statistics and Aggregation Functions
+--
+-- Functions for:
+-- - Inventory statistics (dashboard)
+-- - Aggregated stock across warehouses
+-- - Stock status calculations
+--
+-- ORDER: 500-599 (Functions)
+-- DEPENDENCIES: 202, 204
 -- =====================================================
 
 -- Function to get inventory stats for dashboard

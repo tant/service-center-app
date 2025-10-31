@@ -1,11 +1,15 @@
 -- =====================================================
--- 17_stock_update_triggers.sql
+-- 600_stock_triggers.sql
 -- =====================================================
--- STOCK UPDATE TRIGGERS ON APPROVAL
--- Updates declared_quantity immediately when documents are approved
--- - Receipts: Increment stock when approved
--- - Issues: Decrement stock when approved
--- - Transfers: Auto-handled via generated issue/receipt documents
+-- Stock Update Triggers
+--
+-- Triggers for automatic stock updates:
+-- - Receipt approval → increment stock
+-- - Issue approval → decrement stock
+-- - Serial management (create/delete/update physical products)
+--
+-- ORDER: 600-699 (Triggers)
+-- DEPENDENCIES: 204, 500
 -- =====================================================
 
 -- =====================================================

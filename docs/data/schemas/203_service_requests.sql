@@ -1,14 +1,18 @@
 -- =====================================================
--- 05_service_requests.sql
+-- 203_service_requests.sql
 -- =====================================================
--- Phase 2 tables for the public service request portal
--- and email notifications.
+-- Service Request Portal and Email Notifications
+--
+-- Tables for:
+-- - Public service request submissions
+-- - Service request items (1:N with requests)
+-- - Email notification tracking
+-- - Auto-ticket creation workflows
+--
+-- ORDER: 200-299 (Tables)
+-- DEPENDENCIES: 100, 150, 200, 201, 202
+-- NOTE: FK constraints for service_tickets will be added in 301
 -- =====================================================
-
--- =====================================================
--- SERVICE REQUESTS TABLE (from 15_service_request_tables.sql)
--- Updated: 2025-10-29 - Support multiple products via service_request_items
--- Status Flow: submitted → pickingup → received → processing → completed
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.service_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

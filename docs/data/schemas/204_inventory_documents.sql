@@ -1,11 +1,18 @@
 -- =====================================================
--- 16_inventory_documents.sql
+-- 204_inventory_documents.sql
 -- =====================================================
--- REDESIGNED: Simplified inventory management system
--- - Receipt types: normal, adjustment (2 types only)
--- - Issue types: normal, adjustment (2 types only)
--- - Virtual warehouse reference: direct virtual_warehouse_id
--- - Transfer auto-generation: creates issue + receipt automatically
+-- Inventory Document Management System
+--
+-- Comprehensive inventory management tables:
+-- - Stock receipts (Phiếu Nhập Kho)
+-- - Stock issues (Phiếu Xuất Kho)
+-- - Stock transfers (Phiếu Chuyển Kho)
+-- - Serial number tracking
+-- - Product warehouse stock levels
+-- - Document attachments
+--
+-- ORDER: 200-299 (Tables)
+-- DEPENDENCIES: 100, 150, 200, 202
 -- =====================================================
 
 -- =====================================================

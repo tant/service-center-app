@@ -29,8 +29,6 @@ export function InventoryTableVirtual() {
     { warehouseType, search },
     {
       enabled: !!warehouseType,
-      refetchInterval: 30000, // Refresh every 30 seconds
-      refetchOnWindowFocus: true,
     }
   );
 

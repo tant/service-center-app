@@ -34,9 +34,6 @@ export function InventoryTableAll() {
   const { data: stock, isLoading } = trpc.inventory.stock.getAggregated.useQuery({
     search,
     status,
-  }, {
-    refetchInterval: 30000, // Refresh every 30 seconds
-    refetchOnWindowFocus: true,
   });
 
   return (

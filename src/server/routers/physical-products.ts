@@ -257,7 +257,8 @@ export const inventoryRouter = router({
       }
 
       if (input.search) {
-        query = query.ilike("serial_number", `%${input.search}%`);
+        // Search by both serial number and product name
+        query = query.or(`serial_number.ilike.%${input.search}%,product.name.ilike.%${input.search}%`);
       }
 
       // Get data
@@ -275,7 +276,7 @@ export const inventoryRouter = router({
       // Get count separately (simpler and faster)
       let countQuery = ctx.supabaseAdmin
         .from("physical_products")
-        .select("id", { count: "exact", head: true });
+        .select("id, product:products!inner(name)", { count: "exact", head: true });
 
       if (input.virtual_warehouse_id) {
         countQuery = countQuery.eq("virtual_warehouse_id", input.virtual_warehouse_id);
@@ -284,7 +285,8 @@ export const inventoryRouter = router({
         countQuery = countQuery.eq("condition", input.condition);
       }
       if (input.search) {
-        countQuery = countQuery.ilike("serial_number", `%${input.search}%`);
+        // Search by both serial number and product name
+        countQuery = countQuery.or(`serial_number.ilike.%${input.search}%,product.name.ilike.%${input.search}%`);
       }
 
       const { count } = await countQuery;

@@ -10,10 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, TrendingUp, AlertTriangle } from "lucide-react";
 
 export function InventoryStatCards() {
-  const { data: stats, isLoading } = trpc.inventory.stock.getStats.useQuery(undefined, {
-    refetchInterval: 30000, // Refresh every 30 seconds
-    refetchOnWindowFocus: true,
-  });
+  const { data: stats, isLoading } = trpc.inventory.stock.getStats.useQuery();
 
   if (isLoading || !stats) {
     return (

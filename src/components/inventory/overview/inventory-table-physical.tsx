@@ -29,8 +29,6 @@ export function InventoryTablePhysical() {
     { warehouseId, search },
     {
       enabled: !!warehouseId,
-      refetchInterval: 30000, // Refresh every 30 seconds
-      refetchOnWindowFocus: true,
     }
   );
 

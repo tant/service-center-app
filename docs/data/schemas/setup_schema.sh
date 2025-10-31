@@ -90,8 +90,41 @@ else
     echo -e "${YELLOW}⚠️  Storage buckets seed file not found, skipping...${NC}"
 fi
 
-# Generate migration (simple, may take some time)
-echo -e "${BLUE}📊 Generating migration (this may take a little while)...${NC}"
+# Apply all schema files to database first (so db diff can detect changes)
+echo -e "${BLUE}🔧 Applying schema files to database...${NC}"
+SCHEMA_ERRORS=0
+for file in supabase/schemas/[1-9]*.sql; do
+    if [ -f "$file" ]; then
+        BASENAME=$(basename "$file")
+        echo -e "${BLUE}   → Applying $BASENAME...${NC}"
+
+        APPLY_OUTPUT=$(psql "$DB_URL" -f "$file" 2>&1)
+        APPLY_EXIT_CODE=$?
+
+        if [ $APPLY_EXIT_CODE -ne 0 ]; then
+            # Check if errors are benign (already exists, IF EXISTS, etc)
+            if echo "$APPLY_OUTPUT" | grep -q "already exists\|does not exist\|IF EXISTS"; then
+                echo -e "${YELLOW}      ⚠️  Skipped (already applied)${NC}"
+            else
+                echo -e "${RED}      ❌ Error applying $BASENAME${NC}"
+                echo "$APPLY_OUTPUT" | sed 's/^/         /'
+                SCHEMA_ERRORS=$((SCHEMA_ERRORS + 1))
+            fi
+        else
+            echo -e "${GREEN}      ✅ Applied${NC}"
+        fi
+    fi
+done
+
+if [ $SCHEMA_ERRORS -gt 0 ]; then
+    echo -e "${RED}❌ $SCHEMA_ERRORS schema file(s) failed to apply${NC}"
+    exit 1
+else
+    echo -e "${GREEN}✅ All schema files applied successfully${NC}"
+fi
+
+# Generate migration from current database state
+echo -e "${BLUE}📊 Generating migration from database state...${NC}"
 if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Migration generated (init_schema)${NC}"
 
@@ -107,16 +140,7 @@ if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
     fi
 else
     echo -e "${YELLOW}⚠️  Migration generation failed or no changes detected${NC}"
-    echo -e "${YELLOW}   Continuing to attempt migration application...${NC}"
-fi
-
-# Apply migration
-echo -e "${BLUE}🔄 Applying migration...${NC}"
-if pnpx supabase migration up; then
-    echo -e "${GREEN}✅ Migration applied${NC}"
-else
-    echo -e "${RED}❌ Migration application failed${NC}"
-    exit 1
+    echo -e "${YELLOW}   This is expected if schema was just applied directly${NC}"
 fi
 
 # Apply storage policies (db diff doesn't capture policies on system tables)

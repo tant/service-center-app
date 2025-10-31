@@ -12,6 +12,9 @@
 -- DEPENDENCIES: 202
 -- NOTE: Triggers moved to 601_default_warehouse_triggers.sql
 -- =====================================================
+
+-- Step 1: Add new columns to virtual_warehouses
+ALTER TABLE public.virtual_warehouses
   ADD COLUMN IF NOT EXISTS physical_warehouse_id UUID REFERENCES public.physical_warehouses(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 

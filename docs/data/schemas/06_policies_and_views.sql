@@ -107,22 +107,27 @@ CREATE POLICY email_notifications_system_update ON public.email_notifications FO
 -- Warehouse Stock Levels View
 CREATE OR REPLACE VIEW public.v_warehouse_stock_levels AS
 SELECT
+  vw.id AS virtual_warehouse_id,
+  vw.name AS virtual_warehouse_name,
+  vw.warehouse_type,
+  pw.id AS physical_warehouse_id,
+  pw.name AS physical_warehouse_name,
+  pw.code AS physical_warehouse_code,
   p.id AS product_id,
   p.name AS product_name,
   p.sku AS product_sku,
   b.name AS brand_name,
-  pp.virtual_warehouse_type AS warehouse_type,
   pp.condition,
-  COUNT(*) AS quantity,
-  COUNT(*) FILTER (WHERE
+  COUNT(pp.id) AS quantity,
+  COUNT(pp.id) FILTER (WHERE
     (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date > CURRENT_DATE + INTERVAL '30 days') OR
     (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date > CURRENT_DATE + INTERVAL '30 days')
   ) AS active_warranty_count,
-  COUNT(*) FILTER (WHERE
+  COUNT(pp.id) FILTER (WHERE
     (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date > CURRENT_DATE AND pp.user_warranty_end_date <= CURRENT_DATE + INTERVAL '30 days') OR
     (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date > CURRENT_DATE AND pp.manufacturer_warranty_end_date <= CURRENT_DATE + INTERVAL '30 days')
   ) AS expiring_soon_count,
-  COUNT(*) FILTER (WHERE
+  COUNT(pp.id) FILTER (WHERE
     (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= CURRENT_DATE) OR
     (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= CURRENT_DATE)
   ) AS expired_count,
@@ -132,16 +137,18 @@ SELECT
   pst.reorder_quantity,
   pst.maximum_quantity,
   pst.alert_enabled,
-  CASE WHEN pst.minimum_quantity IS NOT NULL AND COUNT(*) < pst.minimum_quantity THEN true ELSE false END AS is_below_minimum,
+  CASE WHEN pst.minimum_quantity IS NOT NULL AND COUNT(pp.id) < pst.minimum_quantity THEN true ELSE false END AS is_below_minimum,
   MIN(pp.created_at) AS oldest_stock_date,
   MAX(pp.created_at) AS newest_stock_date
-FROM public.physical_products pp
-JOIN public.products p ON pp.product_id = p.id
-JOIN public.brands b ON p.brand_id = b.id
-LEFT JOIN public.product_stock_thresholds pst ON pst.product_id = p.id AND pst.warehouse_type = pp.virtual_warehouse_type
-GROUP BY p.id, p.name, p.sku, b.name, pp.virtual_warehouse_type, pp.condition, pst.minimum_quantity, pst.reorder_quantity, pst.maximum_quantity, pst.alert_enabled
-ORDER BY b.name, p.name, pp.virtual_warehouse_type;
-COMMENT ON VIEW public.v_warehouse_stock_levels IS 'Real-time stock levels by product, warehouse type, and condition with threshold alerts (prioritizes user warranty over manufacturer warranty)';
+FROM public.virtual_warehouses vw
+JOIN public.physical_warehouses pw ON vw.physical_warehouse_id = pw.id
+LEFT JOIN public.physical_products pp ON pp.virtual_warehouse_id = vw.id
+LEFT JOIN public.products p ON pp.product_id = p.id
+LEFT JOIN public.brands b ON p.brand_id = b.id
+LEFT JOIN public.product_stock_thresholds pst ON pst.product_id = p.id AND pst.warehouse_type = vw.warehouse_type
+GROUP BY vw.id, vw.name, vw.warehouse_type, pw.id, pw.name, pw.code, p.id, p.name, p.sku, b.name, pp.condition, pst.minimum_quantity, pst.reorder_quantity, pst.maximum_quantity, pst.alert_enabled
+ORDER BY pw.name, vw.warehouse_type, b.name, p.name;
+COMMENT ON VIEW public.v_warehouse_stock_levels IS 'Current stock levels across all warehouses';
 
 -- Task Progress Summary View
 CREATE OR REPLACE VIEW public.v_task_progress_summary AS
@@ -157,32 +164,25 @@ SELECT
   pp.id AS physical_product_id,
   pp.serial_number,
   pp.condition,
-  pp.virtual_warehouse_type,
   p.id AS product_id,
   p.name AS product_name,
   p.sku AS product_sku,
   b.name AS brand_name,
-  pp.manufacturer_warranty_end_date,
-  pp.user_warranty_end_date,
-  CASE
-    WHEN pp.user_warranty_end_date IS NOT NULL THEN 'user'
-    WHEN pp.manufacturer_warranty_end_date IS NOT NULL THEN 'manufacturer'
-    ELSE 'none'
-  END AS warranty_type,
-  CASE
-    WHEN pp.user_warranty_end_date IS NOT NULL THEN pp.user_warranty_end_date - CURRENT_DATE
-    WHEN pp.manufacturer_warranty_end_date IS NOT NULL THEN pp.manufacturer_warranty_end_date - CURRENT_DATE
-    ELSE NULL
-  END AS days_remaining,
-  CASE
-    WHEN pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= CURRENT_DATE THEN 'expired'
-    WHEN pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= CURRENT_DATE THEN 'expired'
-    WHEN pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date <= (CURRENT_DATE + '30 days'::interval) THEN 'expiring_soon'
-    WHEN pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date <= (CURRENT_DATE + '30 days'::interval) THEN 'expiring_soon'
-    ELSE 'active'
-  END AS warranty_status,
+  vw.id AS virtual_warehouse_id,
+  vw.name AS virtual_warehouse_name,
+  vw.warehouse_type,
   pw.name AS physical_warehouse_name,
   pw.code AS physical_warehouse_code,
+  pp.manufacturer_warranty_end_date,
+  pp.user_warranty_end_date,
+  GREATEST(pp.manufacturer_warranty_end_date, pp.user_warranty_end_date) AS effective_warranty_end_date,
+  CASE
+    WHEN GREATEST(pp.manufacturer_warranty_end_date, pp.user_warranty_end_date) < CURRENT_DATE THEN 'expired'
+    WHEN GREATEST(pp.manufacturer_warranty_end_date, pp.user_warranty_end_date) <= CURRENT_DATE + INTERVAL '30 days' THEN 'expiring_soon'
+    ELSE 'active'
+  END AS warranty_status,
+  pp.last_known_customer_id,
+  c.name AS customer_name,
   st.id AS current_ticket_id,
   st.ticket_number AS current_ticket_number,
   st.status AS current_ticket_status,
@@ -191,16 +191,14 @@ SELECT
 FROM public.physical_products pp
 JOIN public.products p ON pp.product_id = p.id
 JOIN public.brands b ON p.brand_id = b.id
-LEFT JOIN public.physical_warehouses pw ON pp.physical_warehouse_id = pw.id
+JOIN public.virtual_warehouses vw ON pp.virtual_warehouse_id = vw.id
+JOIN public.physical_warehouses pw ON vw.physical_warehouse_id = pw.id
+LEFT JOIN public.customers c ON pp.last_known_customer_id = c.id
 LEFT JOIN public.service_tickets st ON pp.current_ticket_id = st.id
-WHERE (pp.user_warranty_end_date IS NOT NULL AND pp.user_warranty_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')
-   OR (pp.user_warranty_end_date IS NULL AND pp.manufacturer_warranty_end_date IS NOT NULL AND pp.manufacturer_warranty_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days')
-ORDER BY
-  CASE
-    WHEN pp.user_warranty_end_date IS NOT NULL THEN pp.user_warranty_end_date
-    ELSE pp.manufacturer_warranty_end_date
-  END;
-COMMENT ON VIEW public.v_warranty_expiring_soon IS 'Physical products with warranty expiring within 30 days (prioritizes user warranty over manufacturer warranty)';
+WHERE (pp.manufacturer_warranty_end_date IS NOT NULL OR pp.user_warranty_end_date IS NOT NULL)
+  AND GREATEST(pp.manufacturer_warranty_end_date, pp.user_warranty_end_date) <= CURRENT_DATE + INTERVAL '90 days'
+ORDER BY effective_warranty_end_date ASC, b.name, p.name;
+COMMENT ON VIEW public.v_warranty_expiring_soon IS 'Products with warranties expiring within 90 days';
 
 -- Service Request Summary View
 -- TODO: This view needs redesign for 1:N relationship (service_requests -> service_request_items)
@@ -230,8 +228,34 @@ COMMENT ON VIEW public.v_stock_movement_history IS 'Detailed stock movement hist
 
 -- Low Stock Alert View
 CREATE OR REPLACE VIEW public.v_low_stock_alerts AS
-SELECT p.id AS product_id, p.name AS product_name, p.sku AS product_sku, b.name AS brand_name, pst.warehouse_type, pst.minimum_quantity, pst.reorder_quantity, pst.maximum_quantity, COALESCE(stock.quantity, 0) AS current_quantity, pst.minimum_quantity - COALESCE(stock.quantity, 0) AS quantity_below_minimum, pst.alert_enabled, pst.last_alert_sent_at, pst.created_at AS threshold_created_at, pst.updated_at AS threshold_updated_at
-FROM public.product_stock_thresholds pst JOIN public.products p ON pst.product_id = p.id JOIN public.brands b ON p.brand_id = b.id LEFT JOIN (SELECT product_id, virtual_warehouse_type, COUNT(*) AS quantity FROM public.physical_products GROUP BY product_id, virtual_warehouse_type) stock ON stock.product_id = p.id AND stock.virtual_warehouse_type = pst.warehouse_type
-WHERE pst.alert_enabled = true AND COALESCE(stock.quantity, 0) < pst.minimum_quantity
-ORDER BY (pst.minimum_quantity - COALESCE(stock.quantity, 0)) DESC, b.name, p.name;
-COMMENT ON VIEW public.v_low_stock_alerts IS 'Products below minimum stock thresholds requiring reorder';
+SELECT
+  p.id AS product_id,
+  p.name AS product_name,
+  p.sku AS product_sku,
+  b.name AS brand_name,
+  pst.warehouse_type,
+  pst.minimum_quantity,
+  pst.reorder_quantity,
+  pst.maximum_quantity,
+  COALESCE(stock.quantity, 0) AS current_quantity,
+  pst.minimum_quantity - COALESCE(stock.quantity, 0) AS quantity_below_minimum,
+  pst.alert_enabled,
+  pst.last_alert_sent_at,
+  pst.created_at AS threshold_created_at,
+  pst.updated_at AS threshold_updated_at
+FROM public.product_stock_thresholds pst
+JOIN public.products p ON pst.product_id = p.id
+JOIN public.brands b ON p.brand_id = b.id
+LEFT JOIN (
+  SELECT
+    pp.product_id,
+    vw.warehouse_type,
+    COUNT(*) AS quantity
+  FROM public.physical_products pp
+  JOIN public.virtual_warehouses vw ON pp.virtual_warehouse_id = vw.id
+  GROUP BY pp.product_id, vw.warehouse_type
+) stock ON stock.product_id = p.id AND stock.warehouse_type = pst.warehouse_type
+WHERE pst.alert_enabled = true
+  AND COALESCE(stock.quantity, 0) < pst.minimum_quantity
+ORDER BY quantity_below_minimum DESC, b.name, p.name;
+COMMENT ON VIEW public.v_low_stock_alerts IS 'Products below minimum stock threshold requiring restocking';

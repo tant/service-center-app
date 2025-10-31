@@ -27,9 +27,7 @@ BEGIN
         (SELECT COUNT(*)::INTEGER
          FROM public.physical_products pp
          WHERE pp.product_id = pws.product_id
-           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
-           AND pp.physical_warehouse_id = pws.physical_warehouse_id
-           AND pp.deleted_at IS NULL)
+           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id)
       ), 0
     )::BIGINT AS total_actual,
     COUNT(DISTINCT CASE
@@ -38,8 +36,6 @@ BEGIN
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
-          AND pp.physical_warehouse_id = pws.physical_warehouse_id
-          AND pp.deleted_at IS NULL
       ) < (pws.declared_quantity * 0.1) THEN pws.id
     END)::BIGINT AS critical_count,
     COUNT(DISTINCT CASE
@@ -48,20 +44,15 @@ BEGIN
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
-          AND pp.physical_warehouse_id = pws.physical_warehouse_id
-          AND pp.deleted_at IS NULL
       ) >= (pws.declared_quantity * 0.1)
       AND (
         SELECT COUNT(*)::INTEGER
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
-          AND pp.physical_warehouse_id = pws.physical_warehouse_id
-          AND pp.deleted_at IS NULL
       ) < (pws.declared_quantity * 0.5) THEN pws.id
     END)::BIGINT AS warning_count
-  FROM public.product_warehouse_stock pws
-  WHERE pws.deleted_at IS NULL;
+  FROM public.product_warehouse_stock pws;
 END;
 $$;
 

@@ -48,8 +48,9 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
 
   const selectedItem = receipt.items?.find((item) => item.id === selectedItemId);
 
-  // Allow editing when: draft, pending_approval, or approved
-  const canEdit = receipt.status === "draft" || receipt.status === "pending_approval" || receipt.status === "approved";
+  // Allow editing when: draft, pending_approval, approved, or completed
+  // v2.0 Workflow: Serial entry is non-blocking and can continue even after approval/completion
+  const canEdit = receipt.status === "draft" || receipt.status === "pending_approval" || receipt.status === "approved" || receipt.status === "completed";
 
   return (
     <>

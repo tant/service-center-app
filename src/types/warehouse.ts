@@ -44,10 +44,15 @@ export interface PhysicalProductWithDetails extends PhysicalProduct {
       name: string;
     };
   };
-  physical_warehouse?: {
+  virtual_warehouse?: {
     id: string;
     name: string;
-    code: string;
+    warehouse_type: string;
+    physical_warehouse?: {
+      id: string;
+      name: string;
+      code: string;
+    };
   };
   current_ticket?: {
     id: string;
@@ -85,7 +90,6 @@ export interface PhysicalProductFormData {
   serial_number: string;
   condition: ProductCondition;
   virtual_warehouse_id: string; // Changed to virtual warehouse ID
-  physical_warehouse_id?: string;
   manufacturer_warranty_end_date?: string;
   user_warranty_end_date?: string;
   supplier_id?: string;

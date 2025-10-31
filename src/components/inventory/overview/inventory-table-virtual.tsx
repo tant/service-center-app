@@ -27,7 +27,11 @@ export function InventoryTableVirtual() {
 
   const { data: stock, isLoading } = trpc.inventory.stock.getByVirtualWarehouse.useQuery(
     { warehouseType, search },
-    { enabled: !!warehouseType }
+    {
+      enabled: !!warehouseType,
+      refetchInterval: 30000, // Refresh every 30 seconds
+      refetchOnWindowFocus: true,
+    }
   );
 
   return (

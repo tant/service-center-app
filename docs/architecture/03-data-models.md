@@ -45,9 +45,14 @@ graph TB
 ### 3.2.1 ENUMs and Types
 
 
-Note: On 2025-10-27 we added an operational field to `physical_products` to support robust RMA flows:
+**IMPORTANT SCHEMA UPDATE (2025-10-31):** The `physical_products` table was redesigned to use virtual warehouse instances instead of types:
 
-- `previous_virtual_warehouse_type` (public.warehouse_type nullable): when a physical product is moved into `rma_staging` the system now saves the product's source virtual warehouse in this field so it can be restored when the product is removed from an RMA batch. This enables reliable round-trip movement without relying on a global default return warehouse.
+- ✅ **NEW:** `virtual_warehouse_id` (UUID NOT NULL) - References specific virtual warehouse instance
+- ✅ **NEW:** `previous_virtual_warehouse_id` (UUID nullable) - Stores previous warehouse for RMA batch management
+- ❌ **REMOVED:** `virtual_warehouse_type` (ENUM) - Replaced with UUID reference for flexibility
+- ❌ **REMOVED:** `physical_warehouse_id` - Redundant, obtained via `virtual_warehouse.physical_warehouse_id`
+
+This enables unlimited warehouse instances per physical location and proper foreign key relationships. See [Physical Products Schema Update](./PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md) for complete details.
 ```mermaid
 graph LR
     subgraph "User Management"
@@ -632,36 +637,53 @@ $$ language sql security definer;
 **Warehouse & Inventory Management:**
 - `physical_warehouses` - Physical warehouse locations.
   ```sql
-  create table "physical_warehouses" (
+  CREATE TABLE "physical_warehouses" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "code" text not null,
     "address" text,
     "description" text,
+    "is_system_default" boolean not null default false,
     "created_at" timestamptz not null default now(),
     "updated_at" timestamptz not null default now(),
     constraint "physical_warehouses_pkey" primary key ("id"),
     constraint "physical_warehouses_code_key" unique ("code")
   );
   ```
-- `virtual_warehouses` - Virtual warehouse zones within physical warehouses. A default virtual warehouse is created automatically when a physical one is created.
+- `virtual_warehouses` - Virtual warehouse instances within physical warehouses. Each belongs to a physical warehouse (NOT NULL).
   ```sql
-  create table "virtual_warehouses" (
+  CREATE TABLE "virtual_warehouses" (
     "id" uuid not null default gen_random_uuid(),
-    "physical_warehouse_id" uuid references "physical_warehouses"("id") on delete set null,
+    "physical_warehouse_id" uuid not null references "physical_warehouses"("id") on delete cascade,
     "name" text not null,
-    "warehouse_type" public.warehouse_type,
+    "warehouse_type" public.warehouse_type not null,
     "description" text,
-    "is_default" boolean not null default false,
+    "is_active" boolean not null default true,
     "created_at" timestamptz not null default now(),
     "updated_at" timestamptz not null default now(),
     constraint "virtual_warehouses_pkey" primary key ("id")
   );
   ```
-- `physical_products` - Physical products with serial numbers
-- `stock_movements` - Product movement history
-- `product_stock_thresholds` - Low-stock alert thresholds
-- `product_warehouse_stock` - Stock levels by warehouse
+- `physical_products` - Serialized product instances **REDESIGNED 2025-10-31**
+  - Now references `virtual_warehouse_id` (UUID) instead of `virtual_warehouse_type` (ENUM)
+  - Added `previous_virtual_warehouse_id` for RMA batch management
+  - Removed `physical_warehouse_id` (get from virtual_warehouse join)
+  ```sql
+  CREATE TABLE "physical_products" (
+    "id" uuid primary key,
+    "product_id" uuid not null references products(id),
+    "serial_number" varchar(255) not null unique,
+    "virtual_warehouse_id" uuid not null references virtual_warehouses(id),
+    "previous_virtual_warehouse_id" uuid references virtual_warehouses(id),
+    "manufacturer_warranty_end_date" date,
+    "user_warranty_end_date" date,
+    "last_known_customer_id" uuid references customers(id),
+    -- ... other fields
+  );
+  ```
+- `stock_movements` - Product movement audit trail
+- `product_stock_thresholds` - Low-stock alert thresholds by warehouse type
+- `product_warehouse_stock` - Declared stock quantities by product-warehouse instance
 - `rma_batches` - Return merchandise authorization batches
 
 **Stock Documents:**

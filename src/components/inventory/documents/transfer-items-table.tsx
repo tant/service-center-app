@@ -29,8 +29,9 @@ export function TransferItemsTable({ transfer, onSerialsSelected }: TransferItem
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Allow editing when: draft, pending_approval, or approved
-  const canEdit = transfer.status === "draft" || transfer.status === "pending_approval" || transfer.status === "approved";
+  // Allow editing when: draft, pending_approval, approved, or completed
+  // v2.0 Workflow: Serial selection is non-blocking and can continue even after approval/completion
+  const canEdit = transfer.status === "draft" || transfer.status === "pending_approval" || transfer.status === "approved" || transfer.status === "completed";
 
   const handleSelectSerials = (itemId: string) => {
     setSelectedItemId(itemId);

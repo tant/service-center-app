@@ -27,7 +27,11 @@ export function InventoryTablePhysical() {
 
   const { data: stock, isLoading } = trpc.inventory.stock.getByPhysicalWarehouse.useQuery(
     { warehouseId, search },
-    { enabled: !!warehouseId }
+    {
+      enabled: !!warehouseId,
+      refetchInterval: 30000, // Refresh every 30 seconds
+      refetchOnWindowFocus: true,
+    }
   );
 
   return (

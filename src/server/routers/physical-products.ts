@@ -16,7 +16,6 @@ const createProductSchema = z.object({
     .regex(/^[A-Z0-9_-]+$/, "Serial number must be alphanumeric (A-Z, 0-9, dash, underscore)")
     .transform((val) => val.toUpperCase()),
   product_id: z.string().uuid("Product ID must be a valid UUID"),
-  physical_warehouse_id: z.string().uuid("Warehouse ID must be a valid UUID").optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID"),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]),
   manufacturer_warranty_end_date: z.string().optional(),
@@ -38,7 +37,6 @@ const updateProductSchema = z.object({
     .transform((val) => val.toUpperCase())
     .optional(),
   product_id: z.string().uuid().optional(),
-  physical_warehouse_id: z.string().uuid().nullable().optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   manufacturer_warranty_end_date: z.string().nullable().optional(),
@@ -52,7 +50,6 @@ const updateProductSchema = z.object({
 });
 
 const listProductsSchema = z.object({
-  physical_warehouse_id: z.string().uuid().optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
@@ -91,7 +88,6 @@ export const inventoryRouter = router({
         .insert({
           serial_number: input.serial_number,
           product_id: input.product_id,
-          physical_warehouse_id: input.physical_warehouse_id,
           virtual_warehouse_id: input.virtual_warehouse_id,
           condition: input.condition,
           manufacturer_warranty_end_date: input.manufacturer_warranty_end_date,
@@ -247,16 +243,11 @@ export const inventoryRouter = router({
           `
           *,
           product:products(id, name, sku, brand:brands(name)),
-          physical_warehouse:physical_warehouses(id, name),
-          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type)
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
         `
         );
 
       // Apply filters
-      if (input.physical_warehouse_id) {
-        query = query.eq("physical_warehouse_id", input.physical_warehouse_id);
-      }
-
       if (input.virtual_warehouse_id) {
         query = query.eq("virtual_warehouse_id", input.virtual_warehouse_id);
       }
@@ -288,9 +279,6 @@ export const inventoryRouter = router({
 
       if (input.virtual_warehouse_id) {
         countQuery = countQuery.eq("virtual_warehouse_id", input.virtual_warehouse_id);
-      }
-      if (input.physical_warehouse_id) {
-        countQuery = countQuery.eq("physical_warehouse_id", input.physical_warehouse_id);
       }
       if (input.condition) {
         countQuery = countQuery.eq("condition", input.condition);
@@ -330,16 +318,16 @@ export const inventoryRouter = router({
           warranty_months,
           brand:brands(name)
         ),
-        physical_warehouse:physical_warehouses(
-          id,
-          name,
-          code,
-          location
-        ),
         virtual_warehouse:virtual_warehouses!virtual_warehouse_id(
           id,
           name,
-          warehouse_type
+          warehouse_type,
+          physical_warehouse:physical_warehouses(
+            id,
+            name,
+            code,
+            location
+          )
         ),
         current_ticket:service_tickets(
           id,
@@ -432,7 +420,6 @@ export const inventoryRouter = router({
             .insert({
               serial_number: productData.serial_number,
               product_id: productData.product_id,
-              physical_warehouse_id: productData.physical_warehouse_id,
               virtual_warehouse_id: productData.virtual_warehouse_id,
               condition: productData.condition,
               manufacturer_warranty_end_date: productData.manufacturer_warranty_end_date,
@@ -483,8 +470,7 @@ export const inventoryRouter = router({
           `
           *,
           product:products(*),
-          physical_warehouse:physical_warehouses(*),
-          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*, physical_warehouse:physical_warehouses(*)),
           current_ticket:service_tickets(id, ticket_number, status)
         `
         )
@@ -523,7 +509,7 @@ export const inventoryRouter = router({
           endDate: warrantyEndDate,
         },
         location: {
-          physical: product.physical_warehouse,
+          physical: (product.virtual_warehouse as any)?.physical_warehouse || null,
           virtual: product.virtual_warehouse,
         },
         inService: product.current_ticket
@@ -602,11 +588,8 @@ export const inventoryRouter = router({
         });
       }
 
-      // Update product location
+      // Update product location (only virtual warehouse - physical is derived from virtual)
       const updateData: any = {};
-      if (input.to_physical_warehouse_id !== undefined) {
-        updateData.physical_warehouse_id = input.to_physical_warehouse_id;
-      }
       if (input.to_virtual_warehouse_id) {
         updateData.virtual_warehouse_id = input.to_virtual_warehouse_id;
       }

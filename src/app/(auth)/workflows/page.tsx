@@ -9,18 +9,18 @@ import { useTaskTemplates } from "@/hooks/use-workflow";
 export default function TemplatesPage() {
   const router = useRouter();
 
-  const { templates, isLoading } = useTaskTemplates({ is_active: true });
+  const { templates: workflows, isLoading } = useTaskTemplates({ is_active: true });
 
   const handleCreateNew = () => {
-    router.push("/workflows/templates/new");
+    router.push("/workflows/new");
   };
 
-  const handleEdit = (templateId: string) => {
-    router.push(`/workflows/templates/${templateId}/edit`);
+  const handleEdit = (workflowId: string) => {
+    router.push(`/workflows/${workflowId}/edit`);
   };
 
-  const handleView = (templateId: string) => {
-    router.push(`/workflows/templates/${templateId}`);
+  const handleView = (workflowId: string) => {
+    router.push(`/workflows/${workflowId}`);
   };
 
   return (
@@ -30,7 +30,7 @@ export default function TemplatesPage() {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <TemplateListTable
-              templates={templates}
+              templates={workflows}
               isLoading={isLoading}
               onEdit={handleEdit}
               onView={handleView}

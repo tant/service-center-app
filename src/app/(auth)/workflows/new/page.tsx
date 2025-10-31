@@ -10,13 +10,13 @@ import {
 
 export default function NewTemplatePage() {
   const router = useRouter();
-  const { taskTypes } = useTaskTypes();
+  const { taskTypes: tasks } = useTaskTypes();
   const { createTemplate, isCreating } = useCreateTemplate();
 
-  const handleSubmit = (templateData: any) => {
-    createTemplate(templateData, {
+  const handleSubmit = (workflowData: any) => {
+    createTemplate(workflowData, {
       onSuccess: () => {
-        router.push("/workflows/templates");
+        router.push("/workflows");
       },
     });
   };
@@ -29,7 +29,7 @@ export default function NewTemplatePage() {
     <>
       <PageHeader
         title="Tạo mẫu quy trình mới"
-        backHref="/workflows/templates"
+        backHref="/workflows"
       />
 
       <div className="flex flex-1 flex-col">
@@ -37,7 +37,7 @@ export default function NewTemplatePage() {
           <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
             <TemplateForm
               mode="create"
-              taskTypes={taskTypes}
+              tasks={tasks}
               isSubmitting={isCreating}
               onSubmit={handleSubmit}
               onCancel={handleCancel}

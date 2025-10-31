@@ -129,7 +129,7 @@ export const workflowRouter = router({
       .query(async ({ ctx, input }) => {
         // Build query with optional is_active filter
         let query = ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .select('*')
           .order('category', { ascending: true })
           .order('name', { ascending: true });
@@ -163,7 +163,7 @@ export const workflowRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Check for duplicate name
         const { data: existing } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .select('id')
           .eq('name', input.name)
           .single();
@@ -176,7 +176,7 @@ export const workflowRouter = router({
         }
 
         const { data, error } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .insert(input)
           .select()
           .single();
@@ -202,7 +202,7 @@ export const workflowRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Check if task type exists
         const { data: existing, error: existingError } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .select('id')
           .eq('id', input.id)
           .single();
@@ -216,7 +216,7 @@ export const workflowRouter = router({
 
         // Check for duplicate name (excluding current task type)
         const { data: duplicate } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .select('id')
           .eq('name', input.name)
           .neq('id', input.id)
@@ -231,7 +231,7 @@ export const workflowRouter = router({
 
         const { id, ...updateData } = input;
         const { data, error } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .update(updateData)
           .eq('id', id)
           .select()
@@ -258,7 +258,7 @@ export const workflowRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Check if task type exists
         const { data: existing, error: existingError } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .select('id, name')
           .eq('id', input.id)
           .single();
@@ -273,12 +273,12 @@ export const workflowRouter = router({
         // If deactivating, check if it's being used in active templates
         if (!input.is_active) {
           const { data: templatesUsing, error: checkError } = await ctx.supabaseAdmin
-            .from('task_templates_tasks')
+            .from('workflow_tasks')
             .select(`
               id,
-              template:task_templates!inner(id, name, is_active)
+              template:workflows!inner(id, name, is_active)
             `)
-            .eq('task_type_id', input.id)
+            .eq('task_id', input.id)
             .eq('template.is_active', true);
 
           if (checkError) {
@@ -298,7 +298,7 @@ export const workflowRouter = router({
         }
 
         const { data, error } = await ctx.supabaseAdmin
-          .from('task_types')
+          .from('tasks')
           .update({ is_active: input.is_active })
           .eq('id', input.id)
           .select()
@@ -331,16 +331,16 @@ export const workflowRouter = router({
       .input(templateListSchema.optional())
       .query(async ({ ctx, input }) => {
         let query = ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select(`
             *,
             product:products(id, name, sku),
-            tasks:task_templates_tasks(
+            tasks:workflow_tasks(
               id,
               sequence_order,
               is_required,
               custom_instructions,
-              task_type:task_types(*)
+              task_type:tasks(*)
             )
           `)
           .order('created_at', { ascending: false });
@@ -410,17 +410,17 @@ export const workflowRouter = router({
         }
 
         const { data, error } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select(`
             *,
             product:products(id, name, sku),
-            tasks:task_templates_tasks(
+            tasks:workflow_tasks(
               id,
               sequence_order,
               is_required,
               custom_instructions,
-              task_type_id,
-              task_type:task_types(*)
+              task_id,
+              task_type:tasks(*)
             )
           `)
           .eq('id', input.template_id)
@@ -485,7 +485,7 @@ export const workflowRouter = router({
 
         // Check for duplicate name
         const { data: existing } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select('id')
           .eq('name', input.name)
           .single();
@@ -512,7 +512,7 @@ export const workflowRouter = router({
 
         // 1. Create template (map enforce_sequence to strict_sequence for DB)
         const { data: template, error: templateError } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .insert({
             ...templateData,
             strict_sequence: enforce_sequence, // Map field name to DB column
@@ -531,18 +531,21 @@ export const workflowRouter = router({
 
         // 2. Create template tasks
         const templateTasks = tasks.map(task => ({
-          template_id: template.id,
-          ...task,
+          workflow_id: template.id,
+          task_id: task.task_type_id,
+          sequence_order: task.sequence_order,
+          is_required: task.is_required,
+          custom_instructions: task.custom_instructions,
         }));
 
         const { error: tasksError } = await ctx.supabaseAdmin
-          .from('task_templates_tasks')
+          .from('workflow_tasks')
           .insert(templateTasks);
 
         if (tasksError) {
           // Rollback: Delete the template
           await ctx.supabaseAdmin
-            .from('task_templates')
+            .from('workflows')
             .delete()
             .eq('id', template.id);
 
@@ -555,16 +558,16 @@ export const workflowRouter = router({
 
         // Fetch complete template with tasks
         const { data: completeTemplate } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select(`
             *,
             product:products(id, name, sku),
-            tasks:task_templates_tasks(
+            tasks:workflow_tasks(
               id,
               sequence_order,
               is_required,
               custom_instructions,
-              task_type:task_types(*)
+              task_type:tasks(*)
             )
           `)
           .eq('id', template.id)
@@ -633,7 +636,7 @@ export const workflowRouter = router({
         const { count: activeTicketsCount, error: countError } = await ctx.supabaseAdmin
           .from('service_tickets')
           .select('id', { count: 'exact', head: true })
-          .eq('template_id', input.template_id)
+          .eq('workflow_id', input.template_id)
           .in('status', ['pending', 'in_progress']);
 
         if (countError) {
@@ -653,15 +656,15 @@ export const workflowRouter = router({
 
         // Fetch OLD template snapshot for audit log
         const { data: oldTemplate, error: fetchError } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select(`
             *,
-            tasks:task_templates_tasks(
+            tasks:workflow_tasks(
               id,
               sequence_order,
               is_required,
               custom_instructions,
-              task_type_id
+              task_id
             )
           `)
           .eq('id', input.template_id)
@@ -678,7 +681,7 @@ export const workflowRouter = router({
         const { tasks, template_id, enforce_sequence, ...templateData } = input;
 
         const { data: updatedTemplate, error: updateError } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .update({
             ...templateData,
             strict_sequence: enforce_sequence, // Map field name to DB column
@@ -697,9 +700,9 @@ export const workflowRouter = router({
 
         // 2. DELETE old tasks
         const { error: deleteTasksError } = await ctx.supabaseAdmin
-          .from('task_templates_tasks')
+          .from('workflow_tasks')
           .delete()
-          .eq('template_id', input.template_id);
+          .eq('workflow_id', input.template_id);
 
         if (deleteTasksError) {
           throw new TRPCError({
@@ -711,12 +714,15 @@ export const workflowRouter = router({
 
         // 3. INSERT new tasks
         const newTemplateTasks = tasks.map(task => ({
-          template_id: input.template_id,
-          ...task,
+          workflow_id: input.template_id,
+          task_id: task.task_type_id,
+          sequence_order: task.sequence_order,
+          is_required: task.is_required,
+          custom_instructions: task.custom_instructions,
         }));
 
         const { error: insertTasksError } = await ctx.supabaseAdmin
-          .from('task_templates_tasks')
+          .from('workflow_tasks')
           .insert(newTemplateTasks);
 
         if (insertTasksError) {
@@ -759,16 +765,16 @@ export const workflowRouter = router({
 
         // 5. Fetch complete updated template
         const { data: completeTemplate } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select(`
             *,
             product:products(id, name, sku),
-            tasks:task_templates_tasks(
+            tasks:workflow_tasks(
               id,
               sequence_order,
               is_required,
               custom_instructions,
-              task_type:task_types(*)
+              task_type:tasks(*)
             )
           `)
           .eq('id', input.template_id)
@@ -823,7 +829,7 @@ export const workflowRouter = router({
 
         // Update is_active field only
         const { error: updateError } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .update({ is_active: input.is_active })
           .eq('id', input.template_id);
 
@@ -885,7 +891,7 @@ export const workflowRouter = router({
         const { data: activeTickets, error: checkError } = await ctx.supabaseAdmin
           .from('service_tickets')
           .select('id, ticket_number')
-          .eq('template_id', input.template_id)
+          .eq('workflow_id', input.template_id)
           .in('status', ['pending', 'in_progress']);
 
         if (checkError) {
@@ -905,7 +911,7 @@ export const workflowRouter = router({
 
         // Fetch template info for audit log
         const { data: template } = await ctx.supabaseAdmin
-          .from('task_templates')
+          .from('workflows')
           .select('name, service_type, is_active')
           .eq('id', input.template_id)
           .single();
@@ -913,7 +919,7 @@ export const workflowRouter = router({
         if (input.soft_delete) {
           // Soft delete: Mark as inactive
           const { error: deactivateError } = await ctx.supabaseAdmin
-            .from('task_templates')
+            .from('workflows')
             .update({ is_active: false })
             .eq('id', input.template_id);
 
@@ -942,7 +948,7 @@ export const workflowRouter = router({
         } else {
           // Hard delete: Remove from database
           const { error: deleteError } = await ctx.supabaseAdmin
-            .from('task_templates')
+            .from('workflows')
             .delete()
             .eq('id', input.template_id);
 
@@ -1010,7 +1016,7 @@ export const workflowRouter = router({
         .from('service_ticket_tasks')
         .select(`
           *,
-          task_type:task_types(*),
+          task_type:tasks(*),
           ticket:service_tickets(
             id,
             ticket_number,
@@ -1263,7 +1269,7 @@ export const workflowRouter = router({
       // Get template to check enforce_sequence (map from strict_sequence in DB)
       const { data: ticket } = await ctx.supabaseAdmin
         .from('service_tickets')
-        .select('template_id, task_templates(strict_sequence)')
+        .select('workflow_id, workflows(strict_sequence)')
         .eq('id', currentTask.ticket_id)
         .single();
 
@@ -1275,7 +1281,7 @@ export const workflowRouter = router({
           sequence_order,
           status,
           is_required,
-          task_type:task_types(
+          task_type:tasks(
             id,
             name,
             category
@@ -1293,10 +1299,10 @@ export const workflowRouter = router({
         });
       }
 
-      // Handle task_templates being array or object (Supabase type inference)
-      const taskTemplate = Array.isArray(ticket?.task_templates)
-        ? ticket?.task_templates[0]
-        : ticket?.task_templates;
+      // Handle workflows being array or object (Supabase type inference)
+      const taskTemplate = Array.isArray(ticket?.workflows)
+        ? ticket?.workflows[0]
+        : ticket?.workflows;
 
       return {
         prerequisites: prerequisites || [],
@@ -1455,10 +1461,10 @@ export const workflowRouter = router({
         });
       }
 
-      // 4. Get current ticket with template_id
+      // 4. Get current ticket with workflow_id
       const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
         .from('service_tickets')
-        .select('id, template_id, status')
+        .select('id, workflow_id, status')
         .eq('id', ticket_id)
         .single();
 
@@ -1478,7 +1484,7 @@ export const workflowRouter = router({
       }
 
       // 6. Validate template is different
-      if (ticket.template_id === new_template_id) {
+      if (ticket.workflow_id === new_template_id) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'New template must be different from current template',
@@ -1509,13 +1515,13 @@ export const workflowRouter = router({
 
       // 8. Get new template tasks
       const { data: newTemplateTasks, error: newTemplateError } = await ctx.supabaseAdmin
-        .from('template_tasks')
+        .from('workflow_tasks')
         .select(`
-          task_type_id,
+          task_id,
           sequence_order,
           is_required,
           custom_instructions,
-          task_types (
+          tasks (
             name,
             description,
             category,
@@ -1524,7 +1530,7 @@ export const workflowRouter = router({
             requires_photo
           )
         `)
-        .eq('template_id', new_template_id)
+        .eq('workflow_id', new_template_id)
         .order('sequence_order');
 
       if (newTemplateError || !newTemplateTasks || newTemplateTasks.length === 0) {
@@ -1541,7 +1547,7 @@ export const workflowRouter = router({
       );
 
       const tasksToAdd = newTemplateTasks.filter(nt =>
-        !existingTaskTypeIds.has(nt.task_type_id)
+        !existingTaskTypeIds.has(nt.task_id)
       );
 
       // 10. Delete tasks that are pending/blocked and not in new template
@@ -1567,13 +1573,13 @@ export const workflowRouter = router({
       if (tasksToAdd.length > 0) {
         const newTasksToInsert = tasksToAdd.map((tt, index) => ({
           ticket_id,
-          task_type_id: tt.task_type_id,
-          name: (tt.task_types as any)?.name || 'Unknown Task',
-          description: tt.custom_instructions || (tt.task_types as any)?.description,
+          task_type_id: tt.task_id,
+          name: (tt.tasks as any)?.name || 'Unknown Task',
+          description: tt.custom_instructions || (tt.tasks as any)?.description,
           sequence_order: preservedTasks.length + index + 1,
           status: 'pending' as const,
           is_required: tt.is_required,
-          estimated_duration_minutes: (tt.task_types as any)?.estimated_duration_minutes,
+          estimated_duration_minutes: (tt.tasks as any)?.estimated_duration_minutes,
         }));
 
         const { error: insertError } = await ctx.supabaseAdmin
@@ -1605,10 +1611,10 @@ export const workflowRouter = router({
         }
       }
 
-      // 13. Update ticket template_id
+      // 13. Update ticket workflow_id
       const { error: updateTicketError } = await ctx.supabaseAdmin
         .from('service_tickets')
-        .update({ template_id: new_template_id })
+        .update({ workflow_id: new_template_id })
         .eq('id', ticket_id);
 
       if (updateTicketError) {
@@ -1620,11 +1626,11 @@ export const workflowRouter = router({
 
       // 14. Create audit log
       const { error: auditError } = await ctx.supabaseAdmin
-        .from('ticket_template_changes')
+        .from('ticket_workflow_changes')
         .insert({
           ticket_id,
-          old_template_id: ticket.template_id,
-          new_template_id,
+          old_workflow_id: ticket.workflow_id,
+          new_workflow_id: new_template_id,
           reason,
           changed_by_id: profile.id,
           tasks_preserved_count: preservedTasks.length,

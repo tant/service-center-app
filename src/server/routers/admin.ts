@@ -925,7 +925,7 @@ export const adminRouter = router({
 
       // Query all existing task types instead of creating them
       const { data: existingTaskTypes, error: taskTypesError } = await supabaseAdmin
-        .from("task_types")
+        .from("tasks")
         .select("id, name");
 
       if (taskTypesError) {

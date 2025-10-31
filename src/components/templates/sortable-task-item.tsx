@@ -27,14 +27,14 @@ export interface TaskItem {
 
 interface SortableTaskItemProps {
   task: TaskItem;
-  taskTypes: Array<{ id: string; name: string; category?: string }>;
+  tasks: Array<{ id: string; name: string; category?: string }>;
   onUpdate: (task: TaskItem) => void;
   onRemove: () => void;
 }
 
 export function SortableTaskItem({
   task,
-  taskTypes,
+  tasks,
   onUpdate,
   onRemove,
 }: SortableTaskItemProps) {
@@ -53,7 +53,7 @@ export function SortableTaskItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const taskType = taskTypes.find((t) => t.id === task.task_type_id);
+  const selectedTask = tasks.find((t) => t.id === task.task_type_id);
 
   return (
     <div
@@ -83,7 +83,7 @@ export function SortableTaskItem({
               <SelectValue placeholder="Chọn loại công việc" />
             </SelectTrigger>
             <SelectContent>
-              {taskTypes.map((type) => (
+              {tasks.map((type) => (
                 <SelectItem key={type.id} value={type.id}>
                   {type.category && (
                     <span className="text-muted-foreground mr-2">

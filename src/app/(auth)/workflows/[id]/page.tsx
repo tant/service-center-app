@@ -24,7 +24,7 @@ export default function TemplateDetailPage() {
   const params = useParams();
   const templateId = params.id as string;
 
-  const { template, isLoading } = useTaskTemplate(templateId);
+  const { template: workflow, isLoading } = useTaskTemplate(templateId);
   const { deleteTemplate, isDeleting } = useDeleteTemplate();
   const { toggleTemplate, isToggling } = useToggleTemplate();
 
@@ -35,7 +35,7 @@ export default function TemplateDetailPage() {
   };
 
   const handleEdit = () => {
-    router.push(`/workflows/templates/${templateId}/edit`);
+    router.push(`/workflows/${templateId}/edit`);
   };
 
   const handleDelete = () => {
@@ -45,16 +45,16 @@ export default function TemplateDetailPage() {
       { template_id: templateId, soft_delete: true },
       {
         onSuccess: () => {
-          router.push("/workflows/templates");
+          router.push("/workflows");
         },
       }
     );
   };
 
   const handleToggleActive = () => {
-    if (!template) return;
+    if (!workflow) return;
 
-    const newStatus = !template.is_active;
+    const newStatus = !workflow.is_active;
     const action = newStatus ? "kích hoạt" : "vô hiệu hóa";
 
     if (!confirm(`Bạn có chắc chắn muốn ${action} mẫu quy trình này?`)) return;
@@ -70,7 +70,7 @@ export default function TemplateDetailPage() {
       <>
         <PageHeader
           title="Đang tải..."
-          backHref="/workflows/templates"
+          backHref="/workflows"
         />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
@@ -82,12 +82,12 @@ export default function TemplateDetailPage() {
     );
   }
 
-  if (!template) {
+  if (!workflow) {
     return (
       <>
         <PageHeader
           title="Không tìm thấy"
-          backHref="/workflows/templates"
+          backHref="/workflows"
         />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
@@ -105,8 +105,8 @@ export default function TemplateDetailPage() {
   return (
     <>
       <PageHeader
-        title={template.name}
-        backHref="/workflows/templates"
+        title={workflow.name}
+        backHref="/workflows"
       />
 
       <div className="flex flex-1 flex-col">
@@ -116,13 +116,13 @@ export default function TemplateDetailPage() {
               {/* Actions */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge variant={template.is_active ? "default" : "secondary"}>
-                    {template.is_active ? "Đang hoạt động" : "Không hoạt động"}
+                  <Badge variant={workflow.is_active ? "default" : "secondary"}>
+                    {workflow.is_active ? "Đang hoạt động" : "Không hoạt động"}
                   </Badge>
                   <Badge variant="outline">
-                    {serviceTypeLabels[template.service_type] || template.service_type}
+                    {serviceTypeLabels[workflow.service_type] || workflow.service_type}
                   </Badge>
-                  {template.enforce_sequence && (
+                  {workflow.enforce_sequence && (
                     <Badge variant="outline">
                       Thứ tự bắt buộc
                     </Badge>
@@ -137,7 +137,7 @@ export default function TemplateDetailPage() {
                   >
                     {isToggling ? (
                       <>Đang xử lý...</>
-                    ) : template.is_active ? (
+                    ) : workflow.is_active ? (
                       <>
                         <IconToggleLeft className="h-4 w-4 mr-2" />
                         Vô hiệu hóa
@@ -183,7 +183,7 @@ export default function TemplateDetailPage() {
                       <h3 className="text-sm font-medium text-muted-foreground mb-1">
                         Tên mẫu
                       </h3>
-                      <p className="text-base font-semibold">{template.name}</p>
+                      <p className="text-base font-semibold">{workflow.name}</p>
                     </div>
 
                     <div>
@@ -191,17 +191,17 @@ export default function TemplateDetailPage() {
                         Loại dịch vụ
                       </h3>
                       <Badge variant="outline">
-                        {serviceTypeLabels[template.service_type] || template.service_type}
+                        {serviceTypeLabels[workflow.service_type] || workflow.service_type}
                       </Badge>
                     </div>
                   </div>
 
-                  {template.description && (
+                  {workflow.description && (
                     <div>
                       <h3 className="text-sm font-medium text-muted-foreground mb-1">
                         Mô tả
                       </h3>
-                      <p className="text-sm">{template.description}</p>
+                      <p className="text-sm">{workflow.description}</p>
                     </div>
                   )}
 
@@ -212,7 +212,7 @@ export default function TemplateDetailPage() {
                       Cấu hình thực hiện
                     </h3>
                     <div className="flex items-center gap-2">
-                      {template.enforce_sequence ? (
+                      {workflow.enforce_sequence ? (
                         <Badge variant="default" className="gap-1">
                           <IconCheck className="h-3 w-3" />
                           Thứ tự bắt buộc
@@ -223,7 +223,7 @@ export default function TemplateDetailPage() {
                         </Badge>
                       )}
                       <p className="text-sm text-muted-foreground">
-                        {template.enforce_sequence
+                        {workflow.enforce_sequence
                           ? "Công việc phải hoàn thành theo đúng thứ tự"
                           : "Công việc có thể hoàn thành không theo thứ tự"}
                       </p>
@@ -237,7 +237,7 @@ export default function TemplateDetailPage() {
                       Ngày tạo
                     </h3>
                     <p className="text-sm">
-                      {new Date(template.created_at).toLocaleString("vi-VN")}
+                      {new Date(workflow.created_at).toLocaleString("vi-VN")}
                     </p>
                   </div>
                 </CardContent>
@@ -248,7 +248,7 @@ export default function TemplateDetailPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Danh sách công việc ({template.tasks?.length || 0})</CardTitle>
+                      <CardTitle>Danh sách công việc ({workflow.tasks?.length || 0})</CardTitle>
                       <CardDescription>
                         Các bước thực hiện trong mẫu quy trình này
                       </CardDescription>
@@ -256,13 +256,13 @@ export default function TemplateDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {!template.tasks || template.tasks.length === 0 ? (
+                  {!workflow.tasks || workflow.tasks.length === 0 ? (
                     <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
                       Không có công việc nào
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {template.tasks
+                      {workflow.tasks
                         .sort((a: any, b: any) => a.sequence_order - b.sequence_order)
                         .map((task: any, index: number) => (
                           <div
@@ -305,11 +305,11 @@ export default function TemplateDetailPage() {
                 </CardContent>
               </Card>
 
-              {template.enforce_sequence && template.tasks && template.tasks.length > 0 && (
+              {workflow.enforce_sequence && workflow.tasks && workflow.tasks.length > 0 && (
                 <div className="rounded-lg bg-muted p-4">
                   <p className="text-sm text-muted-foreground">
                     <strong>Lưu ý:</strong> Mẫu này yêu cầu thực hiện công việc theo thứ tự nghiêm ngặt.
-                    Các công việc phải được hoàn thành theo đúng trình tự từ 1 đến {template.tasks.length}.
+                    Các công việc phải được hoàn thành theo đúng trình tự từ 1 đến {workflow.tasks.length}.
                   </p>
                 </div>
               )}

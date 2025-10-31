@@ -475,6 +475,13 @@ export type Database = {
             foreignKeyName: "physical_products_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "physical_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -621,6 +628,13 @@ export type Database = {
             foreignKeyName: "product_parts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_parts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -696,6 +710,13 @@ export type Database = {
             foreignKeyName: "product_stock_thresholds_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_stock_thresholds_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -749,6 +770,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
             referencedColumns: ["product_id"]
           },
           {
@@ -1331,10 +1359,10 @@ export type Database = {
           sequence_order: number
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
-          task_type_id: string
-          template_task_id: string | null
+          task_id: string
           ticket_id: string
           updated_at: string
+          workflow_task_id: string | null
         }
         Insert: {
           assigned_to_id?: string | null
@@ -1349,10 +1377,10 @@ export type Database = {
           sequence_order: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
-          task_type_id: string
-          template_task_id?: string | null
+          task_id: string
           ticket_id: string
           updated_at?: string
+          workflow_task_id?: string | null
         }
         Update: {
           assigned_to_id?: string | null
@@ -1367,10 +1395,10 @@ export type Database = {
           sequence_order?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
-          task_type_id?: string
-          template_task_id?: string | null
+          task_id?: string
           ticket_id?: string
           updated_at?: string
+          workflow_task_id?: string | null
         }
         Relationships: [
           {
@@ -1381,17 +1409,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "service_ticket_tasks_task_type_id_fkey"
-            columns: ["task_type_id"]
+            foreignKeyName: "service_ticket_tasks_task_id_fkey"
+            columns: ["task_id"]
             isOneToOne: false
-            referencedRelation: "task_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_ticket_tasks_template_task_id_fkey"
-            columns: ["template_task_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates_tasks"
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {
@@ -1414,6 +1435,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_warranty_expiring_soon"
             referencedColumns: ["current_ticket_id"]
+          },
+          {
+            foreignKeyName: "service_ticket_tasks_workflow_task_id_fkey"
+            columns: ["workflow_task_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_tasks"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1438,12 +1466,12 @@ export type Database = {
           service_fee: number
           started_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
-          template_id: string | null
           ticket_number: string
           total_cost: number | null
           updated_at: string
           updated_by: string | null
           warranty_type: Database["public"]["Enums"]["warranty_type"] | null
+          workflow_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -1467,12 +1495,12 @@ export type Database = {
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
-          template_id?: string | null
           ticket_number: string
           total_cost?: number | null
           updated_at?: string
           updated_by?: string | null
           warranty_type?: Database["public"]["Enums"]["warranty_type"] | null
+          workflow_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -1496,12 +1524,12 @@ export type Database = {
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
-          template_id?: string | null
           ticket_number?: string
           total_cost?: number | null
           updated_at?: string
           updated_by?: string | null
           warranty_type?: Database["public"]["Enums"]["warranty_type"] | null
+          workflow_id?: string | null
         }
         Relationships: [
           {
@@ -1543,6 +1571,13 @@ export type Database = {
             foreignKeyName: "service_tickets_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -1559,20 +1594,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "service_requests"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_tickets_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_tickets_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "v_task_progress_summary"
-            referencedColumns: ["template_id"]
           },
           {
             foreignKeyName: "service_tickets_updated_by_fkey"
@@ -1678,6 +1699,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_issue_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
             referencedColumns: ["product_id"]
           },
           {
@@ -2080,6 +2108,13 @@ export type Database = {
             foreignKeyName: "stock_receipt_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["product_id"]
           },
@@ -2312,6 +2347,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
             referencedColumns: ["product_id"]
           },
           {
@@ -2610,134 +2652,7 @@ export type Database = {
           },
         ]
       }
-      task_templates: {
-        Row: {
-          created_at: string
-          created_by_id: string
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          product_type: string | null
-          service_type: Database["public"]["Enums"]["service_type"]
-          strict_sequence: boolean
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by_id: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          product_type?: string | null
-          service_type?: Database["public"]["Enums"]["service_type"]
-          strict_sequence?: boolean
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by_id?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          product_type?: string | null
-          service_type?: Database["public"]["Enums"]["service_type"]
-          strict_sequence?: boolean
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_templates_created_by_id_fkey"
-            columns: ["created_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_templates_product_type_fkey"
-            columns: ["product_type"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_templates_product_type_fkey"
-            columns: ["product_type"]
-            isOneToOne: false
-            referencedRelation: "v_low_stock_alerts"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "task_templates_product_type_fkey"
-            columns: ["product_type"]
-            isOneToOne: false
-            referencedRelation: "v_warehouse_stock_levels"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "task_templates_product_type_fkey"
-            columns: ["product_type"]
-            isOneToOne: false
-            referencedRelation: "v_warranty_expiring_soon"
-            referencedColumns: ["product_id"]
-          },
-        ]
-      }
-      task_templates_tasks: {
-        Row: {
-          created_at: string
-          custom_instructions: string | null
-          id: string
-          is_required: boolean
-          sequence_order: number
-          task_type_id: string
-          template_id: string
-        }
-        Insert: {
-          created_at?: string
-          custom_instructions?: string | null
-          id?: string
-          is_required?: boolean
-          sequence_order: number
-          task_type_id: string
-          template_id: string
-        }
-        Update: {
-          created_at?: string
-          custom_instructions?: string | null
-          id?: string
-          is_required?: boolean
-          sequence_order?: number
-          task_type_id?: string
-          template_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_templates_tasks_task_type_id_fkey"
-            columns: ["task_type_id"]
-            isOneToOne: false
-            referencedRelation: "task_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_templates_tasks_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_templates_tasks_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "v_task_progress_summary"
-            referencedColumns: ["template_id"]
-          },
-        ]
-      }
-      task_types: {
+      tasks: {
         Row: {
           category: string | null
           created_at: string
@@ -2776,13 +2691,13 @@ export type Database = {
         }
         Relationships: []
       }
-      ticket_template_changes: {
+      ticket_workflow_changes: {
         Row: {
           changed_by_id: string
           created_at: string
           id: string
-          new_template_id: string | null
-          old_template_id: string | null
+          new_workflow_id: string | null
+          old_workflow_id: string | null
           reason: string
           ticket_id: string
         }
@@ -2790,8 +2705,8 @@ export type Database = {
           changed_by_id: string
           created_at?: string
           id?: string
-          new_template_id?: string | null
-          old_template_id?: string | null
+          new_workflow_id?: string | null
+          old_workflow_id?: string | null
           reason: string
           ticket_id: string
         }
@@ -2799,63 +2714,63 @@ export type Database = {
           changed_by_id?: string
           created_at?: string
           id?: string
-          new_template_id?: string | null
-          old_template_id?: string | null
+          new_workflow_id?: string | null
+          old_workflow_id?: string | null
           reason?: string
           ticket_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "ticket_template_changes_changed_by_id_fkey"
+            foreignKeyName: "ticket_workflow_changes_changed_by_id_fkey"
             columns: ["changed_by_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_new_template_id_fkey"
-            columns: ["new_template_id"]
+            foreignKeyName: "ticket_workflow_changes_new_workflow_id_fkey"
+            columns: ["new_workflow_id"]
             isOneToOne: false
-            referencedRelation: "task_templates"
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["workflow_id"]
+          },
+          {
+            foreignKeyName: "ticket_workflow_changes_new_workflow_id_fkey"
+            columns: ["new_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_new_template_id_fkey"
-            columns: ["new_template_id"]
+            foreignKeyName: "ticket_workflow_changes_old_workflow_id_fkey"
+            columns: ["old_workflow_id"]
             isOneToOne: false
             referencedRelation: "v_task_progress_summary"
-            referencedColumns: ["template_id"]
+            referencedColumns: ["workflow_id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_old_template_id_fkey"
-            columns: ["old_template_id"]
+            foreignKeyName: "ticket_workflow_changes_old_workflow_id_fkey"
+            columns: ["old_workflow_id"]
             isOneToOne: false
-            referencedRelation: "task_templates"
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_old_template_id_fkey"
-            columns: ["old_template_id"]
-            isOneToOne: false
-            referencedRelation: "v_task_progress_summary"
-            referencedColumns: ["template_id"]
-          },
-          {
-            foreignKeyName: "ticket_template_changes_ticket_id_fkey"
+            foreignKeyName: "ticket_workflow_changes_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "service_tickets"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_ticket_id_fkey"
+            foreignKeyName: "ticket_workflow_changes_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "v_task_progress_summary"
             referencedColumns: ["ticket_id"]
           },
           {
-            foreignKeyName: "ticket_template_changes_ticket_id_fkey"
+            foreignKeyName: "ticket_workflow_changes_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "v_warranty_expiring_soon"
@@ -2870,7 +2785,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
-          physical_warehouse_id: string
+          physical_warehouse_id: string | null
           updated_at: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -2880,7 +2795,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
-          physical_warehouse_id: string
+          physical_warehouse_id?: string | null
           updated_at?: string
           warehouse_type: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -2890,7 +2805,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
-          physical_warehouse_id?: string
+          physical_warehouse_id?: string | null
           updated_at?: string
           warehouse_type?: Database["public"]["Enums"]["warehouse_type"]
         }
@@ -2908,6 +2823,140 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_warehouse_stock_levels"
             referencedColumns: ["physical_warehouse_id"]
+          },
+        ]
+      }
+      workflow_tasks: {
+        Row: {
+          created_at: string
+          custom_instructions: string | null
+          id: string
+          is_required: boolean
+          sequence_order: number
+          task_id: string
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_instructions?: string | null
+          id?: string
+          is_required?: boolean
+          sequence_order: number
+          task_id: string
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_instructions?: string | null
+          id?: string
+          is_required?: boolean
+          sequence_order?: number
+          task_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["workflow_id"]
+          },
+          {
+            foreignKeyName: "workflow_tasks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          created_at: string
+          created_by_id: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          product_type: string | null
+          service_type: Database["public"]["Enums"]["service_type"]
+          strict_sequence: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          product_type?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          strict_sequence?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          product_type?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"]
+          strict_sequence?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock_alerts"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "workflows_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "v_stock_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "workflows_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "workflows_product_type_fkey"
+            columns: ["product_type"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -3046,6 +3095,64 @@ export type Database = {
           },
         ]
       }
+      v_stock_summary: {
+        Row: {
+          actual_serial_count: number | null
+          created_at: string | null
+          declared_quantity: number | null
+          initial_stock_entry: number | null
+          minimum_quantity: number | null
+          physical_warehouse_id: string | null
+          physical_warehouse_name: string | null
+          product_id: string | null
+          product_name: string | null
+          reorder_quantity: number | null
+          serial_gap: number | null
+          sku: string | null
+          stock_status: string | null
+          updated_at: string | null
+          virtual_warehouse_id: string | null
+          virtual_warehouse_name: string | null
+          warehouse_type: Database["public"]["Enums"]["warehouse_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_warehouse_stock_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["virtual_warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["virtual_warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_warehouse_stock_virtual_warehouse_id_fkey"
+            columns: ["virtual_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_warehouses_physical_warehouse_id_fkey"
+            columns: ["physical_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "physical_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_warehouses_physical_warehouse_id_fkey"
+            columns: ["physical_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_warehouse_stock_levels"
+            referencedColumns: ["physical_warehouse_id"]
+          },
+        ]
+      }
       v_task_progress_summary: {
         Row: {
           blocked_tasks: number | null
@@ -3062,8 +3169,6 @@ export type Database = {
           required_tasks: number | null
           skipped_tasks: number | null
           strict_sequence: boolean | null
-          template_id: string | null
-          template_name: string | null
           ticket_created_at: string | null
           ticket_id: string | null
           ticket_number: string | null
@@ -3071,6 +3176,8 @@ export type Database = {
           ticket_updated_at: string | null
           total_minutes_spent: number | null
           total_tasks: number | null
+          workflow_id: string | null
+          workflow_name: string | null
         }
         Relationships: []
       }

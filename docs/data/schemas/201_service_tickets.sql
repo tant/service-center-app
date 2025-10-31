@@ -41,7 +41,7 @@ CREATE TABLE "service_tickets" (
   "updated_by" UUID REFERENCES "profiles"("user_id"),
 
   -- Phase 2 columns (FK constraints added in 301_foreign_key_constraints.sql)
-  "template_id" UUID,
+  "workflow_id" UUID,
   "request_id" UUID,
   "delivery_method" public.delivery_method,
   "delivery_address" TEXT,
@@ -51,7 +51,7 @@ CREATE TABLE "service_tickets" (
   CONSTRAINT "service_tickets_delivery_requires_address" CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL)
 );
 
-COMMENT ON COLUMN public.service_tickets.template_id IS 'Task template used for workflow (Phase 2)';
+COMMENT ON COLUMN public.service_tickets.workflow_id IS 'Workflow template used for task execution (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.request_id IS 'Service request that created this ticket (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.delivery_method IS 'Customer delivery preference: pickup or delivery (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.delivery_address IS 'Delivery address if delivery_method = delivery (Phase 2)';
@@ -65,7 +65,7 @@ CREATE INDEX "service_tickets_priority_level_idx" ON "service_tickets" USING btr
 CREATE INDEX "service_tickets_assigned_to_idx" ON "service_tickets" USING btree ("assigned_to");
 CREATE INDEX "service_tickets_created_at_idx" ON "service_tickets" USING btree ("created_at");
 CREATE INDEX "service_tickets_status_created_at_idx" ON "service_tickets" USING btree ("status", "created_at");
-CREATE INDEX IF NOT EXISTS idx_service_tickets_template ON public.service_tickets(template_id) WHERE template_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_service_tickets_workflow ON public.service_tickets(workflow_id) WHERE workflow_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_service_tickets_request ON public.service_tickets(request_id) WHERE request_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_service_tickets_delivery_method ON public.service_tickets(delivery_method) WHERE delivery_method IS NOT NULL;
 

@@ -18,8 +18,8 @@
 -- TASK WORKFLOW TABLES
 -- =====================================================
 
--- TASK TEMPLATES
-CREATE TABLE IF NOT EXISTS public.task_templates (
+-- WORKFLOWS (formerly task_templates)
+CREATE TABLE IF NOT EXISTS public.workflows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -30,13 +30,13 @@ CREATE TABLE IF NOT EXISTS public.task_templates (
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT task_templates_name_unique UNIQUE(name)
+  CONSTRAINT workflows_name_unique UNIQUE(name)
 );
-COMMENT ON TABLE public.task_templates IS 'Task workflow templates for different product and service types';
-CREATE TRIGGER trigger_task_templates_updated_at BEFORE UPDATE ON public.task_templates FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+COMMENT ON TABLE public.workflows IS 'Workflow templates for different product and service types';
+CREATE TRIGGER trigger_workflows_updated_at BEFORE UPDATE ON public.workflows FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- TASK TYPES
-CREATE TABLE IF NOT EXISTS public.task_types (
+-- TASKS (formerly task_types)
+CREATE TABLE IF NOT EXISTS public.tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -47,31 +47,31 @@ CREATE TABLE IF NOT EXISTS public.task_types (
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT task_types_name_unique UNIQUE(name)
+  CONSTRAINT tasks_name_unique UNIQUE(name)
 );
-COMMENT ON TABLE public.task_types IS 'Reusable library of task definitions';
-CREATE TRIGGER trigger_task_types_updated_at BEFORE UPDATE ON public.task_types FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+COMMENT ON TABLE public.tasks IS 'Reusable library of task definitions';
+CREATE TRIGGER trigger_tasks_updated_at BEFORE UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- TASK TEMPLATES TASKS (Junction)
-CREATE TABLE IF NOT EXISTS public.task_templates_tasks (
+-- WORKFLOW TASKS (Junction) (formerly task_templates_tasks)
+CREATE TABLE IF NOT EXISTS public.workflow_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id UUID NOT NULL REFERENCES public.task_templates(id) ON DELETE CASCADE,
-  task_type_id UUID NOT NULL REFERENCES public.task_types(id) ON DELETE RESTRICT,
+  workflow_id UUID NOT NULL REFERENCES public.workflows(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE RESTRICT,
   sequence_order INT NOT NULL,
   is_required BOOLEAN NOT NULL DEFAULT true,
   custom_instructions TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT task_templates_tasks_template_sequence_unique UNIQUE(template_id, sequence_order),
-  CONSTRAINT task_templates_tasks_sequence_positive CHECK (sequence_order > 0)
+  CONSTRAINT workflow_tasks_workflow_sequence_unique UNIQUE(workflow_id, sequence_order),
+  CONSTRAINT workflow_tasks_sequence_positive CHECK (sequence_order > 0)
 );
-COMMENT ON TABLE public.task_templates_tasks IS 'Junction table mapping task types to templates with sequence order';
+COMMENT ON TABLE public.workflow_tasks IS 'Junction table mapping tasks to workflows with sequence order';
 
 -- SERVICE TICKET TASKS
 CREATE TABLE IF NOT EXISTS public.service_ticket_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL REFERENCES public.service_tickets(id) ON DELETE CASCADE,
-  task_type_id UUID NOT NULL REFERENCES public.task_types(id) ON DELETE RESTRICT,
-  template_task_id UUID REFERENCES public.task_templates_tasks(id) ON DELETE SET NULL,
+  task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE RESTRICT,
+  workflow_task_id UUID REFERENCES public.workflow_tasks(id) ON DELETE SET NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   sequence_order INT NOT NULL,
@@ -105,17 +105,17 @@ CREATE TABLE IF NOT EXISTS public.task_history (
 );
 COMMENT ON TABLE public.task_history IS 'Immutable audit trail of task status changes';
 
--- TICKET TEMPLATE CHANGES
-CREATE TABLE IF NOT EXISTS public.ticket_template_changes (
+-- TICKET WORKFLOW CHANGES (formerly ticket_template_changes)
+CREATE TABLE IF NOT EXISTS public.ticket_workflow_changes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL REFERENCES public.service_tickets(id) ON DELETE CASCADE,
-  old_template_id UUID REFERENCES public.task_templates(id) ON DELETE SET NULL,
-  new_template_id UUID REFERENCES public.task_templates(id) ON DELETE SET NULL,
+  old_workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
+  new_workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
   reason TEXT NOT NULL,
   changed_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-COMMENT ON TABLE public.ticket_template_changes IS 'Audit trail of template changes during service execution';
+COMMENT ON TABLE public.ticket_workflow_changes IS 'Audit trail of workflow changes during service execution';
 
 -- RMA BATCHES
 CREATE TABLE IF NOT EXISTS public.rma_batches (

@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 interface TemplatePreviewModalProps {
   open: boolean;
   onClose: () => void;
-  template: {
+  workflow: {
     name: string;
     description?: string | null;
     service_type: string;
@@ -40,9 +40,9 @@ interface TemplatePreviewModalProps {
 export function TemplatePreviewModal({
   open,
   onClose,
-  template,
+  workflow,
 }: TemplatePreviewModalProps) {
-  if (!template) return null;
+  if (!workflow) return null;
 
   const serviceTypeLabels: Record<string, string> = {
     warranty: "Bảo hành",
@@ -67,15 +67,15 @@ export function TemplatePreviewModal({
               <h3 className="text-sm font-medium text-muted-foreground mb-1">
                 Tên mẫu
               </h3>
-              <p className="text-base font-semibold">{template.name}</p>
+              <p className="text-base font-semibold">{workflow.name}</p>
             </div>
 
-            {template.description && (
+            {workflow.description && (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Mô tả
                 </h3>
-                <p className="text-sm">{template.description}</p>
+                <p className="text-sm">{workflow.description}</p>
               </div>
             )}
 
@@ -85,7 +85,7 @@ export function TemplatePreviewModal({
                   Loại dịch vụ
                 </h3>
                 <Badge variant="outline">
-                  {serviceTypeLabels[template.service_type] || template.service_type}
+                  {serviceTypeLabels[workflow.service_type] || workflow.service_type}
                 </Badge>
               </div>
 
@@ -93,12 +93,12 @@ export function TemplatePreviewModal({
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Trạng thái
                 </h3>
-                <Badge variant={template.is_active ? "default" : "secondary"}>
-                  {template.is_active ? "Đang hoạt động" : "Không hoạt động"}
+                <Badge variant={workflow.is_active ? "default" : "secondary"}>
+                  {workflow.is_active ? "Đang hoạt động" : "Không hoạt động"}
                 </Badge>
               </div>
 
-              {template.enforce_sequence && (
+              {workflow.enforce_sequence && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">
                     Thứ tự
@@ -115,17 +115,17 @@ export function TemplatePreviewModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold">
-                Danh sách công việc ({template.tasks?.length || 0})
+                Danh sách công việc ({workflow.tasks?.length || 0})
               </h3>
             </div>
 
-            {!template.tasks || template.tasks.length === 0 ? (
+            {!workflow.tasks || workflow.tasks.length === 0 ? (
               <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
                 Không có công việc nào
               </div>
             ) : (
               <div className="space-y-2">
-                {template.tasks
+                {workflow.tasks
                   .sort((a, b) => a.sequence_order - b.sequence_order)
                   .map((task, index) => (
                     <div
@@ -167,11 +167,11 @@ export function TemplatePreviewModal({
             )}
           </div>
 
-          {template.enforce_sequence && template.tasks && template.tasks.length > 0 && (
+          {workflow.enforce_sequence && workflow.tasks && workflow.tasks.length > 0 && (
             <div className="rounded-lg bg-muted p-4">
               <p className="text-sm text-muted-foreground">
                 <strong>Lưu ý:</strong> Mẫu này yêu cầu thực hiện công việc theo thứ tự nghiêm ngặt.
-                Các công việc phải được hoàn thành theo đúng trình tự từ 1 đến {template.tasks.length}.
+                Các công việc phải được hoàn thành theo đúng trình tự từ 1 đến {workflow.tasks.length}.
               </p>
             </div>
           )}

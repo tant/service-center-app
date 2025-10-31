@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateTaskType, useUpdateTaskType } from "@/hooks/use-workflow";
-import type { TaskType } from "@/types/workflow";
+import type { Task } from "@/types/workflow";
 
 // Schema for form validation
 const taskTypeSchema = z.object({
@@ -45,7 +45,7 @@ const taskTypeSchema = z.object({
 type TaskTypeFormData = z.infer<typeof taskTypeSchema>;
 
 interface TaskTypeFormProps {
-  taskType?: TaskType;
+  task?: Task;
   onSuccess?: () => void;
 }
 
@@ -59,8 +59,8 @@ const CATEGORIES = [
   "Khác",
 ];
 
-export function TaskTypeForm({ taskType, onSuccess }: TaskTypeFormProps) {
-  const isEdit = !!taskType;
+export function TaskTypeForm({ task, onSuccess }: TaskTypeFormProps) {
+  const isEdit = !!task;
   const { createTaskType, isCreating } = useCreateTaskType();
   const { updateTaskType, isUpdating } = useUpdateTaskType();
   const isSubmitting = isCreating || isUpdating;
@@ -75,13 +75,13 @@ export function TaskTypeForm({ taskType, onSuccess }: TaskTypeFormProps) {
     resolver: zodResolver(taskTypeSchema),
     defaultValues: isEdit
       ? {
-          name: taskType.name,
-          description: taskType.description || "",
-          category: taskType.category || "",
-          estimated_duration_minutes: taskType.estimated_duration_minutes?.toString() || "",
-          requires_notes: taskType.requires_notes,
-          requires_photo: taskType.requires_photo,
-          is_active: taskType.is_active,
+          name: task.name,
+          description: task.description || "",
+          category: task.category || "",
+          estimated_duration_minutes: task.estimated_duration_minutes?.toString() || "",
+          requires_notes: task.requires_notes,
+          requires_photo: task.requires_photo,
+          is_active: task.is_active,
         }
       : {
           name: "",
@@ -97,7 +97,7 @@ export function TaskTypeForm({ taskType, onSuccess }: TaskTypeFormProps) {
   const onSubmit = (data: any) => {
     if (isEdit) {
       updateTaskType(
-        { id: taskType.id, ...data } as any,
+        { id: task.id, ...data } as any,
         {
           onSuccess: () => {
             onSuccess?.();

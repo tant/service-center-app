@@ -40,7 +40,7 @@ interface TemplateFormProps {
   mode: "create" | "edit";
   initialData?: Partial<TemplateFormData>;
   initialTasks?: any[];
-  taskTypes: Array<{ id: string; name: string; category?: string }>;
+  tasks: Array<{ id: string; name: string; category?: string }>;
   isSubmitting: boolean;
   onSubmit: (data: TemplateFormData & { tasks: any[] }) => void;
   onCancel: () => void;
@@ -50,7 +50,7 @@ export function TemplateForm({
   mode,
   initialData,
   initialTasks = [],
-  taskTypes,
+  tasks,
   isSubmitting,
   onSubmit,
   onCancel,
@@ -75,7 +75,7 @@ export function TemplateForm({
   }, [initialTasks]);
 
   const {
-    tasks,
+    tasks: workflowTasks,
     sensors,
     handleDragEnd,
     handleAddTask,
@@ -91,20 +91,20 @@ export function TemplateForm({
       return;
     }
 
-    if (tasks.length === 0) {
+    if (workflowTasks.length === 0) {
       return;
     }
 
-    if (tasks.some((t) => !t.task_type_id)) {
+    if (workflowTasks.some((t) => !t.task_type_id)) {
       return;
     }
 
-    const templateData = {
+    const workflowData = {
       ...formData,
-      tasks: tasks.map(({ id, ...task }) => task), // Remove temporary IDs
+      tasks: workflowTasks.map(({ id, ...task }) => task), // Remove temporary IDs
     };
 
-    onSubmit(templateData);
+    onSubmit(workflowData);
   };
 
   return (
@@ -207,7 +207,7 @@ export function TemplateForm({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Danh sách công việc ({tasks.length})</CardTitle>
+              <CardTitle>Danh sách công việc ({workflowTasks.length})</CardTitle>
               <CardDescription>
                 Kéo thả để sắp xếp thứ tự công việc
               </CardDescription>
@@ -224,7 +224,7 @@ export function TemplateForm({
           </div>
         </CardHeader>
         <CardContent>
-          {tasks.length === 0 ? (
+          {workflowTasks.length === 0 ? (
             <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
               Chưa có công việc nào. Nhấn "Thêm công việc" để bắt đầu.
             </div>
@@ -235,15 +235,15 @@ export function TemplateForm({
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={tasks.map((t) => t.id)}
+                items={workflowTasks.map((t) => t.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-3">
-                  {tasks.map((task) => (
+                  {workflowTasks.map((task) => (
                     <SortableTaskItem
                       key={task.id}
                       task={task}
-                      taskTypes={taskTypes}
+                      tasks={tasks}
                       onUpdate={handleUpdateTask}
                       onRemove={() => handleRemoveTask(task.id)}
                     />

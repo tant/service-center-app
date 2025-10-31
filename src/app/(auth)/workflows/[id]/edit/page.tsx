@@ -18,19 +18,19 @@ export default function EditTemplatePage() {
   const params = useParams();
   const templateId = params.id as string;
 
-  const { taskTypes } = useTaskTypes();
-  const { template, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
+  const { taskTypes: tasks } = useTaskTypes();
+  const { template: workflow, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
   const { updateTemplate, isUpdating } = useUpdateTemplate();
 
-  const handleSubmit = (templateData: any) => {
+  const handleSubmit = (workflowData: any) => {
     updateTemplate(
       {
         template_id: templateId,
-        ...templateData,
+        ...workflowData,
       },
       {
         onSuccess: () => {
-          router.push("/workflows/templates");
+          router.push("/workflows");
         },
       }
     );
@@ -45,7 +45,7 @@ export default function EditTemplatePage() {
       <>
         <PageHeader
           title="Đang tải..."
-          backHref="/workflows/templates"
+          backHref="/workflows"
         />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
@@ -57,12 +57,12 @@ export default function EditTemplatePage() {
     );
   }
 
-  if (!template) {
+  if (!workflow) {
     return (
       <>
         <PageHeader
           title="Không tìm thấy"
-          backHref="/workflows/templates"
+          backHref="/workflows"
         />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
@@ -80,8 +80,8 @@ export default function EditTemplatePage() {
   return (
     <>
       <PageHeader
-        title={`Chỉnh sửa: ${template.name || "Mẫu quy trình"}`}
-        backHref="/workflows/templates"
+        title={`Chỉnh sửa: ${workflow.name || "Mẫu quy trình"}`}
+        backHref="/workflows"
       />
 
       <div className="flex flex-1 flex-col">
@@ -90,13 +90,13 @@ export default function EditTemplatePage() {
             <TemplateForm
               mode="edit"
               initialData={{
-                name: template.name || "",
-                description: template.description || "",
-                service_type: template.service_type || "warranty",
-                enforce_sequence: template.enforce_sequence ?? true,
+                name: workflow.name || "",
+                description: workflow.description || "",
+                service_type: workflow.service_type || "warranty",
+                enforce_sequence: workflow.enforce_sequence ?? true,
               }}
-              initialTasks={template.tasks || []}
-              taskTypes={taskTypes}
+              initialTasks={workflow.tasks || []}
+              tasks={tasks}
               isSubmitting={isUpdating}
               onSubmit={handleSubmit}
               onCancel={handleCancel}

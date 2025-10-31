@@ -248,6 +248,8 @@ export const serviceRequestRouter = router({
         return {
           found: false,
           eligible: false,
+          product: null,
+          warranty: null,
           message: "Serial number not found. Please check and try again.",
         };
       }

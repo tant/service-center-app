@@ -165,12 +165,10 @@ function StepNavigation() {
         }
         const invalidSerial = state.products.find((product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH);
         if (invalidSerial) {
-          toast.error("Serial phải có tối thiểu 5 ký tự.");
           return false;
         }
         const invalidIssue = state.products.find((product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH);
         if (invalidIssue) {
-          toast.error("Mỗi sản phẩm cần mô tả vấn đề tối thiểu 10 ký tự.");
           return false;
         }
         const uploadingAttachment = state.products.some((product) =>

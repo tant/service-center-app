@@ -13,17 +13,23 @@ import {
   useServiceRequestWizardState,
 } from "@/hooks/use-service-request-wizard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const STEP_LABELS: Record<number, string> = {
-  0: "Sản phẩm & vấn đề",
-  1: "Bảo hành & giải pháp",
-  2: "Khách hàng & tiếp nhận",
-};
+import { format } from "date-fns";
 
 const SERVICE_OPTION_LABELS: Record<string, string> = {
   warranty: "Bảo hành",
   paid: "Dịch vụ trả phí",
   replacement: "Đổi sản phẩm",
+};
+
+const formatWarrantyDate = (iso?: string | null) => {
+  if (!iso) {
+    return undefined;
+  }
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) {
+    return undefined;
+  }
+  return format(date, "dd/MM/yyyy");
 };
 
 function SummaryRow(props: { label: string; value?: string | null }) {
@@ -84,39 +90,49 @@ function ProductSummary() {
 
   return (
     <div className="space-y-4">
-      {state.products.map((product, index) => (
-        <Card key={product.id}>
-          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase text-muted-foreground">Sản phẩm #{index + 1}</div>
-              <div className="text-lg font-semibold tracking-wide">{product.serialNumber || "Chưa có serial"}</div>
-              <CardDescription>
-                {[product.productBrand, product.productModel].filter(Boolean).join(" • ") || "Chưa có thông tin chi tiết"}
-              </CardDescription>
-            </div>
-            <ProductBadge status={product.warrantyCheck.status} eligible={product.warrantyCheck.eligible} />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <SummaryRow label="Mô tả vấn đề" value={product.issueDescription} />
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">
-                {SERVICE_OPTION_LABELS[product.serviceOption ?? ""] ?? "Chưa chọn dịch vụ"}
-              </Badge>
-              {product.warrantyRequested ? (
-                <Badge variant="default">Đã yêu cầu xử lý bảo hành</Badge>
-              ) : (
-                <Badge variant="secondary">Xử lý theo dịch vụ đã chọn</Badge>
-              )}
-            </div>
-            {product.serviceOptionNotes ? (
-              <SummaryRow label="Ghi chú dịch vụ" value={product.serviceOptionNotes} />
-            ) : null}
-            <div className="text-xs text-muted-foreground">
-              Ảnh đính kèm: {product.attachments.length} (sẽ hiển thị sau khi tích hợp upload).
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {state.products.map((product, index) => {
+        const formattedExpiry =
+          product.warrantyCheck.status === "success"
+            ? formatWarrantyDate(product.warrantyCheck.expiresAt)
+            : undefined;
+
+        return (
+          <Card key={product.id}>
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Sản phẩm #{index + 1}</div>
+                <div className="text-lg font-semibold tracking-wide">{product.serialNumber || "Chưa có serial"}</div>
+                <CardDescription>
+                  {[product.productBrand, product.productModel].filter(Boolean).join(" • ") || "Chưa có thông tin chi tiết"}
+                </CardDescription>
+              </div>
+              <ProductBadge status={product.warrantyCheck.status} eligible={product.warrantyCheck.eligible} />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <SummaryRow label="Mô tả vấn đề" value={product.issueDescription} />
+              <SummaryRow label="Hạn bảo hành" value={formattedExpiry} />
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">
+                  {SERVICE_OPTION_LABELS[product.serviceOption ?? ""] ?? "Chưa chọn dịch vụ"}
+                </Badge>
+                {product.warrantyRequested ? (
+                  <Badge variant="default">Đã yêu cầu xử lý bảo hành</Badge>
+                ) : (
+                  <Badge variant="secondary">Xử lý theo dịch vụ đã chọn</Badge>
+                )}
+              </div>
+              {product.warrantyCheck.message ? (
+                <Alert variant={product.warrantyCheck.eligible ? "default" : "destructive"}>
+                  <AlertDescription>{product.warrantyCheck.message}</AlertDescription>
+                </Alert>
+              ) : null}
+              {product.serviceOptionNotes ? (
+                <SummaryRow label="Ghi chú dịch vụ" value={product.serviceOptionNotes} />
+              ) : null}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <Button type="button" variant="outline" size="sm" onClick={() => setActiveStep(dispatch, 0)}>
         Quay lại chỉnh sửa sản phẩm
@@ -170,6 +186,14 @@ export function StepReview() {
         </div>
 
         <Separator />
+
+        {state.requestIssueOverview.trim() ? (
+          <>
+            <SectionHeader title="Mô tả tổng quát" onEdit={() => setActiveStep(dispatch, 0)} />
+            <SummaryRow label="Tổng quan vấn đề" value={state.requestIssueOverview} />
+            <Separator />
+          </>
+        ) : null}
 
         <div className="space-y-4">
           <SectionHeader title="Danh sách sản phẩm" onEdit={() => setActiveStep(dispatch, 1)} />

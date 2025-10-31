@@ -5,13 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import {
-  setActiveStep,
-  setWizardCustomer,
-  setWizardDelivery,
-  useServiceRequestWizardDispatch,
-  useServiceRequestWizardState,
-} from "@/hooks/use-service-request-wizard";
+import { setWizardCustomer, setWizardDelivery, useServiceRequestWizardDispatch, useServiceRequestWizardState } from "@/hooks/use-service-request-wizard";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomerLookup } from "@/hooks/use-customer-lookup";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,10 +26,6 @@ export function StepCustomer() {
       preferred_delivery_method?: "pickup" | "delivery" | null;
       delivery_address?: string | null;
     } | null;
-  };
-
-  const handleBackToSolutions = () => {
-    setActiveStep(dispatch, 1);
   };
 
   useEffect(() => {
@@ -207,14 +197,6 @@ export function StepCustomer() {
             }
           />
         </div>
-
-        <button
-          type="button"
-          className="text-sm text-muted-foreground underline underline-offset-4"
-          onClick={handleBackToSolutions}
-        >
-          Quay lại bước bảo hành
-        </button>
       </CardContent>
     </Card>
   );

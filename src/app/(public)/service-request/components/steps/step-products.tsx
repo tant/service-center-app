@@ -40,7 +40,6 @@ function ProductCard({ index, productId }: ProductCardProps) {
   }
 
   const attachments = getAttachments(productId);
-  const hasSerial = product.serialNumber.trim().length > 0;
   const serialValid = product.serialNumber.trim().length >= MIN_SERIAL_LENGTH;
   const issueValid = product.issueDescription.trim().length >= MIN_ISSUE_LENGTH;
 
@@ -73,7 +72,7 @@ function ProductCard({ index, productId }: ProductCardProps) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <span className="text-xs font-semibold uppercase text-muted-foreground">Sản phẩm #{index + 1}</span>
-          {hasSerial ? (
+          {product.serialNumber.trim().length > 0 ? (
             <p className="font-medium tracking-wide">{product.serialNumber}</p>
           ) : (
             <p className="text-sm text-muted-foreground">Chưa nhập serial</p>
@@ -103,7 +102,7 @@ function ProductCard({ index, productId }: ProductCardProps) {
             required
             minLength={MIN_SERIAL_LENGTH}
           />
-          {hasSerial && !serialValid ? (
+          {!serialValid ? (
             <p className="text-xs text-destructive">Serial phải có tối thiểu {MIN_SERIAL_LENGTH} ký tự.</p>
           ) : null}
         </div>
@@ -147,7 +146,7 @@ function ProductCard({ index, productId }: ProductCardProps) {
           className="min-h-[120px]"
           required
         />
-        {product.issueDescription.trim().length > 0 && !issueValid ? (
+        {!issueValid ? (
           <p className="text-xs text-destructive">Cần ít nhất {MIN_ISSUE_LENGTH} ký tự để mô tả vấn đề.</p>
         ) : null}
       </div>

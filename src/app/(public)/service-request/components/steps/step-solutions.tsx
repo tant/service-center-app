@@ -4,13 +4,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  removeWizardProduct,
-  setActiveStep,
-  updateWizardProduct,
-  useServiceRequestWizardDispatch,
-  useServiceRequestWizardState,
-} from "@/hooks/use-service-request-wizard";
+import { removeWizardProduct, updateWizardProduct, useServiceRequestWizardDispatch, useServiceRequestWizardState } from "@/hooks/use-service-request-wizard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useVerifyWarranty } from "@/hooks/use-service-request";
 import { IconRefresh, IconShieldCheck, IconShieldX, IconShieldQuestion, IconAlertCircle } from "@tabler/icons-react";
 import type { ServiceType } from "@/types/enums";
+import { format } from "date-fns";
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
   idle: "outline",
@@ -33,6 +28,18 @@ const SERVICE_OPTIONS = [
   { value: "replacement", label: "Đổi sản phẩm" },
 ] as const;
 
+const formatWarrantyDate = (iso?: string | null) => {
+  if (!iso) {
+    return undefined;
+  }
+
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) {
+    return undefined;
+  }
+  return format(date, "dd/MM/yyyy");
+};
+
 export function StepSolutions() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
@@ -41,10 +48,6 @@ export function StepSolutions() {
 
   const handleServiceChange = (id: string, value: string) => {
     updateWizardProduct(dispatch, id, { serviceOption: value as ServiceType });
-  };
-
-  const handleBackToProducts = () => {
-    setActiveStep(dispatch, 0);
   };
 
   const productsWithSerial = useMemo(
@@ -166,9 +169,6 @@ export function StepSolutions() {
     <Card>
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Bước 2: Kiểm tra bảo hành & giải pháp</CardTitle>
-        <Button variant="outline" size="sm" onClick={handleBackToProducts}>
-          Quay lại bước sản phẩm
-        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {state.products.length === 0 ? (
@@ -181,6 +181,8 @@ export function StepSolutions() {
             const verifying = verifyingProductIds[product.id] || isVerifying;
             const hasSerial = product.serialNumber.trim().length > 0;
             const eligible = product.warrantyCheck.eligible;
+            const formattedExpiry =
+              status === "success" ? formatWarrantyDate(product.warrantyCheck.expiresAt) : undefined;
 
             return (
               <div key={product.id} className="flex flex-col gap-4 rounded-md border p-4">
@@ -236,6 +238,12 @@ export function StepSolutions() {
                   <Alert variant={eligible ? "default" : "destructive"}>
                     <AlertDescription>{product.warrantyCheck.message}</AlertDescription>
                   </Alert>
+                ) : null}
+
+                {formattedExpiry ? (
+                  <p className="text-xs text-muted-foreground">
+                    Hạn bảo hành: {formattedExpiry}
+                  </p>
                 ) : null}
 
                 <div className="space-y-2 rounded-md border bg-muted/40 p-4">

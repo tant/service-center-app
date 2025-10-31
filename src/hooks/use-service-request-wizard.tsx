@@ -75,7 +75,7 @@ export interface WizardSubmitProductPayload {
   product_brand?: string;
   product_model?: string;
   purchase_date?: string;
-  issue_description: string;
+  issue_description?: string;
   warranty_requested: boolean;
   service_option: ServiceType;
   service_option_notes?: string;
@@ -117,6 +117,7 @@ type WizardAction =
   | { type: "SET_DELIVERY"; delivery: WizardDelivery }
   | { type: "ADD_PRODUCT"; product: WizardProduct }
   | { type: "UPDATE_PRODUCT"; productId: string; updates: Partial<WizardProduct> }
+  | { type: "PATCH_PRODUCT"; productId: string; updater: (product: WizardProduct) => WizardProduct }
   | { type: "REMOVE_PRODUCT"; productId: string }
   | { type: "REPLACE_PRODUCTS"; products: WizardProduct[] };
 
@@ -173,6 +174,13 @@ function wizardReducer(state: ServiceRequestWizardState, action: WizardAction): 
         ...state,
         products: state.products.map((product) =>
           product.id === action.productId ? { ...product, ...action.updates } : product
+        ),
+      };
+    case "PATCH_PRODUCT":
+      return {
+        ...state,
+        products: state.products.map((product) =>
+          product.id === action.productId ? action.updater(product) : product
         ),
       };
     case "REMOVE_PRODUCT": {
@@ -253,6 +261,14 @@ export function updateWizardProduct(
   dispatch({ type: "UPDATE_PRODUCT", productId, updates });
 }
 
+export function patchWizardProduct(
+  dispatch: React.Dispatch<WizardAction>,
+  productId: string,
+  updater: (product: WizardProduct) => WizardProduct
+) {
+  dispatch({ type: "PATCH_PRODUCT", productId, updater });
+}
+
 export function removeWizardProduct(dispatch: React.Dispatch<WizardAction>, productId: string) {
   dispatch({ type: "REMOVE_PRODUCT", productId });
 }
@@ -286,7 +302,7 @@ export function buildWizardPayload(state: ServiceRequestWizardState): WizardSubm
         product_brand: product.productBrand?.trim() || undefined,
         product_model: product.productModel?.trim() || undefined,
         purchase_date: product.purchaseDate?.trim() || undefined,
-        issue_description: product.issueDescription.trim(),
+        issue_description: product.issueDescription.trim().length > 0 ? product.issueDescription.trim() : undefined,
         warranty_requested: product.warrantyRequested,
         service_option: (product.serviceOption ?? "paid") as ServiceType,
         service_option_notes: product.serviceOptionNotes?.trim() || undefined,

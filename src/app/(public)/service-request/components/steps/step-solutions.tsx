@@ -98,10 +98,12 @@ export function StepSolutions() {
       const message =
         result.message ??
         (eligible ? "Sản phẩm đủ điều kiện bảo hành." : "Không đủ điều kiện bảo hành.");
+      const warrantyInfo =
+        result && typeof result === "object" && "warranty" in result ? (result as { warranty?: { endDate?: string | null; manufacturerEndDate?: string | null; userEndDate?: string | null } }).warranty : undefined;
       const expiresAt =
-        result.warranty?.endDate ??
-        result.warranty?.manufacturerEndDate ??
-        result.warranty?.userEndDate ??
+        warrantyInfo?.endDate ??
+        warrantyInfo?.manufacturerEndDate ??
+        warrantyInfo?.userEndDate ??
         null;
 
       updateWizardProduct(dispatch, productId, {

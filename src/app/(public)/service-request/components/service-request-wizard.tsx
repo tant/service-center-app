@@ -18,6 +18,13 @@ import { useSubmitServiceRequest } from "@/hooks/use-service-request";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
+const MIN_SERIAL_LENGTH = 5;
+const MIN_ISSUE_LENGTH = 10;
+const MIN_NAME_LENGTH = 2;
+const MIN_PHONE_LENGTH = 10;
+const MIN_ADDRESS_LENGTH = 10;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const STEP_CONFIG: Array<{ id: WizardStep; title: string; description: string }> = [
   { id: 0, title: "Sản phẩm & vấn đề", description: "Thêm sản phẩm và mô tả triệu chứng." },
   { id: 1, title: "Bảo hành & dịch vụ", description: "Kiểm tra bảo hành, chọn phương án xử lý." },
@@ -86,11 +93,17 @@ function StepNavigation() {
   };
 
   const goNext = () => {
+    if (!validateStep(state.activeStep)) {
+      return;
+    }
     const next = Math.min(3, state.activeStep + 1) as WizardStep;
     setActiveStep(dispatch, next);
   };
 
   const handleSubmit = async () => {
+    if (!validateStep(state.activeStep)) {
+      return;
+    }
     if (!state.consentConfirmed) {
       toast.error("Vui lòng xác nhận đồng ý điều khoản trước khi gửi.");
       return;
@@ -115,17 +128,13 @@ function StepNavigation() {
         customer_name: payload.customer.name,
         customer_email: payload.customer.email,
         customer_phone: payload.customer.phone,
-        issue_description: payload.issue_overview ?? "",
-        items: payload.items.map((item) => ({
-          serial_number: item.serial_number,
-          product_brand: item.product_brand,
-          product_model: item.product_model,
-          purchase_date: item.purchase_date,
-          issue_description: item.issue_description,
-        })),
-        service_type: payload.items.find((item) => item.service_option)?.service_option ?? "paid",
+        issue_overview: payload.issue_overview,
+        items: payload.items,
         preferred_delivery_method: payload.delivery.preferred_delivery_method,
         delivery_address: payload.delivery.delivery_address,
+        preferred_schedule: payload.delivery.preferred_schedule,
+        pickup_notes: payload.delivery.pickup_notes,
+        contact_notes: payload.delivery.contact_notes,
         honeypot: payload.honeypot,
       });
 
@@ -136,6 +145,75 @@ function StepNavigation() {
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Không thể gửi yêu cầu. Vui lòng thử lại.");
+    }
+  };
+
+  const validateStep = (step: WizardStep): boolean => {
+    switch (step) {
+      case 0: {
+        if (state.products.length === 0) {
+          toast.error("Vui lòng thêm ít nhất một sản phẩm.");
+          return false;
+        }
+        const invalidSerial = state.products.find((product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH);
+        if (invalidSerial) {
+          toast.error("Serial phải có tối thiểu 5 ký tự.");
+          return false;
+        }
+        const invalidIssue = state.products.find((product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH);
+        if (invalidIssue) {
+          toast.error("Mỗi sản phẩm cần mô tả vấn đề tối thiểu 10 ký tự.");
+          return false;
+        }
+        const uploadingAttachment = state.products.some((product) =>
+          product.attachments.some((attachment) => attachment.status === "uploading")
+        );
+        if (uploadingAttachment) {
+          toast.error("Đang tải ảnh lên. Vui lòng chờ hoàn tất trước khi tiếp tục.");
+          return false;
+        }
+        return true;
+      }
+      case 1: {
+        const missingServiceOption = state.products.find((product) => !product.serviceOption);
+        if (missingServiceOption) {
+          toast.error("Vui lòng chọn phương án xử lý cho từng sản phẩm.");
+          return false;
+        }
+        return true;
+      }
+      case 2: {
+        if (state.customer.name.trim().length < MIN_NAME_LENGTH) {
+          toast.error("Họ và tên phải có ít nhất 2 ký tự.");
+          return false;
+        }
+        if (!EMAIL_REGEX.test(state.customer.email.trim())) {
+          toast.error("Email không hợp lệ.");
+          return false;
+        }
+        const phoneDigits = state.customer.phone.replace(/\D/g, "");
+        if (phoneDigits.length < MIN_PHONE_LENGTH) {
+          toast.error("Số điện thoại cần tối thiểu 10 chữ số.");
+          return false;
+        }
+        if (
+          state.delivery.preferredDeliveryMethod === "delivery" &&
+          (state.delivery.deliveryAddress?.trim().length ?? 0) < MIN_ADDRESS_LENGTH
+        ) {
+          toast.error("Địa chỉ giao nhận cần tối thiểu 10 ký tự.");
+          return false;
+        }
+        return true;
+      }
+      case 3: {
+        if (!state.consentConfirmed) {
+          toast.error("Vui lòng xác nhận điều khoản trước khi gửi.");
+          return false;
+        }
+        return true;
+      }
+      default:
+        return true;
     }
   };
 

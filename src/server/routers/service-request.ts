@@ -172,22 +172,37 @@ const requestItemSchema = z.object({
     .min(5, "Serial number must be at least 5 characters")
     .regex(/^[A-Z0-9_-]+$/i, "Serial number must be alphanumeric")
     .transform((val) => val.toUpperCase()),
-  product_brand: z.string().optional(), // Auto-populated from product lookup
-  product_model: z.string().optional(), // Auto-populated from product lookup
-  purchase_date: z.string().optional(), // ISO date string
+  product_brand: z.string().optional(),
+  product_model: z.string().optional(),
+  purchase_date: z.string().optional(),
   issue_description: z.string().min(10, "Issue description must be at least 10 characters").optional(),
+  warranty_requested: z.boolean().optional(),
+  service_option: z.enum(["warranty", "paid", "replacement"]),
+  service_option_notes: z.string().optional(),
+  attachments: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        file_name: z.string().min(1),
+        file_size: z.number().nonnegative(),
+        file_type: z.string().min(1),
+      })
+    )
+    .optional(),
 });
 
 const submitRequestSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters"),
   customer_email: z.string().email("Invalid email format"),
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  issue_description: z.string().min(20, "General description must be at least 20 characters"),
+  issue_overview: z.string().optional(),
   items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
-  service_type: z.enum(["warranty", "paid", "replacement"]).default("warranty"),
   preferred_delivery_method: z.enum(["pickup", "delivery"]),
   delivery_address: z.string().optional(),
-  honeypot: z.string().optional(), // AC 12: Spam protection
+  preferred_schedule: z.string().optional(),
+  pickup_notes: z.string().optional(),
+  contact_notes: z.string().optional(),
+  honeypot: z.string().optional(),
 });
 
 /**
@@ -332,14 +347,13 @@ export const serviceRequestRouter = router({
             });
           }
 
-          // Extract product data
           const productData = Array.isArray(physicalProduct.product) ? physicalProduct.product[0] : physicalProduct.product;
           const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
 
           return {
             serial_number: item.serial_number,
-            product_brand: brandData?.name || "Unknown",
-            product_model: productData?.name || "Unknown",
+            product_brand: item.product_brand ?? brandData?.name ?? null,
+            product_model: item.product_model ?? productData?.name ?? null,
             purchase_date: item.purchase_date,
             issue_description: item.issue_description,
           };
@@ -364,13 +378,15 @@ export const serviceRequestRouter = router({
           customer_name: input.customer_name,
           customer_email: input.customer_email,
           customer_phone: input.customer_phone,
-          issue_description: input.issue_description,
-          service_type: input.service_type,
-          delivery_method: input.preferred_delivery_method,
+          issue_description: input.issue_overview ?? null,
+          preferred_delivery_method: input.preferred_delivery_method,
           delivery_address:
             input.preferred_delivery_method === "delivery"
-              ? input.delivery_address
+              ? input.delivery_address ?? null
               : null,
+          preferred_schedule: input.preferred_schedule ?? null,
+          pickup_notes: input.pickup_notes ?? null,
+          contact_notes: input.contact_notes ?? null,
           status: "submitted", // AC 6: Initial status
           submitted_ip: submittedIp,
           user_agent: userAgent,
@@ -389,14 +405,20 @@ export const serviceRequestRouter = router({
       const { error: itemsError } = await ctx.supabaseAdmin
         .from("service_request_items")
         .insert(
-          productLookups.map((item) => ({
+          input.items.map((item) => {
+            const reference = productLookups.find((product) => product.serial_number === item.serial_number);
+            return {
             request_id: request.id,
-            product_brand: item.product_brand,
-            product_model: item.product_model,
+            product_brand: reference?.product_brand ?? null,
+            product_model: reference?.product_model ?? null,
             serial_number: item.serial_number,
-            purchase_date: item.purchase_date,
-            issue_description: item.issue_description,
-          }))
+            purchase_date: item.purchase_date ? new Date(item.purchase_date).toISOString().slice(0, 10) : null,
+            issue_description: item.issue_description ?? null,
+            service_option: item.service_option,
+            warranty_requested: Boolean(item.warranty_requested),
+            issue_photos: item.attachments ?? [],
+          };
+          })
         );
 
       if (itemsError) {

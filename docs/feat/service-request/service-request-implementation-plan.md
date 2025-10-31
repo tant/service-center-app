@@ -58,23 +58,26 @@
   - Thêm `warranty_requested boolean default false`.
   - Cho phép `product_brand`, `product_model` nullable; mở rộng `issue_photos` thành JSONB metadata chuẩn (`[{path,url,size,type}]`).
   - Backfill `service_option` từ `service_requests.service_type`, cập nhật function/triggers liên quan.
+  - ✅ Đã tạo `supabase/migrations/20251102090000_update_service_request_items.sql` thêm cột mới, backfill giá trị và chuẩn hóa `issue_photos` thành mảng metadata.
 - [ ] Migration 2: `service_requests`
   - Thêm `preferred_schedule date`, `pickup_notes text`, `contact_notes text`.
   - Đổi `delivery_method` -> `preferred_delivery_method` (nếu cần) và constraint yêu cầu địa chỉ khi delivery.
   - Cho phép `issue_description` nullable (mô tả tổng quát tùy chọn).
   - Bỏ cột `service_type` cấp request sau khi backfill (giữ migration riêng để dễ rollback).
-- [ ] Regenerate Supabase types (`pnpm supabase types gen ...`) và cập nhật `src/types/database.types.ts`.
+  - ✅ Đã tạo `supabase/migrations/20251102091000_update_service_requests.sql` thêm cột delivery metadata, sao chép `delivery_method` sang `preferred_delivery_method`, drop `service_type`, và cho phép `issue_description` nullable.
+- [x] Regenerate Supabase types (`pnpm supabase types gen ...`) và cập nhật `src/types/database.types.ts`.
 - [ ] Cập nhật adapters/tRPC:
-  - `submitRequestSchema` nhận payload mới, validate per-product service_option & warranty flags, enforce địa chỉ khi delivery.
-  - Map attachments -> `issue_photos` với metadata; vệ sinh serial uppercase, mô tả trim.
-  - Điều chỉnh logic insert `service_request_items` tương ứng trường mới.
+  - `submitRequestSchema` nhận payload mới, validate per-product `service_option`/`warranty_requested`, delivery metadata ✔️.
+  - Map attachments -> `issue_photos` với metadata; vệ sinh serial uppercase, mô tả trim ✔️ (payload hiện lưu trực tiếp metadata người dùng cung cấp, cần bổ sung link Supabase khi sẵn).
+  - Điều chỉnh logic insert `service_request_items` tương ứng trường mới ✔️.
 - [ ] Thêm endpoint `lookupCustomerByPhone` trả về `{ name, email, address, history }` lấy từ bảng khách hàng/requests gần nhất, có throttle.
 - [ ] Bổ sung caching/bust logic cho kiểm tra bảo hành (nếu Supabase support).
 
 ### 5. Hooks & client utilities
 - [ ] Cập nhật `useSubmitServiceRequest` để nhận payload mới; handle lỗi mới (thiếu service_option, ảnh quá dung lượng).
 - [x] Tạo hook `useCustomerLookup(phone)` sử dụng endpoint mới với debounce trong Step 3.
-- [ ] Viết helper `useAttachmentQueue(productId)` tách logic upload khỏi component.
+- [x] Viết helper `useAttachmentQueue(productId)` tách logic upload khỏi component.  
+  - `StepProducts` đã sử dụng hook mới để xử lý thêm/xóa ảnh và tiến trình upload.
 
 ### 6. Testing & QA
 - **Unit**

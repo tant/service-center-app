@@ -37,18 +37,28 @@ export interface PublicServiceRequestItem {
   product_model?: string;
   purchase_date?: string;
   issue_description?: string;
-  eligible?: boolean;
+  service_option: ServiceType;
+  warranty_requested?: boolean;
+  service_option_notes?: string;
+  attachments?: Array<{
+    path: string;
+    file_name: string;
+    file_size: number;
+    file_type: string;
+  }>;
 }
 
 export interface PublicServiceRequestPayload {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
-  issue_description: string;
+  issue_overview?: string;
   items: PublicServiceRequestItem[];
-  service_type: ServiceType;
   preferred_delivery_method: DeliveryMethod;
   delivery_address?: string;
+  preferred_schedule?: string;
+  pickup_notes?: string;
+  contact_notes?: string;
   honeypot?: string;
 }
 

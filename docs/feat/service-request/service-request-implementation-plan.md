@@ -16,29 +16,40 @@
 ### 1. Chuẩn bị & dọn dẹp
 - [x] Rà soát các component/hook hiện dùng trong `src/app/(public)/service-request/page.tsx` và xác định phần logic có thể tái sử dụng.  
   - Ghi chú: Giữ lại logic gọi `useVerifyWarranty`, `useSubmitServiceRequest`; cần refactor state cục bộ thành context + payload mới.
-- [ ] Tạo tài liệu sơ đồ state (context) để theo dõi các trường trong wizard (`docs/feat/service-request/service-request-state-diagram.drawio` nếu cần).
-- [ ] Thống nhất giới hạn ảnh/sản phẩm (mặc định 10 ảnh, 10 sản phẩm) với stakeholder.  
-  - Hiện giả định giữ nguyên cấu hình docs (`max 10 sản phẩm`, `5 ảnh mỗi sản phẩm`, 10 MiB/ảnh); cần confirm trước khi chốt.
+- [x] Tạo tài liệu sơ đồ state (context) để theo dõi các trường trong wizard (`docs/feat/service-request/service-request-state-diagram.md`).
+- [x] Thống nhất giới hạn ảnh/sản phẩm (mặc định 10 ảnh, 10 sản phẩm) với stakeholder.  
+  - Tạm thời chốt theo tài liệu hiện tại: tối đa 10 sản phẩm mỗi yêu cầu, 5 ảnh mỗi sản phẩm, 10 MiB/ảnh và định dạng JPEG/PNG/GIF/WebP; sẽ cập nhật nếu nhận yêu cầu mới.
 
 ### 2. Kiến trúc frontend mới
-- [ ] Tạo `ServiceRequestWizardProvider` + hook `useServiceRequestWizard` tại `src/hooks/use-service-request-wizard.ts` để quản lý state toàn cục.
+- [x] Tạo `ServiceRequestWizardProvider` + hook `useServiceRequestWizard` tại `src/hooks/use-service-request-wizard.ts` để quản lý state toàn cục.
   - State: `products[]` (UUID tạm, serial, issue, attachments, warranty metadata, service_option, warranty_requested), `customer`, `delivery`, `review`, `honeypot`.
   - Export reducer/actions cho thêm/xóa cập nhật sản phẩm, reset khi quay lại.
-- [ ] Di chuyển trang chính sang component `ServiceRequestWizard` với 4 bước (Step components trong `src/app/(public)/service-request/components/steps/`).
+- [x] Di chuyển trang chính sang component `ServiceRequestWizard` với 4 bước (Step components trong `src/app/(public)/service-request/components/steps/`).
 - [ ] Xây dựng step UI:
-  1. **Sản phẩm & vấn đề**: dynamic list, serial validation (≥5 ký tự, uppercase), issue ≥10 ký tự, brand/model/purchase date tùy chọn, upload queue (preview, tiến trình, xoá).
-  2. **Kiểm tra bảo hành & giải pháp**: gọi `useVerifyWarranty`, cho phép chọn sản phẩm cần kiểm tra, toggle `warranty_requested`, chọn `service_option`, retry, remove.
-  3. **Khách hàng & tiếp nhận**: thu thập name/email/phone, debounce lookup số điện thoại, hỗ trợ `preferred_delivery_method`, `delivery_address`, `preferred_schedule`, `pickup_notes`, `contact_notes`.
-  4. **Xem lại & xác nhận**: hiển thị tổng hợp, highlight sản phẩm không đủ bảo hành, checkbox consent, input honeypot (ẩn), điều hướng quay lại.
-- [ ] Điều chỉnh điều hướng / bước:
+  - [x] **Sản phẩm & vấn đề**: dynamic list, serial validation (≥5 ký tự, uppercase), issue ≥10 ký tự, brand/model/purchase date tùy chọn, upload queue (preview, tiến trình, xoá).  
+    - Skeleton UI + validation cơ bản đã dựng (chưa tích hợp upload).
+  - [x] **Kiểm tra bảo hành & giải pháp**: gọi `useVerifyWarranty`, cho phép chọn sản phẩm cần kiểm tra, toggle `warranty_requested`, chọn `service_option`, retry, remove.  
+    - Đã cộng nối API kiểm tra bảo hành, hiển thị trạng thái/alert, toggle bảo hành, chọn dịch vụ và ghi chú.
+  - [x] **Khách hàng & tiếp nhận**: thu thập name/email/phone, debounce lookup số điện thoại, hỗ trợ `preferred_delivery_method`, `delivery_address`, `preferred_schedule`, `pickup_notes`, `contact_notes`.  
+    - Đã thêm hook `useCustomerLookup` với debounce, auto-fill khách hàng và hàm tra cứu server-side tạm thời; cần mở rộng khi schema cập nhật.
+  - [x] **Xem lại & xác nhận**: hiển thị tổng hợp, highlight sản phẩm không đủ bảo hành, checkbox consent, input honeypot (ẩn), điều hướng quay lại.  
+    - Hiển thị summary khách hàng, tiếp nhận, sản phẩm; badge phân loại bảo hành và link quay lại chỉnh sửa.
+  - Đã dựng skeleton các step component và wiring state; sẽ bổ sung logic chi tiết theo từng bước tiếp theo.
+- [x] Điều chỉnh điều hướng / bước:
   - Bộ điều khiển tiến lùi chung (disable theo validation).
   - Lưu state khi chuyển bước; reset validation khi xoá sản phẩm.
-- [ ] Payload builder mới: chuẩn hóa dữ liệu gửi đi `{ customer, products[], delivery, issue_overview?, honeypot }`.
+- Navigation cơ bản đã hoạt động; logic disable theo validation sẽ cập nhật sau khi hoàn thiện từng step.
+- [x] Payload builder mới: chuẩn hóa dữ liệu gửi đi `{ customer, products[], delivery, issue_overview?, honeypot }`.  
+  - Đã thêm hàm `buildWizardPayload`; hiện tạm map payload cũ khi gọi tRPC cho tới khi backend hỗ trợ schema mới.
+- [x] Chạy `pnpm build` và xử lý lỗi build (nếu có) trước khi chuyển sang bước 3.  
+  - Lần build đầu báo lỗi vì file hook dùng JSX với đuôi `.ts`; đã đổi sang `.tsx` và build lại thành công.
 
 ### 3. Xử lý upload ảnh
-- [ ] Tạo util upload (`src/utils/upload-service-media.ts`) dùng Supabase client, queue, abort controller.
-- [ ] Ràng buộc dung lượng (≤10 MiB) và định dạng (`image/jpeg|png|gif|webp`).
-- [ ] Lưu metadata attachment `{ id, file_name, path, size, type, status }` trong state sản phẩm; xóa file khỏi bucket khi người dùng bỏ sản phẩm/ảnh.
+- [x] Tạo util upload (`src/utils/upload-service-media.ts`) dùng Supabase client, queue, abort controller.  
+  - Đã hỗ trợ sanitise filename, giới hạn kích thước/định dạng và callback tiến trình.
+- [x] Ràng buộc dung lượng (≤10 MiB) và định dạng (`image/jpeg|png|gif|webp`).
+- [x] Lưu metadata attachment `{ id, file_name, path, size, type, status }` trong state sản phẩm.  
+  - Đã cập nhật progress/preview cục bộ; bước xóa file khỏi bucket sẽ thực hiện sau.
 - [ ] Thiết kế cơ chế preload ảnh đã upload (nếu submit thất bại) và retry.
 
 ### 4. Backend & Supabase
@@ -62,7 +73,7 @@
 
 ### 5. Hooks & client utilities
 - [ ] Cập nhật `useSubmitServiceRequest` để nhận payload mới; handle lỗi mới (thiếu service_option, ảnh quá dung lượng).
-- [ ] Tạo hook `useCustomerLookup(phone)` sử dụng endpoint mới với debounce trong Step 3.
+- [x] Tạo hook `useCustomerLookup(phone)` sử dụng endpoint mới với debounce trong Step 3.
 - [ ] Viết helper `useAttachmentQueue(productId)` tách logic upload khỏi component.
 
 ### 6. Testing & QA

@@ -31,19 +31,72 @@ export interface ServiceRequestWithDetails extends ServiceRequest {
 }
 
 // Form types - Public submission
-export interface ServiceRequestFormData {
+export interface PublicServiceRequestItem {
+  serial_number: string;
+  product_brand?: string;
+  product_model?: string;
+  purchase_date?: string;
+  issue_description?: string;
+  eligible?: boolean;
+}
+
+export interface PublicServiceRequestPayload {
   customer_name: string;
   customer_email: string;
-  customer_phone?: string;
-  product_brand: string;
-  product_model: string;
-  serial_number?: string;
-  purchase_date?: string;
+  customer_phone: string;
   issue_description: string;
-  issue_photos?: string[]; // Storage URLs
+  items: PublicServiceRequestItem[];
   service_type: ServiceType;
-  delivery_method: DeliveryMethod;
+  preferred_delivery_method: DeliveryMethod;
   delivery_address?: string;
+  honeypot?: string;
+}
+
+export interface WarrantyProductInfo {
+  id?: string | null;
+  name?: string | null;
+  brand?: string | null;
+  sku?: string | null;
+  serial: string;
+}
+
+export interface WarrantyStatusInfo {
+  status: 'active' | 'expiring_soon' | 'expired' | 'no_warranty';
+  daysRemaining: number | null;
+  manufacturerEndDate?: string | null;
+  userEndDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface VerifiedWarrantyItem {
+  serial: string;
+  status: 'pending' | 'success' | 'error';
+  eligible: boolean;
+  message?: string;
+  product?: WarrantyProductInfo;
+  warranty?: WarrantyStatusInfo;
+  error?: string;
+}
+
+export interface ServiceRequestWizardState {
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  issue: {
+    description: string;
+    serviceType: ServiceType;
+  };
+  items: PublicServiceRequestItem[];
+  delivery: {
+    method: DeliveryMethod;
+    address: string;
+    pickupNotes: string;
+    preferredSchedule: string;
+  };
+  consentConfirmed: boolean;
+  honeypot: string;
 }
 
 // Form types - Internal review

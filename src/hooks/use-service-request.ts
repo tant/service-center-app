@@ -9,7 +9,6 @@ import type {
   ServiceRequest,
   // ServiceRequestSummary, // TODO: Re-enable when view is recreated
   TrackingTokenLookup,
-  ServiceRequestFormData,
 } from '@/types/service-request';
 
 /**

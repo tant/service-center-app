@@ -179,6 +179,16 @@ When creating each shard:
 5. **Collaboration** - Multiple people can work on different sections
 6. **Version Control** - Better git diffs and merge conflicts
 
+## Architecture Change Logs
+
+**Recent Updates & Design Changes:**
+- ✅ **TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md** (2025-10-31) - Task Types → Tasks, Task Templates → Workflows
+- ✅ **DEFAULT-WAREHOUSE-SYSTEM.md** (2025-10-30) - System-managed default warehouse
+- ✅ **INVENTORY-WORKFLOW-V2.md** (2025-10-29) - Non-blocking serial entry workflow
+- ✅ **PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md** (2025-10-31) - Virtual warehouse UUID references
+- ✅ **WARRANTY-MANAGEMENT.md** - Warranty tracking system
+- ✅ **CHANGELOG-WARRANTY-AND-TRIGGERS.md** (2025-10-29) - Stock update triggers
+
 ## Current Structure
 
 ```
@@ -195,5 +205,12 @@ docs/
     ├── 07-infrastructure.md        # ⏳ To be created
     ├── 08-coding-standards.md      # ⏳ To be created
     ├── 09-testing-strategy.md      # ⏳ To be created
-    └── 10-security.md              # ⏳ To be created
+    ├── 10-security.md              # ⏳ To be created
+    └── changelogs/
+        ├── TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md  # ✅ 2025-10-31
+        ├── DEFAULT-WAREHOUSE-SYSTEM.md                  # ✅ 2025-10-30
+        ├── INVENTORY-WORKFLOW-V2.md                     # ✅ 2025-10-29
+        ├── PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md           # ✅ 2025-10-31
+        ├── WARRANTY-MANAGEMENT.md                       # ✅
+        └── CHANGELOG-WARRANTY-AND-TRIGGERS.md           # ✅ 2025-10-29
 ```

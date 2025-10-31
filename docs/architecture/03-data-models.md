@@ -626,13 +626,13 @@ $$ language sql security definer;
 
 ### 3.7.3 Table Categories
 
-**Task Workflow System:**
-- `task_templates` - Workflow templates for different service types
-- `task_types` - Library of pre-defined task types
-- `task_templates_tasks` - Junction table linking templates to tasks
+**Task Workflow System:** *(Updated 2025-10-31 - See [Terminology Refactoring](./TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md))*
+- `workflows` - Workflow templates for different service types *(was `task_templates`)*
+- `tasks` - Library of pre-defined tasks *(was `task_types`)*
+- `workflow_tasks` - Junction table linking workflows to tasks *(was `task_templates_tasks`)*
 - `service_ticket_tasks` - Task instances for each ticket
 - `task_history` - Audit trail for task execution
-- `ticket_template_changes` - Log of dynamic template switches
+- `ticket_workflow_changes` - Log of dynamic workflow switches *(was `ticket_template_changes`)*
 
 **Warehouse & Inventory Management:**
 - `physical_warehouses` - Physical warehouse locations.
@@ -772,16 +772,16 @@ create trigger "after_update_physical_warehouse_name"
 | **service_ticket_comments** | ~20000+ | Ticket audit trail | Auto-logged status changes |
 | **service_ticket_attachments** | ~5000+ | Ticket file uploads | Images, documents |
 
-### Workflow Tables (6)
+### Workflow Tables (6) *(Updated 2025-10-31)*
 
 | Table | Est. Rows | Purpose |
 |-------|-----------|---------|
-| **task_templates** | ~20-50 | Workflow templates |
-| **task_types** | ~15-30 | Task library |
-| **task_templates_tasks** | ~200-500 | Template-task junction |
+| **workflows** | ~20-50 | Workflow templates *(was `task_templates`)* |
+| **tasks** | ~15-30 | Task library *(was `task_types`)* |
+| **workflow_tasks** | ~200-500 | Workflow-task junction *(was `task_templates_tasks`)* |
 | **service_ticket_tasks** | ~50000+ | Task instances per ticket |
 | **task_history** | ~100000+ | Immutable task execution audit |
-| **ticket_template_changes** | ~1000+ | Template switch log with reason |
+| **ticket_workflow_changes** | ~1000+ | Workflow switch log with reason *(was `ticket_template_changes`)* |
 
 ### Warehouse & Inventory Tables (7)
 

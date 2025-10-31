@@ -92,8 +92,7 @@ BEGIN
       SUM(
         (SELECT COUNT(*)::INTEGER
          FROM public.physical_products pp
-         WHERE pp.product_id = p.id
-           AND pp.deleted_at IS NULL)
+         WHERE pp.product_id = p.id)
       ), 0
     )::BIGINT AS total_actual,
     (
@@ -101,8 +100,7 @@ BEGIN
         SUM(
           (SELECT COUNT(*)::INTEGER
            FROM public.physical_products pp
-           WHERE pp.product_id = p.id
-             AND pp.deleted_at IS NULL)
+           WHERE pp.product_id = p.id)
         ), 0
       ) - COALESCE(SUM(pws.declared_quantity), 0)
     )::BIGINT AS serial_gap,
@@ -111,23 +109,21 @@ BEGIN
         SUM(
           (SELECT COUNT(*)::INTEGER
            FROM public.physical_products pp
-           WHERE pp.product_id = p.id
-             AND pp.deleted_at IS NULL)
+           WHERE pp.product_id = p.id)
         ), 0
       ) < (COALESCE(SUM(pws.declared_quantity), 0) * 0.1) THEN 'critical'
       WHEN COALESCE(
         SUM(
           (SELECT COUNT(*)::INTEGER
            FROM public.physical_products pp
-           WHERE pp.product_id = p.id
-             AND pp.deleted_at IS NULL)
+           WHERE pp.product_id = p.id)
         ), 0
       ) < (COALESCE(SUM(pws.declared_quantity), 0) * 0.5) THEN 'warning'
       ELSE 'ok'
     END AS stock_status
   FROM public.products p
-  LEFT JOIN public.product_warehouse_stock pws ON pws.product_id = p.id AND pws.deleted_at IS NULL
-  WHERE p.deleted_at IS NULL
+  LEFT JOIN public.product_warehouse_stock pws ON pws.product_id = p.id
+  WHERE p.is_active = TRUE
     AND (
       search_term IS NULL
       OR p.name ILIKE '%' || search_term || '%'

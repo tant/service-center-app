@@ -60,7 +60,6 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { EditProductDrawer } from "./edit-product-drawer";
 import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
 import { createProductColumns, CONDITION_LABELS } from "./product-inventory-table-columns";
-import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 import type { PhysicalProduct } from "@/types/warehouse";
 
 // Extended type with relations from API

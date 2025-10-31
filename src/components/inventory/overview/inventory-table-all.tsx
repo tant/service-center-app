@@ -63,9 +63,9 @@ export function InventoryTableAll() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted sticky top-0 z-10">
             <TableRow>
               <TableHead>Sản phẩm</TableHead>
               <TableHead>SKU</TableHead>

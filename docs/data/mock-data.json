@@ -1,9 +1,9 @@
 {
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Mock data for SSTC Service Center - 200 physical products distributed across default warehouses",
   "created": "2025-01-28",
   "updated": "2025-10-31",
-  "changelog": "v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation; Fixed warehouse names to English",
+  "changelog": "v3.1.1 - Fixed warehouse names to Vietnamese (matching database); v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation",
 
   "_note_warehouses": "Uses system default warehouses created by seed.sql",
   "_note_tasks": "taskTypes and taskTemplates are NOT in this file - they already exist from previous seed runs",
@@ -204,17 +204,17 @@
   "physicalProducts": {
     "_note": "200 physical products distributed across 5 default virtual warehouses",
     "_distribution": {
-      "Warranty Stock": 120,
-      "RMA Staging Area": 30,
-      "Dead Stock": 20,
-      "In Service": 15,
-      "Customer Installed": 15
+      "Kho Bảo Hành": 120,
+      "Kho Chờ Trả Hàng": 30,
+      "Kho Hàng Hỏng": 20,
+      "Kho Đang Sửa Chữa": 15,
+      "Hàng Đã Bán": 15
     },
     "receipts": [
       {
         "receiptType": "normal",
         "supplier": "ZOTAC Supplier - Nhập hàng tháng 1/2025",
-        "toVirtualWarehouseName": "Warranty Stock",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
         "receiptDate": "2025-01-05",
         "notes": "Phiếu nhập kho bảo hành - Hàng mới 100%, sẵn sàng thay thế",
         "items": [
@@ -292,7 +292,7 @@
       {
         "receiptType": "normal",
         "supplier": "RMA Return - Sản phẩm lỗi chờ trả hãng",
-        "toVirtualWarehouseName": "RMA Staging Area",
+        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
         "receiptDate": "2025-01-10",
         "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi nghiêm trọng chờ gửi về ZOTAC/SSTC",
         "items": [
@@ -334,7 +334,7 @@
       {
         "receiptType": "normal",
         "supplier": "Dead Stock - Không sửa được",
-        "toVirtualWarehouseName": "Dead Stock",
+        "toVirtualWarehouseName": "Kho Hàng Hỏng",
         "receiptDate": "2025-01-12",
         "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hỏng nặng không thể RMA, chờ thanh lý",
         "items": [
@@ -379,7 +379,7 @@
       {
         "receiptType": "normal",
         "supplier": "Service Tickets - Đang xử lý",
-        "toVirtualWarehouseName": "In Service",
+        "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
         "receiptDate": "2025-01-15",
         "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang trong quá trình bảo hành",
         "items": [
@@ -421,7 +421,7 @@
       {
         "receiptType": "normal",
         "supplier": "Customer Sales - Đã bán",
-        "toVirtualWarehouseName": "Customer Installed",
+        "toVirtualWarehouseName": "Hàng Đã Bán",
         "receiptDate": "2025-01-20",
         "notes": "Phiếu nhập hàng đã bán - Sản phẩm đang ở địa điểm khách hàng",
         "items": [

@@ -201,6 +201,105 @@ $$ language plpgsql security definer set search_path = '';
 comment on function public.is_admin_or_manager() is 'Returns true if current user has admin or manager role';
 
 -- =====================================================
+-- ROLE HELPER FUNCTIONS (from 09_role_helpers.sql)
+-- =====================================================
+-- Additional role helper functions for more flexible
+-- permission checking in RLS policies and application code.
+-- =====================================================
+
+-- Get current authenticated user's role
+-- Returns: Text representation of the user's role (admin, manager, technician, reception)
+-- Returns NULL if user is not authenticated or profile not found
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS TEXT AS $$
+BEGIN
+  RETURN (
+    SELECT role::TEXT
+    FROM public.profiles
+    WHERE user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.get_my_role() IS
+  'Returns the role of the currently authenticated user as text. Returns NULL if not authenticated or profile not found.';
+
+-- Check if current user has a specific role
+-- Parameters:
+--   required_role: The role to check against (e.g., 'admin', 'manager')
+-- Returns: TRUE if user has the specified role, FALSE otherwise
+CREATE OR REPLACE FUNCTION public.has_role(required_role TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE user_id = auth.uid()
+      AND role::TEXT = required_role
+  );
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.has_role(TEXT) IS
+  'Checks if the current user has a specific role. Returns FALSE if not authenticated.';
+
+-- Check if current user has any of the specified roles
+-- Parameters:
+--   required_roles: Array of roles to check against (e.g., ARRAY['admin', 'manager'])
+-- Returns: TRUE if user has any of the specified roles, FALSE otherwise
+CREATE OR REPLACE FUNCTION public.has_any_role(required_roles TEXT[])
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE user_id = auth.uid()
+      AND role::TEXT = ANY(required_roles)
+  );
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.has_any_role(TEXT[]) IS
+  'Checks if the current user has any of the specified roles. Returns FALSE if not authenticated.';
+
+-- Convenience function: Check if user is manager or above (admin/manager)
+-- Returns: TRUE if user is admin or manager, FALSE otherwise
+-- Note: This is an alias for the existing is_admin_or_manager() but uses the new has_any_role() function
+CREATE OR REPLACE FUNCTION public.is_manager_or_above()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN public.has_any_role(ARRAY['admin', 'manager']);
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.is_manager_or_above() IS
+  'Convenience function that returns TRUE if user is admin or manager. Equivalent to has_any_role(ARRAY[''admin'', ''manager''])';
+
+-- Convenience function: Check if user is technician
+-- Returns: TRUE if user is technician, FALSE otherwise
+CREATE OR REPLACE FUNCTION public.is_technician()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN public.has_role('technician');
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.is_technician() IS
+  'Convenience function that returns TRUE if user is a technician.';
+
+-- Convenience function: Check if user is reception
+-- Returns: TRUE if user is reception, FALSE otherwise
+CREATE OR REPLACE FUNCTION public.is_reception()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN public.has_role('reception');
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '';
+
+COMMENT ON FUNCTION public.is_reception() IS
+  'Convenience function that returns TRUE if user is reception staff.';
+
+-- =====================================================
 -- PHASE 2 HELPER FUNCTIONS (from 12_phase2_functions.sql)
 -- =====================================================
 
@@ -320,6 +419,12 @@ COMMENT ON FUNCTION public.generate_rma_batch_number() IS 'Auto-generates sequen
 grant execute on function public.update_updated_at_column() to authenticated;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_admin_or_manager() to authenticated;
+grant execute on function public.get_my_role() to authenticated;
+grant execute on function public.has_role(TEXT) to authenticated;
+grant execute on function public.has_any_role(TEXT[]) to authenticated;
+grant execute on function public.is_manager_or_above() to authenticated;
+grant execute on function public.is_technician() to authenticated;
+grant execute on function public.is_reception() to authenticated;
 grant execute on function public.generate_tracking_token() to authenticated;
 grant execute on function public.calculate_warranty_end_date(DATE, INT) to authenticated;
 grant execute on function public.get_warranty_status(DATE) to authenticated;

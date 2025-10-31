@@ -213,9 +213,9 @@ create trigger "service_ticket_comments_updated_at_trigger"
 -- RLS
 alter table "service_ticket_comments" enable row level security;
 create policy "service_ticket_comments_select_policy" on "service_ticket_comments" for select using (true);
-create policy "service_ticket_comments_insert_policy" on "service_ticket_comments" for insert with check (auth.uid() = created_by);
-create policy "service_ticket_comments_update_policy" on "service_ticket_comments" for update using (auth.uid() = created_by or public.is_admin_or_manager());
-create policy "service_ticket_comments_delete_policy" on "service_ticket_comments" for delete using (auth.uid() = created_by or public.is_admin_or_manager());
+create policy "service_ticket_comments_insert_policy" on "service_ticket_comments" for insert with check ((SELECT auth.uid()) = created_by);
+create policy "service_ticket_comments_update_policy" on "service_ticket_comments" for update using (((SELECT auth.uid()) = created_by AND is_internal = false) OR public.is_admin_or_manager());
+create policy "service_ticket_comments_delete_policy" on "service_ticket_comments" for delete using (((SELECT auth.uid()) = created_by AND is_internal = false) OR public.is_admin_or_manager());
 
 -- View for comments with author info
 create or replace view service_ticket_comments_with_author as

@@ -38,22 +38,22 @@ create policy "service_media_select_public" on storage.objects for select using 
 -- =====================================================
 -- WAREHOUSE PHOTOS BUCKET POLICIES (from 19_phase2_storage.sql)
 -- =====================================================
-CREATE POLICY "warehouse_photos_authenticated_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "warehouse_photos_authenticated_read_own" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "warehouse_photos_admin_read_all" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'warehouse-photos' AND EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'manager')));
-CREATE POLICY "warehouse_photos_authenticated_delete_own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "warehouse_photos_authenticated_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+CREATE POLICY "warehouse_photos_authenticated_read_own" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+CREATE POLICY "warehouse_photos_admin_read_all" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'warehouse-photos' AND public.has_any_role(ARRAY['admin', 'manager']));
+CREATE POLICY "warehouse_photos_authenticated_delete_own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'warehouse-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
 
 -- =====================================================
 -- SERIAL PHOTOS BUCKET POLICIES (from 19_phase2_storage.sql)
 -- =====================================================
-CREATE POLICY "serial_photos_authenticated_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "serial_photos_authenticated_read_own" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "serial_photos_admin_read_all" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'serial-photos' AND EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'manager')));
-CREATE POLICY "serial_photos_authenticated_delete_own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "serial_photos_authenticated_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+CREATE POLICY "serial_photos_authenticated_read_own" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
+CREATE POLICY "serial_photos_admin_read_all" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'serial-photos' AND public.has_any_role(ARRAY['admin', 'manager']));
+CREATE POLICY "serial_photos_authenticated_delete_own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'serial-photos' AND (storage.foldername(name))[1] = (SELECT auth.uid())::text);
 
 -- =====================================================
 -- CSV IMPORTS BUCKET POLICIES (from 19_phase2_storage.sql)
 -- =====================================================
-CREATE POLICY "csv_imports_admin_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'csv-imports' AND EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'manager')));
-CREATE POLICY "csv_imports_admin_read" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'csv-imports' AND EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'manager')));
-CREATE POLICY "csv_imports_admin_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'csv-imports' AND EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'manager')));
+CREATE POLICY "csv_imports_admin_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'csv-imports' AND public.has_any_role(ARRAY['admin', 'manager']));
+CREATE POLICY "csv_imports_admin_read" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'csv-imports' AND public.has_any_role(ARRAY['admin', 'manager']));
+CREATE POLICY "csv_imports_admin_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'csv-imports' AND public.has_any_role(ARRAY['admin', 'manager']));

@@ -39,8 +39,8 @@ create trigger "profiles_updated_at_trigger"
 -- RLS
 alter table "profiles" enable row level security;
 create policy "profiles_select_policy" on "profiles" for select using (true);
-create policy "profiles_insert_policy" on "profiles" for insert with check (auth.uid() = user_id or public.is_admin());
-create policy "profiles_update_policy" on "profiles" for update using (auth.uid() = user_id or public.is_admin());
+create policy "profiles_insert_policy" on "profiles" for insert with check ((SELECT auth.uid()) = user_id or public.is_admin());
+create policy "profiles_update_policy" on "profiles" for update using ((SELECT auth.uid()) = user_id or public.is_admin());
 create policy "profiles_delete_policy" on "profiles" for delete using (public.is_admin());
 
 -- =====================================================

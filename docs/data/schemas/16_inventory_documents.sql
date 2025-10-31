@@ -611,31 +611,26 @@ COMMENT ON COLUMN public.stock_document_attachments.file_path IS 'Path to the up
 -- RLS Policies for stock_document_attachments
 ALTER TABLE public.stock_document_attachments ENABLE ROW LEVEL SECURITY;
 
--- Admins and Managers can do everything
-CREATE POLICY stock_document_attachments_admin_all ON public.stock_document_attachments
-  FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid()
-      AND profiles.role IN ('admin', 'manager')
-  ));
-
--- Technicians can view and upload their own
-CREATE POLICY stock_document_attachments_technician_view ON public.stock_document_attachments
+-- Consolidated SELECT policy (Admin/Manager/Technician can view)
+CREATE POLICY stock_document_attachments_select_policy ON public.stock_document_attachments
   FOR SELECT TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid()
-      AND profiles.role = 'technician'
-  ));
+  USING (public.has_any_role(ARRAY['admin', 'manager']) OR public.is_technician());
 
-CREATE POLICY stock_document_attachments_technician_insert ON public.stock_document_attachments
+-- Consolidated INSERT policy (Admin/Manager can insert, Technicians can insert their own)
+CREATE POLICY stock_document_attachments_insert_policy ON public.stock_document_attachments
   FOR INSERT TO authenticated
   WITH CHECK (
-    uploaded_by_id = (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-    AND EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.user_id = auth.uid()
-        AND profiles.role = 'technician'
-    )
+    public.has_any_role(ARRAY['admin', 'manager'])
+    OR
+    (uploaded_by_id = (SELECT id FROM public.profiles WHERE user_id = (SELECT auth.uid())) AND public.is_technician())
   );
+
+-- UPDATE and DELETE (Admin/Manager only)
+CREATE POLICY stock_document_attachments_update_policy ON public.stock_document_attachments
+  FOR UPDATE TO authenticated
+  USING (public.has_any_role(ARRAY['admin', 'manager']))
+  WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']));
+
+CREATE POLICY stock_document_attachments_delete_policy ON public.stock_document_attachments
+  FOR DELETE TO authenticated
+  USING (public.has_any_role(ARRAY['admin', 'manager']));

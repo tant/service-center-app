@@ -2154,13 +2154,17 @@ $function$
 
 CREATE OR REPLACE FUNCTION public.get_my_role()
  RETURNS text
- LANGUAGE sql
+ LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-  SELECT role::TEXT
-  FROM public.profiles
-  WHERE user_id = auth.uid();
+BEGIN
+  RETURN (
+    SELECT role::TEXT
+    FROM public.profiles
+    WHERE user_id = auth.uid()
+  );
+END;
 $function$
 ;
 
@@ -4479,7 +4483,7 @@ with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (id IN ( SELECT st.customer_id
    FROM (public.service_tickets st
      JOIN public.service_ticket_tasks stt ON ((stt.ticket_id = st.id)))
-  WHERE (stt.assigned_to_id = auth.uid()))))));
+  WHERE (stt.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4497,9 +4501,7 @@ using (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::te
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4508,9 +4510,7 @@ using ((EXISTS ( SELECT 1
   as permissive
   for insert
   to authenticated
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4519,12 +4519,8 @@ with check ((EXISTS ( SELECT 1
   as permissive
   for update
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4564,80 +4560,81 @@ using (true);
 
 
 
-  create policy "physical_products_admin_all"
+  create policy "physical_products_delete_policy"
   on "public"."physical_products"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "physical_products_reception_read"
+  create policy "physical_products_insert_policy"
   on "public"."physical_products"
   as permissive
-  for select
+  for insert
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'reception'::public.user_role)))));
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "physical_products_technician_read"
+  create policy "physical_products_select_policy"
   on "public"."physical_products"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role)))));
+using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR public.is_technician() OR public.is_reception()));
 
 
 
-  create policy "physical_products_technician_update"
+  create policy "physical_products_update_policy"
   on "public"."physical_products"
   as permissive
   for update
   to authenticated
-using (((EXISTS ( SELECT 1
+using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR ((EXISTS ( SELECT 1
    FROM public.service_ticket_tasks
-  WHERE ((service_ticket_tasks.assigned_to_id = auth.uid()) AND (service_ticket_tasks.ticket_id = physical_products.current_ticket_id)))) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))))
-with check (((EXISTS ( SELECT 1
+  WHERE ((service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)) AND (service_ticket_tasks.ticket_id = physical_products.current_ticket_id)))) AND public.is_technician())))
+with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR ((EXISTS ( SELECT 1
    FROM public.service_ticket_tasks
-  WHERE ((service_ticket_tasks.assigned_to_id = auth.uid()) AND (service_ticket_tasks.ticket_id = physical_products.current_ticket_id)))) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))));
+  WHERE ((service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)) AND (service_ticket_tasks.ticket_id = physical_products.current_ticket_id)))) AND public.is_technician())));
 
 
 
-  create policy "physical_warehouses_admin_all"
+  create policy "physical_warehouses_delete_policy"
   on "public"."physical_warehouses"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "physical_warehouses_authenticated_read"
+  create policy "physical_warehouses_insert_policy"
+  on "public"."physical_warehouses"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "physical_warehouses_select_policy"
   on "public"."physical_warehouses"
   as permissive
   for select
   to authenticated
 using (true);
+
+
+
+  create policy "physical_warehouses_update_policy"
+  on "public"."physical_warehouses"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4677,26 +4674,40 @@ using (true);
 
 
 
-  create policy "product_stock_thresholds_admin_all"
+  create policy "product_stock_thresholds_delete_policy"
   on "public"."product_stock_thresholds"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "product_stock_thresholds_authenticated_read"
+  create policy "product_stock_thresholds_insert_policy"
+  on "public"."product_stock_thresholds"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "product_stock_thresholds_select_policy"
   on "public"."product_stock_thresholds"
   as permissive
   for select
   to authenticated
 using (true);
+
+
+
+  create policy "product_stock_thresholds_update_policy"
+  on "public"."product_stock_thresholds"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4750,7 +4761,7 @@ using (public.is_admin());
   as permissive
   for insert
   to public
-with check (((auth.uid() = user_id) OR public.is_admin()));
+with check (((( SELECT auth.uid() AS uid) = user_id) OR public.is_admin()));
 
 
 
@@ -4768,32 +4779,44 @@ using (true);
   as permissive
   for update
   to public
-using (((auth.uid() = user_id) OR public.is_admin()));
+using (((( SELECT auth.uid() AS uid) = user_id) OR public.is_admin()));
 
 
 
-  create policy "rma_batches_admin_all"
+  create policy "rma_batches_delete_policy"
   on "public"."rma_batches"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "rma_batches_staff_read"
+  create policy "rma_batches_insert_policy"
+  on "public"."rma_batches"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "rma_batches_select_policy"
   on "public"."rma_batches"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['technician'::public.user_role, 'reception'::public.user_role]))))));
+using (true);
+
+
+
+  create policy "rma_batches_update_policy"
+  on "public"."rma_batches"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -4820,12 +4843,8 @@ with check (true);
   as permissive
   for update
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role, 'reception'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role, 'reception'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]));
 
 
 
@@ -4845,7 +4864,7 @@ using (public.is_admin_or_manager());
   to authenticated
 with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4856,7 +4875,7 @@ with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'receptio
   to authenticated
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4874,7 +4893,7 @@ using (true);
   as permissive
   for delete
   to public
-using (((auth.uid() = created_by) OR public.is_admin_or_manager()));
+using ((((( SELECT auth.uid() AS uid) = created_by) AND (is_internal = false)) OR public.is_admin_or_manager()));
 
 
 
@@ -4885,7 +4904,7 @@ using (((auth.uid() = created_by) OR public.is_admin_or_manager()));
   to authenticated
 with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4896,7 +4915,7 @@ with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'receptio
   to authenticated
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4905,7 +4924,7 @@ using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::t
   as permissive
   for update
   to public
-using (((auth.uid() = created_by) OR public.is_admin_or_manager()));
+using ((((( SELECT auth.uid() AS uid) = created_by) AND (is_internal = false)) OR public.is_admin_or_manager()));
 
 
 
@@ -4925,7 +4944,7 @@ using (public.is_admin_or_manager());
   to authenticated
 with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4936,7 +4955,7 @@ with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR (publ
   to authenticated
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -4947,57 +4966,44 @@ using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::t
   to authenticated
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR (public.is_technician() AND (ticket_id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
-  create policy "service_ticket_tasks_admin_all"
+  create policy "service_ticket_tasks_delete_policy"
   on "public"."service_ticket_tasks"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "service_ticket_tasks_reception_read"
+  create policy "service_ticket_tasks_insert_policy"
   on "public"."service_ticket_tasks"
   as permissive
-  for select
+  for insert
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'reception'::public.user_role)))));
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "service_ticket_tasks_technician_read"
+  create policy "service_ticket_tasks_select_policy"
   on "public"."service_ticket_tasks"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role)))));
+using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR public.is_technician() OR public.is_reception()));
 
 
 
-  create policy "service_ticket_tasks_technician_update"
+  create policy "service_ticket_tasks_update_policy"
   on "public"."service_ticket_tasks"
   as permissive
   for update
   to authenticated
-using (((assigned_to_id = auth.uid()) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))))
-with check (((assigned_to_id = auth.uid()) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))));
+using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR ((assigned_to_id = ( SELECT auth.uid() AS uid)) AND public.is_technician())))
+with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR ((assigned_to_id = ( SELECT auth.uid() AS uid)) AND public.is_technician())));
 
 
 
@@ -5026,7 +5032,7 @@ with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception
   to authenticated
 using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'reception'::text]) OR (public.is_technician() AND (id IN ( SELECT service_ticket_tasks.ticket_id
    FROM public.service_ticket_tasks
-  WHERE (service_ticket_tasks.assigned_to_id = auth.uid()))))));
+  WHERE (service_ticket_tasks.assigned_to_id = ( SELECT auth.uid() AS uid)))))));
 
 
 
@@ -5039,38 +5045,42 @@ using ((public.is_admin() OR (public.has_role('manager'::text) AND (status <> 'c
 
 
 
-  create policy "stock_document_attachments_admin_all"
+  create policy "stock_document_attachments_delete_policy"
   on "public"."stock_document_attachments"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "stock_document_attachments_technician_insert"
+  create policy "stock_document_attachments_insert_policy"
   on "public"."stock_document_attachments"
   as permissive
   for insert
   to authenticated
-with check (((uploaded_by_id = ( SELECT profiles.id
+with check ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR ((uploaded_by_id = ( SELECT profiles.id
    FROM public.profiles
-  WHERE (profiles.user_id = auth.uid()))) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = 'technician'::public.user_role))))));
+  WHERE (profiles.user_id = ( SELECT auth.uid() AS uid)))) AND public.is_technician())));
 
 
 
-  create policy "stock_document_attachments_technician_view"
+  create policy "stock_document_attachments_select_policy"
   on "public"."stock_document_attachments"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.user_id = auth.uid()) AND (profiles.role = 'technician'::public.user_role)))));
+using ((public.has_any_role(ARRAY['admin'::text, 'manager'::text]) OR public.is_technician()));
+
+
+
+  create policy "stock_document_attachments_update_policy"
+  on "public"."stock_document_attachments"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -5088,9 +5098,7 @@ using (true);
   as permissive
   for insert
   to authenticated
-with check (((moved_by_id = auth.uid()) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role, 'technician'::public.user_role])))))));
+with check (((moved_by_id = ( SELECT auth.uid() AS uid)) AND public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'technician'::text])));
 
 
 
@@ -5108,84 +5116,118 @@ using (true);
   as permissive
   for insert
   to authenticated
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role, 'technician'::public.user_role]))))));
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text, 'technician'::text]));
 
 
 
-  create policy "task_templates_admin_all"
+  create policy "task_templates_delete_policy"
   on "public"."task_templates"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "task_templates_staff_read"
+  create policy "task_templates_insert_policy"
+  on "public"."task_templates"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "task_templates_select_policy"
   on "public"."task_templates"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['technician'::public.user_role, 'reception'::public.user_role]))))));
+using (true);
 
 
 
-  create policy "task_templates_tasks_admin_all"
+  create policy "task_templates_update_policy"
+  on "public"."task_templates"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "task_templates_tasks_delete_policy"
   on "public"."task_templates_tasks"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "task_templates_tasks_staff_read"
+  create policy "task_templates_tasks_insert_policy"
+  on "public"."task_templates_tasks"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "task_templates_tasks_select_policy"
   on "public"."task_templates_tasks"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['technician'::public.user_role, 'reception'::public.user_role]))))));
+using (true);
 
 
 
-  create policy "task_types_admin_all"
+  create policy "task_templates_tasks_update_policy"
+  on "public"."task_templates_tasks"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "task_types_delete_policy"
   on "public"."task_types"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "task_types_staff_read"
+  create policy "task_types_insert_policy"
+  on "public"."task_types"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "task_types_select_policy"
   on "public"."task_types"
   as permissive
   for select
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['technician'::public.user_role, 'reception'::public.user_role]))))));
+using (true);
+
+
+
+  create policy "task_types_update_policy"
+  on "public"."task_types"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
@@ -5194,9 +5236,7 @@ using ((EXISTS ( SELECT 1
   as permissive
   for insert
   to authenticated
-with check (((changed_by_id = auth.uid()) AND (EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role])))))));
+with check (((changed_by_id = ( SELECT auth.uid() AS uid)) AND public.has_any_role(ARRAY['admin'::text, 'manager'::text])));
 
 
 
@@ -5209,26 +5249,40 @@ using (true);
 
 
 
-  create policy "virtual_warehouses_admin_all"
+  create policy "virtual_warehouses_delete_policy"
   on "public"."virtual_warehouses"
   as permissive
-  for all
+  for delete
   to authenticated
-using ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))))
-with check ((EXISTS ( SELECT 1
-   FROM public.profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['admin'::public.user_role, 'manager'::public.user_role]))))));
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 
-  create policy "virtual_warehouses_authenticated_read"
+  create policy "virtual_warehouses_insert_policy"
+  on "public"."virtual_warehouses"
+  as permissive
+  for insert
+  to authenticated
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
+
+
+
+  create policy "virtual_warehouses_select_policy"
   on "public"."virtual_warehouses"
   as permissive
   for select
   to authenticated
 using (true);
+
+
+
+  create policy "virtual_warehouses_update_policy"
+  on "public"."virtual_warehouses"
+  as permissive
+  for update
+  to authenticated
+using (public.has_any_role(ARRAY['admin'::text, 'manager'::text]))
+with check (public.has_any_role(ARRAY['admin'::text, 'manager'::text]));
 
 
 CREATE TRIGGER brands_updated_at_trigger BEFORE UPDATE ON public.brands FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

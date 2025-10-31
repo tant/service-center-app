@@ -59,7 +59,6 @@ SCHEMA_FILES=(
     "06_policies_and_views.sql"
     "07_storage.sql"
     "08_inventory_functions.sql"
-    "09_role_helpers.sql"
     "10_audit_logs.sql"
     "11_rls_policy_updates.sql"
     "12_seed_test_users.sql"

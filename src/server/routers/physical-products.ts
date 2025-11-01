@@ -50,6 +50,7 @@ const updateProductSchema = z.object({
 });
 
 const listProductsSchema = z.object({
+  product_id: z.string().uuid("Product ID must be a valid UUID").optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
   warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
@@ -248,6 +249,10 @@ export const inventoryRouter = router({
         );
 
       // Apply filters
+      if (input.product_id) {
+        query = query.eq("product_id", input.product_id);
+      }
+
       if (input.virtual_warehouse_id) {
         query = query.eq("virtual_warehouse_id", input.virtual_warehouse_id);
       }
@@ -278,6 +283,9 @@ export const inventoryRouter = router({
         .from("physical_products")
         .select("id, product:products!inner(name)", { count: "exact", head: true });
 
+      if (input.product_id) {
+        countQuery = countQuery.eq("product_id", input.product_id);
+      }
       if (input.virtual_warehouse_id) {
         countQuery = countQuery.eq("virtual_warehouse_id", input.virtual_warehouse_id);
       }

@@ -125,7 +125,7 @@ fi
 
 # Generate migration from current database state
 echo -e "${BLUE}📊 Generating migration from database state...${NC}"
-if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
+if pnpx supabase db diff -f init_schema --schema public --debug > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Migration generated (init_schema)${NC}"
 
     # Fix DROP POLICY statements for fresh database compatibility
@@ -198,11 +198,11 @@ else
 fi
 
 # Cleanup: remove SQL files from schemas (keep migrations!)
-echo -e "${BLUE}🧹 Cleaning up supabase/schemas...${NC}"
+# echo -e "${BLUE}🧹 Cleaning up supabase/schemas...${NC}"
 # Remove schema files from supabase/schemas (they're just temp copies)
-rm -f supabase/schemas/*.sql 2>/dev/null || true
+# rm -f supabase/schemas/*.sql 2>/dev/null || true
 
-echo -e "${GREEN}✅ Cleanup completed. Schema files removed from supabase/schemas${NC}"
+# echo -e "${GREEN}✅ Cleanup completed. Schema files removed from supabase/schemas${NC}"
 echo -e "${YELLOW}   Note: Migrations in supabase/migrations/ are preserved${NC}"
 
 # Final verification

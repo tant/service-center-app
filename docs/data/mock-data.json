@@ -1,9 +1,9 @@
 {
-  "version": "3.1.1",
-  "description": "Mock data for SSTC Service Center - 200 physical products distributed across default warehouses",
+  "version": "3.2.0",
+  "description": "Mock data for SSTC Service Center - 22 receipts across 3 months with weekly RTX 4070 imports",
   "created": "2025-01-28",
-  "updated": "2025-10-31",
-  "changelog": "v3.1.1 - Fixed warehouse names to Vietnamese (matching database); v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation",
+  "updated": "2025-11-01",
+  "changelog": "v3.2.0 - Updated to Aug-Oct 2025 dates, 22 receipts with weekly RTX 4070 imports; v3.1.1 - Fixed warehouse names to Vietnamese (matching database); v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation",
 
   "_note_warehouses": "Uses system default warehouses created by seed.sql",
   "_note_tasks": "taskTypes and taskTemplates are NOT in this file - they already exist from previous seed runs",
@@ -202,132 +202,125 @@
   ],
 
   "physicalProducts": {
-    "_note": "200 physical products distributed across 5 default virtual warehouses",
+    "_note": "22 receipts distributed across 3 months (Aug 2025 - Oct 2025)",
     "_distribution": {
-      "Kho Bảo Hành": 120,
-      "Kho Chờ Trả Hàng": 30,
-      "Kho Hàng Hỏng": 20,
-      "Kho Đang Sửa Chữa": 15,
-      "Hàng Đã Bán": 15
+      "RTX 4070 imports": "Weekly (every week has at least one receipt with 4070)",
+      "Total receipts": 22,
+      "Date range": "2025-08-04 to 2025-10-27"
     },
     "receipts": [
       {
         "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tháng 1/2025",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 8",
         "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-01-05",
-        "notes": "Phiếu nhập kho bảo hành - Hàng mới 100%, sẵn sàng thay thế",
+        "receiptDate": "2025-08-04",
+        "notes": "Phiếu nhập kho bảo hành - Hàng mới tuần đầu tháng 8",
         "items": [
           {
             "productSku": "ZT-4070-G",
-            "quantity": 40,
-            "manufacturerWarrantyEndDate": "2028-01-05",
-            "userWarrantyEndDate": "2028-07-05",
-            "serials": [
-              "ZT4070-BH-001", "ZT4070-BH-002", "ZT4070-BH-003", "ZT4070-BH-004", "ZT4070-BH-005",
-              "ZT4070-BH-006", "ZT4070-BH-007", "ZT4070-BH-008", "ZT4070-BH-009", "ZT4070-BH-010",
-              "ZT4070-BH-011", "ZT4070-BH-012", "ZT4070-BH-013", "ZT4070-BH-014", "ZT4070-BH-015",
-              "ZT4070-BH-016", "ZT4070-BH-017", "ZT4070-BH-018", "ZT4070-BH-019", "ZT4070-BH-020",
-              "ZT4070-BH-021", "ZT4070-BH-022", "ZT4070-BH-023", "ZT4070-BH-024", "ZT4070-BH-025",
-              "ZT4070-BH-026", "ZT4070-BH-027", "ZT4070-BH-028", "ZT4070-BH-029", "ZT4070-BH-030",
-              "ZT4070-BH-031", "ZT4070-BH-032", "ZT4070-BH-033", "ZT4070-BH-034", "ZT4070-BH-035",
-              "ZT4070-BH-036", "ZT4070-BH-037", "ZT4070-BH-038", "ZT4070-BH-039", "ZT4070-BH-040"
-            ]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 25,
-            "manufacturerWarrantyEndDate": "2027-10-05",
-            "userWarrantyEndDate": null,
-            "serials": [
-              "ZT4060-BH-001", "ZT4060-BH-002", "ZT4060-BH-003", "ZT4060-BH-004", "ZT4060-BH-005",
-              "ZT4060-BH-006", "ZT4060-BH-007", "ZT4060-BH-008", "ZT4060-BH-009", "ZT4060-BH-010",
-              "ZT4060-BH-011", "ZT4060-BH-012", "ZT4060-BH-013", "ZT4060-BH-014", "ZT4060-BH-015",
-              "ZT4060-BH-016", "ZT4060-BH-017", "ZT4060-BH-018", "ZT4060-BH-019", "ZT4060-BH-020",
-              "ZT4060-BH-021", "ZT4060-BH-022", "ZT4060-BH-023", "ZT4060-BH-024", "ZT4060-BH-025"
-            ]
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2028-08-04",
+            "userWarrantyEndDate": "2029-02-04",
+            "serials": ["ZT4070-W01-001", "ZT4070-W01-002", "ZT4070-W01-003", "ZT4070-W01-004", "ZT4070-W01-005", "ZT4070-W01-006", "ZT4070-W01-007", "ZT4070-W01-008"]
           },
           {
             "productSku": "SSTC-1TB-G4",
-            "quantity": 30,
-            "manufacturerWarrantyEndDate": "2030-01-05",
-            "userWarrantyEndDate": "2030-07-05",
-            "serials": [
-              "SSD1TB-BH-001", "SSD1TB-BH-002", "SSD1TB-BH-003", "SSD1TB-BH-004", "SSD1TB-BH-005",
-              "SSD1TB-BH-006", "SSD1TB-BH-007", "SSD1TB-BH-008", "SSD1TB-BH-009", "SSD1TB-BH-010",
-              "SSD1TB-BH-011", "SSD1TB-BH-012", "SSD1TB-BH-013", "SSD1TB-BH-014", "SSD1TB-BH-015",
-              "SSD1TB-BH-016", "SSD1TB-BH-017", "SSD1TB-BH-018", "SSD1TB-BH-019", "SSD1TB-BH-020",
-              "SSD1TB-BH-021", "SSD1TB-BH-022", "SSD1TB-BH-023", "SSD1TB-BH-024", "SSD1TB-BH-025",
-              "SSD1TB-BH-026", "SSD1TB-BH-027", "SSD1TB-BH-028", "SSD1TB-BH-029", "SSD1TB-BH-030"
-            ]
-          },
-          {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 15,
-            "manufacturerWarrantyEndDate": "2029-07-05",
-            "userWarrantyEndDate": null,
-            "serials": [
-              "SSD512-BH-001", "SSD512-BH-002", "SSD512-BH-003", "SSD512-BH-004", "SSD512-BH-005",
-              "SSD512-BH-006", "SSD512-BH-007", "SSD512-BH-008", "SSD512-BH-009", "SSD512-BH-010",
-              "SSD512-BH-011", "SSD512-BH-012", "SSD512-BH-013", "SSD512-BH-014", "SSD512-BH-015"
-            ]
-          },
-          {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2029-10-05",
-            "userWarrantyEndDate": "2030-04-05",
-            "serials": [
-              "RAM16G-BH-001", "RAM16G-BH-002", "RAM16G-BH-003", "RAM16G-BH-004",
-              "RAM16G-BH-005", "RAM16G-BH-006", "RAM16G-BH-007", "RAM16G-BH-008"
-            ]
-          },
-          {
-            "productSku": "ZBOX-CI",
-            "quantity": 2,
-            "serials": ["ZBOX-BH-001", "ZBOX-BH-002"]
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2030-08-04",
+            "userWarrantyEndDate": "2031-02-04",
+            "serials": ["SSD1TB-W01-001", "SSD1TB-W01-002", "SSD1TB-W01-003", "SSD1TB-W01-004", "SSD1TB-W01-005", "SSD1TB-W01-006", "SSD1TB-W01-007", "SSD1TB-W01-008", "SSD1TB-W01-009", "SSD1TB-W01-010"]
           }
         ]
       },
       {
         "receiptType": "normal",
-        "supplier": "RMA Return - Sản phẩm lỗi chờ trả hãng",
-        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
-        "receiptDate": "2025-01-10",
-        "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi nghiêm trọng chờ gửi về ZOTAC/SSTC",
+        "supplier": "SSTC Supplier - RAM và SSD",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-08-06",
+        "notes": "Nhập RAM và SSD từ SSTC",
+        "items": [
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2030-08-06",
+            "userWarrantyEndDate": "2031-02-06",
+            "serials": ["RAM16G-W01-001", "RAM16G-W01-002", "RAM16G-W01-003", "RAM16G-W01-004", "RAM16G-W01-005", "RAM16G-W01-006", "RAM16G-W01-007", "RAM16G-W01-008", "RAM16G-W01-009", "RAM16G-W01-010", "RAM16G-W01-011", "RAM16G-W01-012"]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2030-08-06",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-W01-001", "SSD512-W01-002", "SSD512-W01-003", "SSD512-W01-004", "SSD512-W01-005", "SSD512-W01-006", "SSD512-W01-007", "SSD512-W01-008"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 8",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-08-11",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 và 4060Ti",
         "items": [
           {
             "productSku": "ZT-4070-G",
             "quantity": 10,
-            "manufacturerWarrantyEndDate": "2026-07-10",
-            "userWarrantyEndDate": null,
-            "serials": [
-              "ZT4070-RMA-001", "ZT4070-RMA-002", "ZT4070-RMA-003", "ZT4070-RMA-004", "ZT4070-RMA-005",
-              "ZT4070-RMA-006", "ZT4070-RMA-007", "ZT4070-RMA-008", "ZT4070-RMA-009", "ZT4070-RMA-010"
-            ]
+            "manufacturerWarrantyEndDate": "2028-08-11",
+            "userWarrantyEndDate": "2029-02-11",
+            "serials": ["ZT4070-W02-001", "ZT4070-W02-002", "ZT4070-W02-003", "ZT4070-W02-004", "ZT4070-W02-005", "ZT4070-W02-006", "ZT4070-W02-007", "ZT4070-W02-008", "ZT4070-W02-009", "ZT4070-W02-010"]
           },
           {
             "productSku": "ZT-4060Ti",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2026-04-10",
-            "userWarrantyEndDate": "2026-10-10",
-            "serials": [
-              "ZT4060-RMA-001", "ZT4060-RMA-002", "ZT4060-RMA-003", "ZT4060-RMA-004",
-              "ZT4060-RMA-005", "ZT4060-RMA-006", "ZT4060-RMA-007", "ZT4060-RMA-008"
-            ]
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2028-08-11",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-W02-001", "ZT4060-W02-002", "ZT4060-W02-003", "ZT4060-W02-004", "ZT4060-W02-005", "ZT4060-W02-006", "ZT4060-W02-007", "ZT4060-W02-008", "ZT4060-W02-009", "ZT4060-W02-010", "ZT4060-W02-011", "ZT4060-W02-012"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "RMA Return - Sản phẩm lỗi",
+        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
+        "receiptDate": "2025-08-14",
+        "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi chờ trả về hãng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 3,
+            "manufacturerWarrantyEndDate": "2027-08-14",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4070-RMA-W02-001", "ZT4070-RMA-W02-002", "ZT4070-RMA-W02-003"]
           },
           {
             "productSku": "SSTC-1TB-G4",
-            "quantity": 8,
-            "serials": [
-              "SSD1TB-RMA-001", "SSD1TB-RMA-002", "SSD1TB-RMA-003", "SSD1TB-RMA-004",
-              "SSD1TB-RMA-005", "SSD1TB-RMA-006", "SSD1TB-RMA-007", "SSD1TB-RMA-008"
-            ]
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2029-08-14",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD1TB-RMA-W02-001", "SSD1TB-RMA-W02-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 8",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-08-18",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 6,
+            "manufacturerWarrantyEndDate": "2028-08-18",
+            "userWarrantyEndDate": "2029-02-18",
+            "serials": ["ZT4070-W03-001", "ZT4070-W03-002", "ZT4070-W03-003", "ZT4070-W03-004", "ZT4070-W03-005", "ZT4070-W03-006"]
           },
           {
-            "productSku": "SSTC-512GB-G3",
+            "productSku": "ZBOX-CI",
             "quantity": 4,
-            "serials": ["SSD512-RMA-001", "SSD512-RMA-002", "SSD512-RMA-003", "SSD512-RMA-004"]
+            "manufacturerWarrantyEndDate": "2028-08-18",
+            "userWarrantyEndDate": null,
+            "serials": ["ZBOX-W03-001", "ZBOX-W03-002", "ZBOX-W03-003", "ZBOX-W03-004"]
           }
         ]
       },
@@ -335,44 +328,68 @@
         "receiptType": "normal",
         "supplier": "Dead Stock - Không sửa được",
         "toVirtualWarehouseName": "Kho Hàng Hỏng",
-        "receiptDate": "2025-01-12",
-        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hỏng nặng không thể RMA, chờ thanh lý",
+        "receiptDate": "2025-08-21",
+        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hư hỏng nặng",
         "items": [
           {
             "productSku": "ZT-4070-G",
-            "quantity": 5,
-            "manufacturerWarrantyEndDate": "2025-06-12",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2026-08-21",
             "userWarrantyEndDate": null,
-            "serials": [
-              "ZT4070-DEAD-001", "ZT4070-DEAD-002", "ZT4070-DEAD-003", "ZT4070-DEAD-004", "ZT4070-DEAD-005"
-            ]
+            "serials": ["ZT4070-DEAD-W03-001", "ZT4070-DEAD-W03-002"]
           },
           {
             "productSku": "ZT-4060Ti",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2024-12-12",
-            "userWarrantyEndDate": "2025-06-12",
-            "serials": ["ZT4060-DEAD-001", "ZT4060-DEAD-002", "ZT4060-DEAD-003", "ZT4060-DEAD-004"]
-          },
-          {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 6,
-            "manufacturerWarrantyEndDate": "2025-12-12",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2026-08-21",
             "userWarrantyEndDate": null,
-            "serials": [
-              "SSD1TB-DEAD-001", "SSD1TB-DEAD-002", "SSD1TB-DEAD-003", "SSD1TB-DEAD-004",
-              "SSD1TB-DEAD-005", "SSD1TB-DEAD-006"
-            ]
+            "serials": ["ZT4060-DEAD-W03-001", "ZT4060-DEAD-W03-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 8",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-08-25",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2028-08-25",
+            "userWarrantyEndDate": "2029-02-25",
+            "serials": ["ZT4070-W04-001", "ZT4070-W04-002", "ZT4070-W04-003", "ZT4070-W04-004", "ZT4070-W04-005", "ZT4070-W04-006", "ZT4070-W04-007", "ZT4070-W04-008", "ZT4070-W04-009", "ZT4070-W04-010", "ZT4070-W04-011", "ZT4070-W04-012"]
           },
           {
             "productSku": "SSTC-512GB-G3",
-            "quantity": 3,
-            "serials": ["SSD512-DEAD-001", "SSD512-DEAD-002", "SSD512-DEAD-003"]
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2030-08-25",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-W04-001", "SSD512-W04-002", "SSD512-W04-003", "SSD512-W04-004", "SSD512-W04-005", "SSD512-W04-006", "SSD512-W04-007", "SSD512-W04-008", "SSD512-W04-009", "SSD512-W04-010"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 9",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-09-02",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 đầu tháng 9",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2028-09-02",
+            "userWarrantyEndDate": "2029-03-02",
+            "serials": ["ZT4070-W05-001", "ZT4070-W05-002", "ZT4070-W05-003", "ZT4070-W05-004", "ZT4070-W05-005", "ZT4070-W05-006", "ZT4070-W05-007", "ZT4070-W05-008", "ZT4070-W05-009", "ZT4070-W05-010"]
           },
           {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 2,
-            "serials": ["RAM16G-DEAD-001", "RAM16G-DEAD-002"]
+            "productSku": "ZT-4060Ti",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2028-09-02",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-W05-001", "ZT4060-W05-002", "ZT4060-W05-003", "ZT4060-W05-004", "ZT4060-W05-005", "ZT4060-W05-006", "ZT4060-W05-007", "ZT4060-W05-008"]
           }
         ]
       },
@@ -380,41 +397,45 @@
         "receiptType": "normal",
         "supplier": "Service Tickets - Đang xử lý",
         "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
-        "receiptDate": "2025-01-15",
-        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang trong quá trình bảo hành",
+        "receiptDate": "2025-09-05",
+        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang bảo hành",
         "items": [
           {
             "productSku": "ZT-4070-G",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2027-01-15",
-            "userWarrantyEndDate": "2027-07-15",
-            "serials": ["ZT4070-SVC-001", "ZT4070-SVC-002", "ZT4070-SVC-003"]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2026-10-15",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-SVC-001", "ZT4060-SVC-002"]
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2028-03-05",
+            "userWarrantyEndDate": "2028-09-05",
+            "serials": ["ZT4070-SVC-W05-001", "ZT4070-SVC-W05-002", "ZT4070-SVC-W05-003", "ZT4070-SVC-W05-004"]
           },
           {
             "productSku": "SSTC-1TB-G4",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2028-01-15",
-            "userWarrantyEndDate": "2028-07-15",
-            "serials": ["SSD1TB-SVC-001", "SSD1TB-SVC-002", "SSD1TB-SVC-003", "SSD1TB-SVC-004"]
-          },
-          {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2027-07-15",
+            "quantity": 3,
+            "manufacturerWarrantyEndDate": "2030-09-05",
             "userWarrantyEndDate": null,
-            "serials": ["SSD512-SVC-001", "SSD512-SVC-002", "SSD512-SVC-003", "SSD512-SVC-004"]
+            "serials": ["SSD1TB-SVC-W05-001", "SSD1TB-SVC-W05-002", "SSD1TB-SVC-W05-003"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 9",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-09-09",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 2 tháng 9",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2028-09-09",
+            "userWarrantyEndDate": "2029-03-09",
+            "serials": ["ZT4070-W06-001", "ZT4070-W06-002", "ZT4070-W06-003", "ZT4070-W06-004", "ZT4070-W06-005", "ZT4070-W06-006", "ZT4070-W06-007", "ZT4070-W06-008"]
           },
           {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 2,
-            "serials": ["RAM16G-SVC-001", "RAM16G-SVC-002"]
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2030-09-09",
+            "userWarrantyEndDate": "2031-03-09",
+            "serials": ["SSD1TB-W06-001", "SSD1TB-W06-002", "SSD1TB-W06-003", "SSD1TB-W06-004", "SSD1TB-W06-005", "SSD1TB-W06-006", "SSD1TB-W06-007", "SSD1TB-W06-008", "SSD1TB-W06-009", "SSD1TB-W06-010", "SSD1TB-W06-011", "SSD1TB-W06-012"]
           }
         ]
       },
@@ -422,46 +443,275 @@
         "receiptType": "normal",
         "supplier": "Customer Sales - Đã bán",
         "toVirtualWarehouseName": "Hàng Đã Bán",
-        "receiptDate": "2025-01-20",
-        "notes": "Phiếu nhập hàng đã bán - Sản phẩm đang ở địa điểm khách hàng",
+        "receiptDate": "2025-09-12",
+        "notes": "Phiếu nhập hàng đã bán - Sản phẩm ở địa điểm khách hàng",
         "items": [
           {
             "productSku": "ZT-4070-G",
+            "quantity": 5,
+            "manufacturerWarrantyEndDate": "2028-09-12",
+            "userWarrantyEndDate": "2029-03-12",
+            "serials": ["ZT4070-SOLD-W06-001", "ZT4070-SOLD-W06-002", "ZT4070-SOLD-W06-003", "ZT4070-SOLD-W06-004", "ZT4070-SOLD-W06-005"]
+          },
+          {
+            "productSku": "ZBOX-CI",
             "quantity": 2,
-            "manufacturerWarrantyEndDate": "2027-07-20",
-            "userWarrantyEndDate": "2028-01-20",
-            "serials": ["ZT4070-SOLD-001", "ZT4070-SOLD-002"]
+            "manufacturerWarrantyEndDate": "2028-09-12",
+            "userWarrantyEndDate": null,
+            "serials": ["ZBOX-SOLD-W06-001", "ZBOX-SOLD-W06-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 9",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-09-16",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3 tháng 9",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2028-09-16",
+            "userWarrantyEndDate": "2029-03-16",
+            "serials": ["ZT4070-W07-001", "ZT4070-W07-002", "ZT4070-W07-003", "ZT4070-W07-004", "ZT4070-W07-005", "ZT4070-W07-006", "ZT4070-W07-007", "ZT4070-W07-008", "ZT4070-W07-009", "ZT4070-W07-010"]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 15,
+            "manufacturerWarrantyEndDate": "2030-09-16",
+            "userWarrantyEndDate": "2031-03-16",
+            "serials": ["RAM16G-W07-001", "RAM16G-W07-002", "RAM16G-W07-003", "RAM16G-W07-004", "RAM16G-W07-005", "RAM16G-W07-006", "RAM16G-W07-007", "RAM16G-W07-008", "RAM16G-W07-009", "RAM16G-W07-010", "RAM16G-W07-011", "RAM16G-W07-012", "RAM16G-W07-013", "RAM16G-W07-014", "RAM16G-W07-015"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "RMA Return - Sản phẩm lỗi",
+        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
+        "receiptDate": "2025-09-19",
+        "notes": "Phiếu nhập kho RMA - Lỗi nghiêm trọng chờ trả hãng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2027-09-19",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4070-RMA-W07-001", "ZT4070-RMA-W07-002", "ZT4070-RMA-W07-003", "ZT4070-RMA-W07-004"]
           },
           {
             "productSku": "ZT-4060Ti",
-            "quantity": 1,
-            "manufacturerWarrantyEndDate": "2027-04-20",
+            "quantity": 3,
+            "manufacturerWarrantyEndDate": "2027-09-19",
             "userWarrantyEndDate": null,
-            "serials": ["ZT4060-SOLD-001"]
+            "serials": ["ZT4060-RMA-W07-001", "ZT4060-RMA-W07-002", "ZT4060-RMA-W07-003"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 9",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-09-23",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4 tháng 9",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 15,
+            "manufacturerWarrantyEndDate": "2028-09-23",
+            "userWarrantyEndDate": "2029-03-23",
+            "serials": ["ZT4070-W08-001", "ZT4070-W08-002", "ZT4070-W08-003", "ZT4070-W08-004", "ZT4070-W08-005", "ZT4070-W08-006", "ZT4070-W08-007", "ZT4070-W08-008", "ZT4070-W08-009", "ZT4070-W08-010", "ZT4070-W08-011", "ZT4070-W08-012", "ZT4070-W08-013", "ZT4070-W08-014", "ZT4070-W08-015"]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2028-09-23",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-W08-001", "ZT4060-W08-002", "ZT4060-W08-003", "ZT4060-W08-004", "ZT4060-W08-005", "ZT4060-W08-006", "ZT4060-W08-007", "ZT4060-W08-008", "ZT4060-W08-009", "ZT4060-W08-010"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 10",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-10-02",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 đầu tháng 10",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2028-10-02",
+            "userWarrantyEndDate": "2029-04-02",
+            "serials": ["ZT4070-W09-001", "ZT4070-W09-002", "ZT4070-W09-003", "ZT4070-W09-004", "ZT4070-W09-005", "ZT4070-W09-006", "ZT4070-W09-007", "ZT4070-W09-008", "ZT4070-W09-009", "ZT4070-W09-010", "ZT4070-W09-011", "ZT4070-W09-012"]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2030-10-02",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-W09-001", "SSD512-W09-002", "SSD512-W09-003", "SSD512-W09-004", "SSD512-W09-005", "SSD512-W09-006", "SSD512-W09-007", "SSD512-W09-008", "SSD512-W09-009", "SSD512-W09-010"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Dead Stock - Không sửa được",
+        "toVirtualWarehouseName": "Kho Hàng Hỏng",
+        "receiptDate": "2025-10-06",
+        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hư hỏng nặng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 3,
+            "manufacturerWarrantyEndDate": "2026-10-06",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4070-DEAD-W09-001", "ZT4070-DEAD-W09-002", "ZT4070-DEAD-W09-003"]
           },
           {
             "productSku": "SSTC-1TB-G4",
             "quantity": 2,
-            "manufacturerWarrantyEndDate": "2029-01-20",
-            "userWarrantyEndDate": "2029-07-20",
-            "serials": ["SSD1TB-SOLD-001", "SSD1TB-SOLD-002"]
-          },
-          {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2028-07-20",
+            "manufacturerWarrantyEndDate": "2027-10-06",
             "userWarrantyEndDate": null,
-            "serials": ["SSD512-SOLD-001", "SSD512-SOLD-002", "SSD512-SOLD-003", "SSD512-SOLD-004"]
+            "serials": ["SSD1TB-DEAD-W09-001", "SSD1TB-DEAD-W09-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 10",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-10-09",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 2 tháng 10",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2028-10-09",
+            "userWarrantyEndDate": "2029-04-09",
+            "serials": ["ZT4070-W10-001", "ZT4070-W10-002", "ZT4070-W10-003", "ZT4070-W10-004", "ZT4070-W10-005", "ZT4070-W10-006", "ZT4070-W10-007", "ZT4070-W10-008"]
           },
           {
-            "productSku": "SSTC-16GB-3200",
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 15,
+            "manufacturerWarrantyEndDate": "2030-10-09",
+            "userWarrantyEndDate": "2031-04-09",
+            "serials": ["SSD1TB-W10-001", "SSD1TB-W10-002", "SSD1TB-W10-003", "SSD1TB-W10-004", "SSD1TB-W10-005", "SSD1TB-W10-006", "SSD1TB-W10-007", "SSD1TB-W10-008", "SSD1TB-W10-009", "SSD1TB-W10-010", "SSD1TB-W10-011", "SSD1TB-W10-012", "SSD1TB-W10-013", "SSD1TB-W10-014", "SSD1TB-W10-015"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Service Tickets - Đang xử lý",
+        "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
+        "receiptDate": "2025-10-13",
+        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang bảo hành",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
             "quantity": 3,
-            "serials": ["RAM16G-SOLD-001", "RAM16G-SOLD-002", "RAM16G-SOLD-003"]
+            "manufacturerWarrantyEndDate": "2028-04-13",
+            "userWarrantyEndDate": "2028-10-13",
+            "serials": ["ZT4070-SVC-W10-001", "ZT4070-SVC-W10-002", "ZT4070-SVC-W10-003"]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2028-04-13",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-SVC-W10-001", "ZT4060-SVC-W10-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 10",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-10-16",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3 tháng 10",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2028-10-16",
+            "userWarrantyEndDate": "2029-04-16",
+            "serials": ["ZT4070-W11-001", "ZT4070-W11-002", "ZT4070-W11-003", "ZT4070-W11-004", "ZT4070-W11-005", "ZT4070-W11-006", "ZT4070-W11-007", "ZT4070-W11-008", "ZT4070-W11-009", "ZT4070-W11-010"]
           },
           {
             "productSku": "ZBOX-CI",
+            "quantity": 5,
+            "manufacturerWarrantyEndDate": "2028-10-16",
+            "userWarrantyEndDate": null,
+            "serials": ["ZBOX-W11-001", "ZBOX-W11-002", "ZBOX-W11-003", "ZBOX-W11-004", "ZBOX-W11-005"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Customer Sales - Đã bán",
+        "toVirtualWarehouseName": "Hàng Đã Bán",
+        "receiptDate": "2025-10-20",
+        "notes": "Phiếu nhập hàng đã bán - Sản phẩm ở địa điểm khách hàng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 6,
+            "manufacturerWarrantyEndDate": "2028-10-20",
+            "userWarrantyEndDate": "2029-04-20",
+            "serials": ["ZT4070-SOLD-W11-001", "ZT4070-SOLD-W11-002", "ZT4070-SOLD-W11-003", "ZT4070-SOLD-W11-004", "ZT4070-SOLD-W11-005", "ZT4070-SOLD-W11-006"]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2030-10-20",
+            "userWarrantyEndDate": "2031-04-20",
+            "serials": ["RAM16G-SOLD-W11-001", "RAM16G-SOLD-W11-002", "RAM16G-SOLD-W11-003", "RAM16G-SOLD-W11-004", "RAM16G-SOLD-W11-005", "RAM16G-SOLD-W11-006", "RAM16G-SOLD-W11-007", "RAM16G-SOLD-W11-008"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 10",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "receiptDate": "2025-10-23",
+        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4 tháng 10",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 10,
+            "manufacturerWarrantyEndDate": "2028-10-23",
+            "userWarrantyEndDate": "2029-04-23",
+            "serials": ["ZT4070-W12-001", "ZT4070-W12-002", "ZT4070-W12-003", "ZT4070-W12-004", "ZT4070-W12-005", "ZT4070-W12-006", "ZT4070-W12-007", "ZT4070-W12-008", "ZT4070-W12-009", "ZT4070-W12-010"]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 12,
+            "manufacturerWarrantyEndDate": "2028-10-23",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-W12-001", "ZT4060-W12-002", "ZT4060-W12-003", "ZT4060-W12-004", "ZT4060-W12-005", "ZT4060-W12-006", "ZT4060-W12-007", "ZT4060-W12-008", "ZT4060-W12-009", "ZT4060-W12-010", "ZT4060-W12-011", "ZT4060-W12-012"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "RMA Return - Sản phẩm lỗi cuối tháng",
+        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
+        "receiptDate": "2025-10-27",
+        "notes": "Phiếu nhập kho RMA - Lỗi nghiêm trọng chờ trả hãng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 5,
+            "manufacturerWarrantyEndDate": "2027-10-27",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4070-RMA-W12-001", "ZT4070-RMA-W12-002", "ZT4070-RMA-W12-003", "ZT4070-RMA-W12-004", "ZT4070-RMA-W12-005"]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
             "quantity": 3,
-            "serials": ["ZBOX-SOLD-001", "ZBOX-SOLD-002", "ZBOX-SOLD-003"]
+            "manufacturerWarrantyEndDate": "2028-10-27",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-RMA-W12-001", "SSD512-RMA-W12-002", "SSD512-RMA-W12-003"]
           }
         ]
       }

@@ -241,4 +241,112 @@ export const stockRouter = router({
 
       return data;
     }),
+
+  /**
+   * Get stock trend history for a product
+   * Returns time-series data showing stock changes over time
+   */
+  getStockTrend: publicProcedure.use(requireAnyAuthenticated)
+    .input(
+      z.object({
+        productId: z.string(),
+        days: z.number().min(7).max(365).default(30),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Get all receipts for this product
+      const { data: receipts } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select(`
+          declared_quantity,
+          receipt:stock_receipts!inner(
+            receipt_date,
+            status,
+            approved_at
+          )
+        `)
+        .eq("product_id", input.productId)
+        .eq("receipt.status", "completed")
+        .order("receipt(approved_at)", { ascending: true });
+
+      // Get all issues for this product
+      const { data: issues } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select(`
+          quantity,
+          issue:stock_issues!inner(
+            issue_date,
+            status,
+            approved_at
+          )
+        `)
+        .eq("product_id", input.productId)
+        .eq("issue.status", "completed")
+        .order("issue(approved_at)", { ascending: true });
+
+      // Calculate cumulative stock over time
+      type StockEvent = {
+        date: string;
+        change: number;
+        type: 'receipt' | 'issue';
+      };
+
+      const events: StockEvent[] = [];
+
+      // Add receipt events
+      receipts?.forEach((r: any) => {
+        if (r.receipt?.approved_at) {
+          events.push({
+            date: r.receipt.approved_at,
+            change: r.declared_quantity,
+            type: 'receipt',
+          });
+        }
+      });
+
+      // Add issue events (negative)
+      issues?.forEach((i: any) => {
+        if (i.issue?.approved_at) {
+          events.push({
+            date: i.issue.approved_at,
+            change: -i.quantity,
+            type: 'issue',
+          });
+        }
+      });
+
+      // Sort by date
+      events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Calculate cumulative stock
+      let cumulativeStock = 0;
+      const trendData = events.map((event) => {
+        cumulativeStock += event.change;
+        return {
+          date: new Date(event.date).toISOString().split('T')[0], // YYYY-MM-DD
+          stock: cumulativeStock,
+          change: event.change,
+          type: event.type,
+        };
+      });
+
+      // Group by day and take the last value of each day
+      const dailyData = trendData.reduce<Record<string, { date: string; stock: number }>>((acc, item) => {
+        acc[item.date] = {
+          date: item.date,
+          stock: item.stock,
+        };
+        return acc;
+      }, {});
+
+      // Filter to requested time range
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - input.days);
+
+      const filteredData = Object.values(dailyData)
+        .filter((item) => new Date(item.date) >= cutoffDate)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      return filteredData;
+    }),
 });

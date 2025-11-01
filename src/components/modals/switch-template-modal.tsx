@@ -197,7 +197,7 @@ export function SwitchTemplateModal({
               <div className="border rounded-md">
                 <div className="h-[200px] overflow-y-auto p-4">
                   <div className="space-y-2">
-                    {selectedWorkflow.template_tasks?.map((task: any, index: number) => (
+                    {selectedWorkflow.tasks?.map((task: any, index: number) => (
                       <div
                         key={task.id}
                         className="flex items-start gap-2 text-sm"
@@ -207,7 +207,7 @@ export function SwitchTemplateModal({
                         </Badge>
                         <div className="flex-1">
                           <div className="font-medium">
-                            {task.task_types?.name || "Unknown Task"}
+                            {task.tasks?.name || "Unknown Task"}
                           </div>
                           {task.custom_instructions && (
                             <div className="text-muted-foreground text-xs mt-1">
@@ -226,7 +226,7 @@ export function SwitchTemplateModal({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Tổng: {selectedWorkflow.template_tasks?.length || 0} công việc
+                Tổng: {selectedWorkflow.tasks?.length || 0} công việc
               </p>
             </div>
           )}

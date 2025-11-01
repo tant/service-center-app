@@ -59,7 +59,7 @@ export interface ServiceRequestConversion {
     customer_id: string; // Existing or newly created
     product_id: string; // Matched from catalog
     brand_id: string;
-    template_id?: string; // Task template to apply
+    workflow_id?: string; // Workflow template to apply
     warranty_type: string;
     issue_description: string;
     delivery_method: DeliveryMethod;

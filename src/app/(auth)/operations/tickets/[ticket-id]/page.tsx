@@ -74,7 +74,7 @@ async function getTicketData(ticketId: string) {
           name
         )
       ),
-      task_templates (
+      workflows (
         id,
         name
       ),
@@ -185,7 +185,7 @@ async function getTicketData(ticketId: string) {
     .from("service_ticket_tasks")
     .select(`
       *,
-      task_type:task_types(*),
+      task_type:tasks(*),
       assigned_to:profiles!assigned_to_id(
         id,
         full_name,
@@ -288,11 +288,11 @@ export default async function Page({ params }: PageProps) {
         <TicketActions
           ticketId={ticketId}
           ticketStatus={ticket.status}
-          currentTemplateId={ticket.template_id || undefined}
+          currentTemplateId={ticket.workflow_id || undefined}
           currentTemplateName={
-            Array.isArray(ticket.task_templates)
-              ? ticket.task_templates[0]?.name
-              : ticket.task_templates?.name
+            Array.isArray(ticket.workflows)
+              ? ticket.workflows[0]?.name
+              : ticket.workflows?.name
           }
         />
       </PageHeader>

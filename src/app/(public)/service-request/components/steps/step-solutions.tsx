@@ -1,19 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { removeWizardProduct, updateWizardProduct, useServiceRequestWizardDispatch, useServiceRequestWizardState } from "@/hooks/use-service-request-wizard";
+import {
+  removeWizardProduct,
+  updateWizardProduct,
+  useServiceRequestWizardDispatch,
+  useServiceRequestWizardState,
+} from "@/hooks/use-service-request-wizard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useVerifyWarranty } from "@/hooks/use-service-request";
 import { IconRefresh, IconShieldCheck, IconShieldX, IconShieldQuestion, IconAlertCircle } from "@tabler/icons-react";
 import type { ServiceType } from "@/types/enums";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
   idle: "outline",
@@ -21,6 +26,8 @@ const STATUS_BADGE_VARIANT: Record<string, "default" | "outline" | "secondary" |
   success: "default",
   error: "destructive",
 };
+
+const MIN_SERIAL_LENGTH = 5;
 
 const SERVICE_OPTIONS = [
   { value: "warranty", label: "Bảo hành" },
@@ -45,6 +52,8 @@ export function StepSolutions() {
   const dispatch = useServiceRequestWizardDispatch();
   const { verifyWarrantyAsync, isVerifying } = useVerifyWarranty();
   const [verifyingProductIds, setVerifyingProductIds] = useState<Record<string, boolean>>({});
+  const [isBulkVerifying, setIsBulkVerifying] = useState(false);
+  const autoVerifiedSerialRef = useRef<Record<string, string>>({});
 
   const handleServiceChange = (id: string, value: string) => {
     updateWizardProduct(dispatch, id, { serviceOption: value as ServiceType });
@@ -58,91 +67,203 @@ export function StepSolutions() {
     [state.products]
   );
 
-  const handleVerifyWarranty = async (productId: string) => {
-    const product = state.products.find((item) => item.id === productId);
-    if (!product) {
-      return;
-    }
+  const verifyProduct = useCallback(
+    async (productId: string): Promise<"eligible" | "ineligible" | "error" | "skipped"> => {
+      const product = state.products.find((item) => item.id === productId);
+      if (!product) {
+        return "skipped";
+      }
 
-    const serial = product.serialNumber.trim().toUpperCase();
-    if (serial.length === 0) {
+      const serial = product.serialNumber.trim().toUpperCase();
+      if (serial.length < MIN_SERIAL_LENGTH) {
+        updateWizardProduct(dispatch, productId, {
+          warrantyCheck: {
+            status: "error",
+            message: `Serial cần tối thiểu ${MIN_SERIAL_LENGTH} ký tự để kiểm tra.`,
+          },
+        });
+        return "skipped";
+      }
+
+      setVerifyingProductIds((prev) => ({ ...prev, [productId]: true }));
       updateWizardProduct(dispatch, productId, {
-        warrantyCheck: {
-          status: "error",
-          message: "Serial trống. Quay lại bước 1 để cập nhật.",
-        },
+        serialNumber: serial,
+        warrantyCheck: { status: "pending" },
       });
-      return;
-    }
 
-    setVerifyingProductIds((prev) => ({ ...prev, [productId]: true }));
-    updateWizardProduct(dispatch, productId, {
-      serialNumber: serial,
-      warrantyCheck: { status: "pending" },
-    });
+      try {
+        const result = await verifyWarrantyAsync({ serial_number: serial });
 
-    try {
-      const result = await verifyWarrantyAsync({ serial_number: serial });
+        if (!result?.found) {
+          updateWizardProduct(dispatch, productId, {
+            warrantyCheck: {
+              status: "error",
+              eligible: false,
+              message: result?.message ?? "Không tìm thấy thông tin bảo hành cho serial này.",
+            },
+            warrantyRequested: false,
+            serviceOption: "paid",
+          });
+          return "error";
+        }
 
-      if (!result?.found) {
+        const eligible = Boolean(result.eligible);
+        const message =
+          result.message ??
+          (eligible ? "Sản phẩm đủ điều kiện bảo hành." : "Không đủ điều kiện bảo hành.");
+        const warrantyInfo =
+          result && typeof result === "object" && "warranty" in result
+            ? (result as {
+                warranty?: { endDate?: string | null; manufacturerEndDate?: string | null; userEndDate?: string | null };
+              }).warranty
+            : undefined;
+        const expiresAt =
+          warrantyInfo?.endDate ??
+          warrantyInfo?.manufacturerEndDate ??
+          warrantyInfo?.userEndDate ??
+          null;
+
+        updateWizardProduct(dispatch, productId, {
+          productBrand: result.product?.brand ?? product.productBrand,
+          productModel: result.product?.name ?? product.productModel,
+          warrantyCheck: {
+            status: "success",
+            eligible,
+            message,
+            expiresAt: expiresAt ?? undefined,
+          },
+          warrantyRequested: eligible,
+          serviceOption: eligible ? "warranty" : product.serviceOption ?? "paid",
+        });
+
+        return eligible ? "eligible" : "ineligible";
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể kiểm tra tình trạng bảo hành. Vui lòng thử lại.";
+
         updateWizardProduct(dispatch, productId, {
           warrantyCheck: {
             status: "error",
             eligible: false,
-            message: result?.message ?? "Không tìm thấy thông tin bảo hành cho serial này.",
+            message,
           },
           warrantyRequested: false,
-          serviceOption: "paid",
         });
+        return "error";
+      } finally {
+        setVerifyingProductIds((prev) => {
+          const next = { ...prev };
+          delete next[productId];
+          return next;
+        });
+      }
+    },
+    [dispatch, state.products, verifyWarrantyAsync]
+  );
+
+  const bulkVerifyProducts = useCallback(
+    async (
+      productIds: string[],
+      options: { origin?: "manual" | "auto"; showToast?: boolean } = {}
+    ) => {
+      const { origin = "manual", showToast = false } = options;
+      const uniqueIds = Array.from(new Set(productIds));
+      const validIds = uniqueIds.filter((id) => {
+        const product = state.products.find((item) => item.id === id);
+        return Boolean(product && product.serialNumber.trim().length >= MIN_SERIAL_LENGTH);
+      });
+
+      if (validIds.length === 0) {
+        if (origin === "manual" && showToast) {
+          toast.info("Không có sản phẩm hợp lệ để kiểm tra.");
+        }
         return;
       }
 
-      const eligible = Boolean(result.eligible);
-      const message =
-        result.message ??
-        (eligible ? "Sản phẩm đủ điều kiện bảo hành." : "Không đủ điều kiện bảo hành.");
-      const warrantyInfo =
-        result && typeof result === "object" && "warranty" in result ? (result as { warranty?: { endDate?: string | null; manufacturerEndDate?: string | null; userEndDate?: string | null } }).warranty : undefined;
-      const expiresAt =
-        warrantyInfo?.endDate ??
-        warrantyInfo?.manufacturerEndDate ??
-        warrantyInfo?.userEndDate ??
-        null;
+      setIsBulkVerifying(true);
+      const counts = { eligible: 0, ineligible: 0, error: 0, skipped: 0 };
 
-      updateWizardProduct(dispatch, productId, {
-        productBrand: result.product?.brand ?? product.productBrand,
-        productModel: result.product?.name ?? product.productModel,
-        warrantyCheck: {
-          status: "success",
-          eligible,
-          message,
-          expiresAt: expiresAt ?? undefined,
-        },
-        warrantyRequested: eligible,
-        serviceOption: eligible ? "warranty" : product.serviceOption ?? "paid",
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể kiểm tra tình trạng bảo hành. Vui lòng thử lại.";
+      try {
+        for (const id of validIds) {
+          const outcome = await verifyProduct(id);
+          counts[outcome as keyof typeof counts] += 1;
+        }
+      } finally {
+        setIsBulkVerifying(false);
+      }
 
-      updateWizardProduct(dispatch, productId, {
-        warrantyCheck: {
-          status: "error",
-          eligible: false,
-          message,
-        },
-        warrantyRequested: false,
-      });
-    } finally {
-      setVerifyingProductIds((prev) => {
-        const next = { ...prev };
-        delete next[productId];
-        return next;
-      });
+      if (!showToast) {
+        return;
+      }
+
+      const totalChecked = counts.eligible + counts.ineligible;
+      if (totalChecked === 0 && counts.error === 0) {
+        toast.info("Không có sản phẩm nào được kiểm tra.");
+        return;
+      }
+
+      const baseMessage = `${totalChecked} sản phẩm đã được kiểm tra.`;
+      if (counts.error > 0) {
+        toast.warning(`${baseMessage} ${counts.error} sản phẩm gặp lỗi khi kiểm tra.`);
+      } else if (counts.eligible > 0) {
+        toast.success(`${baseMessage} ${counts.eligible} sản phẩm đủ điều kiện bảo hành.`);
+      } else {
+        toast.info(`${baseMessage} Không có sản phẩm nào đủ điều kiện bảo hành.`);
+      }
+    },
+    [state.products, verifyProduct]
+  );
+
+  useEffect(() => {
+    const cache = autoVerifiedSerialRef.current;
+
+    state.products.forEach((product) => {
+      const serial = product.serialNumber.trim().toUpperCase();
+      if (serial.length < MIN_SERIAL_LENGTH) {
+        delete cache[product.id];
+      }
+    });
+
+    const autoTargets = state.products.filter((product) => {
+      const serial = product.serialNumber.trim().toUpperCase();
+      if (serial.length < MIN_SERIAL_LENGTH) {
+        return false;
+      }
+      if (product.warrantyCheck.status !== "idle") {
+        return false;
+      }
+      const cachedSerial = cache[product.id];
+      return cachedSerial !== serial;
+    });
+
+    if (autoTargets.length === 0) {
+      return;
     }
+
+    autoTargets.forEach((product) => {
+      cache[product.id] = product.serialNumber.trim().toUpperCase();
+    });
+
+    void bulkVerifyProducts(
+      autoTargets.map((product) => product.id),
+      { origin: "auto", showToast: true }
+    );
+  }, [bulkVerifyProducts, state.products]);
+
+  const handleVerifyWarranty = async (productId: string) => {
+    await verifyProduct(productId);
   };
+
+  const handleBulkVerify = async () => {
+    await bulkVerifyProducts(
+      productsWithSerial.map((product) => product.id),
+      { origin: "manual", showToast: true }
+    );
+  };
+
+  const hasVerifiableProducts = productsWithSerial.length > 0;
 
   const updateServiceNotes = (productId: string, notes: string) => {
     updateWizardProduct(dispatch, productId, { serviceOptionNotes: notes });
@@ -163,8 +284,29 @@ export function StepSolutions() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Bước 2: Kiểm tra bảo hành & giải pháp</CardTitle>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Bước 2: Kiểm tra bảo hành & giải pháp</CardTitle>
+          <CardDescription>
+            Kiểm tra tự động và cập nhật phương án xử lý cho từng sản phẩm.
+          </CardDescription>
+        </div>
+        {hasVerifiableProducts ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleBulkVerify().catch(() => undefined)}
+            disabled={isBulkVerifying || isVerifying}
+          >
+            {isBulkVerifying || isVerifying ? (
+              <IconRefresh className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <IconShieldCheck className="mr-2 h-4 w-4" />
+            )}
+            Kiểm tra tất cả
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {state.products.length === 0 ? (
@@ -174,7 +316,7 @@ export function StepSolutions() {
         ) : (
           state.products.map((product) => {
             const status = product.warrantyCheck.status;
-            const verifying = verifyingProductIds[product.id] || isVerifying;
+            const verifying = verifyingProductIds[product.id] || isVerifying || isBulkVerifying;
             const hasSerial = product.serialNumber.trim().length > 0;
             const eligible = product.warrantyCheck.eligible;
             const formattedExpiry =
@@ -214,7 +356,7 @@ export function StepSolutions() {
                     variant="outline"
                     size="sm"
                     disabled={!hasSerial || verifying}
-                    onClick={() => handleVerifyWarranty(product.id).catch(() => undefined)}
+                    onClick={() => void handleVerifyWarranty(product.id)}
                   >
                     <IconShieldCheck className="mr-2 h-4 w-4" />
                     Kiểm tra bảo hành

@@ -29,6 +29,11 @@ export interface WizardWarrantyCheck {
   eligible?: boolean;
   message?: string;
   expiresAt?: string;
+  /**
+   * Flag set when our warranty lookup explicitly reports the serial is missing.
+   * Used to block progression until the user fixes the serial input.
+   */
+  notFound?: boolean;
 }
 
 export interface WizardProduct {
@@ -241,7 +246,7 @@ export function createEmptyWizardProduct(): WizardProduct {
     productModel: "",
     purchaseDate: "",
     issueDescription: "",
-    warrantyCheck: { status: "idle" },
+    warrantyCheck: { status: "idle", notFound: false },
     warrantyRequested: false,
     attachments: [],
   };

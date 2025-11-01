@@ -80,6 +80,7 @@ export function StepSolutions() {
           warrantyCheck: {
             status: "error",
             message: `Serial cần tối thiểu ${MIN_SERIAL_LENGTH} ký tự để kiểm tra.`,
+            notFound: false,
           },
         });
         return "skipped";
@@ -88,7 +89,7 @@ export function StepSolutions() {
       setVerifyingProductIds((prev) => ({ ...prev, [productId]: true }));
       updateWizardProduct(dispatch, productId, {
         serialNumber: serial,
-        warrantyCheck: { status: "pending" },
+        warrantyCheck: { status: "pending", notFound: false },
       });
 
       try {
@@ -100,6 +101,7 @@ export function StepSolutions() {
               status: "error",
               eligible: false,
               message: result?.message ?? "Không tìm thấy thông tin bảo hành cho serial này.",
+              notFound: true,
             },
             warrantyRequested: false,
             serviceOption: "paid",
@@ -131,6 +133,7 @@ export function StepSolutions() {
             eligible,
             message,
             expiresAt: expiresAt ?? undefined,
+            notFound: false,
           },
           warrantyRequested: eligible,
           serviceOption: eligible ? "warranty" : product.serviceOption ?? "paid",
@@ -148,6 +151,7 @@ export function StepSolutions() {
             status: "error",
             eligible: false,
             message,
+            notFound: false,
           },
           warrantyRequested: false,
         });

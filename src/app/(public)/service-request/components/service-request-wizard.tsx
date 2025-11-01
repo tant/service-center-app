@@ -73,6 +73,12 @@ function validateWizardStep(state: ServiceRequestWizardState, step: WizardStep):
         toast.error("Vui lòng chọn phương án xử lý cho từng sản phẩm.");
         return false;
       }
+      const serialNotFound = state.products.find((product) => product.warrantyCheck.notFound);
+      if (serialNotFound) {
+        const serial = serialNotFound.serialNumber || "chưa có serial";
+        toast.error(`Serial ${serial} chưa khớp với dữ liệu bảo hành. Vui lòng kiểm tra lại ở bước trước.`);
+        return false;
+      }
       return true;
     }
     case 2: {

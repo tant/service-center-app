@@ -44,7 +44,14 @@ function ProductCard({ index, productId }: ProductCardProps) {
   const issueValid = product.issueDescription.trim().length >= MIN_ISSUE_LENGTH;
 
   const handleSerialChange = (value: string) => {
-    updateWizardProduct(dispatch, productId, { serialNumber: value.toUpperCase() });
+    const formattedSerial = value.toUpperCase();
+    if (formattedSerial === product.serialNumber) {
+      return;
+    }
+    updateWizardProduct(dispatch, productId, {
+      serialNumber: formattedSerial,
+      warrantyCheck: { status: "idle", notFound: false },
+    });
   };
 
   const handleIssueChange = (value: string) => {

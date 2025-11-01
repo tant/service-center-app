@@ -18,7 +18,7 @@ export function InventoryTabs() {
   const [activeTab, setActiveTab] = useState("all");
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-col justify-start gap-6">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full flex-col justify-start gap-6">
       {/* Tab Header */}
       <div className="flex items-center justify-between px-4 lg:px-6">
         <TabsList className="grid w-full max-w-md grid-cols-3">

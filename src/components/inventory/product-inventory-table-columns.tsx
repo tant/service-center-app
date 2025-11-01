@@ -59,18 +59,22 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
     {
       accessorKey: "virtual_warehouse",
       header: "Kho",
-      cell: ({ row }) => (
-        <div>
-          <Badge variant="outline" className="mb-1">
-            {row.original.virtual_warehouse?.name || "Không xác định"}
-          </Badge>
-          {row.original.physical_warehouse && (
-            <div className="text-xs text-muted-foreground">
-              {row.original.physical_warehouse.name}
-            </div>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const warehouseName = row.original.virtual_warehouse?.name || "Không xác định";
+
+        return (
+          <div>
+            <Badge variant="outline" className="mb-1">
+              {warehouseName}
+            </Badge>
+            {row.original.physical_warehouse && (
+              <div className="text-xs text-muted-foreground">
+                {row.original.physical_warehouse.name}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "condition",

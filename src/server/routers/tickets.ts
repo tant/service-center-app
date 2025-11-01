@@ -466,7 +466,7 @@ export const ticketsRouter = router({
         .from("service_ticket_tasks")
         .select(`
           *,
-          task_type:task_types(*)
+          task_type:tasks(*)
         `)
         .eq("ticket_id", ticketData.id)
         .order("sequence_order", { ascending: true });
@@ -600,7 +600,7 @@ export const ticketsRouter = router({
         .from("service_ticket_tasks")
         .select(`
           *,
-          task_type:task_types(*),
+          task_type:tasks(*),
           assigned_to:profiles!assigned_to_id(
             id,
             full_name,

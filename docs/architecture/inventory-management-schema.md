@@ -1,9 +1,10 @@
 # Inventory Management System - Database Schema Design
 
-**Version:** 2.0 (REDESIGNED)
-**Date:** 2025-10-29
+**Version:** 2.1 (UPDATED)
+**Date:** 2025-10-31
 **Architect:** Winston
-**Status:** Implemented
+**Status:** Implemented & Tested
+**Last Update:** Physical Products schema migration complete
 
 ---
 
@@ -152,21 +153,60 @@ COMMENT ON COLUMN public.virtual_warehouses.warehouse_type IS
 
 ### 4.2 Physical Products (Using virtual_warehouse_id)
 ```sql
-ALTER TABLE public.physical_products
-  ADD COLUMN IF NOT EXISTS virtual_warehouse_id UUID NOT NULL
-    REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT;
+CREATE TABLE IF NOT EXISTS public.physical_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE RESTRICT,
+  serial_number VARCHAR(255) NOT NULL,
+  condition public.product_condition NOT NULL DEFAULT 'new',
 
-ALTER TABLE public.physical_products
-  ADD COLUMN IF NOT EXISTS previous_virtual_warehouse_id UUID
-    REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL;
+  -- ✅ REDESIGNED: Direct reference to virtual warehouse instance
+  virtual_warehouse_id UUID NOT NULL
+    REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
+
+  -- ✅ NEW: Track previous warehouse for RMA batch management
+  previous_virtual_warehouse_id UUID
+    REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
+
+  -- Warranty (managed separately at /inventory/products)
+  manufacturer_warranty_end_date DATE,
+  user_warranty_end_date DATE,
+
+  -- Relationships
+  current_ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
+  rma_reason TEXT,
+  rma_date DATE,
+  supplier_id UUID,
+  purchase_date DATE,
+  purchase_price DECIMAL(10,2),
+
+  -- Customer tracking (Added Oct 30, 2025)
+  last_known_customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT physical_products_serial_unique UNIQUE(serial_number)
+);
 
 CREATE INDEX idx_physical_products_virtual_warehouse
   ON public.physical_products(virtual_warehouse_id);
+CREATE INDEX idx_physical_products_previous_virtual_warehouse
+  ON public.physical_products(previous_virtual_warehouse_id)
+  WHERE previous_virtual_warehouse_id IS NOT NULL;
+CREATE INDEX idx_physical_products_last_customer
+  ON public.physical_products(last_known_customer_id)
+  WHERE last_known_customer_id IS NOT NULL;
 
+COMMENT ON TABLE public.physical_products IS
+  'Serialized product instances with warranty and location tracking (REDESIGNED 2025-10-31)';
 COMMENT ON COLUMN public.physical_products.virtual_warehouse_id IS
-  'Virtual warehouse instance where this product is currently located (required)';
+  'Virtual warehouse instance where this product is currently located (required - UUID not ENUM)';
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_id IS
-  'Stores the virtual warehouse before product was moved to RMA, used to restore product location when removed from RMA batch';
+  'Previous virtual warehouse before RMA - used to restore product location when removed from RMA batch';
+COMMENT ON COLUMN public.physical_products.last_known_customer_id IS
+  'Last known customer who owns/received this product. Updated when product moves to customer_installed warehouse.';
 ```
 
 ### 4.3 Product Warehouse Stock (Instance-Based)

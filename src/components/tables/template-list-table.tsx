@@ -61,7 +61,7 @@ import { useDeleteTemplate } from "@/hooks/use-workflow";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 
-interface Template {
+interface Workflow {
   id: string;
   name: string;
   description?: string;
@@ -82,10 +82,10 @@ interface Template {
 }
 
 interface TemplateListTableInterface {
-  templates: Template[];
+  templates: Workflow[];
   isLoading: boolean;
-  onEdit: (templateId: string) => void;
-  onView: (templateId: string) => void;
+  onEdit: (workflowId: string) => void;
+  onView: (workflowId: string) => void;
   onCreateNew: () => void;
 }
 
@@ -119,7 +119,7 @@ export function TemplateListTable({
   const [globalFilter, setGlobalFilter] = React.useState("");
   const { deleteTemplate, isDeleting } = useDeleteTemplate();
 
-  const columns: ColumnDef<Template>[] = React.useMemo(
+  const columns: ColumnDef<Workflow>[] = React.useMemo(
     () => [
       {
         id: "select",

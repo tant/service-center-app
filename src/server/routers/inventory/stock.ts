@@ -85,7 +85,7 @@ export const stockRouter = router({
 
       // Apply filters
       if (input.virtualWarehouseType) {
-        query = query.eq("virtual_warehouse_type", input.virtualWarehouseType);
+        query = query.eq("warehouse_type", input.virtualWarehouseType);
       }
 
       if (input.physicalWarehouseId) {
@@ -160,7 +160,7 @@ export const stockRouter = router({
       let query = ctx.supabaseAdmin
         .from("v_stock_summary")
         .select("*")
-        .eq("virtual_warehouse_type", input.warehouseType);
+        .eq("warehouse_type", input.warehouseType);
 
       if (input.search) {
         query = query.or(
@@ -187,7 +187,7 @@ export const stockRouter = router({
         .from("v_stock_summary")
         .select("*")
         .eq("product_id", input.productId)
-        .order("virtual_warehouse_type");
+        .order("warehouse_type");
 
       if (error) {
         throw new Error(`Failed to get product stock detail: ${error.message}`);

@@ -180,7 +180,7 @@ export function TemplateEditorModal({
   templateId,
 }: TemplateEditorModalInterface) {
   const { taskTypes } = useTaskTypes();
-  const { template, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
+  const { template: workflow, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
   const { createTemplate, isCreating } = useCreateTemplate();
   const { updateTemplate, isUpdating } = useUpdateTemplate();
 
@@ -202,17 +202,17 @@ export function TemplateEditorModal({
 
   // Load template data when editing
   React.useEffect(() => {
-    if (template && templateId) {
+    if (workflow && templateId) {
       setFormData({
-        name: template.name || "",
-        description: template.description || "",
-        service_type: template.service_type || "warranty",
-        enforce_sequence: template.enforce_sequence ?? true, // Story 1.5: Default to true if undefined
+        name: workflow.name || "",
+        description: workflow.description || "",
+        service_type: workflow.service_type || "warranty",
+        enforce_sequence: workflow.enforce_sequence ?? true, // Story 1.5: Default to true if undefined
       });
 
       // Convert loaded tasks to TaskItem format with temporary IDs
-      if (template.tasks && Array.isArray(template.tasks)) {
-        const loadedTasks: TaskItem[] = template.tasks.map((task: any) => ({
+      if (workflow.tasks && Array.isArray(workflow.tasks)) {
+        const loadedTasks: TaskItem[] = workflow.tasks.map((task: any) => ({
           id: task.id || `temp-${Date.now()}-${task.sequence_order}`,
           task_type_id: task.task_type_id || "",
           sequence_order: task.sequence_order || 0,
@@ -222,7 +222,7 @@ export function TemplateEditorModal({
         setTasks(loadedTasks);
       }
     }
-  }, [template, templateId]);
+  }, [workflow, templateId]);
 
   // Reset form when modal opens/closes
   React.useEffect(() => {

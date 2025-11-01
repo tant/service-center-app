@@ -47,26 +47,26 @@ export function SwitchTemplateModal({
   currentTemplateId,
   currentTemplateName,
 }: SwitchTemplateModalProps) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
   const [reason, setReason] = useState("");
   const [validationError, setValidationError] = useState("");
 
   const { switchTemplate, isSwitching } = useSwitchTemplate();
 
   // Fetch available templates
-  const { data: templates, isLoading: templatesLoading } =
+  const { data: workflows, isLoading: workflowsLoading } =
     trpc.workflow.template.list.useQuery({});
 
   // Fetch selected template details for preview
-  const { data: selectedTemplate } = trpc.workflow.template.getById.useQuery(
-    { template_id: selectedTemplateId },
-    { enabled: !!selectedTemplateId }
+  const { data: selectedWorkflow } = trpc.workflow.template.getById.useQuery(
+    { template_id: selectedWorkflowId },
+    { enabled: !!selectedWorkflowId }
   );
 
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
-      setSelectedTemplateId("");
+      setSelectedWorkflowId("");
       setReason("");
       setValidationError("");
     }
@@ -74,7 +74,7 @@ export function SwitchTemplateModal({
 
   const handleSubmit = () => {
     // Validation
-    if (!selectedTemplateId) {
+    if (!selectedWorkflowId) {
       setValidationError("Vui lòng chọn mẫu quy trình mới");
       return;
     }
@@ -91,13 +91,13 @@ export function SwitchTemplateModal({
     switchTemplate(
       {
         ticket_id: ticketId,
-        new_template_id: selectedTemplateId,
+        new_template_id: selectedWorkflowId,
         reason: reason.trim(),
       },
       {
         onSuccess: () => {
           // Reset form and close modal
-          setSelectedTemplateId("");
+          setSelectedWorkflowId("");
           setReason("");
           onClose();
         },
@@ -106,15 +106,15 @@ export function SwitchTemplateModal({
   };
 
   const handleCancel = () => {
-    setSelectedTemplateId("");
+    setSelectedWorkflowId("");
     setReason("");
     setValidationError("");
     onClose();
   };
 
   // Filter out current template from list
-  const availableTemplates =
-    templates?.filter(
+  const availableWorkflows =
+    workflows?.filter(
       (t) => t.id !== currentTemplateId && t.is_active
     ) || [];
 
@@ -159,28 +159,28 @@ export function SwitchTemplateModal({
               Chọn mẫu quy trình mới <span className="text-destructive">*</span>
             </Label>
             <Select
-              value={selectedTemplateId}
+              value={selectedWorkflowId}
               onValueChange={(value) => {
-                setSelectedTemplateId(value);
+                setSelectedWorkflowId(value);
                 if (validationError) setValidationError("");
               }}
-              disabled={templatesLoading || isSwitching}
+              disabled={workflowsLoading || isSwitching}
             >
               <SelectTrigger id="template-select">
                 <SelectValue placeholder="-- Chọn mẫu quy trình --" />
               </SelectTrigger>
               <SelectContent>
-                {availableTemplates.length === 0 ? (
+                {availableWorkflows.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground">
                     Không có mẫu quy trình khả dụng
                   </div>
                 ) : (
-                  availableTemplates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
+                  availableWorkflows.map((workflow) => (
+                    <SelectItem key={workflow.id} value={workflow.id}>
                       <div className="flex items-center gap-2">
-                        <span>{template.name}</span>
+                        <span>{workflow.name}</span>
                         <Badge variant="outline" className="capitalize">
-                          {template.service_type}
+                          {workflow.service_type}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -191,13 +191,13 @@ export function SwitchTemplateModal({
           </div>
 
           {/* Template Preview */}
-          {selectedTemplate && (
+          {selectedWorkflow && (
             <div className="space-y-2">
               <Label>Xem trước công việc</Label>
               <div className="border rounded-md">
                 <div className="h-[200px] overflow-y-auto p-4">
                   <div className="space-y-2">
-                    {selectedTemplate.template_tasks?.map((task: any, index: number) => (
+                    {selectedWorkflow.template_tasks?.map((task: any, index: number) => (
                       <div
                         key={task.id}
                         className="flex items-start gap-2 text-sm"
@@ -226,7 +226,7 @@ export function SwitchTemplateModal({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Tổng: {selectedTemplate.template_tasks?.length || 0} công việc
+                Tổng: {selectedWorkflow.template_tasks?.length || 0} công việc
               </p>
             </div>
           )}
@@ -274,7 +274,7 @@ export function SwitchTemplateModal({
             onClick={handleSubmit}
             disabled={
               isSwitching ||
-              !selectedTemplateId ||
+              !selectedWorkflowId ||
               reason.trim().length < 10
             }
           >

@@ -60,7 +60,6 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { EditProductDrawer } from "./edit-product-drawer";
 import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
 import { createProductColumns, CONDITION_LABELS } from "./product-inventory-table-columns";
-import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 import type { PhysicalProduct } from "@/types/warehouse";
 
 // Extended type with relations from API
@@ -224,7 +223,7 @@ export function ProductInventoryTable() {
         {/* Filters Row */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
-            placeholder="Tìm kiếm theo số serial..."
+            placeholder="Tìm kiếm theo số serial hoặc tên sản phẩm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full"

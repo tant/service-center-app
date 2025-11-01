@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/components/providers/trpc-provider';
-import type { TaskTemplate, ServiceTicketTask, TaskProgressSummary } from '@/types/workflow';
+import type { Workflow, ServiceTicketTask, TaskProgressSummary } from '@/types/workflow';
 
 /**
  * Hook for managing task types

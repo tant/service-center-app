@@ -388,7 +388,7 @@ export const issuesRouter = router({
       // Validate physical products exist and belong to correct warehouse/product
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
+        .select("id, serial_number, product_id, virtual_warehouse_id, virtual_warehouse:virtual_warehouses!virtual_warehouse_id(physical_warehouse_id)")
         .in("id", input.physicalProductIds);
 
       if (validateError) {
@@ -400,12 +400,14 @@ export const issuesRouter = router({
       }
 
       // Check all belong to correct product and warehouse
-      const invalid = physicalProducts.filter(
-        (p) =>
+      const invalid = physicalProducts.filter((p: any) => {
+        const productPhysicalWarehouseId = p.virtual_warehouse?.physical_warehouse_id;
+        return (
           p.product_id !== issueItem.product_id ||
           p.virtual_warehouse_id !== issue.virtual_warehouse_id ||
-          (issue.physical_warehouse_id && p.physical_warehouse_id !== issue.physical_warehouse_id)
-      );
+          (issue.physical_warehouse_id && productPhysicalWarehouseId !== issue.physical_warehouse_id)
+        );
+      });
 
       if (invalid.length > 0) {
         const serials = invalid.map((p) => p.serial_number).join(", ");

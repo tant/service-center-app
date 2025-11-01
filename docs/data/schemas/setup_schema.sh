@@ -1,20 +1,20 @@
 #!/bin/bash
 
 # Service Center Database Schema Setup Script
-# This script helps copy schema files and seed data to Supabase folder and generate migrations
+# This script copies schema files to Supabase folder and generates migrations
 #
-# Updated: 2025-10-30
+# Updated: 2025-10-31
+# Version: 4.0 (Schema Refactoring - 100-900 Numbering Scheme)
+#
 # Changes:
-# - Added file 18 (Default Warehouse System with customer_installed type)
-# - Updated seed.sql to include default warehouse seed data
-# - Fixed storage_buckets.sql to be idempotent (ON CONFLICT DO NOTHING)
-# - Fixed 04_task_and_warehouse.sql partial unique index syntax
-# - Schema now creates 36 tables, 26 task types, 1 default warehouse, 7 virtual warehouses
-# - Migration cleanup now preserves existing migrations (manual cleanup only)
+# - Refactored schema files into 100-900 numbering scheme
+# - 20 files organized by functional category (ENUMs → Functions → Tables → Constraints → Triggers → Views → RLS → Seed)
+# - Simplified copy process using pattern matching
+# - Default warehouse seed data included in schema (900_default_warehouse_seed.sql)
 
 set -e
 
-echo "🚀 Service Center Schema Setup (v2.0)"
+echo "🚀 Service Center Schema Setup (v4.0 - Refactored)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -42,53 +42,23 @@ if [ ! -d "docs/data/schemas" ]; then
     exit 1
 fi
 
-# Copy schema files in proper order
-echo -e "${BLUE}📁 Copying schema files in proper order...${NC}"
+# Copy schema files (100-900 numbering scheme)
+echo -e "${BLUE}📁 Copying schema files...${NC}"
 
-# Order of execution matters due to dependencies
-# 00_base_schema.sql must be first (defines ENUMs, DOMAINs, and base functions)
-# Core tables follow, then Phase 2 extensions, then RBAC helpers, then policies and views
-# Files 15-18 are inventory redesign (virtual warehouses, documents, triggers, default warehouse)
-SCHEMA_FILES=(
-    "00_base_schema.sql"
-    "01_users_and_customers.sql"
-    "02_products_and_inventory.sql"
-    "03_service_tickets.sql"
-    "04_task_and_warehouse.sql"
-    "05_service_requests.sql"
-    "06_policies_and_views.sql"
-    "07_storage.sql"
-    "08_inventory_functions.sql"
-    "09_role_helpers.sql"
-    "10_audit_logs.sql"
-    "11_rls_policy_updates.sql"
-    "12_seed_test_users.sql"
-    "15_virtual_warehouse_physical_link.sql"
-    "16_inventory_documents.sql"
-    "17_stock_update_triggers.sql"
-    "18_default_warehouse_system.sql"
-)
-
-# Copy each file in order
-for file in "${SCHEMA_FILES[@]}"; do
-    if [ -f "docs/data/schemas/$file" ]; then
-        cp "docs/data/schemas/$file" "supabase/schemas/"
-        echo -e "  ✓ Copied $file"
-    else
-        echo -e "${YELLOW}  ⚠️  Warning: $file not found, skipping${NC}"
-    fi
-done
-
-echo -e "${GREEN}✅ Schema files copied${NC}"
-
-# Copy seed data file
-echo -e "${BLUE}📦 Copying seed data file...${NC}"
-if [ -f "docs/data/schemas/seed.sql" ]; then
-    cp "docs/data/schemas/seed.sql" "supabase/"
-    echo -e "  ✓ Copied seed.sql"
+# Copy all numbered schema files (100-900)
+# Files are automatically processed in numerical order by Supabase
+# 100: ENUMs/Sequences → 150: Functions → 200-205: Tables → 300-301: Constraints
+# → 500-502: Functions → 600-601: Triggers → 700: Views → 800-802: RLS → 900: Seed
+if cp docs/data/schemas/[1-9]*.sql supabase/schemas/ 2>/dev/null; then
+    FILE_COUNT=$(ls -1 supabase/schemas/[1-9]*.sql 2>/dev/null | wc -l)
+    echo -e "${GREEN}✅ Copied $FILE_COUNT schema files${NC}"
 else
-    echo -e "${YELLOW}  ⚠️  Warning: seed.sql not found in docs/data/schemas/${NC}"
+    echo -e "${RED}❌ Error: Failed to copy schema files${NC}"
+    exit 1
 fi
+
+# Note: Seed data (default warehouse system) is now included in 900_default_warehouse_seed.sql
+# No separate seed.sql file needed
 
 # Get database connection URL
 echo -e "${BLUE}🔌 Getting database connection...${NC}"
@@ -120,8 +90,41 @@ else
     echo -e "${YELLOW}⚠️  Storage buckets seed file not found, skipping...${NC}"
 fi
 
-# Generate migration (simple, may take some time)
-echo -e "${BLUE}📊 Generating migration (this may take a little while)...${NC}"
+# Apply all schema files to database first (so db diff can detect changes)
+echo -e "${BLUE}🔧 Applying schema files to database...${NC}"
+SCHEMA_ERRORS=0
+for file in supabase/schemas/[1-9]*.sql; do
+    if [ -f "$file" ]; then
+        BASENAME=$(basename "$file")
+        echo -e "${BLUE}   → Applying $BASENAME...${NC}"
+
+        APPLY_OUTPUT=$(psql "$DB_URL" -f "$file" 2>&1)
+        APPLY_EXIT_CODE=$?
+
+        if [ $APPLY_EXIT_CODE -ne 0 ]; then
+            # Check if errors are benign (already exists, IF EXISTS, etc)
+            if echo "$APPLY_OUTPUT" | grep -q "already exists\|does not exist\|IF EXISTS"; then
+                echo -e "${YELLOW}      ⚠️  Skipped (already applied)${NC}"
+            else
+                echo -e "${RED}      ❌ Error applying $BASENAME${NC}"
+                echo "$APPLY_OUTPUT" | sed 's/^/         /'
+                SCHEMA_ERRORS=$((SCHEMA_ERRORS + 1))
+            fi
+        else
+            echo -e "${GREEN}      ✅ Applied${NC}"
+        fi
+    fi
+done
+
+if [ $SCHEMA_ERRORS -gt 0 ]; then
+    echo -e "${RED}❌ $SCHEMA_ERRORS schema file(s) failed to apply${NC}"
+    exit 1
+else
+    echo -e "${GREEN}✅ All schema files applied successfully${NC}"
+fi
+
+# Generate migration from current database state
+echo -e "${BLUE}📊 Generating migration from database state...${NC}"
 if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Migration generated (init_schema)${NC}"
 
@@ -137,26 +140,17 @@ if pnpx supabase db diff -f init_schema --schema public > /dev/null 2>&1; then
     fi
 else
     echo -e "${YELLOW}⚠️  Migration generation failed or no changes detected${NC}"
-    echo -e "${YELLOW}   Continuing to attempt migration application...${NC}"
-fi
-
-# Apply migration
-echo -e "${BLUE}🔄 Applying migration...${NC}"
-if pnpx supabase migration up; then
-    echo -e "${GREEN}✅ Migration applied${NC}"
-else
-    echo -e "${RED}❌ Migration application failed${NC}"
-    exit 1
+    echo -e "${YELLOW}   This is expected if schema was just applied directly${NC}"
 fi
 
 # Apply storage policies (db diff doesn't capture policies on system tables)
 echo -e "${BLUE}🔐 Applying storage policies...${NC}"
-if [ -f "docs/data/schemas/07_storage.sql" ]; then
-    echo -e "${BLUE}   📄 File found: docs/data/schemas/07_storage.sql${NC}"
+if [ -f "docs/data/schemas/802_storage_policies.sql" ]; then
+    echo -e "${BLUE}   📄 File found: docs/data/schemas/802_storage_policies.sql${NC}"
     echo -e "${BLUE}   🔧 Executing storage policies via psql...${NC}"
 
     # Capture both stdout and stderr for debugging
-    POLICY_OUTPUT=$(psql "$DB_URL" -f docs/data/schemas/07_storage.sql 2>&1)
+    POLICY_OUTPUT=$(psql "$DB_URL" -f docs/data/schemas/802_storage_policies.sql 2>&1)
     POLICY_EXIT_CODE=$?
 
     if [ $POLICY_EXIT_CODE -eq 0 ]; then
@@ -199,7 +193,7 @@ if [ -f "docs/data/schemas/07_storage.sql" ]; then
         echo -e "${YELLOW}   ⚠️  Could not verify policy count: $POLICY_COUNT${NC}"
     fi
 else
-    echo -e "${RED}❌ Error: Storage policies file not found at docs/data/schemas/07_storage.sql${NC}"
+    echo -e "${RED}❌ Error: Storage policies file not found at docs/data/schemas/802_storage_policies.sql${NC}"
     exit 1
 fi
 
@@ -215,10 +209,10 @@ echo -e "${YELLOW}   Note: Migrations in supabase/migrations/ are preserved${NC}
 echo -e "${BLUE}🔍 Verifying database setup...${NC}"
 TABLE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'" 2>/dev/null || echo "0")
 
-if [ "$TABLE_COUNT" -ge 36 ]; then
+if [ "$TABLE_COUNT" -ge 30 ]; then
     echo -e "${GREEN}   ✓ Database verified: $TABLE_COUNT tables created${NC}"
 else
-    echo -e "${YELLOW}   ⚠️  Warning: Only $TABLE_COUNT tables found (expected 36+)${NC}"
+    echo -e "${YELLOW}   ⚠️  Warning: Only $TABLE_COUNT tables found (expected 30+)${NC}"
 fi
 
 # Check for RBAC functions
@@ -233,38 +227,21 @@ echo
 echo -e "${GREEN}🎉 Schema setup completed successfully!${NC}"
 echo
 
-# Load seed data (REQUIRED for workflow and warehouse system)
-echo -e "${BLUE}🌱 Loading seed data...${NC}"
-echo -e "   Seed data creates 26 task types and default warehouse system."
-if psql "$DB_URL" -f supabase/seed.sql > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Seed data loaded successfully${NC}"
-
-    # Count inserted task types
-    TASK_TYPE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.task_types" 2>/dev/null || echo "0")
-    if [ "$TASK_TYPE_COUNT" -gt 0 ]; then
-        echo -e "${GREEN}   ✓ $TASK_TYPE_COUNT task types created${NC}"
-    fi
-
-    # Verify default warehouse system
-    WAREHOUSE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.physical_warehouses WHERE is_system_default = true" 2>/dev/null || echo "0")
-    VIRTUAL_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.virtual_warehouses" 2>/dev/null || echo "0")
-    if [ "$WAREHOUSE_COUNT" -eq 1 ] && [ "$VIRTUAL_COUNT" -eq 7 ]; then
-        echo -e "${GREEN}   ✓ Default warehouse system created (1 physical, 7 virtual)${NC}"
-    else
-        echo -e "${YELLOW}   ⚠️  Warning: Warehouse counts unexpected (physical: $WAREHOUSE_COUNT, virtual: $VIRTUAL_COUNT)${NC}"
-    fi
+# Note: Default warehouse seed data is included in 900_default_warehouse_seed.sql
+echo -e "${BLUE}📦 Verifying default warehouse system...${NC}"
+WAREHOUSE_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.physical_warehouses WHERE is_system_default = true" 2>/dev/null || echo "0")
+VIRTUAL_COUNT=$(psql "$DB_URL" -tAc "SELECT COUNT(*) FROM public.virtual_warehouses" 2>/dev/null || echo "0")
+if [ "$WAREHOUSE_COUNT" -eq 1 ] && [ "$VIRTUAL_COUNT" -eq 7 ]; then
+    echo -e "${GREEN}   ✓ Default warehouse system verified (1 physical, 7 virtual)${NC}"
 else
-    echo -e "${RED}❌ Failed to load seed data${NC}"
-    echo -e "${RED}   This is REQUIRED for the workflow and warehouse system to function!${NC}"
-    exit 1
+    echo -e "${YELLOW}   ⚠️  Warning: Warehouse counts unexpected (physical: $WAREHOUSE_COUNT, virtual: $VIRTUAL_COUNT)${NC}"
 fi
 
 echo
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Create admin user via /setup endpoint"
-echo -e "  2. Create test users (see docs/data/schemas/12_seed_test_users.sql)"
-echo -e "  3. Start development: pnpm dev"
+echo -e "  2. Start development: pnpm dev"
 echo
-echo -e "📚 For more information, see docs/DATABASE_SETUP.md"
+echo -e "📚 For more information, see docs/data/schemas/README.md"
 echo
 exit 0

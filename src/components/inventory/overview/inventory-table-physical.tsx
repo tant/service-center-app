@@ -27,7 +27,9 @@ export function InventoryTablePhysical() {
 
   const { data: stock, isLoading } = trpc.inventory.stock.getByPhysicalWarehouse.useQuery(
     { warehouseId, search },
-    { enabled: !!warehouseId }
+    {
+      enabled: !!warehouseId,
+    }
   );
 
   return (

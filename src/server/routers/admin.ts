@@ -534,130 +534,38 @@ export const adminRouter = router({
         }
       }
 
-      // Step 2: Create Physical Warehouses
-      console.log("\n🏭 SEED STEP 2: Creating physical warehouses...");
-      results.push("🏭 Bước 2: Tạo Physical Warehouses...");
-
-      const warehouseMap = new Map<string, string>(); // code -> id mapping
-
-      for (const warehouse of mockData.physicalWarehouses) {
-        try {
-          // Check if warehouse already exists
-          const { data: existingWarehouse } = await supabaseAdmin
-            .from("physical_warehouses")
-            .select("id, code")
-            .eq("code", warehouse.code)
-            .single();
-
-          if (existingWarehouse) {
-            console.log(`⚠️ SEED: Warehouse ${warehouse.code} already exists, using existing ID...`);
-            results.push(`⚠️ Kho ${warehouse.name} đã tồn tại, bỏ qua`);
-            warehouseMap.set(warehouse.code, existingWarehouse.id);
-          } else {
-            // Create physical warehouse
-            const { data: whData, error: whError } = await supabaseAdmin
-              .from("physical_warehouses")
-              .insert({
-                name: warehouse.name,
-                code: warehouse.code,
-                location: warehouse.location,
-                description: warehouse.description,
-                is_active: true,
-              })
-              .select("id")
-              .single();
-
-            if (whError) {
-              console.error(`❌ SEED: Failed to create warehouse ${warehouse.name}:`, whError);
-              results.push(`❌ Lỗi tạo kho ${warehouse.name}: ${whError.message}`);
-              continue;
-            }
-
-            warehouseMap.set(warehouse.code, whData.id);
-            console.log(`✅ SEED: Created warehouse ${warehouse.name}`);
-            results.push(`✅ Tạo kho ${warehouse.name}`);
-          }
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating warehouse ${warehouse.name}:`, error);
-          results.push(`❌ Lỗi tạo kho ${warehouse.name}: ${error.message}`);
-        }
-      }
-
-      // Step 2b: Query auto-created virtual warehouses + Create additional ones
-      console.log("\n🗂️ SEED STEP 2b: Managing virtual warehouses...");
-      results.push("🗂️ Bước 2b: Quản lý Virtual Warehouses...");
+      // Step 2: Query default virtual warehouses (created by seed.sql)
+      console.log("\n🗂️ SEED STEP 2: Querying default virtual warehouses...");
+      results.push("🗂️ Bước 2: Lấy danh sách kho ảo mặc định...");
 
       const virtualWarehouseMap = new Map<string, string>(); // name/type -> id mapping
 
-      // First, query all auto-created virtual warehouses from Step 2
-      const { data: autoCreatedVWs } = await supabaseAdmin
+      // Query all virtual warehouses created by default system
+      const { data: defaultVWs, error: vwQueryError } = await supabaseAdmin
         .from("virtual_warehouses")
         .select("id, name, warehouse_type");
 
-      if (autoCreatedVWs && autoCreatedVWs.length > 0) {
-        console.log(`✅ SEED: Found ${autoCreatedVWs.length} auto-created virtual warehouses`);
-        for (const vw of autoCreatedVWs) {
-          virtualWarehouseMap.set(vw.name, vw.id);
-          if (vw.warehouse_type) {
-            virtualWarehouseMap.set(vw.warehouse_type, vw.id);
-          }
-          console.log(`  → ${vw.name} (auto-created)`);
-        }
-        results.push(`✅ Tìm thấy ${autoCreatedVWs.length} kho ảo tự động`);
+      if (vwQueryError) {
+        console.error("❌ SEED: Failed to query virtual warehouses:", vwQueryError);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to query virtual warehouses: ${vwQueryError.message}`,
+        });
       }
 
-      // Then, create additional virtual warehouses from mockData
-      for (const vw of mockData.virtualWarehouses) {
-        try {
-          // Check if virtual warehouse already exists
-          const { data: existingVW } = await supabaseAdmin
-            .from("virtual_warehouses")
-            .select("id, name, warehouse_type")
-            .eq("name", vw.name)
-            .single();
-
-          if (existingVW) {
-            console.log(`⚠️ SEED: Virtual warehouse ${vw.name} already exists, skipping...`);
-            results.push(`⚠️ Kho ảo ${vw.name} đã tồn tại, bỏ qua`);
-            virtualWarehouseMap.set(vw.name, existingVW.id);
-            virtualWarehouseMap.set(vw.warehouseType, existingVW.id);
-            continue;
-          }
-
-          // Get physical warehouse ID
-          const physicalWarehouseId = warehouseMap.get(vw.physicalWarehouseCode);
-
-          if (!physicalWarehouseId) {
-            console.error(`❌ SEED: Physical warehouse ${vw.physicalWarehouseCode} not found for virtual warehouse ${vw.name}`);
-            results.push(`❌ Không tìm thấy kho vật lý ${vw.physicalWarehouseCode}`);
-            continue;
-          }
-
-          const { data: vwData, error: vwError } = await supabaseAdmin
-            .from("virtual_warehouses")
-            .insert({
-              name: vw.name,
-              warehouse_type: vw.warehouseType,
-              description: vw.description,
-              physical_warehouse_id: physicalWarehouseId,
-              is_active: true,
-            })
-            .select("id")
-            .single();
-
-          if (vwError) {
-            console.error(`❌ SEED: Failed to create virtual warehouse ${vw.name}:`, vwError);
-            results.push(`❌ Lỗi tạo kho ảo ${vw.name}: ${vwError.message}`);
-          } else {
-            virtualWarehouseMap.set(vw.name, vwData.id);
-            virtualWarehouseMap.set(vw.warehouseType, vwData.id);
-            console.log(`✅ SEED: Created virtual warehouse ${vw.name}`);
-            results.push(`✅ Tạo kho ảo ${vw.name}`);
-          }
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating virtual warehouse ${vw.name}:`, error);
-          results.push(`❌ Lỗi tạo kho ảo ${vw.name}: ${error.message}`);
+      if (defaultVWs && defaultVWs.length > 0) {
+        console.log(`✅ SEED: Found ${defaultVWs.length} default virtual warehouses`);
+        for (const vw of defaultVWs) {
+          virtualWarehouseMap.set(vw.name, vw.id);
+          console.log(`  → ${vw.name} (${vw.warehouse_type})`);
         }
+        results.push(`✅ Tìm thấy ${defaultVWs.length} kho ảo mặc định`);
+      } else {
+        console.error("❌ SEED: No virtual warehouses found. Please ensure database has been seeded properly.");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No virtual warehouses found. Please run 'pnpx supabase db reset' first.",
+        });
       }
 
       // Step 3: Create Brands
@@ -863,9 +771,9 @@ export const adminRouter = router({
         }
       }
 
-      // Step 6: Create Physical Products (GRN with full workflow)
-      console.log("\n📋 SEED STEP 6: Creating physical products (GRN receipts)...");
-      results.push("📋 Bước 6: Tạo Physical Products (GRN)...");
+      // Step 6: Create Physical Products (200 products across 5 default virtual warehouses)
+      console.log("\n📋 SEED STEP 6: Creating physical products (200 products via GRN receipts)...");
+      results.push("📋 Bước 6: Tạo 200 Physical Products phân bổ vào 5 kho ảo...");
 
       // Check if any physical products already exist
       const { count: existingPhysicalProductsCount } = await supabaseAdmin
@@ -947,8 +855,8 @@ export const adminRouter = router({
             const serialsToInsert = item.serials.map((serial: string) => ({
               receipt_item_id: itemData.id,
               serial_number: serial,
-              manufacturer_warranty_end_date: item.manufacturerWarrantyEndDate,
-              user_warranty_end_date: item.userWarrantyEndDate,
+              manufacturer_warranty_end_date: item.manufacturerWarrantyEndDate || null,
+              user_warranty_end_date: item.userWarrantyEndDate || null,
             }));
 
             const { error: serialsError } = await supabaseAdmin
@@ -1017,12 +925,34 @@ export const adminRouter = router({
         }
       }
 
-      // Step 7: Create Task Types
-      console.log("\n📝 SEED STEP 7: Creating task types...");
-      results.push("📝 Bước 7: Tạo Task Types...");
+      // Step 7: Query existing Task Types (no longer created here - already in database)
+      console.log("\n📝 SEED STEP 7: Querying existing task types...");
+      results.push("📝 Bước 7: Lấy Task Types từ database...");
 
       const taskTypeMap = new Map<string, string>(); // name -> id mapping
 
+      // Query all existing task types instead of creating them
+      const { data: existingTaskTypes, error: taskTypesError } = await supabaseAdmin
+        .from("tasks")
+        .select("id, name");
+
+      if (taskTypesError) {
+        console.error("❌ SEED: Failed to query task types:", taskTypesError);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to query task types: ${taskTypesError.message}`,
+        });
+      }
+
+      for (const taskType of existingTaskTypes || []) {
+        taskTypeMap.set(taskType.name, taskType.id);
+      }
+
+      console.log(`✅ SEED: Found ${taskTypeMap.size} existing task types`);
+      results.push(`✅ Tìm thấy ${taskTypeMap.size} task types`);
+
+      // OLD CODE - no longer creates task types
+      /*
       for (const taskType of mockData.taskTypes) {
         try {
           // Check if task type already exists
@@ -1067,11 +997,14 @@ export const adminRouter = router({
           results.push(`❌ Lỗi tạo task type ${taskType.name}: ${error.message}`);
         }
       }
+      */
 
-      // Step 8: Create Task Templates
-      console.log("\n📋 SEED STEP 8: Creating task templates...");
-      results.push("📋 Bước 8: Tạo Task Templates...");
+      // Step 8: Skip Task Templates (no longer in mock-data.json - already in database)
+      console.log("\n📋 SEED STEP 8: Skipping task templates (already exist in database)...");
+      results.push("📋 Bước 8: Bỏ qua Task Templates (đã tồn tại trong database)...");
 
+      // OLD CODE - no longer creates task templates
+      /*
       for (const template of mockData.taskTemplates) {
         try {
           // Check if template already exists
@@ -1162,6 +1095,7 @@ export const adminRouter = router({
           results.push(`❌ Lỗi tạo template ${template.name}: ${error.message}`);
         }
       }
+      */
 
       console.log("\n✅ SEED: Mock data seeding completed successfully");
       results.push("✅ Hoàn tất tạo dữ liệu test!");

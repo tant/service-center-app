@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StockStatusBadge } from "../shared/stock-status-badge";
-import { VirtualWarehouseSelector } from "../shared/warehouse-selector";
+import { VirtualWarehouseTypeSelector } from "../shared/warehouse-selector";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
@@ -27,14 +27,16 @@ export function InventoryTableVirtual() {
 
   const { data: stock, isLoading } = trpc.inventory.stock.getByVirtualWarehouse.useQuery(
     { warehouseType, search },
-    { enabled: !!warehouseType }
+    {
+      enabled: !!warehouseType,
+    }
   );
 
   return (
     <div className="space-y-4">
       {/* Warehouse Selector and Search */}
       <div className="flex items-center gap-2">
-        <VirtualWarehouseSelector
+        <VirtualWarehouseTypeSelector
           value={warehouseType}
           onValueChange={setWarehouseType}
           className="w-[250px]"

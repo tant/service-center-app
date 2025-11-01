@@ -328,7 +328,7 @@ export const serialsRouter = router({
           `
           *,
           product:products(id, name, sku),
-          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
         `
         )
         .eq("serial_number", input.serialNumber)
@@ -380,7 +380,7 @@ export const serialsRouter = router({
         date: physicalProduct.created_at,
         warehouse: {
           virtual: physicalProduct.virtual_warehouse?.warehouse_type,
-          physical: physicalProduct.physical_warehouse_id,
+          physical: (physicalProduct.virtual_warehouse as any)?.physical_warehouse?.id,
         },
       });
 
@@ -469,7 +469,7 @@ export const serialsRouter = router({
         serialNumber: input.serialNumber,
         currentLocation: {
           virtual: physicalProduct.virtual_warehouse?.warehouse_type,
-          physical: physicalProduct.physical_warehouse_id,
+          physical: (physicalProduct.virtual_warehouse as any)?.physical_warehouse?.id,
         },
         product: physicalProduct.product,
         warranty: {
@@ -491,7 +491,6 @@ export const serialsRouter = router({
       z.object({
         search: z.string().min(1),
         virtualWarehouseId: z.string().optional(),
-        physicalWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false), // Only show not-issued serials
         limit: z.number().int().min(1).max(100).default(50),
       })
@@ -504,22 +503,17 @@ export const serialsRouter = router({
           id,
           serial_number,
           virtual_warehouse_id,
-          physical_warehouse_id,
           manufacturer_warranty_end_date,
           user_warranty_end_date,
           created_at,
           product:products(id, name, sku),
-          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
         `
         )
         .ilike("serial_number", `%${input.search}%`);
 
       if (input.virtualWarehouseId) {
         query = query.eq("virtual_warehouse_id", input.virtualWarehouseId);
-      }
-
-      if (input.physicalWarehouseId) {
-        query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
       }
 
       // Note: onlyAvailable filter is now redundant - if product exists in DB, it's available
@@ -545,7 +539,6 @@ export const serialsRouter = router({
       z.object({
         productId: z.string(),
         virtualWarehouseId: z.string().optional(),
-        physicalWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false),
       })
     )
@@ -557,21 +550,16 @@ export const serialsRouter = router({
           id,
           serial_number,
           virtual_warehouse_id,
-          physical_warehouse_id,
           manufacturer_warranty_end_date,
           user_warranty_end_date,
           created_at,
-          virtual_warehouse:virtual_warehouses(id, name, warehouse_type)
+          virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
         `
         )
         .eq("product_id", input.productId);
 
       if (input.virtualWarehouseId) {
         query = query.eq("virtual_warehouse_id", input.virtualWarehouseId);
-      }
-
-      if (input.physicalWarehouseId) {
-        query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
       }
 
       // Note: onlyAvailable filter is now redundant - if product exists in DB, it's available

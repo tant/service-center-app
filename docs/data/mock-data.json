@@ -1,9 +1,12 @@
 {
-  "version": "2.0.0",
-  "description": "Mock data for SSTC Service Center - Based on DATA-SETUP-GUIDE.md",
+  "version": "3.1.0",
+  "description": "Mock data for SSTC Service Center - 200 physical products distributed across default warehouses",
   "created": "2025-01-28",
-  "updated": "2025-10-28",
-  "changelog": "v2.0.0 - Updated for inventory system redesign: Virtual warehouses are now separate database records; Receipt/Issue types simplified to 2 types (normal/adjustment); Receipts reference virtual warehouse names instead of types",
+  "updated": "2025-10-31",
+  "changelog": "v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation; Fixed warehouse names to English",
+
+  "_note_warehouses": "Uses system default warehouses created by seed.sql",
+  "_note_tasks": "taskTypes and taskTemplates are NOT in this file - they already exist from previous seed runs",
 
   "staffUsers": [
     {
@@ -35,74 +38,6 @@
       "password": "tantran",
       "fullName": "Lễ Tân",
       "role": "reception"
-    }
-  ],
-
-  "physicalWarehouses": [
-    {
-      "name": "Kho nhà cũ",
-      "code": "WH-OLD-HOUSE",
-      "location": "69/18 Nguyễn Cửu Đàm, Phường Tân Sơn Nhì, TP.HCM",
-      "description": "Kho cũ dùng cho sản phẩm hỏng không còn giá trị"
-    },
-    {
-      "name": "SSTC",
-      "code": "WH-SSTC-MAIN",
-      "location": "69/18 Nguyễn Cửu Đàm, Phường Tân Sơn Nhì, TP.HCM",
-      "description": "Kho chính SSTC Service Center"
-    },
-    {
-      "name": "Hà Nội",
-      "code": "WH-HANOI",
-      "location": "123 Trần Duy Hưng, Quận Cầu Giấy, Hà Nội",
-      "description": "Chi nhánh Hà Nội - kho tạm thời"
-    }
-  ],
-
-  "_note_virtualWarehouses": "Virtual warehouses are now separate database records and must be created through the UI after physical warehouses are created. See DATA-SETUP-GUIDE.md for the list of virtual warehouses to create.",
-
-  "virtualWarehouses": [
-    {
-      "name": "Dead Stock",
-      "warehouseType": "dead_stock",
-      "physicalWarehouseCode": "WH-OLD-HOUSE",
-      "description": "Sản phẩm hỏng không sửa được, chờ thanh lý",
-      "colorCode": "#dc2626"
-    },
-    {
-      "name": "Warranty Stock",
-      "warehouseType": "warranty_stock",
-      "physicalWarehouseCode": "WH-SSTC-MAIN",
-      "description": "Sản phẩm bảo hành mới, sẵn sàng thay thế cho khách",
-      "colorCode": "#16a34a"
-    },
-    {
-      "name": "RMA Staging Area",
-      "warehouseType": "rma_staging",
-      "physicalWarehouseCode": "WH-SSTC-MAIN",
-      "description": "Sản phẩm lỗi chờ trả về nhà cung cấp (ZOTAC, SSTC)",
-      "colorCode": "#ea580c"
-    },
-    {
-      "name": "Dead Stock",
-      "warehouseType": "dead_stock",
-      "physicalWarehouseCode": "WH-SSTC-MAIN",
-      "description": "Sản phẩm hỏng không RMA được, chờ thanh lý",
-      "colorCode": "#dc2626"
-    },
-    {
-      "name": "In Service",
-      "warehouseType": "in_service",
-      "physicalWarehouseCode": "WH-SSTC-MAIN",
-      "description": "Sản phẩm đang được sử dụng trong service tickets",
-      "colorCode": "#2563eb"
-    },
-    {
-      "name": "Parts Inventory",
-      "warehouseType": "parts",
-      "physicalWarehouseCode": "WH-SSTC-MAIN",
-      "description": "Linh kiện thay thế (fan, thermal pad, capacitor...)",
-      "colorCode": "#7c3aed"
     }
   ],
 
@@ -267,638 +202,269 @@
   ],
 
   "physicalProducts": {
-    "_note": "Receipts now use receipt type (normal/adjustment) and virtual warehouse name instead of warehouse type",
+    "_note": "200 physical products distributed across 5 default virtual warehouses",
+    "_distribution": {
+      "Warranty Stock": 120,
+      "RMA Staging Area": 30,
+      "Dead Stock": 20,
+      "In Service": 15,
+      "Customer Installed": 15
+    },
     "receipts": [
       {
         "receiptType": "normal",
-        "supplier": "ZOTAC Supplier",
+        "supplier": "ZOTAC Supplier - Nhập hàng tháng 1/2025",
         "toVirtualWarehouseName": "Warranty Stock",
-        "toVirtualWarehouseType": "warranty_stock",
-        "receiptDate": "2025-01-01",
-        "notes": "Nhập hàng bảo hành VGA tháng 01/2025",
+        "receiptDate": "2025-01-05",
+        "notes": "Phiếu nhập kho bảo hành - Hàng mới 100%, sẵn sàng thay thế",
         "items": [
           {
             "productSku": "ZT-4070-G",
-            "quantity": 5,
-            "warrantyStartDate": "2025-01-01",
-            "warrantyMonths": 36,
+            "quantity": 40,
+            "manufacturerWarrantyEndDate": "2028-01-05",
+            "userWarrantyEndDate": "2028-07-05",
             "serials": [
-              "ZT4070-2025-001",
-              "ZT4070-2025-002",
-              "ZT4070-2025-003",
-              "ZT4070-2025-004",
-              "ZT4070-2025-005"
+              "ZT4070-BH-001", "ZT4070-BH-002", "ZT4070-BH-003", "ZT4070-BH-004", "ZT4070-BH-005",
+              "ZT4070-BH-006", "ZT4070-BH-007", "ZT4070-BH-008", "ZT4070-BH-009", "ZT4070-BH-010",
+              "ZT4070-BH-011", "ZT4070-BH-012", "ZT4070-BH-013", "ZT4070-BH-014", "ZT4070-BH-015",
+              "ZT4070-BH-016", "ZT4070-BH-017", "ZT4070-BH-018", "ZT4070-BH-019", "ZT4070-BH-020",
+              "ZT4070-BH-021", "ZT4070-BH-022", "ZT4070-BH-023", "ZT4070-BH-024", "ZT4070-BH-025",
+              "ZT4070-BH-026", "ZT4070-BH-027", "ZT4070-BH-028", "ZT4070-BH-029", "ZT4070-BH-030",
+              "ZT4070-BH-031", "ZT4070-BH-032", "ZT4070-BH-033", "ZT4070-BH-034", "ZT4070-BH-035",
+              "ZT4070-BH-036", "ZT4070-BH-037", "ZT4070-BH-038", "ZT4070-BH-039", "ZT4070-BH-040"
             ]
           },
           {
             "productSku": "ZT-4060Ti",
-            "quantity": 3,
-            "warrantyStartDate": "2025-01-01",
-            "warrantyMonths": 36,
+            "quantity": 25,
+            "manufacturerWarrantyEndDate": "2027-10-05",
+            "userWarrantyEndDate": null,
             "serials": [
-              "ZT4060Ti-2025-001",
-              "ZT4060Ti-2025-002",
-              "ZT4060Ti-2025-003"
+              "ZT4060-BH-001", "ZT4060-BH-002", "ZT4060-BH-003", "ZT4060-BH-004", "ZT4060-BH-005",
+              "ZT4060-BH-006", "ZT4060-BH-007", "ZT4060-BH-008", "ZT4060-BH-009", "ZT4060-BH-010",
+              "ZT4060-BH-011", "ZT4060-BH-012", "ZT4060-BH-013", "ZT4060-BH-014", "ZT4060-BH-015",
+              "ZT4060-BH-016", "ZT4060-BH-017", "ZT4060-BH-018", "ZT4060-BH-019", "ZT4060-BH-020",
+              "ZT4060-BH-021", "ZT4060-BH-022", "ZT4060-BH-023", "ZT4060-BH-024", "ZT4060-BH-025"
             ]
+          },
+          {
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 30,
+            "manufacturerWarrantyEndDate": "2030-01-05",
+            "userWarrantyEndDate": "2030-07-05",
+            "serials": [
+              "SSD1TB-BH-001", "SSD1TB-BH-002", "SSD1TB-BH-003", "SSD1TB-BH-004", "SSD1TB-BH-005",
+              "SSD1TB-BH-006", "SSD1TB-BH-007", "SSD1TB-BH-008", "SSD1TB-BH-009", "SSD1TB-BH-010",
+              "SSD1TB-BH-011", "SSD1TB-BH-012", "SSD1TB-BH-013", "SSD1TB-BH-014", "SSD1TB-BH-015",
+              "SSD1TB-BH-016", "SSD1TB-BH-017", "SSD1TB-BH-018", "SSD1TB-BH-019", "SSD1TB-BH-020",
+              "SSD1TB-BH-021", "SSD1TB-BH-022", "SSD1TB-BH-023", "SSD1TB-BH-024", "SSD1TB-BH-025",
+              "SSD1TB-BH-026", "SSD1TB-BH-027", "SSD1TB-BH-028", "SSD1TB-BH-029", "SSD1TB-BH-030"
+            ]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 15,
+            "manufacturerWarrantyEndDate": "2029-07-05",
+            "userWarrantyEndDate": null,
+            "serials": [
+              "SSD512-BH-001", "SSD512-BH-002", "SSD512-BH-003", "SSD512-BH-004", "SSD512-BH-005",
+              "SSD512-BH-006", "SSD512-BH-007", "SSD512-BH-008", "SSD512-BH-009", "SSD512-BH-010",
+              "SSD512-BH-011", "SSD512-BH-012", "SSD512-BH-013", "SSD512-BH-014", "SSD512-BH-015"
+            ]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2029-10-05",
+            "userWarrantyEndDate": "2030-04-05",
+            "serials": [
+              "RAM16G-BH-001", "RAM16G-BH-002", "RAM16G-BH-003", "RAM16G-BH-004",
+              "RAM16G-BH-005", "RAM16G-BH-006", "RAM16G-BH-007", "RAM16G-BH-008"
+            ]
+          },
+          {
+            "productSku": "ZBOX-CI",
+            "quantity": 2,
+            "serials": ["ZBOX-BH-001", "ZBOX-BH-002"]
           }
         ]
       },
       {
         "receiptType": "normal",
-        "supplier": "SSTC Supplier",
-        "toVirtualWarehouseName": "Warranty Stock",
-        "toVirtualWarehouseType": "warranty_stock",
-        "receiptDate": "2025-01-01",
-        "notes": "Nhập hàng bảo hành SSD & RAM tháng 01/2025",
+        "supplier": "RMA Return - Sản phẩm lỗi chờ trả hãng",
+        "toVirtualWarehouseName": "RMA Staging Area",
+        "receiptDate": "2025-01-10",
+        "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi nghiêm trọng chờ gửi về ZOTAC/SSTC",
         "items": [
           {
-            "productSku": "SSTC-1TB-G4",
+            "productSku": "ZT-4070-G",
             "quantity": 10,
-            "warrantyStartDate": "2025-01-01",
-            "warrantyMonths": 60,
+            "manufacturerWarrantyEndDate": "2026-07-10",
+            "userWarrantyEndDate": null,
             "serials": [
-              "SSTC1TB-2025-001",
-              "SSTC1TB-2025-002",
-              "SSTC1TB-2025-003",
-              "SSTC1TB-2025-004",
-              "SSTC1TB-2025-005",
-              "SSTC1TB-2025-006",
-              "SSTC1TB-2025-007",
-              "SSTC1TB-2025-008",
-              "SSTC1TB-2025-009",
-              "SSTC1TB-2025-010"
+              "ZT4070-RMA-001", "ZT4070-RMA-002", "ZT4070-RMA-003", "ZT4070-RMA-004", "ZT4070-RMA-005",
+              "ZT4070-RMA-006", "ZT4070-RMA-007", "ZT4070-RMA-008", "ZT4070-RMA-009", "ZT4070-RMA-010"
             ]
           },
           {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 10,
-            "warrantyStartDate": "2025-01-01",
-            "warrantyMonths": 60,
+            "productSku": "ZT-4060Ti",
+            "quantity": 8,
+            "manufacturerWarrantyEndDate": "2026-04-10",
+            "userWarrantyEndDate": "2026-10-10",
             "serials": [
-              "SSTCRAM-2025-001",
-              "SSTCRAM-2025-002",
-              "SSTCRAM-2025-003",
-              "SSTCRAM-2025-004",
-              "SSTCRAM-2025-005",
-              "SSTCRAM-2025-006",
-              "SSTCRAM-2025-007",
-              "SSTCRAM-2025-008",
-              "SSTCRAM-2025-009",
-              "SSTCRAM-2025-010"
+              "ZT4060-RMA-001", "ZT4060-RMA-002", "ZT4060-RMA-003", "ZT4060-RMA-004",
+              "ZT4060-RMA-005", "ZT4060-RMA-006", "ZT4060-RMA-007", "ZT4060-RMA-008"
             ]
+          },
+          {
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 8,
+            "serials": [
+              "SSD1TB-RMA-001", "SSD1TB-RMA-002", "SSD1TB-RMA-003", "SSD1TB-RMA-004",
+              "SSD1TB-RMA-005", "SSD1TB-RMA-006", "SSD1TB-RMA-007", "SSD1TB-RMA-008"
+            ]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 4,
+            "serials": ["SSD512-RMA-001", "SSD512-RMA-002", "SSD512-RMA-003", "SSD512-RMA-004"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Dead Stock - Không sửa được",
+        "toVirtualWarehouseName": "Dead Stock",
+        "receiptDate": "2025-01-12",
+        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hỏng nặng không thể RMA, chờ thanh lý",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 5,
+            "manufacturerWarrantyEndDate": "2025-06-12",
+            "userWarrantyEndDate": null,
+            "serials": [
+              "ZT4070-DEAD-001", "ZT4070-DEAD-002", "ZT4070-DEAD-003", "ZT4070-DEAD-004", "ZT4070-DEAD-005"
+            ]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2024-12-12",
+            "userWarrantyEndDate": "2025-06-12",
+            "serials": ["ZT4060-DEAD-001", "ZT4060-DEAD-002", "ZT4060-DEAD-003", "ZT4060-DEAD-004"]
+          },
+          {
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 6,
+            "manufacturerWarrantyEndDate": "2025-12-12",
+            "userWarrantyEndDate": null,
+            "serials": [
+              "SSD1TB-DEAD-001", "SSD1TB-DEAD-002", "SSD1TB-DEAD-003", "SSD1TB-DEAD-004",
+              "SSD1TB-DEAD-005", "SSD1TB-DEAD-006"
+            ]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 3,
+            "serials": ["SSD512-DEAD-001", "SSD512-DEAD-002", "SSD512-DEAD-003"]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 2,
+            "serials": ["RAM16G-DEAD-001", "RAM16G-DEAD-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Service Tickets - Đang xử lý",
+        "toVirtualWarehouseName": "In Service",
+        "receiptDate": "2025-01-15",
+        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang trong quá trình bảo hành",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 3,
+            "manufacturerWarrantyEndDate": "2027-01-15",
+            "userWarrantyEndDate": "2027-07-15",
+            "serials": ["ZT4070-SVC-001", "ZT4070-SVC-002", "ZT4070-SVC-003"]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2026-10-15",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-SVC-001", "ZT4060-SVC-002"]
+          },
+          {
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2028-01-15",
+            "userWarrantyEndDate": "2028-07-15",
+            "serials": ["SSD1TB-SVC-001", "SSD1TB-SVC-002", "SSD1TB-SVC-003", "SSD1TB-SVC-004"]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2027-07-15",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-SVC-001", "SSD512-SVC-002", "SSD512-SVC-003", "SSD512-SVC-004"]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 2,
+            "serials": ["RAM16G-SVC-001", "RAM16G-SVC-002"]
+          }
+        ]
+      },
+      {
+        "receiptType": "normal",
+        "supplier": "Customer Sales - Đã bán",
+        "toVirtualWarehouseName": "Customer Installed",
+        "receiptDate": "2025-01-20",
+        "notes": "Phiếu nhập hàng đã bán - Sản phẩm đang ở địa điểm khách hàng",
+        "items": [
+          {
+            "productSku": "ZT-4070-G",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2027-07-20",
+            "userWarrantyEndDate": "2028-01-20",
+            "serials": ["ZT4070-SOLD-001", "ZT4070-SOLD-002"]
+          },
+          {
+            "productSku": "ZT-4060Ti",
+            "quantity": 1,
+            "manufacturerWarrantyEndDate": "2027-04-20",
+            "userWarrantyEndDate": null,
+            "serials": ["ZT4060-SOLD-001"]
+          },
+          {
+            "productSku": "SSTC-1TB-G4",
+            "quantity": 2,
+            "manufacturerWarrantyEndDate": "2029-01-20",
+            "userWarrantyEndDate": "2029-07-20",
+            "serials": ["SSD1TB-SOLD-001", "SSD1TB-SOLD-002"]
+          },
+          {
+            "productSku": "SSTC-512GB-G3",
+            "quantity": 4,
+            "manufacturerWarrantyEndDate": "2028-07-20",
+            "userWarrantyEndDate": null,
+            "serials": ["SSD512-SOLD-001", "SSD512-SOLD-002", "SSD512-SOLD-003", "SSD512-SOLD-004"]
+          },
+          {
+            "productSku": "SSTC-16GB-3200",
+            "quantity": 3,
+            "serials": ["RAM16G-SOLD-001", "RAM16G-SOLD-002", "RAM16G-SOLD-003"]
+          },
+          {
+            "productSku": "ZBOX-CI",
+            "quantity": 3,
+            "serials": ["ZBOX-SOLD-001", "ZBOX-SOLD-002", "ZBOX-SOLD-003"]
           }
         ]
       }
     ]
-  },
-
-  "taskTypes": [
-    {
-      "name": "Tiếp nhận sản phẩm",
-      "description": "Nhận sản phẩm từ khách, kiểm tra ngoại quan ban đầu",
-      "category": "Reception",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra ban đầu",
-      "description": "Kiểm tra tình trạng bên ngoài, phụ kiện đi kèm",
-      "category": "Inspection",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Chụp ảnh sản phẩm nhận",
-      "description": "Chụp ảnh sản phẩm lúc nhận để tránh tranh chấp",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": false,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra bảo hành",
-      "description": "Kiểm tra serial, ngày mua, tình trạng bảo hành",
-      "category": "Verification",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chẩn đoán lỗi",
-      "description": "Xác định nguyên nhân lỗi chính xác",
-      "category": "Diagnosis",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test phần cứng",
-      "description": "Test CPU, RAM, VGA, SSD... bằng công cụ",
-      "category": "Testing",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test phần mềm",
-      "description": "Kiểm tra driver, firmware, hệ điều hành",
-      "category": "Testing",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test stress",
-      "description": "Test sản phẩm dưới tải nặng kéo dài",
-      "category": "Testing",
-      "estimatedDurationMinutes": 60,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Báo giá sửa chữa",
-      "description": "Báo giá chi phí sửa chữa cho khách (nếu trả phí)",
-      "category": "Quotation",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Sửa chữa phần cứng",
-      "description": "Hàn, sửa chữa bo mạch, thay linh kiện điện tử",
-      "category": "Repair",
-      "estimatedDurationMinutes": 45,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Thay linh kiện VGA",
-      "description": "Thay fan, capacitor, HDMI port...",
-      "category": "Repair",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Cài đặt phần mềm",
-      "description": "Cài driver, firmware, cập nhật BIOS",
-      "category": "Software",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Backup dữ liệu",
-      "description": "Sao lưu dữ liệu khách trước khi sửa",
-      "category": "Data",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Restore dữ liệu",
-      "description": "Khôi phục dữ liệu sau khi sửa xong",
-      "category": "Data",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Vệ sinh sản phẩm",
-      "description": "Vệ sinh bụi bẩn, làm sạch sản phẩm",
-      "category": "Cleaning",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Thay keo tản nhiệt",
-      "description": "Thay thermal paste cho VGA, CPU",
-      "category": "Maintenance",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Thay thế sản phẩm",
-      "description": "Thay thế toàn bộ sản phẩm từ kho bảo hành",
-      "category": "Replacement",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Xuất kho bảo hành",
-      "description": "Xuất sản phẩm mới từ warranty_stock",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập kho RMA",
-      "description": "Chuyển sản phẩm lỗi đã được kỹ thuật viên xác định cần RMA vào kho rma_staging",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Tạo lô RMA",
-      "description": "Tạo một lô RMA mới để nhóm các sản phẩm lỗi chờ trả về nhà cung cấp",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chuẩn bị & Gửi lô RMA",
-      "description": "Vệ sinh, sắp xếp, đóng gói các sản phẩm vật lý trong lô RMA đã tạo và đánh dấu lô đã được gửi đi",
-      "category": "Logistics",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Kiểm tra sau sửa",
-      "description": "Test sản phẩm sau khi sửa chữa xong",
-      "category": "QC",
-      "estimatedDurationMinutes": 20,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Test ổn định",
-      "description": "Test sản phẩm chạy ổn định trong 30 phút",
-      "category": "QC",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Kiểm tra cuối cùng",
-      "description": "Kiểm tra toàn diện trước khi giao khách",
-      "category": "QC",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Chụp ảnh kết quả",
-      "description": "Chụp ảnh sản phẩm sau sửa, kết quả test",
-      "category": "Documentation",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": false,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Thông báo khách hàng",
-      "description": "Gọi điện/nhắn tin thông báo sản phẩm đã xong",
-      "category": "Communication",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Đóng gói sản phẩm",
-      "description": "Đóng gói cẩn thận, đính kèm phụ kiện",
-      "category": "Packaging",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Giao hàng",
-      "description": "Giao sản phẩm cho khách, thu tiền (nếu có)",
-      "category": "Delivery",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Hướng dẫn sử dụng",
-      "description": "Hướng dẫn khách cách sử dụng, bảo quản",
-      "category": "Support",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": false,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập kho hàng mới",
-      "description": "Tạo GRN, nhập sản phẩm bảo hành vào kho",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nhập serial number",
-      "description": "Nhập serial cho từng sản phẩm trong GRN",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 45,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Kiểm kê kho",
-      "description": "Kiểm kê định kỳ tồn kho, đối chiếu số liệu",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 120,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chuyển kho",
-      "description": "Chuyển sản phẩm giữa các kho vật lý",
-      "category": "Warehouse",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phụ tùng",
-      "description": "Đánh dấu đang chờ linh kiện về",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phê duyệt",
-      "description": "Chờ manager phê duyệt báo giá/thay thế",
-      "category": "Approval",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Liên hệ nhà cung cấp",
-      "description": "Liên hệ ZOTAC, SSTC về bảo hành, RMA",
-      "category": "Communication",
-      "estimatedDurationMinutes": 15,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ khách quyết định",
-      "description": "Chờ khách xác nhận có sửa/không sửa",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Yêu cầu thêm thông tin từ khách",
-      "description": "Gửi yêu cầu (email/tin nhắn) cho khách hàng để làm rõ thêm về tình trạng lỗi",
-      "category": "Communication",
-      "estimatedDurationMinutes": 5,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Chờ phản hồi từ khách",
-      "description": "Đánh dấu ticket đang tạm dừng để chờ thông tin phản hồi từ khách hàng",
-      "category": "Waiting",
-      "estimatedDurationMinutes": null,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    },
-    {
-      "name": "Nâng cấp theo yêu cầu",
-      "description": "Thực hiện các yêu cầu nâng cấp (ví dụ: thêm RAM, đổi SSD) không nằm trong phạm vi bảo hành",
-      "category": "Service",
-      "estimatedDurationMinutes": 30,
-      "requiresNotes": true,
-      "requiresPhoto": true
-    },
-    {
-      "name": "Tạo hóa đơn dịch vụ",
-      "description": "Tạo và xuất hóa đơn chi tiết cho các dịch vụ sửa chữa có tính phí hoặc chi phí nâng cấp",
-      "category": "Billing",
-      "estimatedDurationMinutes": 10,
-      "requiresNotes": true,
-      "requiresPhoto": false
-    }
-  ],
-
-  "taskTemplates": [
-    {
-      "name": "Sửa chữa VGA - Thay linh kiện",
-      "description": "Quy trình sửa chữa card đồ họa bằng cách thay thế linh kiện hỏng (fan, capacitor, HDMI port). Áp dụng cho các lỗi phần cứng nhỏ có thể sửa được.",
-      "productSku": "ZT-4070-G",
-      "serviceType": "warranty",
-      "strictSequence": false,
-      "tasks": [
-        {
-          "taskTypeName": "Tiếp nhận sản phẩm",
-          "sequenceOrder": 1,
-          "isRequired": true,
-          "customInstructions": "Kiểm tra số serial, phụ kiện đi kèm"
-        },
-        {
-          "taskTypeName": "Kiểm tra ban đầu",
-          "sequenceOrder": 2,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chụp ảnh sản phẩm nhận",
-          "sequenceOrder": 3,
-          "isRequired": false,
-          "customInstructions": "Chụp 6 mặt sản phẩm để tránh tranh chấp"
-        },
-        {
-          "taskTypeName": "Kiểm tra bảo hành",
-          "sequenceOrder": 4,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chẩn đoán lỗi",
-          "sequenceOrder": 5,
-          "isRequired": true,
-          "customInstructions": "Ghi rõ nguyên nhân lỗi, linh kiện hỏng"
-        },
-        {
-          "taskTypeName": "Test phần cứng",
-          "sequenceOrder": 6,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Sửa chữa phần cứng",
-          "sequenceOrder": 7,
-          "isRequired": true,
-          "customInstructions": "Hàn linh kiện điện tử, sửa chữa bo mạch"
-        },
-        {
-          "taskTypeName": "Thay linh kiện VGA",
-          "sequenceOrder": 8,
-          "isRequired": true,
-          "customInstructions": "Cập nhật parts đã sử dụng vào ticket"
-        },
-        {
-          "taskTypeName": "Vệ sinh sản phẩm",
-          "sequenceOrder": 9,
-          "isRequired": false,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Thay keo tản nhiệt",
-          "sequenceOrder": 10,
-          "isRequired": false,
-          "customInstructions": "Chỉ thay nếu keo cũ khô/hỏng"
-        },
-        {
-          "taskTypeName": "Kiểm tra sau sửa",
-          "sequenceOrder": 11,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Test ổn định",
-          "sequenceOrder": 12,
-          "isRequired": false,
-          "customInstructions": "Chạy stress test 30 phút để đảm bảo ổn định"
-        },
-        {
-          "taskTypeName": "Kiểm tra cuối cùng",
-          "sequenceOrder": 13,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chụp ảnh kết quả",
-          "sequenceOrder": 14,
-          "isRequired": false,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Thông báo khách hàng",
-          "sequenceOrder": 15,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Đóng gói sản phẩm",
-          "sequenceOrder": 16,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Giao hàng",
-          "sequenceOrder": 17,
-          "isRequired": true,
-          "customInstructions": null
-        }
-      ]
-    },
-    {
-      "name": "Thay thế VGA - Xuất kho bảo hành",
-      "description": "Quy trình thay thế toàn bộ card đồ họa bằng sản phẩm mới từ kho bảo hành. Áp dụng khi lỗi quá nặng không thể sửa (chip chết, PCB cháy). Sản phẩm lỗi sẽ được chuyển vào kho RMA để trả về nhà cung cấp.",
-      "productSku": "ZT-4070-G",
-      "serviceType": "warranty",
-      "strictSequence": true,
-      "tasks": [
-        {
-          "taskTypeName": "Tiếp nhận sản phẩm",
-          "sequenceOrder": 1,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Kiểm tra ban đầu",
-          "sequenceOrder": 2,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chụp ảnh sản phẩm nhận",
-          "sequenceOrder": 3,
-          "isRequired": true,
-          "customInstructions": "Chụp chi tiết lỗi để phục vụ RMA"
-        },
-        {
-          "taskTypeName": "Kiểm tra bảo hành",
-          "sequenceOrder": 4,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chẩn đoán lỗi",
-          "sequenceOrder": 5,
-          "isRequired": true,
-          "customInstructions": "Xác định chính xác lỗi để yêu cầu RMA"
-        },
-        {
-          "taskTypeName": "Test phần cứng",
-          "sequenceOrder": 6,
-          "isRequired": true,
-          "customInstructions": "Chạy đầy đủ test để có bằng chứng lỗi"
-        },
-        {
-          "taskTypeName": "Chờ phê duyệt",
-          "sequenceOrder": 7,
-          "isRequired": true,
-          "customInstructions": "Manager phê duyệt thay thế và RMA"
-        },
-        {
-          "taskTypeName": "Thay thế sản phẩm",
-          "sequenceOrder": 8,
-          "isRequired": true,
-          "customInstructions": "Chọn VGA mới từ kho warranty_stock"
-        },
-        {
-          "taskTypeName": "Xuất kho bảo hành",
-          "sequenceOrder": 9,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Nhập kho RMA",
-          "sequenceOrder": 10,
-          "isRequired": true,
-          "customInstructions": "Chuyển VGA lỗi vào rma_staging"
-        },
-        {
-          "taskTypeName": "Kiểm tra sau sửa",
-          "sequenceOrder": 11,
-          "isRequired": true,
-          "customInstructions": "Test VGA mới trước khi giao khách"
-        },
-        {
-          "taskTypeName": "Kiểm tra cuối cùng",
-          "sequenceOrder": 12,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Chụp ảnh kết quả",
-          "sequenceOrder": 13,
-          "isRequired": false,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Thông báo khách hàng",
-          "sequenceOrder": 14,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Đóng gói sản phẩm",
-          "sequenceOrder": 15,
-          "isRequired": true,
-          "customInstructions": null
-        },
-        {
-          "taskTypeName": "Giao hàng",
-          "sequenceOrder": 16,
-          "isRequired": true,
-          "customInstructions": null
-        }
-      ]
-    }
-  ]
+  }
 }

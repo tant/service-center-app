@@ -91,7 +91,6 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
     const movementData: any = {
       product_id: product.id,
       movement_type: movementType,
-      from_physical_warehouse_id: product.physical_warehouse_id || undefined,
       from_virtual_warehouse_id: product.virtual_warehouse_id || undefined,
       notes: notes || undefined,
       force: false,

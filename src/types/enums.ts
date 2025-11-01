@@ -82,6 +82,7 @@ export const getWarehouseTypeLabel = (type: WarehouseType): string => {
 export const getRequestStatusLabel = (status: RequestStatus): string => {
   const labels: Record<RequestStatus, string> = {
     submitted: 'Submitted',
+    pickingup: 'Picking Up',
     received: 'Received',
     processing: 'Processing',
     completed: 'Completed',

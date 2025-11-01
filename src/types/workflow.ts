@@ -1,21 +1,21 @@
 // Task Workflow Types
-// Types for task templates, task execution, and workflow management
+// Types for workflows, task execution, and workflow management
 
 import type { Database } from './database.types';
 import type { TaskStatus, ServiceType } from './enums';
 
 // Database table types
-export type TaskTemplate = Database['public']['Tables']['task_templates']['Row'];
-export type TaskTemplateInsert = Database['public']['Tables']['task_templates']['Insert'];
-export type TaskTemplateUpdate = Database['public']['Tables']['task_templates']['Update'];
+export type Workflow = Database['public']['Tables']['workflows']['Row'];
+export type WorkflowInsert = Database['public']['Tables']['workflows']['Insert'];
+export type WorkflowUpdate = Database['public']['Tables']['workflows']['Update'];
 
-export type TaskType = Database['public']['Tables']['task_types']['Row'];
-export type TaskTypeInsert = Database['public']['Tables']['task_types']['Insert'];
-export type TaskTypeUpdate = Database['public']['Tables']['task_types']['Update'];
+export type Task = Database['public']['Tables']['tasks']['Row'];
+export type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
+export type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
 
-export type TaskTemplateTask = Database['public']['Tables']['task_templates_tasks']['Row'];
-export type TaskTemplateTaskInsert = Database['public']['Tables']['task_templates_tasks']['Insert'];
-export type TaskTemplateTaskUpdate = Database['public']['Tables']['task_templates_tasks']['Update'];
+export type WorkflowTask = Database['public']['Tables']['workflow_tasks']['Row'];
+export type WorkflowTaskInsert = Database['public']['Tables']['workflow_tasks']['Insert'];
+export type WorkflowTaskUpdate = Database['public']['Tables']['workflow_tasks']['Update'];
 
 export type ServiceTicketTask = Database['public']['Tables']['service_ticket_tasks']['Row'];
 export type ServiceTicketTaskInsert = Database['public']['Tables']['service_ticket_tasks']['Insert'];
@@ -24,21 +24,21 @@ export type ServiceTicketTaskUpdate = Database['public']['Tables']['service_tick
 export type TaskHistory = Database['public']['Tables']['task_history']['Row'];
 export type TaskHistoryInsert = Database['public']['Tables']['task_history']['Insert'];
 
-export type TicketTemplateChange = Database['public']['Tables']['ticket_template_changes']['Row'];
-export type TicketTemplateChangeInsert = Database['public']['Tables']['ticket_template_changes']['Insert'];
+export type TicketWorkflowChange = Database['public']['Tables']['ticket_workflow_changes']['Row'];
+export type TicketWorkflowChangeInsert = Database['public']['Tables']['ticket_workflow_changes']['Insert'];
 
 // View types
 export type TaskProgressSummary = Database['public']['Views']['v_task_progress_summary']['Row'];
 
 // Extended types with relations
-export interface TaskTemplateWithTasks extends TaskTemplate {
-  tasks: (TaskTemplateTask & {
-    task_type: TaskType;
+export interface WorkflowWithTasks extends Workflow {
+  tasks: (WorkflowTask & {
+    task: Task;
   })[];
 }
 
 export interface ServiceTicketTaskWithDetails extends ServiceTicketTask {
-  task_type: TaskType;
+  task: Task;
   assigned_to?: {
     id: string;
     full_name: string;
@@ -54,7 +54,7 @@ export interface TaskHistoryWithDetails extends TaskHistory {
 }
 
 // Form types
-export interface TaskTemplateFormData {
+export interface WorkflowFormData {
   name: string;
   description?: string;
   product_type?: string;
@@ -62,14 +62,14 @@ export interface TaskTemplateFormData {
   strict_sequence: boolean;
   is_active: boolean;
   tasks: {
-    task_type_id: string;
+    task_id: string;
     sequence_order: number;
     is_required: boolean;
     custom_instructions?: string;
   }[];
 }
 
-export interface TaskTypeFormData {
+export interface TaskFormData {
   name: string;
   description?: string;
   category?: string;

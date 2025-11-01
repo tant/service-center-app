@@ -5,16 +5,39 @@
 
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { useRequestDetails, useUpdateRequestStatus } from "@/hooks/use-service-request";
-import { IconPackage, IconUser, IconMapPin, IconFileText, IconTicket, IconLoader2 } from "@tabler/icons-react";
-import { formatDistanceToNow } from "date-fns";
+import {
+  IconFileText,
+  IconLoader2,
+  IconMapPin,
+  IconPackage,
+  IconTicket,
+  IconUser,
+} from "@tabler/icons-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import {
+  useRequestDetails,
+  useUpdateRequestStatus,
+} from "@/hooks/use-service-request";
+
+type RequestDetailsData = NonNullable<
+  ReturnType<typeof useRequestDetails>["data"]
+>;
+type RequestItem = RequestDetailsData extends { items: Array<infer Item> }
+  ? Item
+  : never;
 
 interface RequestDetailModalProps {
   requestId: string | null;
@@ -33,7 +56,31 @@ export function RequestDetailModal({
 }: RequestDetailModalProps) {
   const { data: request, isLoading } = useRequestDetails(requestId);
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
-  const items = Array.isArray(request?.items) ? (request.items as any[]) : [];
+  const items: RequestItem[] = Array.isArray(request?.items)
+    ? (request.items as RequestItem[])
+    : [];
+  const deliveryMethod =
+    (request?.preferred_delivery_method as "pickup" | "delivery" | undefined) ??
+    (request as { delivery_method?: "pickup" | "delivery" }).delivery_method ??
+    "pickup";
+  const isDelivery = deliveryMethod === "delivery";
+  const preferredScheduleRaw =
+    (request as { preferred_schedule?: string | null }).preferred_schedule ??
+    null;
+  const preferredSchedule =
+    preferredScheduleRaw && preferredScheduleRaw.trim().length > 0
+      ? (() => {
+          const date = new Date(preferredScheduleRaw);
+          if (Number.isNaN(date.getTime())) {
+            return preferredScheduleRaw;
+          }
+          return format(date, "dd/MM/yyyy");
+        })()
+      : null;
+  const pickupNotes =
+    (request as { pickup_notes?: string | null }).pickup_notes ?? null;
+  const deliveryAddress =
+    (request as { delivery_address?: string | null }).delivery_address ?? null;
 
   const handleMarkReceived = () => {
     if (!requestId) return;
@@ -50,14 +97,17 @@ export function RequestDetailModal({
         onError: (error) => {
           toast.error(`Lỗi: ${error.message}`);
         },
-      }
+      },
     );
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
       string,
-      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+      {
+        label: string;
+        variant: "default" | "secondary" | "destructive" | "outline";
+      }
     > = {
       submitted: { label: "Đã gửi", variant: "outline" },
       received: { label: "Đã tiếp nhận", variant: "secondary" },
@@ -89,7 +139,9 @@ export function RequestDetailModal({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Mã theo dõi</p>
-                <p className="font-mono text-lg font-bold">{request.tracking_token}</p>
+                <p className="font-mono text-lg font-bold">
+                  {request.tracking_token}
+                </p>
               </div>
               <div>{getStatusBadge(request.status)}</div>
             </div>
@@ -130,8 +182,11 @@ export function RequestDetailModal({
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {items.length > 0 ? (
-                  items.map((item: any, index: number) => (
-                    <div key={item.id} className="rounded border p-3 space-y-2 bg-muted/30">
+                  items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="rounded border p-3 space-y-2 bg-muted/30"
+                    >
                       {items.length > 1 && (
                         <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
                           Sản phẩm {index + 1}
@@ -145,20 +200,30 @@ export function RequestDetailModal({
                       </div>
                       {item.product_brand && (
                         <div>
-                          <p className="text-muted-foreground text-xs">Thương hiệu</p>
+                          <p className="text-muted-foreground text-xs">
+                            Thương hiệu
+                          </p>
                           <p className="font-medium">{item.product_brand}</p>
                         </div>
                       )}
                       {item.serial_number && (
                         <div>
-                          <p className="text-muted-foreground text-xs">Serial Number</p>
-                          <p className="font-mono text-xs font-medium">{item.serial_number}</p>
+                          <p className="text-muted-foreground text-xs">
+                            Serial Number
+                          </p>
+                          <p className="font-mono text-xs font-medium">
+                            {item.serial_number}
+                          </p>
                         </div>
                       )}
                       {item.issue_description && (
                         <div>
-                          <p className="text-muted-foreground text-xs">Mô tả riêng của sản phẩm</p>
-                          <p className="text-xs whitespace-pre-wrap">{item.issue_description}</p>
+                          <p className="text-muted-foreground text-xs">
+                            Mô tả riêng của sản phẩm
+                          </p>
+                          <p className="text-xs whitespace-pre-wrap">
+                            {item.issue_description}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -180,7 +245,9 @@ export function RequestDetailModal({
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <p className="whitespace-pre-wrap">{request.issue_description}</p>
+                <p className="whitespace-pre-wrap">
+                  {request.issue_description}
+                </p>
               </CardContent>
             </Card>
 
@@ -194,15 +261,23 @@ export function RequestDetailModal({
               </CardHeader>
               <CardContent className="text-sm">
                 <p className="font-medium capitalize">
-                  {request.delivery_method === "pickup"
-                    ? "Đến lấy tại trung tâm"
-                    : "Giao hàng tận nơi"}
+                  {isDelivery ? "Giao nhận tận nơi" : "Khách tự mang tới"}
                 </p>
-                {request.delivery_address && (
+                {isDelivery && deliveryAddress ? (
                   <p className="text-muted-foreground mt-2">
-                    Địa chỉ: {request.delivery_address}
+                    Địa chỉ: {deliveryAddress}
                   </p>
-                )}
+                ) : null}
+                {!isDelivery && pickupNotes ? (
+                  <p className="text-muted-foreground mt-2">
+                    Ghi chú mang tới: {pickupNotes}
+                  </p>
+                ) : null}
+                {preferredSchedule ? (
+                  <p className="text-muted-foreground mt-2">
+                    Lịch hẹn ưu tiên: {preferredSchedule}
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -217,7 +292,10 @@ export function RequestDetailModal({
                 </CardHeader>
                 <CardContent className="text-sm">
                   <p>
-                    Mã phiếu: <span className="font-mono font-bold">{request.linked_ticket.ticket_number}</span>
+                    Mã phiếu:{" "}
+                    <span className="font-mono font-bold">
+                      {request.linked_ticket.ticket_number}
+                    </span>
                   </p>
                   <p className="text-muted-foreground mt-1">
                     Trạng thái: {request.linked_ticket.status}
@@ -254,16 +332,18 @@ export function RequestDetailModal({
                 </Button>
               )}
 
-              {(request.status === "submitted" || request.status === "received") && !request.linked_ticket && (
-                <>
-                  <Button variant="destructive" onClick={onReject}>
-                    Từ chối yêu cầu
-                  </Button>
-                  <Button variant="default" onClick={onConvert}>
-                    Chuyển thành phiếu dịch vụ
-                  </Button>
-                </>
-              )}
+              {(request.status === "submitted" ||
+                request.status === "received") &&
+                !request.linked_ticket && (
+                  <>
+                    <Button variant="destructive" onClick={onReject}>
+                      Từ chối yêu cầu
+                    </Button>
+                    <Button variant="default" onClick={onConvert}>
+                      Chuyển thành phiếu dịch vụ
+                    </Button>
+                  </>
+                )}
             </div>
           </div>
         ) : (

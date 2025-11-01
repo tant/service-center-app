@@ -282,7 +282,7 @@ export function StepProducts() {
               setWizardIssueOverview(dispatch, event.target.value)
             }
             minLength={MIN_ISSUE_LENGTH}
-            className="min-h-[96px]"
+            className="min-h-24"
           />
         </div>
 

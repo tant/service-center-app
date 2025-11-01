@@ -539,6 +539,15 @@ export const adminRouter = router({
       results.push("🗂️ Bước 2: Lấy danh sách kho ảo mặc định...");
 
       const virtualWarehouseMap = new Map<string, string>(); // name/type -> id mapping
+      const virtualWarehouseAliases: Record<string, string[]> = {
+        main: ["Main"],
+        warranty_stock: ["Warranty Stock"],
+        rma_staging: ["RMA Staging", "RMA Staging Area"],
+        dead_stock: ["Dead Stock"],
+        in_service: ["In Service"],
+        parts: ["Parts"],
+        customer_installed: ["Customer Installed"],
+      };
 
       // Query all virtual warehouses created by default system
       const { data: defaultVWs, error: vwQueryError } = await supabaseAdmin
@@ -557,6 +566,11 @@ export const adminRouter = router({
         console.log(`✅ SEED: Found ${defaultVWs.length} default virtual warehouses`);
         for (const vw of defaultVWs) {
           virtualWarehouseMap.set(vw.name, vw.id);
+          virtualWarehouseMap.set(vw.warehouse_type, vw.id);
+
+          for (const alias of virtualWarehouseAliases[vw.warehouse_type] ?? []) {
+            virtualWarehouseMap.set(alias, vw.id);
+          }
           console.log(`  → ${vw.name} (${vw.warehouse_type})`);
         }
         results.push(`✅ Tìm thấy ${defaultVWs.length} kho ảo mặc định`);
@@ -933,7 +947,7 @@ export const adminRouter = router({
 
       // Query all existing task types instead of creating them
       const { data: existingTaskTypes, error: taskTypesError } = await supabaseAdmin
-        .from("tasks")
+        .from("task_types")
         .select("id, name");
 
       if (taskTypesError) {

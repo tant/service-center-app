@@ -538,15 +538,15 @@ export const adminRouter = router({
       console.log("\n🗂️ SEED STEP 2: Querying default virtual warehouses...");
       results.push("🗂️ Bước 2: Lấy danh sách kho ảo mặc định...");
 
-      const virtualWarehouseMap = new Map<string, string>(); // name/type -> id mapping
+      const virtualWarehouseMap = new Map<string, string>(); // name/type/alias -> id mapping
       const virtualWarehouseAliases: Record<string, string[]> = {
-        main: ["Main"],
-        warranty_stock: ["Warranty Stock"],
-        rma_staging: ["RMA Staging", "RMA Staging Area"],
-        dead_stock: ["Dead Stock"],
-        in_service: ["In Service"],
-        parts: ["Parts"],
-        customer_installed: ["Customer Installed"],
+        main: ["Main", "Kho Chính"],
+        warranty_stock: ["Warranty Stock", "Kho Bảo Hành"],
+        rma_staging: ["RMA Staging", "RMA Staging Area", "Khu Vực RMA"],
+        dead_stock: ["Dead Stock", "Kho Hàng Hỏng"],
+        in_service: ["In Service", "Đang Sử Dụng"],
+        parts: ["Parts", "Kho Linh Kiện"],
+        customer_installed: ["Customer Installed", "Hàng Đã Bán"],
       };
 
       // Query all virtual warehouses created by default system

@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ServiceRequestWizardProvider,
+  type ServiceRequestWizardState,
   WizardStep,
   buildWizardPayload,
   setActiveStep,
@@ -24,6 +25,7 @@ const MIN_NAME_LENGTH = 2;
 const MIN_PHONE_LENGTH = 10;
 const MIN_ADDRESS_LENGTH = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SWIPE_THRESHOLD_PX = 60;
 
 const STEP_CONFIG: Array<{ id: WizardStep; title: string; description: string }> = [
   { id: 0, title: "Sản phẩm & vấn đề", description: "Thêm sản phẩm và mô tả triệu chứng." },
@@ -39,12 +41,80 @@ const STEP_COMPONENT_MAP: Record<WizardStep, React.ComponentType> = {
   3: StepReview,
 };
 
+function validateWizardStep(state: ServiceRequestWizardState, step: WizardStep): boolean {
+  switch (step) {
+    case 0: {
+      if (state.products.length === 0) {
+        toast.error("Vui lòng thêm ít nhất một sản phẩm.");
+        return false;
+      }
+      const invalidSerial = state.products.find((product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH);
+      if (invalidSerial) {
+        toast.error(`Serial phải có tối thiểu ${MIN_SERIAL_LENGTH} ký tự.`);
+        return false;
+      }
+      const invalidIssue = state.products.find((product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH);
+      if (invalidIssue) {
+        toast.error(`Mô tả vấn đề cần tối thiểu ${MIN_ISSUE_LENGTH} ký tự.`);
+        return false;
+      }
+      const uploadingAttachment = state.products.some((product) =>
+        product.attachments.some((attachment) => attachment.status === "uploading"),
+      );
+      if (uploadingAttachment) {
+        toast.error("Đang tải ảnh lên. Vui lòng chờ hoàn tất trước khi tiếp tục.");
+        return false;
+      }
+      return true;
+    }
+    case 1: {
+      const missingServiceOption = state.products.find((product) => !product.serviceOption);
+      if (missingServiceOption) {
+        toast.error("Vui lòng chọn phương án xử lý cho từng sản phẩm.");
+        return false;
+      }
+      return true;
+    }
+    case 2: {
+      if (state.customer.name.trim().length < MIN_NAME_LENGTH) {
+        toast.error("Họ và tên phải có ít nhất 2 ký tự.");
+        return false;
+      }
+      if (!EMAIL_REGEX.test(state.customer.email.trim())) {
+        toast.error("Email không hợp lệ.");
+        return false;
+      }
+      const phoneDigits = state.customer.phone.replace(/\D/g, "");
+      if (phoneDigits.length < MIN_PHONE_LENGTH) {
+        toast.error("Số điện thoại cần tối thiểu 10 chữ số.");
+        return false;
+      }
+      if (
+        state.delivery.preferredDeliveryMethod === "delivery" &&
+        (state.delivery.deliveryAddress?.trim().length ?? 0) < MIN_ADDRESS_LENGTH
+      ) {
+        toast.error("Địa chỉ giao nhận cần tối thiểu 10 ký tự.");
+        return false;
+      }
+      return true;
+    }
+    case 3: {
+      if (!state.consentConfirmed) {
+        toast.error("Vui lòng xác nhận điều khoản trước khi gửi.");
+        return false;
+      }
+      return true;
+    }
+    default:
+      return true;
+  }
+}
+
 function WizardNavigator() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
   const totalSteps = STEP_CONFIG.length;
   const currentStep = STEP_CONFIG[state.activeStep];
-  const progressPercent = ((state.activeStep + 1) / totalSteps) * 100;
 
   const handleStepClick = (stepId: WizardStep) => {
     if (stepId > state.maxVisitedStep) {
@@ -55,23 +125,11 @@ function WizardNavigator() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3 md:hidden">
-        <div className="space-y-1">
-          <Badge variant="secondary">{`Bước ${state.activeStep + 1}/${totalSteps}`}</Badge>
-          <div className="text-base font-semibold">{currentStep.title}</div>
-          <p className="text-sm text-muted-foreground">{currentStep.description}</p>
-        </div>
-        <div className="h-2 w-full rounded-full bg-muted" aria-hidden="true">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+      <div className="space-y-2 md:hidden">
+        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1">
           {STEP_CONFIG.map((step, index) => {
             const isActive = state.activeStep === step.id;
             const isVisited = step.id <= state.maxVisitedStep;
-            const isComplete = step.id < state.activeStep;
 
             return (
               <button
@@ -81,22 +139,22 @@ function WizardNavigator() {
                 onClick={() => handleStepClick(step.id)}
                 aria-current={isActive ? "step" : undefined}
                 className={cn(
-                  "min-w-[160px] rounded-lg border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                   isActive
-                    ? "border-primary bg-primary/10"
-                    : isComplete
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border/60 bg-muted/40 hover:border-border"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : isVisited
+                    ? "border-primary/70 text-primary"
+                    : "border-border text-muted-foreground"
                 )}
               >
-                <Badge variant={isActive ? "default" : "outline"} className="mb-1">
-                  Bước {index + 1}
-                </Badge>
-                <div className="text-sm font-semibold">{step.title}</div>
-                <p className="text-xs text-muted-foreground">{step.description}</p>
+                {index + 1}
               </button>
             );
           })}
+        </div>
+        <div className="text-center space-y-1">
+          <Badge variant="secondary">{`Bước ${state.activeStep + 1}/${totalSteps}`}</Badge>
+          <div className="text-sm font-semibold">{currentStep.title}</div>
         </div>
       </div>
 
@@ -152,11 +210,59 @@ function WizardNavigator() {
 
 function WizardContent() {
   const state = useServiceRequestWizardState();
+  const dispatch = useServiceRequestWizardDispatch();
   const StepComponent = STEP_COMPONENT_MAP[state.activeStep];
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  const handleSwipe = (direction: "next" | "prev") => {
+    if (direction === "next") {
+      const next = Math.min(STEP_CONFIG.length - 1, state.activeStep + 1) as WizardStep;
+      if (next !== state.activeStep && validateWizardStep(state, state.activeStep)) {
+        setActiveStep(dispatch, next);
+      }
+    } else {
+      const prev = Math.max(0, state.activeStep - 1) as WizardStep;
+      if (prev !== state.activeStep) {
+        setActiveStep(dispatch, prev);
+      }
+    }
+  };
+
+  const handleTouchStart: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (!touchStart.current) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStart.current.x;
+    const deltaY = touch.clientY - touchStart.current.y;
+    touchStart.current = null;
+
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      handleSwipe("next");
+    } else {
+      handleSwipe("prev");
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <StepComponent />
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        role="presentation"
+        className="touch-pan-y"
+      >
+        <StepComponent />
+      </div>
       <div className="flex flex-wrap justify-between gap-2">
         <StepNavigation />
       </div>
@@ -176,7 +282,7 @@ function StepNavigation() {
   };
 
   const goNext = () => {
-    if (!validateStep(state.activeStep)) {
+    if (!validateWizardStep(state, state.activeStep)) {
       return;
     }
     const next = Math.min(3, state.activeStep + 1) as WizardStep;
@@ -184,7 +290,7 @@ function StepNavigation() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(state.activeStep)) {
+    if (!validateWizardStep(state, state.activeStep)) {
       return;
     }
     if (!state.consentConfirmed) {
@@ -228,75 +334,6 @@ function StepNavigation() {
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Không thể gửi yêu cầu. Vui lòng thử lại.");
-    }
-  };
-
-  const validateStep = (step: WizardStep): boolean => {
-    switch (step) {
-      case 0: {
-        if (state.products.length === 0) {
-          toast.error("Vui lòng thêm ít nhất một sản phẩm.");
-          return false;
-        }
-        const invalidSerial = state.products.find((product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH);
-        if (invalidSerial) {
-          toast.error(`Serial phải có tối thiểu ${MIN_SERIAL_LENGTH} ký tự.`);
-          return false;
-        }
-        const invalidIssue = state.products.find((product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH);
-        if (invalidIssue) {
-          toast.error(`Mô tả vấn đề cần tối thiểu ${MIN_ISSUE_LENGTH} ký tự.`);
-          return false;
-        }
-        const uploadingAttachment = state.products.some((product) =>
-          product.attachments.some((attachment) => attachment.status === "uploading")
-        );
-        if (uploadingAttachment) {
-          toast.error("Đang tải ảnh lên. Vui lòng chờ hoàn tất trước khi tiếp tục.");
-          return false;
-        }
-        return true;
-      }
-      case 1: {
-        const missingServiceOption = state.products.find((product) => !product.serviceOption);
-        if (missingServiceOption) {
-          toast.error("Vui lòng chọn phương án xử lý cho từng sản phẩm.");
-          return false;
-        }
-        return true;
-      }
-      case 2: {
-        if (state.customer.name.trim().length < MIN_NAME_LENGTH) {
-          toast.error("Họ và tên phải có ít nhất 2 ký tự.");
-          return false;
-        }
-        if (!EMAIL_REGEX.test(state.customer.email.trim())) {
-          toast.error("Email không hợp lệ.");
-          return false;
-        }
-        const phoneDigits = state.customer.phone.replace(/\D/g, "");
-        if (phoneDigits.length < MIN_PHONE_LENGTH) {
-          toast.error("Số điện thoại cần tối thiểu 10 chữ số.");
-          return false;
-        }
-        if (
-          state.delivery.preferredDeliveryMethod === "delivery" &&
-          (state.delivery.deliveryAddress?.trim().length ?? 0) < MIN_ADDRESS_LENGTH
-        ) {
-          toast.error("Địa chỉ giao nhận cần tối thiểu 10 ký tự.");
-          return false;
-        }
-        return true;
-      }
-      case 3: {
-        if (!state.consentConfirmed) {
-          toast.error("Vui lòng xác nhận điều khoản trước khi gửi.");
-          return false;
-        }
-        return true;
-      }
-      default:
-        return true;
     }
   };
 

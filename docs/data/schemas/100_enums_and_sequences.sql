@@ -131,6 +131,14 @@ CREATE TYPE public.delivery_method AS ENUM (
 );
 COMMENT ON TYPE public.delivery_method IS 'Customer product delivery method preference';
 
+-- Receipt Status Enum
+DROP TYPE IF EXISTS public.receipt_status CASCADE;
+CREATE TYPE public.receipt_status AS ENUM (
+  'received',
+  'pending_receipt'
+);
+COMMENT ON TYPE public.receipt_status IS 'Product receipt status: received (create tickets) or pending_receipt (wait for product)';
+
 -- Stock Movement Type Enum
 DROP TYPE IF EXISTS public.movement_type CASCADE;
 CREATE TYPE public.movement_type AS ENUM (
@@ -207,6 +215,7 @@ GRANT USAGE ON TYPE public.request_status TO authenticated;
 GRANT USAGE ON TYPE public.product_condition TO authenticated;
 GRANT USAGE ON TYPE public.service_type TO authenticated;
 GRANT USAGE ON TYPE public.delivery_method TO authenticated;
+GRANT USAGE ON TYPE public.receipt_status TO authenticated;
 GRANT USAGE ON TYPE public.movement_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_document_status TO authenticated;
 GRANT USAGE ON TYPE public.stock_receipt_type TO authenticated;

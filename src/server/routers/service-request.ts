@@ -171,9 +171,6 @@ const requestItemSchema = z.object({
     .min(5, "Serial number must be at least 5 characters")
     .regex(/^[A-Z0-9_-]+$/i, "Serial number must be alphanumeric")
     .transform((val) => val.toUpperCase()),
-  product_brand: z.string().optional(), // Auto-populated from product lookup
-  product_model: z.string().optional(), // Auto-populated from product lookup
-  purchase_date: z.string().optional(), // ISO date string
   issue_description: z.string().min(10, "Issue description must be at least 10 characters").optional(),
 });
 
@@ -183,8 +180,8 @@ const submitRequestSchema = z.object({
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
   issue_description: z.string().min(20, "General description must be at least 20 characters"),
   items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
-  service_type: z.enum(["warranty", "paid", "replacement"]).default("warranty"),
-  preferred_delivery_method: z.enum(["pickup", "delivery"]),
+  receipt_status: z.enum(["received", "pending_receipt"]).default("received"),
+  preferred_delivery_method: z.enum(["pickup", "delivery"]).optional(),
   delivery_address: z.string().optional(),
   honeypot: z.string().optional(), // AC 12: Spam protection
 });
@@ -197,6 +194,136 @@ export const serviceRequestRouter = router({
   // ========================================
   // PUBLIC ENDPOINTS (Story 1.11, 1.12)
   // ========================================
+  /**
+   * Serial Lookup for Service Request Form (Story: Serial Lookup Feature)
+   * Returns comprehensive product, warranty, and location information
+   * Used for real-time validation in service request form
+   */
+  lookupSerial: publicProcedure
+    .input(
+      z.object({
+        serial_number: z.string().min(5, "Serial number must be at least 5 characters"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Query physical_products with all necessary joins
+      // Note: Must explicitly specify foreign key relationship because physical_products
+      // has two FKs to virtual_warehouses (virtual_warehouse_id and previous_virtual_warehouse_id)
+      const { data, error } = await ctx.supabaseAdmin
+        .from('physical_products')
+        .select(`
+          id,
+          serial_number,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
+          last_known_customer_id,
+          current_ticket_id,
+          condition,
+          product:products (
+            id,
+            name,
+            sku,
+            brand:brands (
+              name
+            )
+          ),
+          virtual_warehouse:virtual_warehouses!physical_products_virtual_warehouse_id_fkey (
+            name,
+            warehouse_type,
+            physical_warehouse:physical_warehouses (
+              name
+            )
+          )
+        `)
+        .eq('serial_number', input.serial_number.toUpperCase())
+        .single();
+
+      if (error || !data) {
+        return {
+          found: false,
+          product: null,
+          error: error?.code === 'PGRST116' ? 'Serial number not found' : `Database error: ${error?.message || 'Unknown'}`
+        };
+      }
+
+      // Fetch customer data separately if exists
+      let customerData = null;
+      if (data.last_known_customer_id) {
+        const { data: customer } = await ctx.supabaseAdmin
+          .from('customers')
+          .select('id, name')
+          .eq('id', data.last_known_customer_id)
+          .single();
+        customerData = customer;
+      }
+
+      // Fetch ticket data separately if exists
+      let ticketData = null;
+      if (data.current_ticket_id) {
+        const { data: ticket } = await ctx.supabaseAdmin
+          .from('service_tickets')
+          .select('id, ticket_number')
+          .eq('id', data.current_ticket_id)
+          .single();
+        ticketData = ticket;
+      }
+
+      // Calculate warranty status
+      const effectiveWarrantyDate = data.user_warranty_end_date || data.manufacturer_warranty_end_date;
+      let warrantyStatus: 'active' | 'expiring_soon' | 'expired' | 'no_warranty' = 'no_warranty';
+      let daysRemaining: number | null = null;
+
+      if (effectiveWarrantyDate) {
+        const endDate = new Date(effectiveWarrantyDate);
+        const today = new Date();
+        daysRemaining = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining < 0) {
+          warrantyStatus = 'expired';
+        } else if (daysRemaining <= 30) {
+          warrantyStatus = 'expiring_soon';
+        } else {
+          warrantyStatus = 'active';
+        }
+      }
+
+      // Extract nested data (handle Supabase array wrapping)
+      const productData = Array.isArray(data.product) ? data.product[0] : data.product;
+      const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
+      const virtualWarehouse = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
+      const physicalWarehouse = virtualWarehouse?.physical_warehouse
+        ? (Array.isArray(virtualWarehouse.physical_warehouse) ? virtualWarehouse.physical_warehouse[0] : virtualWarehouse.physical_warehouse)
+        : null;
+
+      return {
+        found: true,
+        product: {
+          id: productData?.id || '',
+          name: productData?.name || 'Unknown',
+          sku: productData?.sku || '',
+          brand: brandData?.name || 'Unknown',
+          warranty_status: warrantyStatus,
+          warranty_end_date: effectiveWarrantyDate,
+          manufacturer_warranty_end_date: data.manufacturer_warranty_end_date,
+          user_warranty_end_date: data.user_warranty_end_date,
+          days_remaining: daysRemaining,
+          last_customer: customerData ? {
+            id: customerData.id,
+            name: customerData.name,
+          } : null,
+          current_location: {
+            physical_warehouse: physicalWarehouse?.name || 'Unknown',
+            virtual_warehouse: virtualWarehouse?.name || 'Unknown',
+            warehouse_type: virtualWarehouse?.warehouse_type || 'main',
+          },
+          service_history_count: 0, // TODO: Calculate from service tickets
+          current_ticket_id: data.current_ticket_id,
+          current_ticket_number: ticketData?.ticket_number || null,
+        },
+        error: undefined,
+      };
+    }),
+
   /**
    * AC 2: Verify warranty status by serial number (public, read-only)
    * AC 8: Show warranty status and days remaining
@@ -305,22 +432,12 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Verify all serial numbers exist and get product details
-      const productLookups = await Promise.all(
+      // Verify all serial numbers exist in the system
+      await Promise.all(
         input.items.map(async (item) => {
           const { data: physicalProduct } = await ctx.supabaseAdmin
             .from("physical_products")
-            .select(
-              `
-              id,
-              serial_number,
-              product:products(
-                id,
-                name,
-                brand:brands(name)
-              )
-            `
-            )
+            .select("id")
             .eq("serial_number", item.serial_number)
             .single();
 
@@ -330,18 +447,6 @@ export const serviceRequestRouter = router({
               message: `Serial number not found: ${item.serial_number}`,
             });
           }
-
-          // Extract product data
-          const productData = Array.isArray(physicalProduct.product) ? physicalProduct.product[0] : physicalProduct.product;
-          const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
-
-          return {
-            serial_number: item.serial_number,
-            product_brand: brandData?.name || "Unknown",
-            product_model: productData?.name || "Unknown",
-            purchase_date: item.purchase_date,
-            issue_description: item.issue_description,
-          };
         })
       );
 
@@ -356,7 +461,7 @@ export const serviceRequestRouter = router({
 
       // AC 2, 3: Create service request
       // AC 5: Tracking token auto-generated by database trigger
-      // AC 6: Status defaults to 'submitted'
+      // AC 6: Status defaults based on receipt_status
       const { data: request, error: requestError } = await ctx.supabaseAdmin
         .from("service_requests")
         .insert({
@@ -364,8 +469,8 @@ export const serviceRequestRouter = router({
           customer_email: input.customer_email,
           customer_phone: input.customer_phone,
           issue_description: input.issue_description,
-          service_type: input.service_type,
-          delivery_method: input.preferred_delivery_method,
+          receipt_status: input.receipt_status,
+          delivery_method: input.preferred_delivery_method || null,
           delivery_address:
             input.preferred_delivery_method === "delivery"
               ? input.delivery_address
@@ -384,16 +489,13 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Insert items
+      // Insert items - only store serial numbers and issue descriptions
       const { error: itemsError } = await ctx.supabaseAdmin
         .from("service_request_items")
         .insert(
-          productLookups.map((item) => ({
+          input.items.map((item) => ({
             request_id: request.id,
-            product_brand: item.product_brand,
-            product_model: item.product_model,
             serial_number: item.serial_number,
-            purchase_date: item.purchase_date,
             issue_description: item.issue_description,
           }))
         );
@@ -414,9 +516,9 @@ export const serviceRequestRouter = router({
       // AC 9: Return tracking token
 
       // Story 1.15: Send email notification (async, non-blocking)
-      const productSummary = productLookups.length === 1
-        ? `${productLookups[0].product_model} (SN: ${productLookups[0].serial_number})`
-        : `${productLookups.length} products`;
+      const productSummary = input.items.length === 1
+        ? `Serial: ${input.items[0].serial_number}`
+        : `${input.items.length} sản phẩm`;
 
       sendEmailNotification(
         ctx,
@@ -426,7 +528,7 @@ export const serviceRequestRouter = router({
         {
           trackingToken: request.tracking_token,
           productName: productSummary,
-          serialNumber: productLookups.length === 1 ? productLookups[0].serial_number : undefined,
+          serialNumber: input.items.length === 1 ? input.items[0].serial_number : undefined,
         },
         request.id
       ).catch((err) => {
@@ -437,7 +539,7 @@ export const serviceRequestRouter = router({
         success: true,
         tracking_token: request.tracking_token,
         request_id: request.id,
-        item_count: productLookups.length,
+        item_count: input.items.length,
       };
     }),
 

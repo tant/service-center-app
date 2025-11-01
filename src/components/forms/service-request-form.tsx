@@ -11,10 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IconLoader2, IconPlus, IconTrash, IconUser, IconPackage } from "@tabler/icons-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { ProductSerialInput } from "./service-request/product-serial-input";
 
 interface ProductItem {
   serial_number: string;
@@ -27,8 +30,8 @@ interface ServiceRequestFormData {
   customer_phone: string;
   issue_description: string;
   items: ProductItem[];
-  service_type: "warranty" | "paid" | "replacement";
-  preferred_delivery_method: "pickup" | "delivery";
+  receipt_status: "received" | "pending_receipt";
+  preferred_delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
 }
 
@@ -50,11 +53,11 @@ export function ServiceRequestForm({
   const [customerEmail, setCustomerEmail] = useState(initialData?.customer_email || "");
   const [customerPhone, setCustomerPhone] = useState(initialData?.customer_phone || "");
   const [issueDescription, setIssueDescription] = useState(initialData?.issue_description || "");
-  const [serviceType, setServiceType] = useState<"warranty" | "paid" | "replacement">(
-    initialData?.service_type || "warranty"
+  const [receiptStatus, setReceiptStatus] = useState<"received" | "pending_receipt">(
+    initialData?.receipt_status || "received"
   );
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">(
-    initialData?.preferred_delivery_method || "pickup"
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | undefined>(
+    initialData?.preferred_delivery_method
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
   const [items, setItems] = useState<ProductItem[]>(
@@ -108,7 +111,7 @@ export function ServiceRequestForm({
       return;
     }
     if (deliveryMethod === "delivery" && !deliveryAddress) {
-      toast.error("Địa chỉ giao hàng là bắt buộc");
+      toast.error("Địa chỉ giao hàng là bắt buộc khi chọn giao hàng tận nơi");
       return;
     }
 
@@ -121,7 +124,7 @@ export function ServiceRequestForm({
         serial_number: item.serial_number.toUpperCase(),
         issue_description: item.issue_description,
       })),
-      service_type: serviceType,
+      receipt_status: receiptStatus,
       preferred_delivery_method: deliveryMethod,
       delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
     });
@@ -129,6 +132,61 @@ export function ServiceRequestForm({
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">
+      {/* Products */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <IconPackage className="h-4 w-4" />
+              Sản phẩm ({items.length}/10)
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddItem}
+              disabled={items.length >= 10 || isSubmitting}
+            >
+              <IconPlus className="h-4 w-4 mr-1" />
+              Thêm sản phẩm
+            </Button>
+          </CardTitle>
+          <CardDescription>Thêm serial number của các sản phẩm cần sửa chữa</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {items.map((item, index) => (
+            <ProductSerialInput
+              key={index}
+              index={index}
+              serial={item.serial_number}
+              onSerialChange={(serial) => handleUpdateItem(index, "serial_number", serial)}
+              onRemove={() => handleRemoveItem(index)}
+              canRemove={items.length > 1}
+              disabled={isSubmitting}
+              totalProducts={items.length}
+            />
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Issue Description */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Mô tả chung vấn đề</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Textarea
+            id="issue-description"
+            value={issueDescription}
+            onChange={(e) => setIssueDescription(e.target.value)}
+            placeholder="Mô tả chung về vấn đề của các sản phẩm... (tối thiểu 20 ký tự)"
+            rows={3}
+            disabled={isSubmitting}
+          />
+          <p className="text-xs text-muted-foreground">{issueDescription.length}/20 ký tự</p>
+        </CardContent>
+      </Card>
+
       {/* Customer Information */}
       <Card>
         <CardHeader>
@@ -174,151 +232,85 @@ export function ServiceRequestForm({
         </CardContent>
       </Card>
 
-      {/* Products */}
+      {/* Receipt Status */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <IconPackage className="h-4 w-4" />
-              Sản phẩm ({items.length}/10)
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddItem}
-              disabled={items.length >= 10 || isSubmitting}
-            >
-              <IconPlus className="h-4 w-4 mr-1" />
-              Thêm sản phẩm
-            </Button>
-          </CardTitle>
-          <CardDescription>Thêm serial number của các sản phẩm cần sửa chữa</CardDescription>
+          <CardTitle className="text-sm">Tình trạng nhận hàng</CardTitle>
+          <CardDescription>
+            Đánh dấu nếu đã nhận sản phẩm từ khách hàng. Bỏ chọn nếu khách sẽ gửi sau.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
-              <div className="flex-1 space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor={`serial-${index}`}>Serial Number #{index + 1} *</Label>
-                  <Input
-                    id={`serial-${index}`}
-                    value={item.serial_number}
-                    onChange={(e) => handleUpdateItem(index, "serial_number", e.target.value)}
-                    placeholder="VD: ZT-RTX4090-001234"
-                    disabled={isSubmitting}
-                  />
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="receipt-status"
+              checked={receiptStatus === "received"}
+              onCheckedChange={(checked) =>
+                setReceiptStatus(checked ? "received" : "pending_receipt")
+              }
+              disabled={isSubmitting}
+            />
+            <Label
+              htmlFor="receipt-status"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Đã nhận sản phẩm từ khách hàng
+            </Label>
+          </div>
+          {receiptStatus === "pending_receipt" && (
+            <p className="text-xs text-muted-foreground mt-3 p-3 bg-muted rounded-md">
+              💡 Phiếu sửa chữa sẽ được tạo tự động khi đánh dấu đã nhận sản phẩm
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delivery Method - Optional */}
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="delivery" className="border rounded-lg px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <IconTruck className="h-4 w-4" />
+              Thông tin giao hàng (tùy chọn)
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4 pt-2">
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Có thể cập nhật sau khi sản phẩm được sửa chữa xong
+              </p>
+              <RadioGroup
+                value={deliveryMethod}
+                onValueChange={(value: any) => setDeliveryMethod(value)}
+                disabled={isSubmitting}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pickup" id="pickup" />
+                  <Label htmlFor="pickup">Tự đến lấy</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="delivery" id="delivery" />
+                  <Label htmlFor="delivery">Giao hàng tận nơi</Label>
+                </div>
+              </RadioGroup>
+
+              {deliveryMethod === "delivery" && (
                 <div className="space-y-2">
-                  <Label htmlFor={`issue-${index}`}>Vấn đề cụ thể (tùy chọn)</Label>
+                  <Label htmlFor="delivery-address">Địa chỉ giao hàng *</Label>
                   <Textarea
-                    id={`issue-${index}`}
-                    value={item.issue_description || ""}
-                    onChange={(e) => handleUpdateItem(index, "issue_description", e.target.value)}
-                    placeholder="Vấn đề riêng của sản phẩm này..."
+                    id="delivery-address"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
                     rows={2}
                     disabled={isSubmitting}
                   />
                 </div>
-              </div>
-              {items.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveItem(index)}
-                  className="mt-8"
-                  disabled={isSubmitting}
-                >
-                  <IconTrash className="h-4 w-4 text-destructive" />
-                </Button>
               )}
             </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Issue Description */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Mô tả chung vấn đề</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Textarea
-            id="issue-description"
-            value={issueDescription}
-            onChange={(e) => setIssueDescription(e.target.value)}
-            placeholder="Mô tả chung về vấn đề của các sản phẩm... (tối thiểu 20 ký tự)"
-            rows={3}
-            disabled={isSubmitting}
-          />
-          <p className="text-xs text-muted-foreground">{issueDescription.length}/20 ký tự</p>
-        </CardContent>
-      </Card>
-
-      {/* Service Type */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Loại dịch vụ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={serviceType}
-            onValueChange={(value: any) => setServiceType(value)}
-            disabled={isSubmitting}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="warranty" id="warranty" />
-              <Label htmlFor="warranty">Bảo hành</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="paid" id="paid" />
-              <Label htmlFor="paid">Sửa chữa có phí</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="replacement" id="replacement" />
-              <Label htmlFor="replacement">Đổi trả bảo hành</Label>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
-
-      {/* Delivery Method */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Phương thức nhận hàng</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RadioGroup
-            value={deliveryMethod}
-            onValueChange={(value: any) => setDeliveryMethod(value)}
-            disabled={isSubmitting}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="pickup" id="pickup" />
-              <Label htmlFor="pickup">Tự đến lấy</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="delivery" id="delivery" />
-              <Label htmlFor="delivery">Giao hàng tận nơi</Label>
-            </div>
-          </RadioGroup>
-
-          {deliveryMethod === "delivery" && (
-            <div className="space-y-2">
-              <Label htmlFor="delivery-address">Địa chỉ giao hàng *</Label>
-              <Textarea
-                id="delivery-address"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
-                rows={2}
-                disabled={isSubmitting}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </form>
   );
 }

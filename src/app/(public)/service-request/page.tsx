@@ -88,7 +88,7 @@ export default function ServiceRequestPage() {
             serial_number: serial,
           },
         ],
-        service_type: "warranty",
+        receipt_status: "pending_receipt", // Customers request service first, send product later
         preferred_delivery_method: deliveryMethod,
         delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
         honeypot, // AC 12: Spam protection

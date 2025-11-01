@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   customer_address TEXT,
   issue_description TEXT NOT NULL,
   status public.request_status NOT NULL DEFAULT 'submitted',
+  receipt_status public.receipt_status NOT NULL DEFAULT 'received',
+  delivery_method public.delivery_method,
+  delivery_address TEXT,
   reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
   rejection_reason TEXT,
@@ -36,6 +39,9 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
 
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
 COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue description for the entire request (specific issues per product in service_request_items)';
+COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products have been received from customer (triggers ticket creation)';
+COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preference for product delivery (pickup or delivery)';
+COMMENT ON COLUMN public.service_requests.delivery_address IS 'Delivery address if delivery_method is delivery';
 
 -- =====================================================
 -- AUTO-CREATE TICKETS FUNCTION
@@ -51,8 +57,9 @@ DECLARE
   v_ticket_id UUID;
   v_item RECORD;
 BEGIN
-  -- Only trigger when status changes to 'received'
-  IF NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup')) THEN
+  -- Trigger when receipt_status changes to 'received' OR status changes to 'received'
+  IF (NEW.receipt_status = 'received' AND (OLD.receipt_status IS NULL OR OLD.receipt_status = 'pending_receipt'))
+     OR (NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup'))) THEN
 
     -- Find or create customer
     SELECT id INTO v_customer_id
@@ -144,7 +151,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when request status changes to received';
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received';
 
 -- =====================================================
 -- TRIGGERS
@@ -160,7 +167,6 @@ CREATE TABLE IF NOT EXISTS public.service_request_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
   serial_number VARCHAR(255) NOT NULL,
-  purchase_date DATE,
   issue_description TEXT,
   issue_photos JSONB DEFAULT '[]'::jsonb,
   ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,

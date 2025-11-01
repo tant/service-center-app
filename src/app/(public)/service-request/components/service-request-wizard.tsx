@@ -1,23 +1,24 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Fragment, useRef } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ServiceRequestWizardProvider,
-  type ServiceRequestWizardState,
+import { useSubmitServiceRequest } from "@/hooks/use-service-request";
+import type {
+  ServiceRequestWizardState,
   WizardStep,
+} from "@/hooks/use-service-request-wizard";
+import {
   buildWizardPayload,
+  ServiceRequestWizardProvider,
   setActiveStep,
-  setWizardConsent,
   useServiceRequestWizardDispatch,
   useServiceRequestWizardState,
 } from "@/hooks/use-service-request-wizard";
-import { StepCustomer, StepProducts, StepReview, StepSolutions } from "./steps";
-import { useSubmitServiceRequest } from "@/hooks/use-service-request";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { StepCustomer, StepProducts, StepReview, StepSolutions } from "./steps";
 
 const MIN_SERIAL_LENGTH = 5;
 const MIN_ISSUE_LENGTH = 10;
@@ -27,11 +28,31 @@ const MIN_ADDRESS_LENGTH = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SWIPE_THRESHOLD_PX = 60;
 
-const STEP_CONFIG: Array<{ id: WizardStep; title: string; description: string }> = [
-  { id: 0, title: "Sản phẩm & vấn đề", description: "Thêm sản phẩm và mô tả triệu chứng." },
-  { id: 1, title: "Bảo hành & dịch vụ", description: "Kiểm tra bảo hành, chọn phương án xử lý." },
-  { id: 2, title: "Khách hàng & tiếp nhận", description: "Thu thập thông tin liên hệ và phương thức." },
-  { id: 3, title: "Xem lại & xác nhận", description: "Kiểm tra lần cuối trước khi gửi yêu cầu." },
+const STEP_CONFIG: Array<{
+  id: WizardStep;
+  title: string;
+  description: string;
+}> = [
+  {
+    id: 0,
+    title: "Sản phẩm & vấn đề",
+    description: "Thêm sản phẩm và mô tả triệu chứng.",
+  },
+  {
+    id: 1,
+    title: "Bảo hành & dịch vụ",
+    description: "Kiểm tra bảo hành, chọn phương án xử lý.",
+  },
+  {
+    id: 2,
+    title: "Khách hàng & tiếp nhận",
+    description: "Thu thập thông tin liên hệ và phương thức.",
+  },
+  {
+    id: 3,
+    title: "Xem lại & xác nhận",
+    description: "Kiểm tra lần cuối trước khi gửi yêu cầu.",
+  },
 ];
 
 const STEP_COMPONENT_MAP: Record<WizardStep, React.ComponentType> = {
@@ -41,42 +62,59 @@ const STEP_COMPONENT_MAP: Record<WizardStep, React.ComponentType> = {
   3: StepReview,
 };
 
-function validateWizardStep(state: ServiceRequestWizardState, step: WizardStep): boolean {
+function validateWizardStep(
+  state: ServiceRequestWizardState,
+  step: WizardStep,
+): boolean {
   switch (step) {
     case 0: {
       if (state.products.length === 0) {
         toast.error("Vui lòng thêm ít nhất một sản phẩm.");
         return false;
       }
-      const invalidSerial = state.products.find((product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH);
+      const invalidSerial = state.products.find(
+        (product) => product.serialNumber.trim().length < MIN_SERIAL_LENGTH,
+      );
       if (invalidSerial) {
         toast.error(`Serial phải có tối thiểu ${MIN_SERIAL_LENGTH} ký tự.`);
         return false;
       }
-      const invalidIssue = state.products.find((product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH);
+      const invalidIssue = state.products.find(
+        (product) => product.issueDescription.trim().length < MIN_ISSUE_LENGTH,
+      );
       if (invalidIssue) {
         toast.error(`Mô tả vấn đề cần tối thiểu ${MIN_ISSUE_LENGTH} ký tự.`);
         return false;
       }
       const uploadingAttachment = state.products.some((product) =>
-        product.attachments.some((attachment) => attachment.status === "uploading"),
+        product.attachments.some(
+          (attachment) => attachment.status === "uploading",
+        ),
       );
       if (uploadingAttachment) {
-        toast.error("Đang tải ảnh lên. Vui lòng chờ hoàn tất trước khi tiếp tục.");
+        toast.error(
+          "Đang tải ảnh lên. Vui lòng chờ hoàn tất trước khi tiếp tục.",
+        );
         return false;
       }
       return true;
     }
     case 1: {
-      const missingServiceOption = state.products.find((product) => !product.serviceOption);
+      const missingServiceOption = state.products.find(
+        (product) => !product.serviceOption,
+      );
       if (missingServiceOption) {
         toast.error("Vui lòng chọn phương án xử lý cho từng sản phẩm.");
         return false;
       }
-      const serialNotFound = state.products.find((product) => product.warrantyCheck.notFound);
+      const serialNotFound = state.products.find(
+        (product) => product.warrantyCheck.notFound,
+      );
       if (serialNotFound) {
         const serial = serialNotFound.serialNumber || "chưa có serial";
-        toast.error(`Serial ${serial} chưa khớp với dữ liệu bảo hành. Vui lòng kiểm tra lại ở bước trước.`);
+        toast.error(
+          `Serial ${serial} chưa khớp với dữ liệu bảo hành. Vui lòng kiểm tra lại ở bước trước.`,
+        );
         return false;
       }
       return true;
@@ -97,7 +135,8 @@ function validateWizardStep(state: ServiceRequestWizardState, step: WizardStep):
       }
       if (
         state.delivery.preferredDeliveryMethod === "delivery" &&
-        (state.delivery.deliveryAddress?.trim().length ?? 0) < MIN_ADDRESS_LENGTH
+        (state.delivery.deliveryAddress?.trim().length ?? 0) <
+          MIN_ADDRESS_LENGTH
       ) {
         toast.error("Địa chỉ giao nhận cần tối thiểu 10 ký tự.");
         return false;
@@ -131,36 +170,61 @@ function WizardNavigator() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2 md:hidden">
-        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1">
+      <div className="space-y-4 md:hidden">
+        <div className="flex items-start gap-1 px-3">
           {STEP_CONFIG.map((step, index) => {
             const isActive = state.activeStep === step.id;
             const isVisited = step.id <= state.maxVisitedStep;
-
+            const isComplete = step.id < state.activeStep;
             return (
-              <button
-                key={step.id}
-                type="button"
-                disabled={!isVisited}
-                onClick={() => handleStepClick(step.id)}
-                aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                  isActive
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : isVisited
-                    ? "border-primary/70 text-primary"
-                    : "border-border text-muted-foreground"
-                )}
-              >
-                {index + 1}
-              </button>
+              <Fragment key={step.id}>
+                <div className="flex min-w-[72px] flex-col items-center text-center">
+                  <button
+                    type="button"
+                    disabled={!isVisited}
+                    onClick={() => handleStepClick(step.id)}
+                    aria-current={isActive ? "step" : undefined}
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : isComplete
+                          ? "border-primary bg-primary/15 text-primary"
+                          : isVisited
+                            ? "border-primary/70 text-primary"
+                            : "border-border bg-background text-muted-foreground",
+                    )}
+                  >
+                    {index + 1}
+                  </button>
+                  <span
+                    className={cn(
+                      "mt-2 text-xs leading-tight text-muted-foreground",
+                      (isActive || isComplete) && "font-semibold",
+                      isActive
+                        ? "text-foreground"
+                        : isComplete
+                          ? "text-primary"
+                          : undefined,
+                    )}
+                  >
+                    {step.title}
+                  </span>
+                </div>
+                {index < STEP_CONFIG.length - 1 ? (
+                  <div
+                    className={cn(
+                      "flex-1 h-px mt-5 rounded-full",
+                      state.maxVisitedStep >= step.id + 1
+                        ? "bg-primary"
+                        : "bg-muted-foreground/30",
+                    )}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </Fragment>
             );
           })}
-        </div>
-        <div className="text-center space-y-1">
-          <Badge variant="secondary">{`Bước ${state.activeStep + 1}/${totalSteps}`}</Badge>
-          <div className="text-sm font-semibold">{currentStep.title}</div>
         </div>
       </div>
 
@@ -182,8 +246,8 @@ function WizardNavigator() {
                   isActive
                     ? "border-primary bg-primary/10"
                     : isComplete
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border/60 bg-muted/40 hover:border-border"
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border/60 bg-muted/40 hover:border-border",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -193,18 +257,23 @@ function WizardNavigator() {
                       isActive
                         ? "border-primary bg-primary text-primary-foreground"
                         : isComplete
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background text-muted-foreground"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-muted-foreground",
                     )}
                   >
                     {index + 1}
                   </div>
                   <span className="text-sm font-semibold">{step.title}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {step.description}
+                </p>
               </button>
               {index < STEP_CONFIG.length - 1 ? (
-                <div className="mx-2 flex-1 border-t border-dashed border-border" aria-hidden="true" />
+                <div
+                  className="mx-2 flex-1 border-t border-dashed border-border"
+                  aria-hidden="true"
+                />
               ) : null}
             </Fragment>
           );
@@ -222,8 +291,14 @@ function WizardContent() {
 
   const handleSwipe = (direction: "next" | "prev") => {
     if (direction === "next") {
-      const next = Math.min(STEP_CONFIG.length - 1, state.activeStep + 1) as WizardStep;
-      if (next !== state.activeStep && validateWizardStep(state, state.activeStep)) {
+      const next = Math.min(
+        STEP_CONFIG.length - 1,
+        state.activeStep + 1,
+      ) as WizardStep;
+      if (
+        next !== state.activeStep &&
+        validateWizardStep(state, state.activeStep)
+      ) {
         setActiveStep(dispatch, next);
       }
     } else {
@@ -248,7 +323,10 @@ function WizardContent() {
     const deltaY = touch.clientY - touchStart.current.y;
     touchStart.current = null;
 
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
+    if (
+      Math.abs(deltaX) < SWIPE_THRESHOLD_PX ||
+      Math.abs(deltaX) <= Math.abs(deltaY)
+    ) {
       return;
     }
 
@@ -312,7 +390,10 @@ function StepNavigation() {
       return;
     }
 
-    if (payload.delivery.preferred_delivery_method === "delivery" && !payload.delivery.delivery_address) {
+    if (
+      payload.delivery.preferred_delivery_method === "delivery" &&
+      !payload.delivery.delivery_address
+    ) {
       toast.error("Vui lòng bổ sung địa chỉ giao nhận.");
       setActiveStep(dispatch, 2);
       return;
@@ -339,13 +420,22 @@ function StepNavigation() {
         router.push("/service-request/success");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Không thể gửi yêu cầu. Vui lòng thử lại.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể gửi yêu cầu. Vui lòng thử lại.",
+      );
     }
   };
 
   return (
     <>
-      <Button type="button" variant="outline" onClick={goPrev} disabled={state.activeStep === 0}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={goPrev}
+        disabled={state.activeStep === 0}
+      >
         Quay lại
       </Button>
       {state.activeStep < 3 ? (

@@ -1,26 +1,47 @@
 "use client";
 
+import {
+  IconAlertCircle,
+  IconRefresh,
+  IconShieldCheck,
+  IconShieldQuestion,
+  IconShieldX,
+} from "@tabler/icons-react";
+import { format } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useVerifyWarranty } from "@/hooks/use-service-request";
 import {
   removeWizardProduct,
   updateWizardProduct,
   useServiceRequestWizardDispatch,
   useServiceRequestWizardState,
 } from "@/hooks/use-service-request-wizard";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useVerifyWarranty } from "@/hooks/use-service-request";
-import { IconRefresh, IconShieldCheck, IconShieldX, IconShieldQuestion, IconAlertCircle } from "@tabler/icons-react";
 import type { ServiceType } from "@/types/enums";
-import { format } from "date-fns";
-import { toast } from "sonner";
 
-const STATUS_BADGE_VARIANT: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
+const STATUS_BADGE_VARIANT: Record<
+  string,
+  "default" | "outline" | "secondary" | "destructive"
+> = {
   idle: "outline",
   pending: "secondary",
   success: "default",
@@ -41,7 +62,7 @@ const formatWarrantyDate = (iso?: string | null) => {
   }
 
   const date = new Date(iso);
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return undefined;
   }
   return format(date, "dd/MM/yyyy");
@@ -51,7 +72,9 @@ export function StepSolutions() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
   const { verifyWarrantyAsync, isVerifying } = useVerifyWarranty();
-  const [verifyingProductIds, setVerifyingProductIds] = useState<Record<string, boolean>>({});
+  const [verifyingProductIds, setVerifyingProductIds] = useState<
+    Record<string, boolean>
+  >({});
   const [isBulkVerifying, setIsBulkVerifying] = useState(false);
   const autoVerifiedSerialRef = useRef<Record<string, string>>({});
 
@@ -62,13 +85,15 @@ export function StepSolutions() {
   const productsWithSerial = useMemo(
     () =>
       state.products.filter(
-        (product) => product.serialNumber.trim().length > 0
+        (product) => product.serialNumber.trim().length > 0,
       ),
-    [state.products]
+    [state.products],
   );
 
   const verifyProduct = useCallback(
-    async (productId: string): Promise<"eligible" | "ineligible" | "error" | "skipped"> => {
+    async (
+      productId: string,
+    ): Promise<"eligible" | "ineligible" | "error" | "skipped"> => {
       const product = state.products.find((item) => item.id === productId);
       if (!product) {
         return "skipped";
@@ -100,7 +125,9 @@ export function StepSolutions() {
             warrantyCheck: {
               status: "error",
               eligible: false,
-              message: result?.message ?? "Không tìm thấy thông tin bảo hành cho serial này.",
+              message:
+                result?.message ??
+                "Không tìm thấy thông tin bảo hành cho serial này.",
               notFound: true,
             },
             warrantyRequested: false,
@@ -112,12 +139,20 @@ export function StepSolutions() {
         const eligible = Boolean(result.eligible);
         const message =
           result.message ??
-          (eligible ? "Sản phẩm đủ điều kiện bảo hành." : "Không đủ điều kiện bảo hành.");
+          (eligible
+            ? "Sản phẩm đủ điều kiện bảo hành."
+            : "Không đủ điều kiện bảo hành.");
         const warrantyInfo =
           result && typeof result === "object" && "warranty" in result
-            ? (result as {
-                warranty?: { endDate?: string | null; manufacturerEndDate?: string | null; userEndDate?: string | null };
-              }).warranty
+            ? (
+                result as {
+                  warranty?: {
+                    endDate?: string | null;
+                    manufacturerEndDate?: string | null;
+                    userEndDate?: string | null;
+                  };
+                }
+              ).warranty
             : undefined;
         const expiresAt =
           warrantyInfo?.endDate ??
@@ -136,7 +171,9 @@ export function StepSolutions() {
             notFound: false,
           },
           warrantyRequested: eligible,
-          serviceOption: eligible ? "warranty" : product.serviceOption ?? "paid",
+          serviceOption: eligible
+            ? "warranty"
+            : (product.serviceOption ?? "paid"),
         });
 
         return eligible ? "eligible" : "ineligible";
@@ -164,19 +201,21 @@ export function StepSolutions() {
         });
       }
     },
-    [dispatch, state.products, verifyWarrantyAsync]
+    [dispatch, state.products, verifyWarrantyAsync],
   );
 
   const bulkVerifyProducts = useCallback(
     async (
       productIds: string[],
-      options: { origin?: "manual" | "auto"; showToast?: boolean } = {}
+      options: { origin?: "manual" | "auto"; showToast?: boolean } = {},
     ) => {
       const { origin = "manual", showToast = false } = options;
       const uniqueIds = Array.from(new Set(productIds));
       const validIds = uniqueIds.filter((id) => {
         const product = state.products.find((item) => item.id === id);
-        return Boolean(product && product.serialNumber.trim().length >= MIN_SERIAL_LENGTH);
+        return Boolean(
+          product && product.serialNumber.trim().length >= MIN_SERIAL_LENGTH,
+        );
       });
 
       if (validIds.length === 0) {
@@ -210,14 +249,20 @@ export function StepSolutions() {
 
       const baseMessage = `${totalChecked} sản phẩm đã được kiểm tra.`;
       if (counts.error > 0) {
-        toast.warning(`${baseMessage} ${counts.error} sản phẩm gặp lỗi khi kiểm tra.`);
+        toast.warning(
+          `${baseMessage} ${counts.error} sản phẩm gặp lỗi khi kiểm tra.`,
+        );
       } else if (counts.eligible > 0) {
-        toast.success(`${baseMessage} ${counts.eligible} sản phẩm đủ điều kiện bảo hành.`);
+        toast.success(
+          `${baseMessage} ${counts.eligible} sản phẩm đủ điều kiện bảo hành.`,
+        );
       } else {
-        toast.info(`${baseMessage} Không có sản phẩm nào đủ điều kiện bảo hành.`);
+        toast.info(
+          `${baseMessage} Không có sản phẩm nào đủ điều kiện bảo hành.`,
+        );
       }
     },
-    [state.products, verifyProduct]
+    [state.products, verifyProduct],
   );
 
   useEffect(() => {
@@ -252,7 +297,7 @@ export function StepSolutions() {
 
     void bulkVerifyProducts(
       autoTargets.map((product) => product.id),
-      { origin: "auto", showToast: true }
+      { origin: "auto", showToast: true },
     );
   }, [bulkVerifyProducts, state.products]);
 
@@ -263,7 +308,7 @@ export function StepSolutions() {
   const handleBulkVerify = async () => {
     await bulkVerifyProducts(
       productsWithSerial.map((product) => product.id),
-      { origin: "manual", showToast: true }
+      { origin: "manual", showToast: true },
     );
   };
 
@@ -275,7 +320,11 @@ export function StepSolutions() {
 
   const renderStatusIcon = (status: string, eligible?: boolean) => {
     if (status === "success") {
-      return eligible ? <IconShieldCheck className="h-4 w-4" /> : <IconShieldX className="h-4 w-4" />;
+      return eligible ? (
+        <IconShieldCheck className="h-4 w-4" />
+      ) : (
+        <IconShieldX className="h-4 w-4" />
+      );
     }
     if (status === "error") {
       return <IconAlertCircle className="h-4 w-4" />;
@@ -320,37 +369,50 @@ export function StepSolutions() {
         ) : (
           state.products.map((product) => {
             const status = product.warrantyCheck.status;
-            const verifying = verifyingProductIds[product.id] || isVerifying || isBulkVerifying;
+            const verifying =
+              verifyingProductIds[product.id] || isVerifying || isBulkVerifying;
             const hasSerial = product.serialNumber.trim().length > 0;
             const eligible = product.warrantyCheck.eligible;
             const formattedExpiry =
-              status === "success" ? formatWarrantyDate(product.warrantyCheck.expiresAt) : undefined;
+              status === "success"
+                ? formatWarrantyDate(product.warrantyCheck.expiresAt)
+                : undefined;
 
             return (
-              <div key={product.id} className="flex flex-col gap-4 rounded-md border p-4">
+              <div
+                key={product.id}
+                className="flex flex-col gap-4 rounded-md border p-4"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 text-sm uppercase tracking-wide text-muted-foreground">
                       Serial
-                      <Badge variant="outline">{product.serialNumber || "Chưa nhập"}</Badge>
+                      <Badge variant="outline">
+                        {product.serialNumber || "Chưa nhập"}
+                      </Badge>
                     </div>
                     {product.productBrand || product.productModel ? (
                       <CardDescription className="mt-1">
-                        {[product.productBrand, product.productModel].filter(Boolean).join(" • ")}
+                        {[product.productBrand, product.productModel]
+                          .filter(Boolean)
+                          .join(" • ")}
                       </CardDescription>
                     ) : null}
                   </div>
-                  <Badge variant={STATUS_BADGE_VARIANT[status] ?? "outline"} className="flex items-center gap-1">
+                  <Badge
+                    variant={STATUS_BADGE_VARIANT[status] ?? "outline"}
+                    className="flex items-center gap-1"
+                  >
                     {renderStatusIcon(status, eligible)}
                     {status === "success"
                       ? eligible
                         ? "Đủ điều kiện bảo hành"
                         : "Không đủ bảo hành"
                       : status === "error"
-                      ? "Lỗi kiểm tra"
-                      : status === "pending"
-                      ? "Đang kiểm tra"
-                      : "Chưa kiểm tra"}
+                        ? "Lỗi kiểm tra"
+                        : status === "pending"
+                          ? "Đang kiểm tra"
+                          : "Chưa kiểm tra"}
                   </Badge>
                 </div>
 
@@ -378,7 +440,9 @@ export function StepSolutions() {
 
                 {product.warrantyCheck.message ? (
                   <Alert variant={eligible ? "default" : "destructive"}>
-                    <AlertDescription>{product.warrantyCheck.message}</AlertDescription>
+                    <AlertDescription>
+                      {product.warrantyCheck.message}
+                    </AlertDescription>
                   </Alert>
                 ) : null}
 
@@ -394,7 +458,9 @@ export function StepSolutions() {
                   </Label>
                   <Select
                     value={product.serviceOption}
-                    onValueChange={(value) => handleServiceChange(product.id, value)}
+                    onValueChange={(value) =>
+                      handleServiceChange(product.id, value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn dịch vụ" />
@@ -409,12 +475,16 @@ export function StepSolutions() {
                   </Select>
 
                   <div className="space-y-1">
-                    <Label htmlFor={`service-notes-${product.id}`}>Ghi chú thêm (tuỳ chọn)</Label>
+                    <Label htmlFor={`service-notes-${product.id}`}>
+                      Ghi chú thêm (tuỳ chọn)
+                    </Label>
                     <Textarea
                       id={`service-notes-${product.id}`}
                       placeholder="Ghi chú thêm cho trung tâm dịch vụ"
                       value={product.serviceOptionNotes ?? ""}
-                      onChange={(event) => updateServiceNotes(product.id, event.target.value)}
+                      onChange={(event) =>
+                        updateServiceNotes(product.id, event.target.value)
+                      }
                       rows={3}
                     />
                   </div>
@@ -427,7 +497,8 @@ export function StepSolutions() {
         {productsWithSerial.length === 0 ? (
           <Alert>
             <AlertDescription>
-              Vui lòng đảm bảo mỗi sản phẩm có serial hợp lệ ở bước trước trước khi kiểm tra bảo hành.
+              Vui lòng đảm bảo mỗi sản phẩm có serial hợp lệ ở bước trước trước
+              khi kiểm tra bảo hành.
             </AlertDescription>
           </Alert>
         ) : null}

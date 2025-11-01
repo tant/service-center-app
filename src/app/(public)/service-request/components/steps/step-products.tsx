@@ -1,24 +1,30 @@
 "use client";
 
+import {
+  IconLoader2,
+  IconPhotoUp,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
+import Image from "next/image";
+import { type ChangeEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { IconPlus, IconTrash, IconPhotoUp, IconX, IconLoader2 } from "@tabler/icons-react";
-import Image from "next/image";
-import { useRef, type ChangeEvent } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { useAttachmentQueue } from "@/hooks/use-attachment-queue";
 import {
-  MAX_ATTACHMENTS_PER_PRODUCT,
   addWizardProduct,
   createEmptyWizardProduct,
+  MAX_ATTACHMENTS_PER_PRODUCT,
   removeWizardProduct,
   setWizardIssueOverview,
   updateWizardProduct,
   useServiceRequestWizardDispatch,
   useServiceRequestWizardState,
 } from "@/hooks/use-service-request-wizard";
-import { useAttachmentQueue } from "@/hooks/use-attachment-queue";
 
 const MIN_SERIAL_LENGTH = 5;
 const MIN_ISSUE_LENGTH = 10;
@@ -31,7 +37,8 @@ interface ProductCardProps {
 function ProductCard({ index, productId }: ProductCardProps) {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
-  const { getAttachments, selectFiles, removeAttachment, canAddMore } = useAttachmentQueue();
+  const { getAttachments, selectFiles, removeAttachment, canAddMore } =
+    useAttachmentQueue();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const product = state.products.find((item) => item.id === productId);
@@ -72,7 +79,9 @@ function ProductCard({ index, productId }: ProductCardProps) {
     <div className="space-y-4 rounded-lg border p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold uppercase text-muted-foreground">Sản phẩm #{index + 1}</span>
+          <span className="text-xs font-semibold uppercase text-muted-foreground">
+            Sản phẩm #{index + 1}
+          </span>
           {product.serialNumber.trim().length > 0 ? (
             <p className="font-medium tracking-wide">{product.serialNumber}</p>
           ) : (
@@ -106,26 +115,32 @@ function ProductCard({ index, productId }: ProductCardProps) {
             minLength={MIN_SERIAL_LENGTH}
           />
           {!serialValid ? (
-            <p className="text-xs text-destructive">Serial phải có tối thiểu {MIN_SERIAL_LENGTH} ký tự.</p>
+            <p className="text-xs text-destructive">
+              Serial phải có tối thiểu {MIN_SERIAL_LENGTH} ký tự.
+            </p>
           ) : null}
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`purchase-date-${productId}`}>Ngày mua (nếu có)</Label>
+          <Label htmlFor={`purchase-date-${productId}`}>
+            Ngày mua (nếu có)
+          </Label>
           <Input
             id={`purchase-date-${productId}`}
             type="date"
             value={product.purchaseDate ?? ""}
             onChange={(event) =>
-              updateWizardProduct(dispatch, productId, { purchaseDate: event.target.value })
+              updateWizardProduct(dispatch, productId, {
+                purchaseDate: event.target.value,
+              })
             }
           />
         </div>
       </div>
 
-        <div className="space-y-1">
-          <Label htmlFor={`issue-${productId}`}>
-            Mô tả vấn đề <span className="text-destructive">*</span>
-          </Label>
+      <div className="space-y-1">
+        <Label htmlFor={`issue-${productId}`}>
+          Mô tả vấn đề <span className="text-destructive">*</span>
+        </Label>
         <Textarea
           id={`issue-${productId}`}
           value={product.issueDescription}
@@ -136,7 +151,9 @@ function ProductCard({ index, productId }: ProductCardProps) {
           required
         />
         {!issueValid ? (
-          <p className="text-xs text-destructive">Cần ít nhất {MIN_ISSUE_LENGTH} ký tự để mô tả vấn đề.</p>
+          <p className="text-xs text-destructive">
+            Cần ít nhất {MIN_ISSUE_LENGTH} ký tự để mô tả vấn đề.
+          </p>
         ) : null}
       </div>
 
@@ -153,7 +170,8 @@ function ProductCard({ index, productId }: ProductCardProps) {
             Thêm ảnh
           </Button>
           <span className="text-xs text-muted-foreground">
-            Tối đa {attachments.length}/{MAX_ATTACHMENTS_PER_PRODUCT} ảnh (10 MiB mỗi ảnh).
+            Tối đa {attachments.length}/{MAX_ATTACHMENTS_PER_PRODUCT} ảnh (10
+            MiB mỗi ảnh).
           </span>
         </div>
         <input
@@ -169,7 +187,10 @@ function ProductCard({ index, productId }: ProductCardProps) {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {attachments.map((attachment) => (
-              <div key={attachment.id} className="relative flex flex-col gap-2 rounded-md border bg-background p-2">
+              <div
+                key={attachment.id}
+                className="relative flex flex-col gap-2 rounded-md border bg-background p-2"
+              >
                 <div className="absolute right-2 top-2">
                   <Button
                     type="button"
@@ -237,7 +258,12 @@ export function StepProducts() {
       <CardHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Bước 1: Sản phẩm và vấn đề</CardTitle>
-          <Button type="button" size="sm" onClick={handleAddProduct} disabled={!canAddMoreProducts}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleAddProduct}
+            disabled={!canAddMoreProducts}
+          >
             <IconPlus className="mr-2 h-4 w-4" />
             Thêm sản phẩm
           </Button>
@@ -245,12 +271,16 @@ export function StepProducts() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="request-issue-overview">Mô tả tổng quát (tuỳ chọn)</Label>
+          <Label htmlFor="request-issue-overview">
+            Mô tả tổng quát (tuỳ chọn)
+          </Label>
           <Textarea
             id="request-issue-overview"
             placeholder="Tóm tắt vấn đề chung"
             value={state.requestIssueOverview}
-            onChange={(event) => setWizardIssueOverview(dispatch, event.target.value)}
+            onChange={(event) =>
+              setWizardIssueOverview(dispatch, event.target.value)
+            }
             minLength={MIN_ISSUE_LENGTH}
             className="min-h-[96px]"
           />
@@ -263,13 +293,19 @@ export function StepProducts() {
             </p>
           ) : (
             state.products.map((product, index) => (
-              <ProductCard key={product.id} index={index} productId={product.id} />
+              <ProductCard
+                key={product.id}
+                index={index}
+                productId={product.id}
+              />
             ))
           )}
         </div>
 
         {!canAddMoreProducts ? (
-          <p className="text-xs text-muted-foreground">Đã đạt giới hạn tối đa 10 sản phẩm cho mỗi yêu cầu.</p>
+          <p className="text-xs text-muted-foreground">
+            Đã đạt giới hạn tối đa 10 sản phẩm cho mỗi yêu cầu.
+          </p>
         ) : null}
       </CardContent>
     </Card>

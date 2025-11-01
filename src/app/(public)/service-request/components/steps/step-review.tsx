@@ -133,10 +133,6 @@ function ProductSummary() {
           </Card>
         );
       })}
-
-      <Button type="button" variant="outline" size="sm" onClick={() => setActiveStep(dispatch, 0)}>
-        Quay lại chỉnh sửa sản phẩm
-      </Button>
     </div>
   );
 }
@@ -174,7 +170,7 @@ export function StepReview() {
           />
           <SummaryRow
             label="Phương thức"
-            value={state.delivery.preferredDeliveryMethod === "delivery" ? "Thu gom / giao nhận" : "Khách tự mang tới"}
+            value={state.delivery.preferredDeliveryMethod === "delivery" ? "Giao nhận" : "Khách tự mang tới"}
           />
           {state.delivery.preferredDeliveryMethod === "delivery" ? (
             <SummaryRow label="Địa chỉ giao nhận" value={state.delivery.deliveryAddress} />

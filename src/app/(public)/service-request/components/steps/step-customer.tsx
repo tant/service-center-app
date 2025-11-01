@@ -199,7 +199,7 @@ export function StepCustomer() {
             <div className="flex items-center gap-2 rounded-md border p-3">
               <RadioGroupItem value="delivery" id="delivery-method-delivery" />
               <Label htmlFor="delivery-method-delivery" className="cursor-pointer">
-                Thu gom / giao nhận
+                Giao nhận
               </Label>
             </div>
           </RadioGroup>
@@ -225,7 +225,7 @@ export function StepCustomer() {
                 Địa chỉ giao nhận cần tối thiểu {MIN_ADDRESS_LENGTH} ký tự.
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">Bắt buộc khi chọn thu gom / giao nhận.</p>
+              <p className="text-xs text-muted-foreground">Bắt buộc khi chọn giao nhận.</p>
             )}
             <Label htmlFor="preferred-schedule" className="text-sm">
               Lịch hẹn mong muốn

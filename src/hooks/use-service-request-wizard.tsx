@@ -122,8 +122,16 @@ type WizardAction =
   | { type: "SET_CUSTOMER"; customer: WizardCustomer }
   | { type: "SET_DELIVERY"; delivery: WizardDelivery }
   | { type: "ADD_PRODUCT"; product: WizardProduct }
-  | { type: "UPDATE_PRODUCT"; productId: string; updates: Partial<WizardProduct> }
-  | { type: "PATCH_PRODUCT"; productId: string; updater: (product: WizardProduct) => WizardProduct }
+  | {
+      type: "UPDATE_PRODUCT";
+      productId: string;
+      updates: Partial<WizardProduct>;
+    }
+  | {
+      type: "PATCH_PRODUCT";
+      productId: string;
+      updater: (product: WizardProduct) => WizardProduct;
+    }
   | { type: "REMOVE_PRODUCT"; productId: string }
   | { type: "REPLACE_PRODUCTS"; products: WizardProduct[] };
 
@@ -152,16 +160,25 @@ const createInitialState = (): ServiceRequestWizardState => ({
   honeypot: "",
 });
 
-const WizardStateContext = createContext<ServiceRequestWizardState | undefined>(undefined);
-const WizardDispatchContext = createContext<React.Dispatch<WizardAction> | undefined>(undefined);
+const WizardStateContext = createContext<ServiceRequestWizardState | undefined>(
+  undefined,
+);
+const WizardDispatchContext = createContext<
+  React.Dispatch<WizardAction> | undefined
+>(undefined);
 
-function wizardReducer(state: ServiceRequestWizardState, action: WizardAction): ServiceRequestWizardState {
+function wizardReducer(
+  state: ServiceRequestWizardState,
+  action: WizardAction,
+): ServiceRequestWizardState {
   switch (action.type) {
     case "SET_ACTIVE_STEP":
       return {
         ...state,
         activeStep: action.step,
-        maxVisitedStep: (action.step > state.maxVisitedStep ? action.step : state.maxVisitedStep) as WizardStep,
+        maxVisitedStep: (action.step > state.maxVisitedStep
+          ? action.step
+          : state.maxVisitedStep) as WizardStep,
       };
     case "RESET":
       return createInitialState();
@@ -184,18 +201,22 @@ function wizardReducer(state: ServiceRequestWizardState, action: WizardAction): 
       return {
         ...state,
         products: state.products.map((product) =>
-          product.id === action.productId ? { ...product, ...action.updates } : product
+          product.id === action.productId
+            ? { ...product, ...action.updates }
+            : product,
         ),
       };
     case "PATCH_PRODUCT":
       return {
         ...state,
         products: state.products.map((product) =>
-          product.id === action.productId ? action.updater(product) : product
+          product.id === action.productId ? action.updater(product) : product,
         ),
       };
     case "REMOVE_PRODUCT": {
-      const filtered = state.products.filter((product) => product.id !== action.productId);
+      const filtered = state.products.filter(
+        (product) => product.id !== action.productId,
+      );
       return { ...state, products: filtered };
     }
     case "REPLACE_PRODUCTS":
@@ -205,14 +226,22 @@ function wizardReducer(state: ServiceRequestWizardState, action: WizardAction): 
   }
 }
 
-export function ServiceRequestWizardProvider(props: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(wizardReducer, undefined, createInitialState);
+export function ServiceRequestWizardProvider(props: {
+  children: React.ReactNode;
+}) {
+  const [state, dispatch] = useReducer(
+    wizardReducer,
+    undefined,
+    createInitialState,
+  );
 
   const value = useMemo(() => state, [state]);
 
   return (
     <WizardStateContext.Provider value={value}>
-      <WizardDispatchContext.Provider value={dispatch}>{props.children}</WizardDispatchContext.Provider>
+      <WizardDispatchContext.Provider value={dispatch}>
+        {props.children}
+      </WizardDispatchContext.Provider>
     </WizardStateContext.Provider>
   );
 }
@@ -220,7 +249,9 @@ export function ServiceRequestWizardProvider(props: { children: React.ReactNode 
 export function useServiceRequestWizardState() {
   const context = useContext(WizardStateContext);
   if (!context) {
-    throw new Error("useServiceRequestWizardState must be used within ServiceRequestWizardProvider");
+    throw new Error(
+      "useServiceRequestWizardState must be used within ServiceRequestWizardProvider",
+    );
   }
   return context;
 }
@@ -228,7 +259,9 @@ export function useServiceRequestWizardState() {
 export function useServiceRequestWizardDispatch() {
   const context = useContext(WizardDispatchContext);
   if (!context) {
-    throw new Error("useServiceRequestWizardDispatch must be used within ServiceRequestWizardProvider");
+    throw new Error(
+      "useServiceRequestWizardDispatch must be used within ServiceRequestWizardProvider",
+    );
   }
   return context;
 }
@@ -256,18 +289,27 @@ export function resetWizard(dispatch: React.Dispatch<WizardAction>) {
   dispatch({ type: "RESET" });
 }
 
-export function setActiveStep(dispatch: React.Dispatch<WizardAction>, step: WizardStep) {
+export function setActiveStep(
+  dispatch: React.Dispatch<WizardAction>,
+  step: WizardStep,
+) {
   dispatch({ type: "SET_ACTIVE_STEP", step });
 }
 
-export function addWizardProduct(dispatch: React.Dispatch<WizardAction>, product?: WizardProduct) {
-  dispatch({ type: "ADD_PRODUCT", product: product ?? createEmptyWizardProduct() });
+export function addWizardProduct(
+  dispatch: React.Dispatch<WizardAction>,
+  product?: WizardProduct,
+) {
+  dispatch({
+    type: "ADD_PRODUCT",
+    product: product ?? createEmptyWizardProduct(),
+  });
 }
 
 export function updateWizardProduct(
   dispatch: React.Dispatch<WizardAction>,
   productId: string,
-  updates: Partial<WizardProduct>
+  updates: Partial<WizardProduct>,
 ) {
   dispatch({ type: "UPDATE_PRODUCT", productId, updates });
 }
@@ -275,52 +317,84 @@ export function updateWizardProduct(
 export function patchWizardProduct(
   dispatch: React.Dispatch<WizardAction>,
   productId: string,
-  updater: (product: WizardProduct) => WizardProduct
+  updater: (product: WizardProduct) => WizardProduct,
 ) {
   dispatch({ type: "PATCH_PRODUCT", productId, updater });
 }
 
-export function removeWizardProduct(dispatch: React.Dispatch<WizardAction>, productId: string) {
+export function removeWizardProduct(
+  dispatch: React.Dispatch<WizardAction>,
+  productId: string,
+) {
   dispatch({ type: "REMOVE_PRODUCT", productId });
 }
 
-export function setWizardCustomer(dispatch: React.Dispatch<WizardAction>, customer: WizardCustomer) {
+export function setWizardCustomer(
+  dispatch: React.Dispatch<WizardAction>,
+  customer: WizardCustomer,
+) {
   dispatch({ type: "SET_CUSTOMER", customer });
 }
 
-export function setWizardDelivery(dispatch: React.Dispatch<WizardAction>, delivery: WizardDelivery) {
+export function setWizardDelivery(
+  dispatch: React.Dispatch<WizardAction>,
+  delivery: WizardDelivery,
+) {
   dispatch({ type: "SET_DELIVERY", delivery });
 }
 
-export function setWizardIssueOverview(dispatch: React.Dispatch<WizardAction>, overview: string) {
+export function setWizardIssueOverview(
+  dispatch: React.Dispatch<WizardAction>,
+  overview: string,
+) {
   dispatch({ type: "SET_REQUEST_ISSUE_OVERVIEW", overview });
 }
 
-export function setWizardConsent(dispatch: React.Dispatch<WizardAction>, consent: boolean) {
+export function setWizardConsent(
+  dispatch: React.Dispatch<WizardAction>,
+  consent: boolean,
+) {
   dispatch({ type: "SET_CONSENT", consent });
 }
 
-export function setWizardHoneypot(dispatch: React.Dispatch<WizardAction>, value: string) {
+export function setWizardHoneypot(
+  dispatch: React.Dispatch<WizardAction>,
+  value: string,
+) {
   dispatch({ type: "SET_HONEYPOT", value });
 }
 
-export function buildWizardPayload(state: ServiceRequestWizardState): WizardSubmitPayload {
+export function buildWizardPayload(
+  state: ServiceRequestWizardState,
+): WizardSubmitPayload {
   const sanitizedItems: WizardSubmitProductPayload[] = state.products
-    .filter((product) => product.serialNumber.trim().length >= MIN_SERIAL_LENGTH)
+    .filter(
+      (product) => product.serialNumber.trim().length >= MIN_SERIAL_LENGTH,
+    )
     .map((product) => {
       return {
         serial_number: product.serialNumber.trim().toUpperCase(),
         product_brand: product.productBrand?.trim() || undefined,
         product_model: product.productModel?.trim() || undefined,
         purchase_date: product.purchaseDate?.trim() || undefined,
-        issue_description: product.issueDescription.trim().length > 0 ? product.issueDescription.trim() : undefined,
+        issue_description:
+          product.issueDescription.trim().length > 0
+            ? product.issueDescription.trim()
+            : undefined,
         warranty_requested: product.warrantyRequested,
         service_option: (product.serviceOption ?? "paid") as ServiceType,
         service_option_notes: product.serviceOptionNotes?.trim() || undefined,
         attachments: product.attachments
-          .filter((attachment) => attachment.status === "uploaded" && attachment.path)
+          .filter(
+            (
+              attachment,
+            ): attachment is WizardProductAttachment & { path: string } =>
+              attachment.status === "uploaded" &&
+              typeof attachment.path === "string" &&
+              attachment.path.length > 0,
+          )
           .map((attachment) => ({
-            path: attachment.path!,
+            path: attachment.path,
             file_name: attachment.fileName,
             file_size: attachment.size,
             file_type: attachment.type,

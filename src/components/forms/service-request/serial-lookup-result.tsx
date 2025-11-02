@@ -70,9 +70,9 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
       <div className="flex items-center gap-2 text-sm p-3 bg-destructive/10 border border-destructive/30 rounded-md">
         <IconCircleX className="h-4 w-4 text-destructive flex-shrink-0" />
         <div className="flex-1">
-          <p className="font-medium text-destructive">Serial không tìm thấy</p>
+          <p className="font-medium text-destructive">Serial không tìm thấy trong kho hàng đã bán</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Vui lòng kiểm tra lại hoặc thêm sản phẩm mới vào kho
+            Chỉ sản phẩm đã bán cho khách hàng mới có thể tạo phiếu yêu cầu dịch vụ
           </p>
         </div>
       </div>

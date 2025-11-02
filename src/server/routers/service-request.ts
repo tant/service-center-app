@@ -242,7 +242,17 @@ export const serviceRequestRouter = router({
         return {
           found: false,
           product: null,
-          error: error?.code === 'PGRST116' ? 'Serial number not found' : `Database error: ${error?.message || 'Unknown'}`
+          error: error?.code === 'PGRST116' ? 'Serial không tìm thấy trong kho hàng đã bán' : `Database error: ${error?.message || 'Unknown'}`
+        };
+      }
+
+      // Check if product is in customer_installed warehouse
+      const virtualWarehouseData = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
+      if (!virtualWarehouseData || virtualWarehouseData.warehouse_type !== 'customer_installed') {
+        return {
+          found: false,
+          product: null,
+          error: 'Serial không tìm thấy trong kho hàng đã bán'
         };
       }
 

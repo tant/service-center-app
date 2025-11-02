@@ -152,7 +152,7 @@ const createInitialDelivery = (): WizardDelivery => ({
 const createInitialState = (): ServiceRequestWizardState => ({
   activeStep: 0,
   maxVisitedStep: 0,
-  products: [],
+  products: [createEmptyWizardProduct()],
   requestIssueOverview: "",
   customer: createInitialCustomer(),
   delivery: createInitialDelivery(),

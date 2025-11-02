@@ -285,7 +285,6 @@ export function StepProducts() {
             className="min-h-24"
           />
         </div>
-
         <div className="space-y-5">
           {state.products.length === 0 ? (
             <p className="text-sm text-muted-foreground">

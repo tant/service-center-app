@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   IconLoader2,
   IconCheck,
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import type { WarrantyStatus } from "@/utils/warranty";
 
 // Status mapping
 const STATUS_MAP = {
@@ -85,30 +87,118 @@ function normalizeIssuePhotos(value: unknown): IssuePhotoMetadata[] {
     return [];
   }
 
-  return value
-    .map((item) => {
-      if (typeof item === "string") {
-        return {
-          path: item,
-          url: item,
-          file_name: item.split("/").pop() ?? item,
-        };
-      }
+  return value.reduce<IssuePhotoMetadata[]>((acc, item) => {
+    if (typeof item === "string") {
+      acc.push({
+        path: item,
+        url: item,
+        file_name: item.split("/").pop() ?? item,
+        file_size: null,
+        file_type: null,
+      });
+      return acc;
+    }
 
-      if (item && typeof item === "object") {
-        const metadata = item as Record<string, unknown>;
-        return {
-          path: typeof metadata.path === "string" ? metadata.path : null,
-          url: typeof metadata.url === "string" ? metadata.url : null,
-          file_name: typeof metadata.file_name === "string" ? metadata.file_name : null,
-          file_size: typeof metadata.file_size === "number" ? metadata.file_size : null,
-          file_type: typeof metadata.file_type === "string" ? metadata.file_type : null,
-        };
-      }
+    if (item && typeof item === "object") {
+      const metadata = item as Record<string, unknown>;
+      acc.push({
+        path: typeof metadata.path === "string" ? metadata.path : null,
+        url: typeof metadata.url === "string" ? metadata.url : null,
+        file_name: typeof metadata.file_name === "string" ? metadata.file_name : null,
+        file_size: typeof metadata.file_size === "number" ? metadata.file_size : null,
+        file_type: typeof metadata.file_type === "string" ? metadata.file_type : null,
+      });
+    }
 
+    return acc;
+  }, []);
+}
+
+type WarrantyBadgeVariant = "resolved" | "processing" | "destructive" | "outline";
+
+function getWarrantyBadgeInfo(
+  status: WarrantyStatus | null | undefined
+): { label: string; variant: WarrantyBadgeVariant } | null {
+  if (!status) {
+    return null;
+  }
+
+  switch (status) {
+    case "active":
+      return {
+        label: "Còn hạn",
+        variant: "resolved",
+      };
+    case "expiring_soon":
+      return {
+        label: "Sắp hết hạn",
+        variant: "processing",
+      };
+    case "expired":
+      return {
+        label: "Hết hạn",
+        variant: "destructive",
+      };
+    case "no_warranty":
+      return {
+        label: "Không có bảo hành",
+        variant: "outline",
+      };
+    default:
       return null;
-    })
-    .filter((item): item is IssuePhotoMetadata => Boolean(item));
+  }
+}
+
+function formatDurationFromDays(days: number) {
+  const abs = Math.abs(days);
+  if (abs >= 365) {
+    const years = Math.floor(abs / 365);
+    return years <= 1 ? "1 năm" : `${years} năm`;
+  }
+  if (abs >= 30) {
+    const months = Math.floor(abs / 30);
+    return months <= 1 ? "1 tháng" : `${months} tháng`;
+  }
+  if (abs === 0) {
+    return "0 ngày";
+  }
+  return abs === 1 ? "1 ngày" : `${abs} ngày`;
+}
+
+function getWarrantyDetailBadgeLabel(
+  status: WarrantyStatus | null | undefined,
+  daysRemaining: number | null | undefined
+) {
+  if (!status) {
+    return null;
+  }
+
+  const days = typeof daysRemaining === "number" ? daysRemaining : null;
+
+  switch (status) {
+    case "active":
+      if (days === null || days <= 0) {
+        return "Còn hạn";
+      }
+      return `Còn hạn ${formatDurationFromDays(days)}`;
+    case "expiring_soon":
+      if (days === null || days <= 0) {
+        return "Sắp hết hạn";
+      }
+      return `Còn hạn ${formatDurationFromDays(days)}`;
+    case "expired":
+      if (days === null) {
+        return "Đã hết hạn";
+      }
+      if (days === 0) {
+        return "Hết hạn hôm nay";
+      }
+      return `Quá hạn ${formatDurationFromDays(Math.abs(days))}`;
+    case "no_warranty":
+      return "Không bảo hành";
+    default:
+      return null;
+  }
 }
 
 export default function ServiceRequestDetailPage() {
@@ -325,117 +415,163 @@ export default function ServiceRequestDetailPage() {
                     Không có thông tin sản phẩm cho yêu cầu này.
                   </p>
                 ) : (
-                  items.map((item, index) => {
-                    const issuePhotos = normalizeIssuePhotos(item.issue_photos);
-                    const serviceOptionLabel = item.service_option
-                      ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
-                      : null;
-                    const warrantyLabel =
-                      typeof item.warranty_requested === "boolean"
-                        ? item.warranty_requested
-                          ? "Có"
-                          : "Không"
+                  <Accordion
+                    type="single"
+                    collapsible
+                    defaultValue={items[0]?.id ?? `item-0`}
+                    className="rounded-md border"
+                  >
+                    {items.map((item, index) => {
+                      const issuePhotos = normalizeIssuePhotos(item.issue_photos);
+                      const serviceOptionLabel = item.service_option
+                        ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
                         : null;
-                    const purchaseDate = formatDisplayDate(item.purchase_date);
+                      const warrantyLabel =
+                        typeof item.warranty_requested === "boolean"
+                          ? item.warranty_requested
+                            ? "Có"
+                            : "Không"
+                          : null;
+                      const purchaseDate = formatDisplayDate(item.purchase_date);
+                      const accordionValue = item.id ?? `item-${index}`;
+                      const modelLabel = item.product_model || "Không xác định";
+                      const serialLabel = item.serial_number || "Không có serial";
+                      const ticketLabel = item.ticket
+                        ? `${item.ticket.ticket_number} · ${item.ticket.status}`
+                        : null;
+                      const warrantyStatus = (item.warranty_status ?? null) as WarrantyStatus | null;
+                      const warrantyEndDateIso =
+                        typeof item.warranty_end_date === "string" ? item.warranty_end_date : null;
+                      const warrantyEndDateDisplay = formatDisplayDate(warrantyEndDateIso);
+                      const warrantyBadge = getWarrantyBadgeInfo(warrantyStatus);
+                      const warrantyDetailBadgeLabel = getWarrantyDetailBadgeLabel(
+                        warrantyStatus,
+                        item.warranty_days_remaining ?? null
+                      );
+                      const warrantyDetailBadgeVariant = warrantyBadge?.variant ?? "outline";
 
-                    return (
-                      <div
-                        key={item.id}
-                        className="rounded-md border p-3 space-y-2 bg-muted/30"
-                      >
-                        {items.length > 1 && (
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Sản phẩm {index + 1}
-                          </p>
-                        )}
-                        <div>
-                          <p className="text-xs text-muted-foreground">Model</p>
-                          <p className="font-medium">{item.product_model || "Không xác định"}</p>
-                        </div>
-                        {item.product_brand && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Thương hiệu</p>
-                            <p className="font-medium">{item.product_brand}</p>
-                          </div>
-                        )}
-                        {item.serial_number && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Serial Number</p>
-                            <p className="font-mono text-xs font-medium">{item.serial_number}</p>
-                          </div>
-                        )}
-                        {serviceOptionLabel && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Loại dịch vụ</p>
-                            <p className="text-sm">{serviceOptionLabel}</p>
-                          </div>
-                        )}
-                        {warrantyLabel && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Yêu cầu bảo hành</p>
-                            <p className="text-sm">{warrantyLabel}</p>
-                          </div>
-                        )}
-                        {item.issue_description && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
-                            <p className="text-sm whitespace-pre-wrap">
-                              {item.issue_description}
-                            </p>
-                          </div>
-                        )}
-                        {purchaseDate && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Ngày mua</p>
-                            <p className="text-sm">{purchaseDate}</p>
-                          </div>
-                        )}
-                        {issuePhotos.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Tệp đính kèm</p>
-                            <div className="mt-1 space-y-1">
-                              {issuePhotos.map((photo, photoIndex) => {
-                                const label =
-                                  photo.file_name ??
-                                  photo.path?.split("/").pop() ??
-                                  photo.url?.split("/").pop() ??
-                                  `Tệp ${photoIndex + 1}`;
-                                const href = photo.url ?? photo.path ?? undefined;
-
-                                if (href) {
-                                  return (
-                                    <a
-                                      key={`${photoIndex}-${href}`}
-                                      href={href}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block text-sm text-primary hover:underline"
-                                    >
-                                      {label}
-                                    </a>
-                                  );
-                                }
-
-                                return (
-                                  <span key={`${photoIndex}-${label}`} className="block text-sm text-muted-foreground">
-                                    {label}
-                                  </span>
-                                );
-                              })}
+                      return (
+                        <AccordionItem key={accordionValue} value={accordionValue}>
+                          <AccordionTrigger className="px-3 border border-transparent hover:border-border hover:bg-muted/50 transition-colors duration-150 hover:shadow-xs hover:no-underline">
+                            <div className="flex flex-1 flex-col gap-2 text-left">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  {items.length > 1 && (
+                                    <span className="text-xs font-medium uppercase text-muted-foreground">
+                                      Sản phẩm {index + 1}
+                                    </span>
+                                  )}
+                                  <span className="font-medium">{modelLabel}</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {serviceOptionLabel && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {serviceOptionLabel}
+                                    </Badge>
+                                  )}
+                                  {warrantyBadge && (
+                                    <Badge variant={warrantyBadge.variant} className="text-xs">
+                                      {warrantyBadge.label}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <span className="font-mono uppercase">{serialLabel}</span>
+                                {typeof item.warranty_requested === "boolean" && (
+                                  <span>Yêu cầu bảo hành: {warrantyLabel}</span>
+                                )}
+                                {ticketLabel && <span>{ticketLabel}</span>}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {item.ticket && (
-                          <div>
-                            <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
-                            <p className="text-sm font-mono">
-                              {item.ticket.ticket_number} · {item.ticket.status}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                          </AccordionTrigger>
+                          <AccordionContent className="px-3">
+                            <div className="space-y-3 pt-2">
+                              {item.product_brand && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Thương hiệu</p>
+                                  <p className="text-sm font-medium">{item.product_brand}</p>
+                                </div>
+                              )}
+                              {purchaseDate && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Ngày mua</p>
+                                  <p className="text-sm">{purchaseDate}</p>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-xs text-muted-foreground">Thời hạn bảo hành</p>
+                                <div className="flex flex-wrap items-center gap-2 text-sm">
+                                  <span>
+                                    {warrantyEndDateDisplay
+                                      ? `${warrantyEndDateDisplay}`
+                                      : "Không có thông tin"}
+                                  </span>
+                                  {warrantyDetailBadgeLabel && (
+                                    <Badge variant={warrantyDetailBadgeVariant} className="text-xs">
+                                      {warrantyDetailBadgeLabel}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              {item.issue_description && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
+                                  <p className="text-sm whitespace-pre-wrap">{item.issue_description}</p>
+                                </div>
+                              )}
+                              {issuePhotos.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Tệp đính kèm</p>
+                                  <div className="mt-1 space-y-1">
+                                    {issuePhotos.map((photo, photoIndex) => {
+                                      const label =
+                                        photo.file_name ??
+                                        photo.path?.split("/").pop() ??
+                                        photo.url?.split("/").pop() ??
+                                        `Tệp ${photoIndex + 1}`;
+                                      const href = photo.url ?? photo.path ?? undefined;
+
+                                      if (href) {
+                                        return (
+                                          <a
+                                            key={`${photoIndex}-${href}`}
+                                            href={href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block text-sm text-primary hover:underline"
+                                          >
+                                            {label}
+                                          </a>
+                                        );
+                                      }
+
+                                      return (
+                                        <span
+                                          key={`${photoIndex}-${label}`}
+                                          className="block text-sm text-muted-foreground"
+                                        >
+                                          {label}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {item.ticket && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
+                                  <p className="text-sm font-mono">
+                                    {item.ticket.ticket_number} · {item.ticket.status}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 )}
               </CardContent>
             </Card>

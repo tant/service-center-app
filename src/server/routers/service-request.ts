@@ -7,6 +7,7 @@ import { router, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
+import type { WarrantyStatus } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
 import type { ServiceRequest } from "@/types/service-request";
@@ -795,6 +796,9 @@ export const serviceRequestRouter = router({
               service_option: string | null;
               warranty_requested: boolean | null;
               issue_photos: unknown;
+              warranty_status: string | null;
+              warranty_end_date: string | null;
+              warranty_days_remaining: number | null;
               ticket?:
                 | {
                     id: string;
@@ -831,7 +835,27 @@ export const serviceRequestRouter = router({
             ? item.ticket[0]
             : item.ticket ?? null;
 
-          return {
+          const normalizedItem: {
+            id: string;
+            product_brand: string | null;
+            product_model: string | null;
+            serial_number: string | null;
+            purchase_date: string | null;
+            issue_description: string | null;
+            service_option: string | null;
+            warranty_requested: boolean | null;
+            issue_photos: unknown;
+            warranty_status: WarrantyStatus | null;
+            warranty_end_date: string | null;
+            warranty_days_remaining: number | null;
+            ticket:
+              | {
+                  id: string;
+                  ticket_number: string;
+                  status: string;
+                }
+              | null;
+          } = {
             id: item.id,
             product_brand: item.product_brand,
             product_model: item.product_model,
@@ -841,9 +865,63 @@ export const serviceRequestRouter = router({
             service_option: item.service_option,
             warranty_requested: item.warranty_requested,
             issue_photos: item.issue_photos,
+            warranty_status: null,
+            warranty_end_date: null,
+            warranty_days_remaining: null,
             ticket,
           };
+
+          return normalizedItem;
         }) ?? [];
+
+      const serialNumbers = items
+        .map((item) => item.serial_number)
+        .filter((serial): serial is string => Boolean(serial));
+
+      if (serialNumbers.length > 0) {
+        const { data: warrantyRows, error: warrantyError } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("serial_number, manufacturer_warranty_end_date, user_warranty_end_date")
+          .in("serial_number", Array.from(new Set(serialNumbers)));
+
+        if (!warrantyError && Array.isArray(warrantyRows)) {
+          const warrantyMap = new Map<
+            string,
+            {
+              status: ReturnType<typeof getWarrantyStatus>;
+              endDate: string | null;
+              daysRemaining: number | null;
+            }
+          >();
+
+          warrantyRows.forEach((row) => {
+            const { serial_number: serial, manufacturer_warranty_end_date, user_warranty_end_date } = row;
+            const warrantyEndDate = user_warranty_end_date || manufacturer_warranty_end_date || null;
+            const status = getWarrantyStatus(warrantyEndDate);
+            const daysRemaining =
+              warrantyEndDate !== null ? getRemainingDays(warrantyEndDate) : null;
+
+            warrantyMap.set(serial, {
+              status,
+              endDate: warrantyEndDate,
+              daysRemaining,
+            });
+          });
+
+          items.forEach((item, index) => {
+            const serial = item.serial_number;
+            if (!serial) {
+              return;
+            }
+            const warrantyInfo = warrantyMap.get(serial);
+            if (warrantyInfo) {
+              items[index].warranty_status = warrantyInfo.status;
+              items[index].warranty_end_date = warrantyInfo.endDate;
+              items[index].warranty_days_remaining = warrantyInfo.daysRemaining;
+            }
+          });
+        }
+      }
 
       const primaryItem = items[0];
 

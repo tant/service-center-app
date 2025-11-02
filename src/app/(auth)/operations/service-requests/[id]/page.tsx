@@ -11,9 +11,19 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconLoader2, IconCheck, IconX, IconUser, IconPackage, IconFileText } from "@tabler/icons-react";
+import {
+  IconLoader2,
+  IconCheck,
+  IconX,
+  IconUser,
+  IconPackage,
+  IconFileText,
+  IconTruckDelivery,
+  IconInfoCircle,
+  IconCalendarEvent,
+} from "@tabler/icons-react";
 import { useRequestDetails, useUpdateRequestStatus, useRejectRequest } from "@/hooks/use-service-request";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -28,6 +38,78 @@ const STATUS_MAP = {
   rejected: { label: "Đã từ chối", variant: "destructive" as const },
   converted: { label: "Đã chuyển", variant: "default" as const },
 };
+
+const DELIVERY_METHOD_LABELS: Record<"pickup" | "delivery", string> = {
+  pickup: "Khách mang tới",
+  delivery: "Giao nhận",
+};
+
+const SERVICE_OPTION_LABELS: Record<string, string> = {
+  warranty: "Bảo hành",
+  paid: "Dịch vụ trả phí",
+  replacement: "Đổi sản phẩm",
+};
+
+type IssuePhotoMetadata = {
+  path?: string | null;
+  url?: string | null;
+  file_name?: string | null;
+  file_size?: number | null;
+  file_type?: string | null;
+};
+
+function formatDisplayDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return format(parsed, "dd/MM/yyyy");
+}
+
+function formatDisplayDateTime(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return format(parsed, "dd/MM/yyyy HH:mm");
+}
+
+function normalizeIssuePhotos(value: unknown): IssuePhotoMetadata[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        return {
+          path: item,
+          url: item,
+          file_name: item.split("/").pop() ?? item,
+        };
+      }
+
+      if (item && typeof item === "object") {
+        const metadata = item as Record<string, unknown>;
+        return {
+          path: typeof metadata.path === "string" ? metadata.path : null,
+          url: typeof metadata.url === "string" ? metadata.url : null,
+          file_name: typeof metadata.file_name === "string" ? metadata.file_name : null,
+          file_size: typeof metadata.file_size === "number" ? metadata.file_size : null,
+          file_type: typeof metadata.file_type === "string" ? metadata.file_type : null,
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is IssuePhotoMetadata => Boolean(item));
+}
 
 export default function ServiceRequestDetailPage() {
   const params = useParams();
@@ -111,6 +193,20 @@ export default function ServiceRequestDetailPage() {
   const status = request.status as keyof typeof STATUS_MAP;
   const statusConfig = STATUS_MAP[status];
   const items = Array.isArray(request.items) ? request.items : [];
+  const deliveryMethod = (request.preferred_delivery_method ?? "pickup") as keyof typeof DELIVERY_METHOD_LABELS;
+  const deliveryLabel = DELIVERY_METHOD_LABELS[deliveryMethod] ?? "Khác";
+  const preferredSchedule = formatDisplayDate(request.preferred_schedule);
+  const reviewedAt = formatDisplayDateTime(request.reviewed_at);
+  const convertedAt = formatDisplayDateTime(request.converted_at);
+  const createdAt = formatDisplayDateTime(request.created_at);
+  const updatedAt = formatDisplayDateTime(request.updated_at);
+  const reviewedByName = request.reviewed_by?.full_name ?? null;
+  const showReviewInfo =
+    Boolean(request.reviewed_at) ||
+    Boolean(request.reviewed_by) ||
+    Boolean(request.rejection_reason) ||
+    Boolean(request.converted_at);
+  const showSystemInfo = Boolean(createdAt) || Boolean(updatedAt);
 
   return (
     <>
@@ -157,6 +253,61 @@ export default function ServiceRequestDetailPage() {
                   <p className="text-sm text-muted-foreground">Số điện thoại</p>
                   <p className="font-medium">{request.customer_phone}</p>
                 </div>
+                {request.customer_address && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Địa chỉ</p>
+                    <p className="text-sm whitespace-pre-wrap">{request.customer_address}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Delivery Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <IconTruckDelivery className="h-4 w-4" />
+                  Thông tin giao nhận
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Hình thức xử lý</p>
+                  <p className="font-medium">
+                    {deliveryLabel}
+                    {deliveryMethod === "delivery" ? " tại nhà" : ""}
+                  </p>
+                </div>
+                {preferredSchedule && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Thời gian mong muốn</p>
+                    <p className="text-sm">{preferredSchedule}</p>
+                  </div>
+                )}
+                {request.delivery_address && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Địa chỉ giao nhận</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {request.delivery_address}
+                    </p>
+                  </div>
+                )}
+                {request.pickup_notes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ghi chú nhận hàng</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {request.pickup_notes}
+                    </p>
+                  </div>
+                )}
+                {request.contact_notes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Thông tin liên hệ ưu tiên</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {request.contact_notes}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -174,56 +325,117 @@ export default function ServiceRequestDetailPage() {
                     Không có thông tin sản phẩm cho yêu cầu này.
                   </p>
                 ) : (
-                  items.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="rounded-md border p-3 space-y-2 bg-muted/30"
-                    >
-                      {items.length > 1 && (
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          Sản phẩm {index + 1}
-                        </p>
-                      )}
-                      <div>
-                        <p className="text-xs text-muted-foreground">Model</p>
-                        <p className="font-medium">{item.product_model || "Không xác định"}</p>
+                  items.map((item, index) => {
+                    const issuePhotos = normalizeIssuePhotos(item.issue_photos);
+                    const serviceOptionLabel = item.service_option
+                      ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
+                      : null;
+                    const warrantyLabel =
+                      typeof item.warranty_requested === "boolean"
+                        ? item.warranty_requested
+                          ? "Có"
+                          : "Không"
+                        : null;
+                    const purchaseDate = formatDisplayDate(item.purchase_date);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-md border p-3 space-y-2 bg-muted/30"
+                      >
+                        {items.length > 1 && (
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Sản phẩm {index + 1}
+                          </p>
+                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground">Model</p>
+                          <p className="font-medium">{item.product_model || "Không xác định"}</p>
+                        </div>
+                        {item.product_brand && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Thương hiệu</p>
+                            <p className="font-medium">{item.product_brand}</p>
+                          </div>
+                        )}
+                        {item.serial_number && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Serial Number</p>
+                            <p className="font-mono text-xs font-medium">{item.serial_number}</p>
+                          </div>
+                        )}
+                        {serviceOptionLabel && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Loại dịch vụ</p>
+                            <p className="text-sm">{serviceOptionLabel}</p>
+                          </div>
+                        )}
+                        {warrantyLabel && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Yêu cầu bảo hành</p>
+                            <p className="text-sm">{warrantyLabel}</p>
+                          </div>
+                        )}
+                        {item.issue_description && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
+                            <p className="text-sm whitespace-pre-wrap">
+                              {item.issue_description}
+                            </p>
+                          </div>
+                        )}
+                        {purchaseDate && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Ngày mua</p>
+                            <p className="text-sm">{purchaseDate}</p>
+                          </div>
+                        )}
+                        {issuePhotos.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Tệp đính kèm</p>
+                            <div className="mt-1 space-y-1">
+                              {issuePhotos.map((photo, photoIndex) => {
+                                const label =
+                                  photo.file_name ??
+                                  photo.path?.split("/").pop() ??
+                                  photo.url?.split("/").pop() ??
+                                  `Tệp ${photoIndex + 1}`;
+                                const href = photo.url ?? photo.path ?? undefined;
+
+                                if (href) {
+                                  return (
+                                    <a
+                                      key={`${photoIndex}-${href}`}
+                                      href={href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block text-sm text-primary hover:underline"
+                                    >
+                                      {label}
+                                    </a>
+                                  );
+                                }
+
+                                return (
+                                  <span key={`${photoIndex}-${label}`} className="block text-sm text-muted-foreground">
+                                    {label}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {item.ticket && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
+                            <p className="text-sm font-mono">
+                              {item.ticket.ticket_number} · {item.ticket.status}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      {item.product_brand && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Thương hiệu</p>
-                          <p className="font-medium">{item.product_brand}</p>
-                        </div>
-                      )}
-                      {item.serial_number && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Serial Number</p>
-                          <p className="font-mono text-xs font-medium">{item.serial_number}</p>
-                        </div>
-                      )}
-                      {item.issue_description && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {item.issue_description}
-                          </p>
-                        </div>
-                      )}
-                      {item.purchase_date && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Ngày mua</p>
-                          <p className="text-sm">{item.purchase_date}</p>
-                        </div>
-                      )}
-                      {item.ticket && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
-                          <p className="text-sm font-mono">
-                            {item.ticket.ticket_number} · {item.ticket.status}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </CardContent>
             </Card>
@@ -237,9 +449,50 @@ export default function ServiceRequestDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{request.issue_description}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {request.issue_description || "Không có mô tả bổ sung."}
+                </p>
               </CardContent>
             </Card>
+
+            {showReviewInfo && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <IconCalendarEvent className="h-4 w-4" />
+                    Thông tin xử lý
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {reviewedByName && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Người duyệt</p>
+                      <p className="text-sm">{reviewedByName}</p>
+                    </div>
+                  )}
+                  {reviewedAt && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Thời gian duyệt</p>
+                      <p className="text-sm">{reviewedAt}</p>
+                    </div>
+                  )}
+                  {request.rejection_reason && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Lý do từ chối</p>
+                      <p className="text-sm text-destructive whitespace-pre-wrap">
+                        {request.rejection_reason}
+                      </p>
+                    </div>
+                  )}
+                  {convertedAt && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Chuyển sang phiếu dịch vụ</p>
+                      <p className="text-sm">{convertedAt}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Linked Ticket */}
             {request.linked_ticket_id && (
@@ -254,6 +507,31 @@ export default function ServiceRequestDetailPage() {
                   >
                     Xem phiếu dịch vụ
                   </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {showSystemInfo && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <IconInfoCircle className="h-4 w-4" />
+                    Thông tin hệ thống
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {createdAt && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Ngày tạo</p>
+                      <p className="text-sm">{createdAt}</p>
+                    </div>
+                  )}
+                  {updatedAt && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cập nhật gần nhất</p>
+                      <p className="text-sm">{updatedAt}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

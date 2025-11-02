@@ -736,6 +736,7 @@ export const serviceRequestRouter = router({
         .select(
           `
           *,
+          reviewed_by:profiles!service_requests_reviewed_by_id_fkey(id, full_name),
           linked_ticket:service_tickets(id, ticket_number, status),
           items:service_request_items(
             id,
@@ -744,6 +745,9 @@ export const serviceRequestRouter = router({
             serial_number,
             purchase_date,
             issue_description,
+            service_option,
+            warranty_requested,
+            issue_photos,
             ticket:service_tickets(id, ticket_number, status)
           )
         `
@@ -758,6 +762,16 @@ export const serviceRequestRouter = router({
         });
       }
       type ServiceRequestDetailsRow = ServiceRequest & {
+        reviewed_by?:
+          | {
+              id: string;
+              full_name: string | null;
+            }
+          | Array<{
+              id: string;
+              full_name: string | null;
+            }>
+          | null;
         linked_ticket?:
           | {
               id: string;
@@ -778,6 +792,9 @@ export const serviceRequestRouter = router({
               serial_number: string | null;
               purchase_date: string | null;
               issue_description: string | null;
+              service_option: string | null;
+              warranty_requested: boolean | null;
+              issue_photos: unknown;
               ticket?:
                 | {
                     id: string;
@@ -797,12 +814,16 @@ export const serviceRequestRouter = router({
       const {
         items: rawItems,
         linked_ticket: rawLinkedTicket,
+        reviewed_by: rawReviewedBy,
         ...requestBase
       } = data as ServiceRequestDetailsRow;
 
       const linkedTicket = Array.isArray(rawLinkedTicket)
         ? rawLinkedTicket[0]
         : rawLinkedTicket ?? null;
+      const reviewedBy = Array.isArray(rawReviewedBy)
+        ? rawReviewedBy[0]
+        : rawReviewedBy ?? null;
 
       const items =
         rawItems?.map((item) => {
@@ -817,6 +838,9 @@ export const serviceRequestRouter = router({
             serial_number: item.serial_number,
             purchase_date: item.purchase_date,
             issue_description: item.issue_description,
+            service_option: item.service_option,
+            warranty_requested: item.warranty_requested,
+            issue_photos: item.issue_photos,
             ticket,
           };
         }) ?? [];
@@ -825,6 +849,7 @@ export const serviceRequestRouter = router({
 
       return {
         ...requestBase,
+        reviewed_by: reviewedBy,
         linked_ticket: linkedTicket,
         linked_ticket_id: linkedTicket?.id ?? null,
         items,

@@ -446,12 +446,6 @@ export default function ServiceRequestDetailPage() {
                           const serviceOptionLabel = item.service_option
                             ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
                             : null;
-                          const warrantyLabel =
-                            typeof item.warranty_requested === "boolean"
-                              ? item.warranty_requested
-                                ? "Có"
-                                : "Không"
-                              : null;
                           const purchaseDate = formatDisplayDate(item.purchase_date);
                           const accordionValue = item.id ?? `item-${index}`;
                           const modelLabel = item.product_model || "Không xác định";
@@ -498,9 +492,6 @@ export default function ServiceRequestDetailPage() {
                                   </div>
                                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                     <span className="font-mono uppercase">{serialLabel}</span>
-                                    {typeof item.warranty_requested === "boolean" && (
-                                      <span>Yêu cầu bảo hành: {warrantyLabel}</span>
-                                    )}
                                     {ticketLabel && <span>{ticketLabel}</span>}
                                   </div>
                                 </div>

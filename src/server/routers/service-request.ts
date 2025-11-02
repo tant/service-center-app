@@ -177,7 +177,6 @@ const requestItemSchema = z.object({
   product_model: z.string().optional(),
   purchase_date: z.string().optional(),
   issue_description: z.string().min(10, "Issue description must be at least 10 characters").optional(),
-  warranty_requested: z.boolean().optional(),
   service_option: z.enum(["warranty", "paid", "replacement"]),
   service_option_notes: z.string().optional(),
   attachments: z
@@ -418,7 +417,6 @@ export const serviceRequestRouter = router({
             purchase_date: item.purchase_date ? new Date(item.purchase_date).toISOString().slice(0, 10) : null,
             issue_description: item.issue_description ?? null,
             service_option: item.service_option,
-            warranty_requested: Boolean(item.warranty_requested),
             issue_photos: item.attachments ?? [],
           };
           })
@@ -747,7 +745,6 @@ export const serviceRequestRouter = router({
             purchase_date,
             issue_description,
             service_option,
-            warranty_requested,
             issue_photos,
             ticket:service_tickets(id, ticket_number, status)
           )
@@ -794,7 +791,6 @@ export const serviceRequestRouter = router({
               purchase_date: string | null;
               issue_description: string | null;
               service_option: string | null;
-              warranty_requested: boolean | null;
               issue_photos: unknown;
               warranty_status: string | null;
               warranty_end_date: string | null;
@@ -843,7 +839,6 @@ export const serviceRequestRouter = router({
             purchase_date: string | null;
             issue_description: string | null;
             service_option: string | null;
-            warranty_requested: boolean | null;
             issue_photos: unknown;
             warranty_status: WarrantyStatus | null;
             warranty_end_date: string | null;
@@ -863,7 +858,6 @@ export const serviceRequestRouter = router({
             purchase_date: item.purchase_date,
             issue_description: item.issue_description,
             service_option: item.service_option,
-            warranty_requested: item.warranty_requested,
             issue_photos: item.issue_photos,
             warranty_status: null,
             warranty_end_date: null,

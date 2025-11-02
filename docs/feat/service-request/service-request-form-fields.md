@@ -21,7 +21,6 @@ Danh sách trường dữ liệu cần thu thập cho từng bước trong wizar
 | `products[].warranty_check` | object | ✖ | UI state kết quả kiểm tra (`status`, `eligible`, `message`, `expires_at`). |
 | `products[].warranty_check.status` | `'idle' \| 'pending' \| 'success' \| 'error'` | ✔ | Trạng thái kiểm tra từng sản phẩm. |
 | `products[].warranty_check.eligible` | boolean | ✖ | Cho biết sản phẩm đủ điều kiện bảo hành. |
-| `products[].warranty_requested` | boolean | ✖ | Người dùng đánh dấu có muốn bảo hành. |
 | `products[].service_option` | `'warranty' \| 'paid' \| 'replacement'` | ✔ | Enum `public.service_type`; lưu cho từng sản phẩm. |
 | `products[].service_option_notes` | string | ✖ | Ghi chú thêm nếu dịch vụ yêu cầu mô tả chi tiết. |
 

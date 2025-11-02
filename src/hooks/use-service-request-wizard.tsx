@@ -44,7 +44,6 @@ export interface WizardProduct {
   purchaseDate?: string;
   issueDescription: string;
   warrantyCheck: WizardWarrantyCheck;
-  warrantyRequested: boolean;
   serviceOption?: ServiceType;
   serviceOptionNotes?: string;
   attachments: WizardProductAttachment[];
@@ -82,7 +81,6 @@ export interface WizardSubmitProductPayload {
   product_model?: string;
   purchase_date?: string;
   issue_description?: string;
-  warranty_requested: boolean;
   service_option: ServiceType;
   service_option_notes?: string;
   attachments: Array<{
@@ -280,7 +278,6 @@ export function createEmptyWizardProduct(): WizardProduct {
     purchaseDate: "",
     issueDescription: "",
     warrantyCheck: { status: "idle", notFound: false },
-    warrantyRequested: false,
     attachments: [],
   };
 }
@@ -293,7 +290,6 @@ export function cloneWizardProduct(product: WizardProduct): WizardProduct {
     productModel: product.productModel,
     purchaseDate: product.purchaseDate,
     issueDescription: product.issueDescription,
-    warrantyRequested: product.warrantyRequested,
     serviceOption: product.serviceOption,
     serviceOptionNotes: product.serviceOptionNotes,
   };
@@ -395,7 +391,6 @@ export function buildWizardPayload(
           product.issueDescription.trim().length > 0
             ? product.issueDescription.trim()
             : undefined,
-        warranty_requested: product.warrantyRequested,
         service_option: (product.serviceOption ?? "paid") as ServiceType,
         service_option_notes: product.serviceOptionNotes?.trim() || undefined,
         attachments: product.attachments

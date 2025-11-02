@@ -38,7 +38,6 @@ export interface PublicServiceRequestItem {
   purchase_date?: string;
   issue_description?: string;
   service_option: ServiceType;
-  warranty_requested?: boolean;
   service_option_notes?: string;
   attachments?: Array<{
     path: string;

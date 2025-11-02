@@ -115,11 +115,15 @@ function ProductSummary() {
                 <Badge variant="outline">
                   {SERVICE_OPTION_LABELS[product.serviceOption ?? ""] ?? "Chưa chọn dịch vụ"}
                 </Badge>
-                {product.warrantyRequested ? (
-                  <Badge variant="default">Đã yêu cầu xử lý bảo hành</Badge>
-                ) : (
-                  <Badge variant="secondary">Xử lý theo dịch vụ đã chọn</Badge>
-                )}
+                <Badge
+                  variant={
+                    product.serviceOption === "warranty" ? "default" : "secondary"
+                  }
+                >
+                  {product.serviceOption === "warranty"
+                    ? "Đã chọn xử lý bảo hành"
+                    : "Xử lý theo dịch vụ đã chọn"}
+                </Badge>
               </div>
               {product.warrantyCheck.message ? (
                 <Alert variant={product.warrantyCheck.eligible ? "default" : "destructive"}>

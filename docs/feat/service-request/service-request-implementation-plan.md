@@ -22,14 +22,14 @@
 
 ### 2. Kiến trúc frontend mới
 - [x] Tạo `ServiceRequestWizardProvider` + hook `useServiceRequestWizard` tại `src/hooks/use-service-request-wizard.ts` để quản lý state toàn cục.
-  - State: `products[]` (UUID tạm, serial, issue, attachments, warranty metadata, service_option, warranty_requested), `customer`, `delivery`, `review`, `honeypot`.
+  - State: `products[]` (UUID tạm, serial, issue, attachments, warranty metadata, service_option), `customer`, `delivery`, `review`, `honeypot`.
   - Export reducer/actions cho thêm/xóa cập nhật sản phẩm, reset khi quay lại.
 - [x] Di chuyển trang chính sang component `ServiceRequestWizard` với 4 bước (Step components trong `src/app/(public)/service-request/components/steps/`).
 - [ ] Xây dựng step UI:
   - [x] **Sản phẩm & vấn đề**: dynamic list, serial validation (≥5 ký tự, uppercase), issue ≥10 ký tự, brand/model/purchase date tùy chọn, upload queue (preview, tiến trình, xoá).  
     - Skeleton UI + validation cơ bản đã dựng (chưa tích hợp upload).
-  - [x] **Kiểm tra bảo hành & giải pháp**: gọi `useVerifyWarranty`, cho phép chọn sản phẩm cần kiểm tra, toggle `warranty_requested`, chọn `service_option`, retry, remove.  
-    - Đã cộng nối API kiểm tra bảo hành, hiển thị trạng thái/alert, toggle bảo hành, chọn dịch vụ và ghi chú.
+  - [x] **Kiểm tra bảo hành & giải pháp**: gọi `useVerifyWarranty`, cho phép chọn sản phẩm cần kiểm tra, cập nhật `service_option`, retry, remove.  
+    - Đã cộng nối API kiểm tra bảo hành, hiển thị trạng thái/alert, chọn dịch vụ và ghi chú.
   - [x] **Khách hàng & tiếp nhận**: thu thập name/email/phone, debounce lookup số điện thoại, hỗ trợ `preferred_delivery_method`, `delivery_address`, `preferred_schedule`, `pickup_notes`, `contact_notes`.  
     - Đã thêm hook `useCustomerLookup` với debounce, auto-fill khách hàng và hàm tra cứu server-side tạm thời; cần mở rộng khi schema cập nhật.
   - [x] **Xem lại & xác nhận**: hiển thị tổng hợp, highlight sản phẩm không đủ bảo hành, checkbox consent, input honeypot (ẩn), điều hướng quay lại.  
@@ -55,10 +55,10 @@
 ### 4. Backend & Supabase
 - [ ] Migration 1: `service_request_items`
   - Thêm `service_option public.service_type not null`.
-  - Thêm `warranty_requested boolean default false`.
   - Cho phép `product_brand`, `product_model` nullable; mở rộng `issue_photos` thành JSONB metadata chuẩn (`[{path,url,size,type}]`).
   - Backfill `service_option` từ `service_requests.service_type`, cập nhật function/triggers liên quan.
   - ✅ Đã tạo `supabase/migrations/20251102090000_update_service_request_items.sql` thêm cột mới, backfill giá trị và chuẩn hóa `issue_photos` thành mảng metadata.
+  - ✅ Đã loại bỏ cột `warranty_requested` bằng `supabase/migrations/20251103090000_drop_warranty_requested_from_service_request_items.sql`.
 - [ ] Migration 2: `service_requests`
   - Thêm `preferred_schedule date`, `pickup_notes text`, `contact_notes text`.
   - Đổi `delivery_method` -> `preferred_delivery_method` (nếu cần) và constraint yêu cầu địa chỉ khi delivery.
@@ -67,7 +67,7 @@
   - ✅ Đã tạo `supabase/migrations/20251102091000_update_service_requests.sql` thêm cột delivery metadata, sao chép `delivery_method` sang `preferred_delivery_method`, drop `service_type`, và cho phép `issue_description` nullable.
 - [x] Regenerate Supabase types (`pnpm supabase types gen ...`) và cập nhật `src/types/database.types.ts`.
 - [ ] Cập nhật adapters/tRPC:
-  - `submitRequestSchema` nhận payload mới, validate per-product `service_option`/`warranty_requested`, delivery metadata ✔️.
+  - `submitRequestSchema` nhận payload mới, validate per-product `service_option`, delivery metadata ✔️.
   - Map attachments -> `issue_photos` với metadata; vệ sinh serial uppercase, mô tả trim ✔️ (payload hiện lưu trực tiếp metadata người dùng cung cấp, cần bổ sung link Supabase khi sẵn).
   - Điều chỉnh logic insert `service_request_items` tương ứng trường mới ✔️.
 - [ ] Thêm endpoint `lookupCustomerByPhone` trả về `{ name, email, address, history }` lấy từ bảng khách hàng/requests gần nhất, có throttle.
@@ -85,7 +85,7 @@
   - [ ] Test helper validation (serial, mô tả, địa chỉ).
   - [ ] Test upload util (chặn file lớn/định dạng sai).
 - **Integration**
-  - [ ] Test tRPC `submit` với payload hợp lệ nhiều sản phẩm và các biến thể (delivery/pickup, warranty toggles).
+  - [ ] Test tRPC `submit` với payload hợp lệ nhiều sản phẩm và các biến thể (delivery/pickup, tùy chọn `service_option`).
   - [ ] Test migration backfill (existing dữ liệu giữ nguyên, `service_option` default).
   - [ ] Test `lookupCustomerByPhone` với dữ liệu seed.
 - **E2E (Playwright)**

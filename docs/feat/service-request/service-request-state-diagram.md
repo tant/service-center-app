@@ -40,7 +40,6 @@ type WizardState = {
       message?: string;
       expiresAt?: string;
     };
-    warrantyRequested: boolean;
     serviceOption?: "warranty" | "paid" | "replacement";
     attachments: Array<{
       id: string;

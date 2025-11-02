@@ -959,7 +959,6 @@ export type Database = {
           service_option: Database["public"]["Enums"]["service_type"]
           ticket_id: string | null
           updated_at: string
-          warranty_requested: boolean
         }
         Insert: {
           created_at?: string
@@ -974,7 +973,6 @@ export type Database = {
           service_option?: Database["public"]["Enums"]["service_type"]
           ticket_id?: string | null
           updated_at?: string
-          warranty_requested?: boolean
         }
         Update: {
           created_at?: string
@@ -989,7 +987,6 @@ export type Database = {
           service_option?: Database["public"]["Enums"]["service_type"]
           ticket_id?: string | null
           updated_at?: string
-          warranty_requested?: boolean
         }
         Relationships: [
           {
@@ -3352,4 +3349,3 @@ export const Constants = {
     },
   },
 } as const
-

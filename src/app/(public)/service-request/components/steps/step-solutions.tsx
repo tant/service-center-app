@@ -130,7 +130,6 @@ export function StepSolutions() {
                 "Không tìm thấy thông tin bảo hành cho serial này.",
               notFound: true,
             },
-            warrantyRequested: false,
             serviceOption: "paid",
           });
           return "error";
@@ -170,7 +169,6 @@ export function StepSolutions() {
             expiresAt: expiresAt ?? undefined,
             notFound: false,
           },
-          warrantyRequested: eligible,
           serviceOption: eligible
             ? "warranty"
             : (product.serviceOption ?? "paid"),
@@ -190,7 +188,6 @@ export function StepSolutions() {
             message,
             notFound: false,
           },
-          warrantyRequested: false,
         });
         return "error";
       } finally {

@@ -8,7 +8,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Image from "next/image";
-import { type ChangeEvent, useRef } from "react";
+import { type ChangeEvent, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,7 +93,10 @@ function ProductCard({ index, productId }: ProductCardProps) {
   };
 
   return (
-    <div className="space-y-4 rounded-lg border p-5">
+    <div
+      id={`service-request-product-${productId}`}
+      className="space-y-4 rounded-lg border p-5"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <span className="text-xs font-semibold uppercase text-muted-foreground">
@@ -263,12 +266,40 @@ function ProductCard({ index, productId }: ProductCardProps) {
 export function StepProducts() {
   const state = useServiceRequestWizardState();
   const dispatch = useServiceRequestWizardDispatch();
+  const lastAddedProductIdRef = useRef<string | null>(null);
 
   const handleAddProduct = () => {
-    addWizardProduct(dispatch, createEmptyWizardProduct());
+    const newProduct = createEmptyWizardProduct();
+    lastAddedProductIdRef.current = newProduct.id;
+    addWizardProduct(dispatch, newProduct);
   };
 
   const canAddMoreProducts = state.products.length < 10;
+
+  useEffect(() => {
+    const lastAddedId = lastAddedProductIdRef.current;
+    if (!lastAddedId) {
+      return;
+    }
+
+    const element = document.getElementById(
+      `service-request-product-${lastAddedId}`,
+    );
+    if (!element) {
+      lastAddedProductIdRef.current = null;
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const fullyVisible =
+      rect.top >= 0 && rect.bottom <= window.innerHeight;
+
+    if (!fullyVisible) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    lastAddedProductIdRef.current = null;
+  }, [state.products.length]);
 
   return (
     <Card>
@@ -317,6 +348,20 @@ export function StepProducts() {
             ))
           )}
         </div>
+
+        {canAddMoreProducts ? (
+          <div className="flex">
+            <Button
+              type="button"
+              onClick={handleAddProduct}
+              size="lg"
+              className="w-full sm:ml-auto sm:w-auto"
+            >
+              <IconPlus className="mr-2 h-4 w-4" />
+              Thêm sản phẩm
+            </Button>
+          </div>
+        ) : null}
 
         {!canAddMoreProducts ? (
           <p className="text-xs text-muted-foreground">

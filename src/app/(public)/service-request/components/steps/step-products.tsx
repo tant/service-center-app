@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  IconCopy,
+  IconDotsVertical,
   IconLoader2,
   IconPhotoUp,
   IconPlus,
@@ -9,8 +11,16 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import { type ChangeEvent, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +60,35 @@ function ProductCard({ index, productId }: ProductCardProps) {
   const serialValid = product.serialNumber.trim().length >= MIN_SERIAL_LENGTH;
   const issueValid = product.issueDescription.trim().length >= MIN_ISSUE_LENGTH;
 
+  const handleDuplicateProduct = () => {
+    const duplicate = {
+      ...createEmptyWizardProduct(),
+      productBrand: product.productBrand,
+      productModel: product.productModel,
+      purchaseDate: product.purchaseDate,
+      issueDescription: product.issueDescription,
+      warrantyRequested: product.warrantyRequested,
+      serviceOption: product.serviceOption,
+      serviceOptionNotes: product.serviceOptionNotes,
+    };
+    addWizardProduct(dispatch, duplicate);
+    toast.success("Đã nhân bản sản phẩm. Vui lòng nhập serial mới.");
+  };
+
+  const handleRemoveProduct = () => {
+    toast("Bạn có chắc muốn xóa sản phẩm này?", {
+      description: "Thao tác này không thể hoàn tác.",
+      action: {
+        label: "Xóa",
+        onClick: () => removeWizardProduct(dispatch, productId),
+      },
+      cancel: {
+        label: "Giữ lại",
+        onClick: () => undefined,
+      },
+    });
+  };
+
   const handleSerialChange = (value: string) => {
     const formattedSerial = value.toUpperCase();
     if (formattedSerial === product.serialNumber) {
@@ -88,16 +127,41 @@ function ProductCard({ index, productId }: ProductCardProps) {
             <p className="text-sm text-muted-foreground">Chưa nhập serial</p>
           )}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          onClick={() => removeWizardProduct(dispatch, productId)}
-        >
-          <IconTrash className="mr-1 h-4 w-4" />
-          Xóa
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground"
+            >
+              <IconDotsVertical className="h-4 w-4" />
+              <span className="sr-only">Tùy chọn sản phẩm</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                handleDuplicateProduct();
+              }}
+            >
+              <IconCopy className="mr-2 h-4 w-4" />
+              Nhân bản sản phẩm
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={(event) => {
+                event.preventDefault();
+                handleRemoveProduct();
+              }}
+            >
+              <IconTrash className="mr-2 h-4 w-4" />
+              Xóa sản phẩm
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

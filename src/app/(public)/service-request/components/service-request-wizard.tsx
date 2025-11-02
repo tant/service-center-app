@@ -385,6 +385,7 @@ function StepNavigation() {
         customer_name: payload.customer.name,
         customer_email: payload.customer.email,
         customer_phone: payload.customer.phone,
+        customer_address: payload.customer.address,
         issue_overview: payload.issue_overview,
         items: payload.items,
         preferred_delivery_method: payload.delivery.preferred_delivery_method,

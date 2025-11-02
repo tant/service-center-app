@@ -518,11 +518,6 @@ export default function ServiceRequestDetailPage() {
                                           ? `${warrantyEndDateDisplay}`
                                           : "Không có thông tin"}
                                       </span>
-                                      {warrantyDetailBadgeLabel && (
-                                        <Badge variant={warrantyDetailBadgeVariant} className="text-xs">
-                                          {warrantyDetailBadgeLabel}
-                                        </Badge>
-                                      )}
                                     </div>
                                   </div>
                                   {item.issue_description && (

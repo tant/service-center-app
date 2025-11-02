@@ -51,6 +51,7 @@ export interface PublicServiceRequestPayload {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  customer_address?: string;
   issue_overview?: string;
   items: PublicServiceRequestItem[];
   preferred_delivery_method: DeliveryMethod;

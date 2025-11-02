@@ -195,6 +195,7 @@ const submitRequestSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters"),
   customer_email: z.string().email("Invalid email format"),
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  customer_address: z.string().optional(),
   issue_overview: z.string().optional(),
   items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
   preferred_delivery_method: z.enum(["pickup", "delivery"]),
@@ -380,6 +381,7 @@ export const serviceRequestRouter = router({
           customer_name: input.customer_name,
           customer_email: input.customer_email,
           customer_phone: input.customer_phone,
+          customer_address: input.customer_address ?? null,
           issue_description: input.issue_overview ?? null,
           preferred_delivery_method: input.preferred_delivery_method,
           delivery_address:

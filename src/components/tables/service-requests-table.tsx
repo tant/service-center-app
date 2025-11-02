@@ -93,6 +93,11 @@ const STATUS_MAP = {
   converted: { label: "Đã chuyển", variant: "default" as const },
 };
 
+const INTAKE_METHOD_MAP = {
+  pickup: { label: "Khách mang tới", variant: "secondary" as const },
+  delivery: { label: "Giao nhận", variant: "outline" as const },
+};
+
 // Column labels
 const COLUMN_LABELS: Record<string, string> = {
   tracking_token: "Mã theo dõi",
@@ -132,7 +137,7 @@ interface IncomingRequestSummary {
 export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -166,9 +171,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
       accessorKey: "tracking_token",
       header: "Mã theo dõi",
       cell: ({ row }) => (
-        <span className="font-medium">
-          {row.getValue("tracking_token")}
-        </span>
+        <span className="font-medium">{row.getValue("tracking_token")}</span>
       ),
     },
     {
@@ -192,39 +195,24 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     },
     {
       id: "items",
-      accessorFn: (row) => {
-        const parts: string[] = [];
-        if (row.primary_item?.product_model) {
-          parts.push(row.primary_item.product_model);
-        }
-        if (row.primary_item?.product_brand) {
-          parts.push(row.primary_item.product_brand);
-        }
-        if (row.primary_item?.serial_number) {
-          parts.push(row.primary_item.serial_number);
-        }
-        return parts.join(" ");
-      },
+      accessorFn: (row) => row.item_serial_numbers[0] ?? "",
       header: "Sản phẩm",
       cell: ({ row }) => {
-        const { primary_item: primaryItem, items_count: itemsCount } =
-          row.original;
-        const extraCount = itemsCount > 1 ? itemsCount - 1 : 0;
+        const primarySerial = row.original.primary_item?.serial_number;
+        const totalItems = row.original.items_count;
+        const extraCount = totalItems > 0 ? totalItems - 1 : 0;
+
+        if (!primarySerial) {
+          return (
+            <span className="text-xs text-muted-foreground">
+              Chưa có serial
+            </span>
+          );
+        }
+
         return (
-          <div>
-            <p className="font-medium">
-              {primaryItem?.product_model || "Chưa có sản phẩm"}
-            </p>
-            {primaryItem?.product_brand ? (
-              <p className="text-xs text-muted-foreground">
-                {primaryItem.product_brand}
-              </p>
-            ) : null}
-            {primaryItem?.serial_number ? (
-              <p className="text-xs text-muted-foreground">
-                {primaryItem.serial_number}
-              </p>
-            ) : null}
+          <div className="">
+            <p className="font-mono text-xs font-medium">{primarySerial}</p>
             {extraCount > 0 ? (
               <p className="text-xs text-muted-foreground">
                 +{extraCount} sản phẩm khác
@@ -240,44 +228,9 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
       header: "Tiếp nhận",
       cell: ({ row }) => {
         const method = row.original.preferred_delivery_method;
-        const isDelivery = method === "delivery";
-        const methodLabel = isDelivery ? "Giao nhận" : "Khách mang tới";
-        const schedule = row.original.preferred_schedule;
-        const deliveryAddress = isDelivery
-          ? row.original.delivery_address
-          : null;
-        const pickupNotes = !isDelivery ? row.original.pickup_notes : null;
-        const scheduleLabel = (() => {
-          if (!schedule) {
-            return null;
-          }
-          const date = new Date(schedule);
-          if (Number.isNaN(date.getTime())) {
-            return schedule;
-          }
-          return format(date, "dd/MM/yyyy");
-        })();
+        const config = INTAKE_METHOD_MAP[method] ?? INTAKE_METHOD_MAP.pickup;
 
-        return (
-          <div className="space-y-1">
-            <p className="font-medium">{methodLabel}</p>
-            {deliveryAddress ? (
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {deliveryAddress}
-              </p>
-            ) : null}
-            {pickupNotes ? (
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {pickupNotes}
-              </p>
-            ) : null}
-            {scheduleLabel ? (
-              <p className="text-xs text-muted-foreground">
-                Ưu tiên: {scheduleLabel}
-              </p>
-            ) : null}
-          </div>
-        );
+        return <Badge variant={config.variant}>{config.label}</Badge>;
       },
     },
     {
@@ -292,14 +245,24 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     {
       accessorKey: "created_at",
       header: "Đã gửi",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(row.getValue("created_at")), {
-            addSuffix: true,
-            locale: vi,
-          })}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const createdValue = row.getValue("created_at");
+        const date = new Date(createdValue as string);
+
+        if (Number.isNaN(date.getTime())) {
+          return (
+            <span className="text-sm text-muted-foreground">
+              {String(createdValue)}
+            </span>
+          );
+        }
+
+        return (
+          <span className="text-sm text-muted-foreground">
+            {format(date, "dd/MM/yyyy")}
+          </span>
+        );
+      },
     },
     {
       id: "linked_ticket",
@@ -583,7 +546,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                             ? null
                             : flexRender(
                                 header.column.columnDef.header,
-                                header.getContext(),
+                                header.getContext()
                               )}
                         </TableHead>
                       ))}
@@ -598,7 +561,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                           <TableCell key={cell.id}>
                             {flexRender(
                               cell.column.columnDef.cell,
-                              cell.getContext(),
+                              cell.getContext()
                             )}
                           </TableCell>
                         ))}
@@ -629,7 +592,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                 {Math.min(
                   (table.getState().pagination.pageIndex + 1) *
                     table.getState().pagination.pageSize,
-                  table.getFilteredRowModel().rows.length,
+                  table.getFilteredRowModel().rows.length
                 )}{" "}
                 trong tổng số {table.getFilteredRowModel().rows.length} yêu cầu
               </div>
@@ -892,7 +855,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                                   {
                                     addSuffix: true,
                                     locale: vi,
-                                  },
+                                  }
                                 )}
                               </div>
                             ) : (

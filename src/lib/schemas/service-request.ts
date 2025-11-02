@@ -36,6 +36,7 @@ export const serviceRequestRowSchema = z.object({
   pickup_notes: z.string().nullable(),
   preferred_schedule: z.string().nullable(),
   items_count: z.number(),
+  item_serial_numbers: z.array(z.string()),
   primary_item: primaryItemSchema,
   linked_ticket: linkedTicketSchema,
 });

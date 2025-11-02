@@ -81,6 +81,9 @@ async function getServiceRequestsData(): Promise<
       const linkedTicket = Array.isArray(linkedTicketRaw)
         ? (linkedTicketRaw[0] ?? null)
         : (linkedTicketRaw ?? null);
+      const itemSerialNumbers = items
+        .map((item) => item.serial_number?.trim())
+        .filter((serial): serial is string => Boolean(serial));
 
       return {
         id: request.id,
@@ -96,6 +99,7 @@ async function getServiceRequestsData(): Promise<
         pickup_notes: request.pickup_notes ?? null,
         preferred_schedule: request.preferred_schedule ?? null,
         items_count: items.length,
+        item_serial_numbers: itemSerialNumbers,
         primary_item: primaryItem
           ? {
               product_brand: primaryItem.product_brand ?? null,

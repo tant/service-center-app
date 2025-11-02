@@ -10,6 +10,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
@@ -280,6 +281,7 @@ export default function ServiceRequestDetailPage() {
     );
   }
 
+
   const status = request.status as keyof typeof STATUS_MAP;
   const statusConfig = STATUS_MAP[status];
   const items = Array.isArray(request.items) ? request.items : [];
@@ -297,358 +299,359 @@ export default function ServiceRequestDetailPage() {
     Boolean(request.rejection_reason) ||
     Boolean(request.converted_at);
   const showSystemInfo = Boolean(createdAt) || Boolean(updatedAt);
+  const hasSupportingInfo =
+    showReviewInfo || Boolean(request.linked_ticket_id);
+  const displayOrDash = (value: string | null | undefined) => {
+    if (typeof value !== "string") {
+      return "-";
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? value : "-";
+  };
 
   return (
     <>
       <PageHeader title={`Yêu cầu ${request.tracking_token}`} backHref="/operations/service-requests" />
       <div className="flex flex-1 flex-col">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 lg:px-6">
-            {/* Status Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Trạng thái</CardTitle>
-                    <CardDescription>
-                      Tạo {formatDistanceToNow(new Date(request.created_at), {
-                        addSuffix: true,
-                        locale: vi,
-                      })}
-                    </CardDescription>
+        <div className="@container/main flex flex-1 flex-col">
+          <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col px-4 py-4 md:py-6 lg:px-6">
+            <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Trạng thái</CardTitle>
+                      <CardDescription>
+                        Tạo {formatDistanceToNow(new Date(request.created_at), {
+                          addSuffix: true,
+                          locale: vi,
+                        })}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
                   </div>
-                  <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                </div>
-              </CardHeader>
-            </Card>
+                </CardHeader>
+              </Card>
 
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <IconUser className="h-4 w-4" />
-                  Thông tin khách hàng
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tên</p>
-                  <p className="font-medium">{request.customer_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{request.customer_email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Số điện thoại</p>
-                  <p className="font-medium">{request.customer_phone}</p>
-                </div>
-                {request.customer_address && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                    <p className="text-sm whitespace-pre-wrap">{request.customer_address}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Delivery Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <IconTruckDelivery className="h-4 w-4" />
-                  Thông tin giao nhận
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Hình thức xử lý</p>
-                  <p className="font-medium">
-                    {deliveryLabel}
-                    {deliveryMethod === "delivery" ? " tại nhà" : ""}
-                  </p>
-                </div>
-                {preferredSchedule && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Thời gian mong muốn</p>
-                    <p className="text-sm">{preferredSchedule}</p>
-                  </div>
-                )}
-                {request.delivery_address && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Địa chỉ giao nhận</p>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {request.delivery_address}
-                    </p>
-                  </div>
-                )}
-                {request.pickup_notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ghi chú nhận hàng</p>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {request.pickup_notes}
-                    </p>
-                  </div>
-                )}
-                {request.contact_notes && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Thông tin liên hệ ưu tiên</p>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {request.contact_notes}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Product Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <IconPackage className="h-4 w-4" />
-                  Thông tin sản phẩm
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {items.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Không có thông tin sản phẩm cho yêu cầu này.
-                  </p>
-                ) : (
-                  <Accordion
-                    type="single"
-                    collapsible
-                    defaultValue={items[0]?.id ?? `item-0`}
-                    className="rounded-md border"
-                  >
-                    {items.map((item, index) => {
-                      const issuePhotos = normalizeIssuePhotos(item.issue_photos);
-                      const serviceOptionLabel = item.service_option
-                        ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
-                        : null;
-                      const warrantyLabel =
-                        typeof item.warranty_requested === "boolean"
-                          ? item.warranty_requested
-                            ? "Có"
-                            : "Không"
-                          : null;
-                      const purchaseDate = formatDisplayDate(item.purchase_date);
-                      const accordionValue = item.id ?? `item-${index}`;
-                      const modelLabel = item.product_model || "Không xác định";
-                      const serialLabel = item.serial_number || "Không có serial";
-                      const ticketLabel = item.ticket
-                        ? `${item.ticket.ticket_number} · ${item.ticket.status}`
-                        : null;
-                      const warrantyStatus = (item.warranty_status ?? null) as WarrantyStatus | null;
-                      const warrantyEndDateIso =
-                        typeof item.warranty_end_date === "string" ? item.warranty_end_date : null;
-                      const warrantyEndDateDisplay = formatDisplayDate(warrantyEndDateIso);
-                      const warrantyBadge = getWarrantyBadgeInfo(warrantyStatus);
-                      const warrantyDetailBadgeLabel = getWarrantyDetailBadgeLabel(
-                        warrantyStatus,
-                        item.warranty_days_remaining ?? null
-                      );
-                      const warrantyDetailBadgeVariant = warrantyBadge?.variant ?? "outline";
-
-                      return (
-                        <AccordionItem key={accordionValue} value={accordionValue}>
-                          <AccordionTrigger className="px-3 border border-transparent hover:border-border hover:bg-muted/50 transition-colors duration-150 hover:shadow-xs hover:no-underline">
-                            <div className="flex flex-1 flex-col gap-2 text-left">
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  {items.length > 1 && (
-                                    <span className="text-xs font-medium uppercase text-muted-foreground">
-                                      Sản phẩm {index + 1}
-                                    </span>
-                                  )}
-                                  <span className="font-medium">{modelLabel}</span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {serviceOptionLabel && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {serviceOptionLabel}
-                                    </Badge>
-                                  )}
-                                  {warrantyBadge && (
-                                    <Badge variant={warrantyBadge.variant} className="text-xs">
-                                      {warrantyBadge.label}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                <span className="font-mono uppercase">{serialLabel}</span>
-                                {typeof item.warranty_requested === "boolean" && (
-                                  <span>Yêu cầu bảo hành: {warrantyLabel}</span>
-                                )}
-                                {ticketLabel && <span>{ticketLabel}</span>}
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-3">
-                            <div className="space-y-3 pt-2">
-                              {item.product_brand && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Thương hiệu</p>
-                                  <p className="text-sm font-medium">{item.product_brand}</p>
-                                </div>
-                              )}
-                              {purchaseDate && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Ngày mua</p>
-                                  <p className="text-sm">{purchaseDate}</p>
-                                </div>
-                              )}
-                              <div>
-                                <p className="text-xs text-muted-foreground">Thời hạn bảo hành</p>
-                                <div className="flex flex-wrap items-center gap-2 text-sm">
-                                  <span>
-                                    {warrantyEndDateDisplay
-                                      ? `${warrantyEndDateDisplay}`
-                                      : "Không có thông tin"}
-                                  </span>
-                                  {warrantyDetailBadgeLabel && (
-                                    <Badge variant={warrantyDetailBadgeVariant} className="text-xs">
-                                      {warrantyDetailBadgeLabel}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              {item.issue_description && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
-                                  <p className="text-sm whitespace-pre-wrap">{item.issue_description}</p>
-                                </div>
-                              )}
-                              {issuePhotos.length > 0 && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Tệp đính kèm</p>
-                                  <div className="mt-1 space-y-1">
-                                    {issuePhotos.map((photo, photoIndex) => {
-                                      const label =
-                                        photo.file_name ??
-                                        photo.path?.split("/").pop() ??
-                                        photo.url?.split("/").pop() ??
-                                        `Tệp ${photoIndex + 1}`;
-                                      const href = photo.url ?? photo.path ?? undefined;
-
-                                      if (href) {
-                                        return (
-                                          <a
-                                            key={`${photoIndex}-${href}`}
-                                            href={href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block text-sm text-primary hover:underline"
-                                          >
-                                            {label}
-                                          </a>
-                                        );
-                                      }
-
-                                      return (
-                                        <span
-                                          key={`${photoIndex}-${label}`}
-                                          className="block text-sm text-muted-foreground"
-                                        >
-                                          {label}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                              {item.ticket && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
-                                  <p className="text-sm font-mono">
-                                    {item.ticket.ticket_number} · {item.ticket.status}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      );
-                    })}
-                  </Accordion>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Issue Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <IconFileText className="h-4 w-4" />
-                  Mô tả vấn đề
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">
-                  {request.issue_description || "Không có mô tả bổ sung."}
-                </p>
-              </CardContent>
-            </Card>
-
-            {showReviewInfo && (
-              <Card>
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <IconCalendarEvent className="h-4 w-4" />
-                    Thông tin xử lý
+                    <IconUser className="h-4 w-4" />
+                    Thông tin khách hàng & giao nhận
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {reviewedByName && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Người duyệt</p>
-                      <p className="text-sm">{reviewedByName}</p>
-                    </div>
-                  )}
-                  {reviewedAt && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Thời gian duyệt</p>
-                      <p className="text-sm">{reviewedAt}</p>
-                    </div>
-                  )}
-                  {request.rejection_reason && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Lý do từ chối</p>
-                      <p className="text-sm text-destructive whitespace-pre-wrap">
-                        {request.rejection_reason}
-                      </p>
-                    </div>
-                  )}
-                  {convertedAt && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Chuyển sang phiếu dịch vụ</p>
-                      <p className="text-sm">{convertedAt}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Linked Ticket */}
-            {request.linked_ticket_id && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Phiếu dịch vụ đã tạo</CardTitle>
-                </CardHeader>
                 <CardContent>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/operations/tickets/${request.linked_ticket_id}`)}
-                  >
-                    Xem phiếu dịch vụ
-                  </Button>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tên</p>
+                        <p className="font-medium">
+                          {displayOrDash(request.customer_name)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="font-medium">
+                          {displayOrDash(request.customer_email)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Số điện thoại</p>
+                        <p className="font-medium">
+                          {displayOrDash(request.customer_phone)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Địa chỉ</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {displayOrDash(request.customer_address)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Hình thức xử lý</p>
+                        <p className="font-medium">
+                          {displayOrDash(
+                            deliveryLabel
+                              ? `${deliveryLabel}${deliveryMethod === "delivery" ? " tại nhà" : ""}`
+                              : null,
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Thời gian mong muốn</p>
+                        <p className="text-sm">
+                          {displayOrDash(preferredSchedule)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Địa chỉ giao nhận</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {displayOrDash(request.delivery_address)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Ghi chú nhận hàng</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {displayOrDash(request.pickup_notes)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Thông tin liên hệ ưu tiên</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {displayOrDash(request.contact_notes)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            )}
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <IconFileText className="h-4 w-4" />
+                    Mô tả & sản phẩm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <section className="space-y-2">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">
+                      Mô tả vấn đề
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {request.issue_description || "Không có mô tả bổ sung."}
+                    </p>
+                  </section>
+                  <Separator />
+                  <section className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <IconPackage className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Thông tin sản phẩm</span>
+                    </div>
+                    {items.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Không có thông tin sản phẩm cho yêu cầu này.
+                      </p>
+                    ) : (
+                      <Accordion
+                        type="single"
+                        collapsible
+                        defaultValue={items[0]?.id ?? `item-0`}
+                        className="rounded-md border"
+                      >
+                        {items.map((item, index) => {
+                          const issuePhotos = normalizeIssuePhotos(item.issue_photos);
+                          const serviceOptionLabel = item.service_option
+                            ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
+                            : null;
+                          const warrantyLabel =
+                            typeof item.warranty_requested === "boolean"
+                              ? item.warranty_requested
+                                ? "Có"
+                                : "Không"
+                              : null;
+                          const purchaseDate = formatDisplayDate(item.purchase_date);
+                          const accordionValue = item.id ?? `item-${index}`;
+                          const modelLabel = item.product_model || "Không xác định";
+                          const serialLabel = item.serial_number || "Không có serial";
+                          const ticketLabel = item.ticket
+                            ? `${item.ticket.ticket_number} · ${item.ticket.status}`
+                            : null;
+                          const warrantyStatus = (item.warranty_status ?? null) as WarrantyStatus | null;
+                          const warrantyEndDateIso =
+                            typeof item.warranty_end_date === "string" ? item.warranty_end_date : null;
+                          const warrantyEndDateDisplay = formatDisplayDate(warrantyEndDateIso);
+                          const warrantyBadge = getWarrantyBadgeInfo(warrantyStatus);
+                          const warrantyDetailBadgeLabel = getWarrantyDetailBadgeLabel(
+                            warrantyStatus,
+                            item.warranty_days_remaining ?? null
+                          );
+                          const warrantyDetailBadgeVariant = warrantyBadge?.variant ?? "outline";
+
+                          return (
+                            <AccordionItem key={accordionValue} value={accordionValue}>
+                              <AccordionTrigger className="px-3 border border-transparent hover:border-border hover:bg-muted/50 transition-colors duration-150 hover:shadow-xs hover:no-underline">
+                                <div className="flex flex-1 flex-col gap-2 text-left">
+                                  <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                      {items.length > 1 && (
+                                        <span className="text-xs font-medium uppercase text-muted-foreground">
+                                          Sản phẩm {index + 1}
+                                        </span>
+                                      )}
+                                      <span className="font-medium">{modelLabel}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {serviceOptionLabel && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {serviceOptionLabel}
+                                        </Badge>
+                                      )}
+                                      {warrantyBadge && (
+                                        <Badge variant={warrantyBadge.variant} className="text-xs">
+                                          {warrantyBadge.label}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="font-mono uppercase">{serialLabel}</span>
+                                    {typeof item.warranty_requested === "boolean" && (
+                                      <span>Yêu cầu bảo hành: {warrantyLabel}</span>
+                                    )}
+                                    {ticketLabel && <span>{ticketLabel}</span>}
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-3">
+                                <div className="space-y-3 pt-2">
+                                  {item.product_brand && (
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Thương hiệu</p>
+                                      <p className="text-sm font-medium">{item.product_brand}</p>
+                                    </div>
+                                  )}
+                                  {purchaseDate && (
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Ngày mua</p>
+                                      <p className="text-sm">{purchaseDate}</p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Thời hạn bảo hành</p>
+                                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                                      <span>
+                                        {warrantyEndDateDisplay
+                                          ? `${warrantyEndDateDisplay}`
+                                          : "Không có thông tin"}
+                                      </span>
+                                      {warrantyDetailBadgeLabel && (
+                                        <Badge variant={warrantyDetailBadgeVariant} className="text-xs">
+                                          {warrantyDetailBadgeLabel}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {item.issue_description && (
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Mô tả vấn đề</p>
+                                      <p className="text-sm whitespace-pre-wrap">{item.issue_description}</p>
+                                    </div>
+                                  )}
+                                  {issuePhotos.length > 0 && (
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Ảnh đính kèm</p>
+                                      <div className="grid gap-2 sm:grid-cols-2">
+                                        {issuePhotos.map((photo, photoIndex) => (
+                                          <div
+                                            key={`${accordionValue}-photo-${photoIndex}`}
+                                            className="rounded-md border p-2 text-xs"
+                                          >
+                                            <p className="font-medium">{photo.file_name ?? "Ảnh đính kèm"}</p>
+                                            {photo.file_size ? (
+                                              <p className="text-muted-foreground">
+                                                {(photo.file_size / 1024 / 1024).toFixed(2)} MiB
+                                              </p>
+                                            ) : null}
+                                            {photo.url && (
+                                              <Button
+                                                asChild
+                                                variant="ghost"
+                                                size="sm"
+                                                className="mt-2 h-7 px-2 text-xs"
+                                              >
+                                                <a href={photo.url} target="_blank" rel="noreferrer">
+                                                  Xem ảnh
+                                                </a>
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {item.ticket && (
+                                    <div>
+                                      <p className="text-xs text-muted-foreground">Phiếu dịch vụ</p>
+                                      <p className="text-sm font-mono">
+                                        {item.ticket.ticket_number} · {item.ticket.status}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
+                    )}
+                  </section>
+                </CardContent>
+              </Card>
+
+            {hasSupportingInfo ? (
+              <div className="space-y-6 lg:col-span-1">
+                {showReviewInfo && (
+                  <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <IconCalendarEvent className="h-4 w-4" />
+                          Thông tin xử lý
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {reviewedByName && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Người duyệt</p>
+                            <p className="text-sm">{reviewedByName}</p>
+                          </div>
+                        )}
+                        {reviewedAt && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Thời gian duyệt</p>
+                            <p className="text-sm">{reviewedAt}</p>
+                          </div>
+                        )}
+                        {request.rejection_reason && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Lý do từ chối</p>
+                            <p className="text-sm text-destructive whitespace-pre-wrap">
+                              {request.rejection_reason}
+                            </p>
+                          </div>
+                        )}
+                        {convertedAt && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Chuyển sang phiếu dịch vụ</p>
+                            <p className="text-sm">{convertedAt}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {request.linked_ticket_id && (
+                  <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Phiếu dịch vụ đã tạo</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="outline"
+                          onClick={() => router.push(`/operations/tickets/${request.linked_ticket_id}`)}
+                        >
+                          Xem phiếu dịch vụ
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+              </div>
+            ) : null}
 
             {showSystemInfo && (
-              <Card>
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <IconInfoCircle className="h-4 w-4" />
@@ -672,60 +675,59 @@ export default function ServiceRequestDetailPage() {
               </Card>
             )}
 
-            {/* Reject Form */}
-            {showRejectForm && (
-              <Card className="border-destructive">
-                <CardHeader>
-                  <CardTitle className="text-sm text-destructive">Từ chối yêu cầu</CardTitle>
-                  <CardDescription>
-                    Vui lòng nhập lý do từ chối (tối thiểu 10 ký tự)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reject-reason">Lý do từ chối</Label>
-                    <Textarea
-                      id="reject-reason"
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      placeholder="Nhập lý do từ chối..."
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground">{rejectReason.length}/10 ký tự</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowRejectForm(false);
-                        setRejectReason("");
-                      }}
-                      disabled={isRejecting}
-                    >
-                      Hủy
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleReject}
-                      disabled={isRejecting}
-                    >
-                      {isRejecting ? (
-                        <>
-                          <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Đang từ chối...
-                        </>
-                      ) : (
-                        "Xác nhận từ chối"
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+              {showRejectForm && (
+                <Card className="border-destructive lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-sm text-destructive">Từ chối yêu cầu</CardTitle>
+                    <CardDescription>
+                      Vui lòng nhập lý do từ chối (tối thiểu 10 ký tự)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reject-reason">Lý do từ chối</Label>
+                      <Textarea
+                        id="reject-reason"
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="Nhập lý do từ chối..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">{rejectReason.length}/10 ký tự</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowRejectForm(false);
+                          setRejectReason("");
+                        }}
+                        disabled={isRejecting}
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleReject}
+                        disabled={isRejecting}
+                      >
+                        {isRejecting ? (
+                          <>
+                            <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Đang từ chối...
+                          </>
+                        ) : (
+                          "Xác nhận từ chối"
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
       {/* Page Footer with Actions */}
       {(request.status === "submitted" || request.status === "received") && (
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">

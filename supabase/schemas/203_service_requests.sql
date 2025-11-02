@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tracking_token VARCHAR(15) NOT NULL UNIQUE,
   customer_name VARCHAR(255) NOT NULL,
-  customer_email VARCHAR(255) NOT NULL,
+  customer_email VARCHAR(255),
   customer_phone VARCHAR(50),
   customer_address TEXT,
   issue_description TEXT NOT NULL,
@@ -61,14 +61,23 @@ BEGIN
   IF (NEW.receipt_status = 'received' AND (OLD.receipt_status IS NULL OR OLD.receipt_status = 'pending_receipt'))
      OR (NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup'))) THEN
 
-    -- Find or create customer
+    -- Find or create customer (lookup by phone first, as it's unique)
     SELECT id INTO v_customer_id
     FROM public.customers
-    WHERE email = NEW.customer_email
+    WHERE phone = NEW.customer_phone
     LIMIT 1;
 
-    -- If customer doesn't exist, create one
-    IF v_customer_id IS NULL THEN
+    -- If customer exists, update name/email if changed
+    IF v_customer_id IS NOT NULL THEN
+      UPDATE public.customers
+      SET
+        name = NEW.customer_name,
+        email = COALESCE(NEW.customer_email, email),
+        updated_at = NOW()
+      WHERE id = v_customer_id
+        AND (name != NEW.customer_name OR email IS DISTINCT FROM NEW.customer_email);
+    ELSE
+      -- Customer doesn't exist, create new one
       INSERT INTO public.customers (
         name,
         email,

@@ -5,6 +5,7 @@ import type { RequestStatus, ServiceType, DeliveryMethod } from '@/types/enums';
 
 // Request status colors for UI
 export const REQUEST_STATUS_COLORS: Record<RequestStatus, string> = {
+  draft: '#9CA3AF', // Light Gray
   submitted: '#6B7280', // Gray
   pickingup: '#8B5CF6', // Purple
   received: '#3B82F6', // Blue
@@ -15,6 +16,7 @@ export const REQUEST_STATUS_COLORS: Record<RequestStatus, string> = {
 
 // Request status icons (lucide-react icon names)
 export const REQUEST_STATUS_ICONS: Record<RequestStatus, string> = {
+  draft: 'file-edit',
   submitted: 'send',
   pickingup: 'package',
   received: 'inbox',
@@ -25,6 +27,7 @@ export const REQUEST_STATUS_ICONS: Record<RequestStatus, string> = {
 
 // Request status descriptions
 export const REQUEST_STATUS_DESCRIPTIONS: Record<RequestStatus, string> = {
+  draft: 'Draft request, not yet submitted',
   submitted: 'Request submitted, awaiting review',
   pickingup: 'Awaiting product pickup from customer',
   received: 'Request received and under review',

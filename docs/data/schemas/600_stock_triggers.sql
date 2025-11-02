@@ -104,14 +104,17 @@ DECLARE
   v_product_id UUID;
   v_virtual_warehouse_id UUID;
   v_physical_product_id UUID;
+  v_receipt_status TEXT;
 BEGIN
-  -- Get product_id and virtual_warehouse_id from receipt
+  -- Get product_id, virtual_warehouse_id, and receipt status
   SELECT
     sri.product_id,
-    sr.virtual_warehouse_id
+    sr.virtual_warehouse_id,
+    sr.status
   INTO
     v_product_id,
-    v_virtual_warehouse_id
+    v_virtual_warehouse_id,
+    v_receipt_status
   FROM public.stock_receipt_items sri
   JOIN public.stock_receipts sr ON sri.receipt_id = sr.id
   WHERE sri.id = NEW.receipt_item_id;
@@ -137,6 +140,16 @@ BEGIN
   -- Update serial record with physical_product_id
   NEW.physical_product_id := v_physical_product_id;
 
+  -- If receipt is already approved, update product_warehouse_stock
+  -- This handles serials added AFTER approval (non-blocking workflow)
+  IF v_receipt_status = 'approved' OR v_receipt_status = 'completed' THEN
+    PERFORM public.upsert_product_stock(
+      v_product_id,
+      v_virtual_warehouse_id,
+      1  -- Increment by 1 for each serial added
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -146,7 +159,7 @@ CREATE TRIGGER trigger_create_physical_product_from_receipt_serial
   FOR EACH ROW
   EXECUTE FUNCTION public.create_physical_product_from_receipt_serial();
 
-COMMENT ON FUNCTION public.create_physical_product_from_receipt_serial IS 'Create physical product immediately when serial is added to receipt';
+COMMENT ON FUNCTION public.create_physical_product_from_receipt_serial IS 'Create physical product when serial is added to receipt. If receipt already approved, also updates product_warehouse_stock.';
 
 -- 2. ISSUE SERIALS: Delete physical product when issued
 CREATE OR REPLACE FUNCTION public.delete_physical_product_on_issue()
@@ -154,10 +167,40 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
+DECLARE
+  v_product_id UUID;
+  v_virtual_warehouse_id UUID;
+  v_issue_status TEXT;
 BEGIN
+  -- Get product info before deletion
+  SELECT
+    pp.product_id,
+    pp.virtual_warehouse_id
+  INTO
+    v_product_id,
+    v_virtual_warehouse_id
+  FROM public.physical_products pp
+  WHERE pp.id = NEW.physical_product_id;
+
+  -- Get issue status
+  SELECT si.status INTO v_issue_status
+  FROM public.stock_issue_items sii
+  JOIN public.stock_issues si ON sii.issue_id = si.id
+  WHERE sii.id = NEW.issue_item_id;
+
   -- Delete the physical product (it's being issued out)
   DELETE FROM public.physical_products
   WHERE id = NEW.physical_product_id;
+
+  -- If issue is already approved, update product_warehouse_stock
+  -- This handles serials added AFTER approval (non-blocking workflow)
+  IF v_issue_status = 'approved' OR v_issue_status = 'completed' THEN
+    PERFORM public.upsert_product_stock(
+      v_product_id,
+      v_virtual_warehouse_id,
+      -1  -- Decrement by 1 for each serial issued
+    );
+  END IF;
 
   RETURN NEW;
 END;
@@ -168,7 +211,7 @@ CREATE TRIGGER trigger_delete_physical_product_on_issue
   FOR EACH ROW
   EXECUTE FUNCTION public.delete_physical_product_on_issue();
 
-COMMENT ON FUNCTION public.delete_physical_product_on_issue IS 'Delete physical product when issued out of warehouse';
+COMMENT ON FUNCTION public.delete_physical_product_on_issue IS 'Delete physical product when issued out of warehouse. If issue already approved, also updates product_warehouse_stock.';
 
 -- 3. TRANSFER SERIALS: Update warehouse location when transferred
 CREATE OR REPLACE FUNCTION public.update_physical_product_warehouse_on_transfer()
@@ -179,14 +222,20 @@ AS $$
 DECLARE
   v_from_warehouse_id UUID;
   v_to_warehouse_id UUID;
+  v_product_id UUID;
+  v_transfer_status TEXT;
 BEGIN
-  -- Get source and destination warehouse IDs
+  -- Get source and destination warehouse IDs and transfer status
   SELECT
     st.from_virtual_warehouse_id,
-    st.to_virtual_warehouse_id
+    st.to_virtual_warehouse_id,
+    st.status,
+    sti.product_id
   INTO
     v_from_warehouse_id,
-    v_to_warehouse_id
+    v_to_warehouse_id,
+    v_transfer_status,
+    v_product_id
   FROM public.stock_transfer_items sti
   JOIN public.stock_transfers st ON sti.transfer_id = st.id
   WHERE sti.id = NEW.transfer_item_id;
@@ -199,6 +248,24 @@ BEGIN
     updated_at = NOW()
   WHERE id = NEW.physical_product_id;
 
+  -- If transfer is already approved, update product_warehouse_stock for both warehouses
+  -- This handles serials added AFTER approval (non-blocking workflow)
+  IF v_transfer_status = 'approved' OR v_transfer_status = 'completed' THEN
+    -- Decrement from source warehouse
+    PERFORM public.upsert_product_stock(
+      v_product_id,
+      v_from_warehouse_id,
+      -1
+    );
+
+    -- Increment to destination warehouse
+    PERFORM public.upsert_product_stock(
+      v_product_id,
+      v_to_warehouse_id,
+      1
+    );
+  END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -208,7 +275,7 @@ CREATE TRIGGER trigger_update_physical_product_warehouse_on_transfer
   FOR EACH ROW
   EXECUTE FUNCTION public.update_physical_product_warehouse_on_transfer();
 
-COMMENT ON FUNCTION public.update_physical_product_warehouse_on_transfer IS 'Update physical product warehouse location when transferred';
+COMMENT ON FUNCTION public.update_physical_product_warehouse_on_transfer IS 'Update physical product warehouse location when transferred. If transfer already approved, also updates product_warehouse_stock for both warehouses.';
 
 -- =====================================================
 -- ISSUE APPROVAL: Decrement stock

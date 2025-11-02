@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck } from "@tabler/icons-react";
+import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { ProductSerialInput } from "./service-request/product-serial-input";
+import { trpc } from "@/components/providers/trpc-provider";
 
 interface ProductItem {
   serial_number: string;
@@ -39,6 +40,7 @@ interface ServiceRequestFormProps {
   initialData?: Partial<ServiceRequestFormData>;
   mode: "create" | "edit";
   onSubmit: (data: ServiceRequestFormData) => void;
+  onSaveDraft?: (data: ServiceRequestFormData) => void;
   isSubmitting: boolean;
 }
 
@@ -46,6 +48,7 @@ export function ServiceRequestForm({
   initialData,
   mode,
   onSubmit,
+  onSaveDraft,
   isSubmitting,
 }: ServiceRequestFormProps) {
   // Form state
@@ -57,12 +60,51 @@ export function ServiceRequestForm({
     initialData?.receipt_status || "received"
   );
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | undefined>(
-    initialData?.preferred_delivery_method
+    initialData?.preferred_delivery_method || "pickup"
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
   const [items, setItems] = useState<ProductItem[]>(
     initialData?.items || [{ serial_number: "" }]
   );
+
+  // Lookup state
+  const [lookupPhone, setLookupPhone] = useState("");
+  const [customerFound, setCustomerFound] = useState(false);
+
+  // Customer lookup query (only enabled when phone is valid)
+  const customerLookup = trpc.customers.getByPhone.useQuery(
+    { phone: lookupPhone },
+    {
+      enabled: lookupPhone.length >= 10,
+      retry: false,
+    }
+  );
+
+  // Debounced phone lookup
+  useEffect(() => {
+    if (customerPhone.length >= 10) {
+      const timer = setTimeout(() => {
+        setLookupPhone(customerPhone);
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(timer);
+    } else {
+      setLookupPhone("");
+      setCustomerFound(false);
+    }
+  }, [customerPhone]);
+
+  // Auto-fill when customer found
+  useEffect(() => {
+    if (customerLookup.data) {
+      setCustomerName(customerLookup.data.name);
+      setCustomerEmail(customerLookup.data.email || "");
+      setCustomerFound(true);
+      toast.success(`Đã tìm thấy khách hàng: ${customerLookup.data.name}`);
+    } else if (customerLookup.isFetched && lookupPhone && !customerLookup.data) {
+      setCustomerFound(false);
+    }
+  }, [customerLookup.data, customerLookup.isFetched, lookupPhone]);
 
   const handleAddItem = () => {
     if (items.length >= 10) {
@@ -86,49 +128,87 @@ export function ServiceRequestForm({
     setItems(newItems);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validate form (returns true if valid)
+  const validateForm = (isDraft = false): boolean => {
+    // For drafts, we can be more lenient
+    if (isDraft) {
+      if (!customerPhone || customerPhone.length < 10) {
+        toast.error("Số điện thoại phải có ít nhất 10 ký tự");
+        return false;
+      }
+      if (items.length === 0 || items.every((item) => !item.serial_number)) {
+        toast.error("Phải có ít nhất 1 sản phẩm");
+        return false;
+      }
+      return true;
+    }
 
-    // Validation
+    // For submission, validate all fields
     if (!customerName || customerName.length < 2) {
       toast.error("Tên khách hàng phải có ít nhất 2 ký tự");
-      return;
+      return false;
     }
-    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       toast.error("Email không hợp lệ");
-      return;
+      return false;
     }
     if (!customerPhone || customerPhone.length < 10) {
       toast.error("Số điện thoại phải có ít nhất 10 ký tự");
-      return;
+      return false;
     }
-    if (!issueDescription || issueDescription.length < 20) {
-      toast.error("Mô tả vấn đề phải có ít nhất 20 ký tự");
-      return;
+    if (!issueDescription || issueDescription.trim().length === 0) {
+      toast.error("Mô tả vấn đề không được để trống");
+      return false;
     }
     if (items.some((item) => !item.serial_number || item.serial_number.length < 5)) {
       toast.error("Tất cả serial number phải có ít nhất 5 ký tự");
-      return;
+      return false;
     }
     if (deliveryMethod === "delivery" && !deliveryAddress) {
       toast.error("Địa chỉ giao hàng là bắt buộc khi chọn giao hàng tận nơi");
-      return;
+      return false;
     }
-
-    onSubmit({
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      issue_description: issueDescription,
-      items: items.map((item) => ({
-        serial_number: item.serial_number.toUpperCase(),
-        issue_description: item.issue_description,
-      })),
-      receipt_status: receiptStatus,
-      preferred_delivery_method: deliveryMethod,
-      delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
-    });
+    return true;
   };
+
+  // Build form data
+  const buildFormData = (): ServiceRequestFormData => ({
+    customer_name: customerName,
+    customer_email: customerEmail,
+    customer_phone: customerPhone,
+    issue_description: issueDescription,
+    items: items.map((item) => ({
+      serial_number: item.serial_number.toUpperCase(),
+      issue_description: item.issue_description,
+    })),
+    receipt_status: receiptStatus,
+    preferred_delivery_method: deliveryMethod,
+    delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm(false)) return;
+    onSubmit(buildFormData());
+  };
+
+  const handleSaveDraft = (e: Event) => {
+    e.preventDefault();
+    if (!onSaveDraft) return;
+    if (!validateForm(true)) return;
+    onSaveDraft(buildFormData());
+  };
+
+  // Listen for submit-draft event
+  useEffect(() => {
+    const form = document.getElementById("service-request-form");
+    if (form && onSaveDraft) {
+      form.addEventListener("submit-draft", handleSaveDraft as EventListener);
+      return () => {
+        form.removeEventListener("submit-draft", handleSaveDraft as EventListener);
+      };
+    }
+  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">
@@ -179,11 +259,11 @@ export function ServiceRequestForm({
             id="issue-description"
             value={issueDescription}
             onChange={(e) => setIssueDescription(e.target.value)}
-            placeholder="Mô tả chung về vấn đề của các sản phẩm... (tối thiểu 20 ký tự)"
+            placeholder="Mô tả chung về vấn đề của các sản phẩm..."
             rows={3}
             disabled={isSubmitting}
           />
-          <p className="text-xs text-muted-foreground">{issueDescription.length}/20 ký tự</p>
+          <p className="text-xs text-muted-foreground">{issueDescription.length} ký tự</p>
         </CardContent>
       </Card>
 
@@ -196,6 +276,34 @@ export function ServiceRequestForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer-phone">Số điện thoại *</Label>
+            <div className="relative">
+              <Input
+                id="customer-phone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="0912345678"
+                disabled={isSubmitting}
+                className={customerFound ? "pr-10" : ""}
+              />
+              {customerLookup.isLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {customerFound && !customerLookup.isLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <IconCheck className="h-4 w-4 text-green-600" />
+                </div>
+              )}
+            </div>
+            {customerFound && (
+              <p className="text-xs text-green-600">
+                ✓ Đã tìm thấy thông tin khách hàng
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="customer-name">Họ tên *</Label>
@@ -208,26 +316,16 @@ export function ServiceRequestForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="customer-phone">Số điện thoại *</Label>
+              <Label htmlFor="customer-email">Email</Label>
               <Input
-                id="customer-phone"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="0912345678"
+                id="customer-email"
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="customer@example.com (không bắt buộc)"
                 disabled={isSubmitting}
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-email">Email *</Label>
-            <Input
-              id="customer-email"
-              type="email"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              placeholder="customer@example.com"
-              disabled={isSubmitting}
-            />
           </div>
         </CardContent>
       </Card>

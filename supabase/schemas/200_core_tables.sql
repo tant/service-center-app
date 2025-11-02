@@ -58,7 +58,7 @@ CREATE POLICY "profiles_delete_policy" ON "profiles" FOR DELETE USING (public.is
 CREATE TABLE "customers" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "name" TEXT NOT NULL,
-  "phone" TEXT NOT NULL,
+  "phone" TEXT NOT NULL UNIQUE,
   "email" TEXT,
   "address" TEXT,
   "notes" TEXT,
@@ -68,11 +68,13 @@ CREATE TABLE "customers" (
   "created_by" UUID REFERENCES "profiles"("user_id"),
   "updated_by" UUID REFERENCES "profiles"("user_id"),
 
-  CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "customers_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "customers_phone_unique" UNIQUE ("phone")
 );
 
+COMMENT ON CONSTRAINT "customers_phone_unique" ON "customers" IS 'Ensures one customer per phone number for reliable customer lookup and prevents duplicates';
+
 -- Indexes
-CREATE INDEX "customers_phone_idx" ON "customers" USING btree ("phone");
 CREATE INDEX "customers_email_idx" ON "customers" USING btree ("email");
 CREATE INDEX "customers_name_idx" ON "customers" USING btree ("name");
 CREATE INDEX "customers_is_active_idx" ON "customers" USING btree ("is_active") WHERE is_active = true;

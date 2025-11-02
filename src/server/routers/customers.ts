@@ -195,6 +195,26 @@ export const customersRouter = router({
     }),
 
   /**
+   * Lookup customer by phone number
+   * Used for auto-filling customer info in service request form
+   */
+  getByPhone: publicProcedure
+    .input(z.object({ phone: z.string().min(10) }))
+    .query(async ({ input, ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("customers")
+        .select("id, name, email, phone")
+        .eq("phone", input.phone)
+        .single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data;
+    }),
+
+  /**
    * Story 1.15: Update customer email preferences (public, for unsubscribe page)
    * AC 7: Allow customers to manage email preferences
    */

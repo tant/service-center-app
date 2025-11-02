@@ -30,14 +30,7 @@ BEGIN
   SELECT
     COUNT(DISTINCT pws.product_id)::BIGINT AS total_skus,
     COALESCE(SUM(pws.declared_quantity), 0)::BIGINT AS total_declared,
-    COALESCE(
-      SUM(
-        (SELECT COUNT(*)::INTEGER
-         FROM public.physical_products pp
-         WHERE pp.product_id = pws.product_id
-           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id)
-      ), 0
-    )::BIGINT AS total_actual,
+    (SELECT COUNT(*)::BIGINT FROM public.physical_products) AS total_actual,
     COUNT(DISTINCT CASE
       WHEN (
         SELECT COUNT(*)::INTEGER

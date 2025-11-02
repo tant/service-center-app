@@ -82,7 +82,7 @@ export const serviceRequestSchema = z.object({
   product_model: z.string(),
   serial_number: z.string().nullable(),
   issue_description: z.string(),
-  status: z.enum(["submitted", "received", "processing", "rejected", "converted"]),
+  status: z.enum(["draft", "submitted", "pickingup", "received", "processing", "completed", "cancelled"]),
   created_at: z.string(),
   updated_at: z.string().nullable(),
   linked_ticket_id: z.string().nullable(),
@@ -92,11 +92,13 @@ export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
 
 // Status mapping
 const STATUS_MAP = {
-  submitted: { label: "Đã gửi", variant: "outline" as const },
-  received: { label: "Đã tiếp nhận", variant: "secondary" as const },
+  draft: { label: "Nháp", variant: "outline" as const },
+  submitted: { label: "Đã gửi", variant: "secondary" as const },
+  pickingup: { label: "Chờ lấy hàng", variant: "secondary" as const },
+  received: { label: "Đã tiếp nhận", variant: "default" as const },
   processing: { label: "Đang xử lý", variant: "default" as const },
-  rejected: { label: "Đã từ chối", variant: "destructive" as const },
-  converted: { label: "Đã chuyển", variant: "default" as const },
+  completed: { label: "Hoàn thành", variant: "default" as const },
+  cancelled: { label: "Đã hủy", variant: "destructive" as const },
 };
 
 // Column labels
@@ -245,9 +247,11 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
   // Calculate stats
   const stats = {
     total: data.length,
+    draft: data.filter((r) => r.status === "draft").length,
+    pickingup: data.filter((r) => r.status === "pickingup").length,
     received: data.filter((r) => r.status === "received").length,
     processing: data.filter((r) => r.status === "processing").length,
-    converted: data.filter((r) => r.status === "converted").length,
+    completed: data.filter((r) => r.status === "completed").length,
   };
 
   return (
@@ -348,12 +352,12 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
 
         <Card className="@container/card">
           <CardHeader>
-            <CardDescription>Đã hoàn thành</CardDescription>
+            <CardDescription>Hoàn thành</CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              {stats.converted}
+              {stats.completed}
             </CardTitle>
             <CardAction>
-              <Badge className="bg-purple-100 text-purple-800">
+              <Badge className="bg-green-100 text-green-800">
                 Đã chuyển ticket
               </Badge>
             </CardAction>

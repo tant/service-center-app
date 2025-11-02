@@ -285,6 +285,20 @@ export function createEmptyWizardProduct(): WizardProduct {
   };
 }
 
+export function cloneWizardProduct(product: WizardProduct): WizardProduct {
+  const base = createEmptyWizardProduct();
+  return {
+    ...base,
+    productBrand: product.productBrand,
+    productModel: product.productModel,
+    purchaseDate: product.purchaseDate,
+    issueDescription: product.issueDescription,
+    warrantyRequested: product.warrantyRequested,
+    serviceOption: product.serviceOption,
+    serviceOptionNotes: product.serviceOptionNotes,
+  };
+}
+
 export function resetWizard(dispatch: React.Dispatch<WizardAction>) {
   dispatch({ type: "RESET" });
 }

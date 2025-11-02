@@ -36,7 +36,7 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
       accessorKey: "serial_number",
       header: "Số Serial",
       cell: ({ row }) => (
-        <div className="font-mono font-medium">
+        <div className="font-medium">
           {row.original.serial_number}
         </div>
       ),

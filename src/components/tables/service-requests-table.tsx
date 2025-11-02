@@ -166,7 +166,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
       accessorKey: "tracking_token",
       header: "Mã theo dõi",
       cell: ({ row }) => (
-        <span className="font-mono text-xs">
+        <span className="font-medium">
           {row.getValue("tracking_token")}
         </span>
       ),
@@ -221,7 +221,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
               </p>
             ) : null}
             {primaryItem?.serial_number ? (
-              <p className="text-xs font-mono text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {primaryItem.serial_number}
               </p>
             ) : null}

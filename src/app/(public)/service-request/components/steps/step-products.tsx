@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  IconCopy,
-  IconDotsVertical,
   IconLoader2,
   IconPhotoUp,
   IconPlus,
@@ -14,13 +12,6 @@ import { type ChangeEvent, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,9 +26,9 @@ import {
   useServiceRequestWizardDispatch,
   useServiceRequestWizardState,
 } from "@/hooks/use-service-request-wizard";
+import { SERVICE_REQUEST_PRODUCT_RULES } from "../wizard-constants";
 
-const MIN_SERIAL_LENGTH = 5;
-const MIN_ISSUE_LENGTH = 10;
+const PRODUCT_RULES = SERVICE_REQUEST_PRODUCT_RULES;
 
 interface ProductCardProps {
   index: number;
@@ -57,23 +48,10 @@ function ProductCard({ index, productId }: ProductCardProps) {
   }
 
   const attachments = getAttachments(productId);
-  const serialValid = product.serialNumber.trim().length >= MIN_SERIAL_LENGTH;
-  const issueValid = product.issueDescription.trim().length >= MIN_ISSUE_LENGTH;
-
-  const handleDuplicateProduct = () => {
-    const duplicate = {
-      ...createEmptyWizardProduct(),
-      productBrand: product.productBrand,
-      productModel: product.productModel,
-      purchaseDate: product.purchaseDate,
-      issueDescription: product.issueDescription,
-      warrantyRequested: product.warrantyRequested,
-      serviceOption: product.serviceOption,
-      serviceOptionNotes: product.serviceOptionNotes,
-    };
-    addWizardProduct(dispatch, duplicate);
-    toast.success("Đã nhân bản sản phẩm. Vui lòng nhập serial mới.");
-  };
+  const serialValid =
+    product.serialNumber.trim().length >= PRODUCT_RULES.serialMinLength;
+  const issueValid =
+    product.issueDescription.trim().length >= PRODUCT_RULES.issueMinLength;
 
   const handleRemoveProduct = () => {
     toast("Bạn có chắc muốn xóa sản phẩm này?", {
@@ -127,41 +105,16 @@ function ProductCard({ index, productId }: ProductCardProps) {
             <p className="text-sm text-muted-foreground">Chưa nhập serial</p>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground"
-            >
-              <IconDotsVertical className="h-4 w-4" />
-              <span className="sr-only">Tùy chọn sản phẩm</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onSelect={(event) => {
-                event.preventDefault();
-                handleDuplicateProduct();
-              }}
-            >
-              <IconCopy className="mr-2 h-4 w-4" />
-              Nhân bản sản phẩm
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onSelect={(event) => {
-                event.preventDefault();
-                handleRemoveProduct();
-              }}
-            >
-              <IconTrash className="mr-2 h-4 w-4" />
-              Xóa sản phẩm
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={handleRemoveProduct}
+        >
+          <IconTrash className="mr-1 h-4 w-4" />
+          Xóa sản phẩm
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -176,11 +129,11 @@ function ProductCard({ index, productId }: ProductCardProps) {
             onChange={(event) => handleSerialChange(event.target.value)}
             onBlur={(event) => handleSerialChange(event.target.value.trim())}
             required
-            minLength={MIN_SERIAL_LENGTH}
+            minLength={PRODUCT_RULES.serialMinLength}
           />
           {!serialValid ? (
             <p className="text-xs text-destructive">
-              Serial phải có tối thiểu {MIN_SERIAL_LENGTH} ký tự.
+              Serial phải có tối thiểu {PRODUCT_RULES.serialMinLength} ký tự.
             </p>
           ) : null}
         </div>
@@ -210,13 +163,13 @@ function ProductCard({ index, productId }: ProductCardProps) {
           value={product.issueDescription}
           placeholder="Mô tả chi tiết triệu chứng gặp phải"
           onChange={(event) => handleIssueChange(event.target.value)}
-          minLength={MIN_ISSUE_LENGTH}
+          minLength={PRODUCT_RULES.issueMinLength}
           className="min-h-[120px]"
           required
         />
         {!issueValid ? (
           <p className="text-xs text-destructive">
-            Cần ít nhất {MIN_ISSUE_LENGTH} ký tự để mô tả vấn đề.
+            Cần ít nhất {PRODUCT_RULES.issueMinLength} ký tự để mô tả vấn đề.
           </p>
         ) : null}
       </div>
@@ -345,7 +298,7 @@ export function StepProducts() {
             onChange={(event) =>
               setWizardIssueOverview(dispatch, event.target.value)
             }
-            minLength={MIN_ISSUE_LENGTH}
+            minLength={PRODUCT_RULES.issueMinLength}
             className="min-h-24"
           />
         </div>

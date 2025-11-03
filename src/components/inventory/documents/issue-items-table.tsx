@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { StockIssueWithRelations } from "@/types/inventory";
+import type { StockIssueWithRelations } from "@/types/inventory";
 import {
   Table,
   TableBody,

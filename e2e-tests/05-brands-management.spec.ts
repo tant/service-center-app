@@ -1,4 +1,4 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const adminUser = {
   email: process.env.ADMIN_EMAIL || "admin@tantran.dev",

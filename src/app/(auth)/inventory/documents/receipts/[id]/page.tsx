@@ -11,7 +11,7 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { PageHeader } from "@/components/page-header";
 import { ReceiptDetailHeader } from "@/components/inventory/documents/receipt-detail-header";
 import { ReceiptItemsTable } from "@/components/inventory/documents/receipt-items-table";
-import { SerialEntryCard, SerialEntryStatus } from "@/components/inventory/serials";
+import { SerialEntryCard, type SerialEntryStatus } from "@/components/inventory/serials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

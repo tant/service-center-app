@@ -111,7 +111,7 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
       }
 
       switch (product.warranty_status) {
-        case 'active':
+        case 'active': {
           const months = product.days_remaining ? Math.floor(product.days_remaining / 30) : 0;
           return {
             icon: <IconCircleCheck className="h-4 w-4 flex-shrink-0" />,
@@ -121,8 +121,9 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
             label: `BH: Còn ${months} tháng`,
             message: null,
           };
+        }
 
-        case 'expiring_soon':
+        case 'expiring_soon': {
           const days = product.days_remaining || 0;
           return {
             icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
@@ -132,8 +133,9 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
             label: `BH: Còn ${days} ngày`,
             message: '⚠️ Bảo hành sắp hết hạn',
           };
+        }
 
-        case 'expired':
+        case 'expired': {
           const expiredDate = product.warranty_end_date
             ? format(new Date(product.warranty_end_date), 'dd/MM/yyyy', { locale: vi })
             : '';
@@ -145,6 +147,7 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
             label: `BH: Hết hạn (${expiredDate})`,
             message: '💡 Sửa chữa có phí - Vui lòng thông báo khách hàng',
           };
+        }
 
         case 'no_warranty':
         default:

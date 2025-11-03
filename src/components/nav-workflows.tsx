@@ -3,7 +3,7 @@
 import type { Icon } from "@tabler/icons-react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
-import * as React from "react";
+import type * as React from "react";
 
 import {
   Collapsible,

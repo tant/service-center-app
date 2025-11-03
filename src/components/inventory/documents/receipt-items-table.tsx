@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { StockReceiptWithRelations } from "@/types/inventory";
+import type { StockReceiptWithRelations } from "@/types/inventory";
 import {
   Table,
   TableBody,

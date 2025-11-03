@@ -5,7 +5,7 @@
  * Displays header information for a stock receipt
  */
 
-import { StockReceiptWithRelations } from "@/types/inventory";
+import type { StockReceiptWithRelations } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

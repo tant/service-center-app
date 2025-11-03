@@ -497,7 +497,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
               trong tổng số {table.getFilteredRowModel().rows.length} yêu cầu
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
-              <div className="flex items-center space-x-2">
+              <div className="ml-8 flex items-center space-x-2">
                 <p className="text-sm font-medium">Số dòng mỗi trang</p>
                 <Select
                   value={`${table.getState().pagination.pageSize}`}

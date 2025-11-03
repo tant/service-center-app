@@ -41,7 +41,7 @@ export function TablePagination({
       {/* Navigation Buttons */}
       <div className="flex items-center gap-8">
         {/* Page Size Selector */}
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="ml-8 hidden items-center gap-2 lg:flex">
           <Label htmlFor={labelId} className="text-sm font-medium">
             Số dòng mỗi trang
           </Label>

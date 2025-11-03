@@ -8,9 +8,8 @@
 
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
-import { TaskCard, TaskPriority } from "@/components/inventory/serials";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { SerialEntryTaskCard } from "@/components/tasks/serial-entry-task-card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -22,24 +21,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, ClipboardList, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-// Mock data interface - will be replaced with tRPC query
-interface SerialTask {
-  id: string;
-  receiptNumber: string;
-  receiptId: string;
-  progress: {
-    current: number;
-    total: number;
-  };
-  assignedTo: {
-    id: string;
-    full_name: string;
-  };
-  receiptStatus: string;
-  createdAt: Date;
-  ageInDays: number;
-}
+import { trpc } from "@/components/providers/trpc-provider";
+import { toast } from "sonner";
 
 type FilterType = "all" | "mine" | "available" | "overdue";
 type SortType = "priority" | "date" | "progress" | "age";
@@ -49,77 +32,49 @@ export default function SerialEntryTaskDashboard() {
   const [filter, setFilter] = useState<FilterType>("mine");
   const [sortBy, setSortBy] = useState<SortType>("priority");
 
-  // TODO: Replace with actual tRPC query
-  const isLoading = false;
-  const currentUserId = "current-user-id"; // TODO: Get from session
+  // Fetch all inventory_receipt tasks
+  const { data: tasks, isLoading } = trpc.tasks.myTasks.useQuery({
+    entityType: "inventory_receipt",
+  });
 
-  // Mock data - will be replaced with tRPC query
-  const mockTasks: SerialTask[] = [
-    {
-      id: "1",
-      receiptNumber: "PN-2025-045",
-      receiptId: "receipt-1",
-      progress: { current: 5, total: 20 },
-      assignedTo: { id: currentUserId, full_name: "Nguyễn Văn A" },
-      receiptStatus: "completed",
-      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-      ageInDays: 15,
+  // Start task mutation
+  const startTaskMutation = trpc.tasks.startTask.useMutation({
+    onSuccess: () => {
+      toast.success("Đã bắt đầu task");
     },
-    {
-      id: "2",
-      receiptNumber: "PN-2025-032",
-      receiptId: "receipt-2",
-      progress: { current: 2, total: 30 },
-      assignedTo: { id: currentUserId, full_name: "Nguyễn Văn A" },
-      receiptStatus: "approved",
-      createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
-      ageInDays: 12,
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
     },
-    {
-      id: "3",
-      receiptNumber: "PN-2025-078",
-      receiptId: "receipt-3",
-      progress: { current: 12, total: 15 },
-      assignedTo: { id: currentUserId, full_name: "Nguyễn Văn A" },
-      receiptStatus: "approved",
-      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-      ageInDays: 4,
+  });
+
+  // Complete task mutation
+  const completeTaskMutation = trpc.tasks.completeTask.useMutation({
+    onSuccess: () => {
+      toast.success("Đã hoàn thành task");
     },
-    {
-      id: "4",
-      receiptNumber: "PN-2025-089",
-      receiptId: "receipt-4",
-      progress: { current: 0, total: 8 },
-      assignedTo: { id: currentUserId, full_name: "Nguyễn Văn A" },
-      receiptStatus: "approved",
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      ageInDays: 1,
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
     },
-    {
-      id: "5",
-      receiptNumber: "PN-2025-091",
-      receiptId: "receipt-5",
-      progress: { current: 5, total: 10 },
-      assignedTo: { id: "other-user", full_name: "Trần Thị B" },
-      receiptStatus: "approved",
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      ageInDays: 2,
-    },
-  ];
+  });
 
   // Filter tasks
   const filteredTasks = useMemo(() => {
-    let result = mockTasks;
+    if (!tasks) return [];
+    let result = tasks;
 
     switch (filter) {
       case "mine":
-        result = result.filter((task) => task.assignedTo.id === currentUserId);
+        result = result.filter((task) => task.assigned_to !== null);
         break;
       case "available":
-        result = result.filter((task) => task.assignedTo.id !== currentUserId);
+        result = result.filter((task) => task.assigned_to === null);
         break;
       case "overdue":
-        result = result.filter((task) => task.ageInDays > 3);
+        result = result.filter((task) => {
+          if (!task.due_date) return false;
+          const dueDate = new Date(task.due_date);
+          return dueDate < new Date() && task.status !== "completed";
+        });
         break;
       default:
         // all
@@ -127,83 +82,111 @@ export default function SerialEntryTaskDashboard() {
     }
 
     return result;
-  }, [mockTasks, filter, currentUserId]);
+  }, [tasks, filter]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => {
-    const tasks = [...filteredTasks];
+    const taskList = [...filteredTasks];
 
     switch (sortBy) {
       case "priority":
-        // Sort by age (oldest first), then by completion percentage (lowest first)
-        tasks.sort((a, b) => {
-          const aPriority = a.ageInDays > 7 ? 3 : a.ageInDays > 3 ? 2 : 1;
-          const bPriority = b.ageInDays > 7 ? 3 : b.ageInDays > 3 ? 2 : 1;
-          if (aPriority !== bPriority) return bPriority - aPriority;
-
-          const aPercentage = (a.progress.current / a.progress.total) * 100;
-          const bPercentage = (b.progress.current / b.progress.total) * 100;
-          return aPercentage - bPercentage;
+        // Sort by entity context priority
+        taskList.sort((a, b) => {
+          const priorityOrder: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+          const aPriority = a.entity_context.priority
+            ? (priorityOrder[a.entity_context.priority] ?? 2)
+            : 2;
+          const bPriority = b.entity_context.priority
+            ? (priorityOrder[b.entity_context.priority] ?? 2)
+            : 2;
+          return aPriority - bPriority;
         });
         break;
       case "date":
-        tasks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        taskList.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
         break;
       case "progress":
-        tasks.sort((a, b) => {
-          const aPercentage = (a.progress.current / a.progress.total) * 100;
-          const bPercentage = (b.progress.current / b.progress.total) * 100;
+        // Sort by serial completion percentage (from metadata)
+        taskList.sort((a, b) => {
+          const aPercentage = Number(
+            a.entity_context.metadata?.serialCompletionPercentage || 0
+          );
+          const bPercentage = Number(
+            b.entity_context.metadata?.serialCompletionPercentage || 0
+          );
           return aPercentage - bPercentage;
         });
         break;
       case "age":
-        tasks.sort((a, b) => b.ageInDays - a.ageInDays);
+        taskList.sort((a, b) => {
+          const aAge = Date.now() - new Date(a.created_at).getTime();
+          const bAge = Date.now() - new Date(b.created_at).getTime();
+          return bAge - aAge;
+        });
         break;
     }
 
-    return tasks;
+    return taskList;
   }, [filteredTasks, sortBy]);
 
   // Group tasks by priority
   const groupedTasks = useMemo(() => {
-    const critical: SerialTask[] = [];
-    const warning: SerialTask[] = [];
-    const normal: SerialTask[] = [];
+    const urgent: typeof sortedTasks = [];
+    const high: typeof sortedTasks = [];
+    const normal: typeof sortedTasks = [];
+    const low: typeof sortedTasks = [];
 
     sortedTasks.forEach((task) => {
-      if (task.ageInDays > 7) {
-        critical.push(task);
-      } else if (task.ageInDays > 3) {
-        warning.push(task);
-      } else {
-        normal.push(task);
+      const priority = task.entity_context.priority || "normal";
+      switch (priority) {
+        case "urgent":
+          urgent.push(task);
+          break;
+        case "high":
+          high.push(task);
+          break;
+        case "low":
+          low.push(task);
+          break;
+        default:
+          normal.push(task);
       }
     });
 
-    return { critical, warning, normal };
+    return { urgent, high, normal, low };
   }, [sortedTasks]);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const myTasks = mockTasks.filter((t) => t.assignedTo.id === currentUserId);
-    const overdueCount = mockTasks.filter((t) => t.ageInDays > 3).length;
-    const availableCount = mockTasks.filter((t) => t.assignedTo.id !== currentUserId).length;
+    if (!tasks) return { total: 0, mine: 0, overdue: 0, available: 0 };
+
+    const myTasks = tasks.filter((t) => t.assigned_to !== null);
+    const overdueCount = tasks.filter((t) => {
+      if (!t.due_date) return false;
+      return new Date(t.due_date) < new Date() && t.status !== "completed";
+    }).length;
+    const availableCount = tasks.filter((t) => t.assigned_to === null).length;
 
     return {
-      total: mockTasks.length,
+      total: tasks.length,
       mine: myTasks.length,
       overdue: overdueCount,
       available: availableCount,
     };
-  }, [mockTasks, currentUserId]);
+  }, [tasks]);
 
-  const handleContinue = (receiptId: string) => {
-    router.push(`/inventory/documents/receipts/${receiptId}`);
+  const handleStartTask = (taskId: string) => {
+    startTaskMutation.mutate({ taskId });
   };
 
-  const handleReassign = (taskId: string) => {
-    // TODO: Implement reassignment modal
-    console.log("Reassign task:", taskId);
+  const handleCompleteTask = (taskId: string) => {
+    completeTaskMutation.mutate({
+      taskId,
+      completionNotes: "Đã hoàn thành nhập serial",
+    });
   };
 
   if (isLoading) {
@@ -325,28 +308,26 @@ export default function SerialEntryTaskDashboard() {
                 </Card>
               )}
 
-              {/* Critical Tasks */}
-              {groupedTasks.critical.length > 0 && (
+              {/* Urgent Tasks (0-49% complete) */}
+              {groupedTasks.urgent.length > 0 && (
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-red-600" />
                     <h2 className="text-xl font-semibold text-red-600">
-                      QUÁ HẠN NGHIÊM TRỌNG
+                      CẦN XỬ LÝ NGAY
                     </h2>
-                    <Badge variant="destructive">{groupedTasks.critical.length}</Badge>
+                    <Badge variant="destructive">{groupedTasks.urgent.length}</Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    {groupedTasks.critical.map((task) => (
-                      <TaskCard
+                    {groupedTasks.urgent.map((task) => (
+                      <SerialEntryTaskCard
                         key={task.id}
                         task={task}
-                        variant={task.assignedTo.id === currentUserId ? "mine" : "available"}
-                        isMine={task.assignedTo.id === currentUserId}
-                        onContinue={() => handleContinue(task.receiptId)}
-                        onReassign={
-                          task.assignedTo.id === currentUserId
-                            ? () => handleReassign(task.id)
-                            : undefined
+                        onStartTask={handleStartTask}
+                        onCompleteTask={handleCompleteTask}
+                        isLoading={
+                          startTaskMutation.isPending ||
+                          completeTaskMutation.isPending
                         }
                       />
                     ))}
@@ -354,28 +335,26 @@ export default function SerialEntryTaskDashboard() {
                 </div>
               )}
 
-              {/* Warning Tasks */}
-              {groupedTasks.warning.length > 0 && (
+              {/* High Priority Tasks (50-99% complete) */}
+              {groupedTasks.high.length > 0 && (
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-yellow-600" />
                     <h2 className="text-xl font-semibold text-yellow-600">
-                      ĐANG QUÁ HẠN
+                      ĐANG XỬ LÝ
                     </h2>
-                    <Badge className="bg-yellow-600">{groupedTasks.warning.length}</Badge>
+                    <Badge className="bg-yellow-600">{groupedTasks.high.length}</Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    {groupedTasks.warning.map((task) => (
-                      <TaskCard
+                    {groupedTasks.high.map((task) => (
+                      <SerialEntryTaskCard
                         key={task.id}
                         task={task}
-                        variant={task.assignedTo.id === currentUserId ? "mine" : "available"}
-                        isMine={task.assignedTo.id === currentUserId}
-                        onContinue={() => handleContinue(task.receiptId)}
-                        onReassign={
-                          task.assignedTo.id === currentUserId
-                            ? () => handleReassign(task.id)
-                            : undefined
+                        onStartTask={handleStartTask}
+                        onCompleteTask={handleCompleteTask}
+                        isLoading={
+                          startTaskMutation.isPending ||
+                          completeTaskMutation.isPending
                         }
                       />
                     ))}
@@ -385,26 +364,51 @@ export default function SerialEntryTaskDashboard() {
 
               {/* Normal Tasks */}
               {groupedTasks.normal.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-2">
                     <ClipboardList className="h-5 w-5 text-blue-600" />
                     <h2 className="text-xl font-semibold text-blue-600">
-                      ĐANG TIẾN HÀNH
+                      BìNH THƯỜNG
                     </h2>
                     <Badge className="bg-blue-600">{groupedTasks.normal.length}</Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {groupedTasks.normal.map((task) => (
-                      <TaskCard
+                      <SerialEntryTaskCard
                         key={task.id}
                         task={task}
-                        variant={task.assignedTo.id === currentUserId ? "mine" : "available"}
-                        isMine={task.assignedTo.id === currentUserId}
-                        onContinue={() => handleContinue(task.receiptId)}
-                        onReassign={
-                          task.assignedTo.id === currentUserId
-                            ? () => handleReassign(task.id)
-                            : undefined
+                        onStartTask={handleStartTask}
+                        onCompleteTask={handleCompleteTask}
+                        isLoading={
+                          startTaskMutation.isPending ||
+                          completeTaskMutation.isPending
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Low Priority Tasks (100% complete) */}
+              {groupedTasks.low.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-green-600" />
+                    <h2 className="text-xl font-semibold text-green-600">
+                      ĐÃ HOÀN THÀNH
+                    </h2>
+                    <Badge className="bg-green-600">{groupedTasks.low.length}</Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {groupedTasks.low.map((task) => (
+                      <SerialEntryTaskCard
+                        key={task.id}
+                        task={task}
+                        onStartTask={handleStartTask}
+                        onCompleteTask={handleCompleteTask}
+                        isLoading={
+                          startTaskMutation.isPending ||
+                          completeTaskMutation.isPending
                         }
                       />
                     ))}

@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { initTRPC } from "@trpc/server";
+import { initializeEntityAdapters } from "./services/entity-adapters/init";
+
+// Initialize entity adapters on module load
+initializeEntityAdapters();
 
 // Global counters for tracking duplicate calls
 let clientCreationCount = 0;

@@ -268,6 +268,185 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_task_history: {
+        Row: {
+          changed_by_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          metadata: Json | null
+          new_status: Database["public"]["Enums"]["task_status"]
+          notes: string | null
+          old_status: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+        }
+        Insert: {
+          changed_by_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          metadata?: Json | null
+          new_status: Database["public"]["Enums"]["task_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id: string
+        }
+        Update: {
+          changed_by_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["task_status"]
+          notes?: string | null
+          old_status?: Database["public"]["Enums"]["task_status"] | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_task_history_changed_by_id_fkey"
+            columns: ["changed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "entity_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "service_ticket_tasks_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_tasks: {
+        Row: {
+          assigned_to_id: string | null
+          blocked_reason: string | null
+          completed_at: string | null
+          completion_notes: string | null
+          created_at: string
+          created_by_id: string | null
+          description: string | null
+          due_date: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          estimated_duration_minutes: number | null
+          id: string
+          is_required: boolean
+          metadata: Json | null
+          name: string
+          sequence_order: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_id: string
+          updated_at: string
+          workflow_id: string | null
+          workflow_task_id: string | null
+        }
+        Insert: {
+          assigned_to_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_required?: boolean
+          metadata?: Json | null
+          name: string
+          sequence_order: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_id: string
+          updated_at?: string
+          workflow_id?: string | null
+          workflow_task_id?: string | null
+        }
+        Update: {
+          assigned_to_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_required?: boolean
+          metadata?: Json | null
+          name?: string
+          sequence_order?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_id?: string
+          updated_at?: string
+          workflow_id?: string | null
+          workflow_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_tasks_assigned_to_id_fkey"
+            columns: ["assigned_to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["workflow_id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_workflow_task_id_fkey"
+            columns: ["workflow_task_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parts: {
         Row: {
           category: string | null
@@ -1203,7 +1382,7 @@ export type Database = {
           comment: string
           comment_type: Database["public"]["Enums"]["comment_type"]
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           is_internal: boolean
           ticket_id: string
@@ -1214,7 +1393,7 @@ export type Database = {
           comment: string
           comment_type?: Database["public"]["Enums"]["comment_type"]
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           is_internal?: boolean
           ticket_id: string
@@ -1225,7 +1404,7 @@ export type Database = {
           comment?: string
           comment_type?: Database["public"]["Enums"]["comment_type"]
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           is_internal?: boolean
           ticket_id?: string
@@ -2238,6 +2417,7 @@ export type Database = {
           supplier_id: string | null
           updated_at: string
           virtual_warehouse_id: string
+          workflow_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -2259,6 +2439,7 @@ export type Database = {
           supplier_id?: string | null
           updated_at?: string
           virtual_warehouse_id: string
+          workflow_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -2280,6 +2461,7 @@ export type Database = {
           supplier_id?: string | null
           updated_at?: string
           virtual_warehouse_id?: string
+          workflow_id?: string | null
         }
         Relationships: [
           {
@@ -2329,6 +2511,20 @@ export type Database = {
             columns: ["virtual_warehouse_id"]
             isOneToOne: false
             referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["workflow_id"]
+          },
+          {
+            foreignKeyName: "stock_receipts_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -2603,6 +2799,130 @@ export type Database = {
             columns: ["to_virtual_warehouse_id"]
             isOneToOne: false
             referencedRelation: "virtual_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_attachments: {
+        Row: {
+          comment_id: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number
+          id: string
+          mime_type: string
+          task_id: string
+          uploaded_by: string
+          user_id: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number
+          id?: string
+          mime_type: string
+          task_id: string
+          uploaded_by: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number
+          id?: string
+          mime_type?: string
+          task_id?: string
+          uploaded_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "entity_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "service_ticket_tasks_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          comment: string
+          created_at: string | null
+          id: string
+          task_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          id?: string
+          task_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          id?: string
+          task_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "entity_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "service_ticket_tasks_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2907,9 +3227,11 @@ export type Database = {
           created_at: string
           created_by_id: string
           description: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"] | null
           id: string
           is_active: boolean
           name: string
+          notes: string | null
           product_type: string | null
           service_type: Database["public"]["Enums"]["service_type"]
           strict_sequence: boolean
@@ -2919,9 +3241,11 @@ export type Database = {
           created_at?: string
           created_by_id: string
           description?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"] | null
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
           product_type?: string | null
           service_type?: Database["public"]["Enums"]["service_type"]
           strict_sequence?: boolean
@@ -2931,9 +3255,11 @@ export type Database = {
           created_at?: string
           created_by_id?: string
           description?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"] | null
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
           product_type?: string | null
           service_type?: Database["public"]["Enums"]["service_type"]
           strict_sequence?: boolean
@@ -3036,6 +3362,85 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      service_ticket_tasks_view: {
+        Row: {
+          assigned_to_id: string | null
+          blocked_reason: string | null
+          completed_at: string | null
+          completion_notes: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_required: boolean | null
+          name: string | null
+          sequence_order: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_id: string | null
+          ticket_id: string | null
+          updated_at: string | null
+          workflow_task_id: string | null
+        }
+        Insert: {
+          assigned_to_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_required?: boolean | null
+          name?: string | null
+          sequence_order?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_id?: string | null
+          ticket_id?: string | null
+          updated_at?: string | null
+          workflow_task_id?: string | null
+        }
+        Update: {
+          assigned_to_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_required?: boolean | null
+          name?: string | null
+          sequence_order?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_id?: string | null
+          ticket_id?: string | null
+          updated_at?: string | null
+          workflow_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_tasks_assigned_to_id_fkey"
+            columns: ["assigned_to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_tasks_workflow_task_id_fkey"
+            columns: ["workflow_task_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_tasks"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3278,6 +3683,7 @@ export type Database = {
         Args: { p_start_date: string; p_warranty_months: number }
         Returns: string
       }
+      count_workflow_usage: { Args: { p_workflow_id: string }; Returns: number }
       decrease_part_stock: {
         Args: { p_part_id: string; p_quantity_to_decrease: number }
         Returns: boolean
@@ -3306,6 +3712,18 @@ export type Database = {
         }[]
       }
       get_my_role: { Args: never; Returns: string }
+      get_serial_entry_progress: {
+        Args: { p_receipt_id: string }
+        Returns: {
+          expected_quantity: number
+          percentage: number
+          product_id: string
+          product_name: string
+          serial_count: number
+          task_id: string
+          task_status: string
+        }[]
+      }
       get_warranty_status: {
         Args: { p_warranty_end_date: string }
         Returns: string
@@ -3354,6 +3772,12 @@ export type Database = {
     Enums: {
       comment_type: "note" | "status_change" | "assignment" | "system"
       delivery_method: "pickup" | "delivery"
+      entity_type:
+        | "service_ticket"
+        | "inventory_receipt"
+        | "inventory_issue"
+        | "inventory_transfer"
+        | "service_request"
       movement_type:
         | "receipt"
         | "transfer"
@@ -3535,6 +3959,13 @@ export const Constants = {
     Enums: {
       comment_type: ["note", "status_change", "assignment", "system"],
       delivery_method: ["pickup", "delivery"],
+      entity_type: [
+        "service_ticket",
+        "inventory_receipt",
+        "inventory_issue",
+        "inventory_transfer",
+        "service_request",
+      ],
       movement_type: [
         "receipt",
         "transfer",

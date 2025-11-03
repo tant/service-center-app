@@ -20,6 +20,10 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/components/providers/trpc-provider";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
+import { TaskCard } from "@/components/tasks/task-card";
+import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
+import { ListTodo } from "lucide-react";
 
 // Status mapping
 const STATUS_MAP = {
@@ -38,6 +42,11 @@ export default function ServiceRequestDetailPage() {
   const requestId = params.id as string;
 
   const { data: request, isLoading, error, refetch } = useRequestDetails(requestId);
+  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
+    { entityType: "service_request", entityId: requestId },
+    { refetchInterval: 30000 }
+  );
+  const tasks = taskData?.tasks || [];
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
   const { rejectRequest, isRejecting } = useRejectRequest();
 
@@ -53,6 +62,25 @@ export default function ServiceRequestDetailPage() {
 
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
+
+  // Task action dialog state
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+    open: false,
+    taskId: null,
+    taskName: "",
+  });
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+    open: false,
+    taskId: null,
+    taskName: "",
+  });
+
+  // Task mutations
+  const startTaskMutation = trpc.tasks.startTask.useMutation();
+  const completeTaskMutation = trpc.tasks.completeTask.useMutation();
+  const blockTaskMutation = trpc.tasks.blockTask.useMutation();
+  const unblockTaskMutation = trpc.tasks.unblockTask.useMutation();
 
   const handleAccept = () => {
     if (!request) return;
@@ -99,6 +127,71 @@ export default function ServiceRequestDetailPage() {
   const handleDeleteDraft = () => {
     if (confirm("Bạn có chắc muốn xóa bản nháp này? Hành động này không thể hoàn tác.")) {
       deleteDraft.mutate({ request_id: requestId });
+    }
+  };
+
+  // Task action handlers
+  const handleStartTask = async (taskId: string) => {
+    try {
+      await startTaskMutation.mutateAsync({ taskId });
+      toast.success("Đã bắt đầu công việc");
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể bắt đầu công việc");
+    }
+  };
+
+  const handleCompleteTask = (taskId: string, taskName: string) => {
+    setCompleteTaskDialog({ open: true, taskId, taskName });
+  };
+
+  const handleCompleteTaskConfirm = async (notes: string) => {
+    if (!completeTaskDialog.taskId) return;
+
+    try {
+      await completeTaskMutation.mutateAsync({
+        taskId: completeTaskDialog.taskId,
+        completionNotes: notes,
+      });
+      toast.success("Đã hoàn thành công việc");
+      setCompleteTaskDialog({ open: false, taskId: null, taskName: "" });
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể hoàn thành công việc");
+    }
+  };
+
+  const handleBlockTask = (taskId: string, taskName: string) => {
+    setBlockTaskDialog({ open: true, taskId, taskName });
+  };
+
+  const handleBlockTaskConfirm = async (reason: string) => {
+    if (!blockTaskDialog.taskId) return;
+
+    try {
+      await blockTaskMutation.mutateAsync({
+        taskId: blockTaskDialog.taskId,
+        blockedReason: reason,
+      });
+      toast.success("Đã báo chặn công việc");
+      setBlockTaskDialog({ open: false, taskId: null, taskName: "" });
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể báo chặn công việc");
+    }
+  };
+
+  const handleUnblockTask = async (taskId: string) => {
+    try {
+      await unblockTaskMutation.mutateAsync({ taskId });
+      toast.success("Đã bỏ chặn công việc");
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể bỏ chặn công việc");
     }
   };
 
@@ -153,6 +246,48 @@ export default function ServiceRequestDetailPage() {
                 </div>
               </CardHeader>
             </Card>
+
+            {/* Workflow Assignment Button */}
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWorkflowDialogOpen(true)}
+              >
+                <ListTodo className="h-4 w-4 mr-2" />
+                Tạo công việc
+              </Button>
+            </div>
+
+            {/* Tasks Section */}
+            {tasks.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <ListTodo className="h-4 w-4" />
+                    Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {tasks.map((task: any) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onStartTask={handleStartTask}
+                      onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
+                      onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                      onUnblockTask={handleUnblockTask}
+                      isLoading={
+                        startTaskMutation.isPending ||
+                        completeTaskMutation.isPending ||
+                        blockTaskMutation.isPending ||
+                        unblockTaskMutation.isPending
+                      }
+                    />
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Customer Information */}
             <Card>
@@ -388,6 +523,39 @@ export default function ServiceRequestDetailPage() {
           )}
         </div>
       )}
+
+      {/* Workflow Selection Dialog */}
+      <WorkflowSelectionDialog
+        open={isWorkflowDialogOpen}
+        onOpenChange={setIsWorkflowDialogOpen}
+        entityType="service_request"
+        entityId={requestId}
+        onSuccess={() => {
+          refetchTasks();
+          refetch();
+        }}
+      />
+
+      {/* Task Action Dialogs */}
+      <CompleteTaskDialog
+        open={completeTaskDialog.open}
+        onOpenChange={(open) =>
+          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+        }
+        onConfirm={handleCompleteTaskConfirm}
+        taskName={completeTaskDialog.taskName}
+        isLoading={completeTaskMutation.isPending}
+      />
+
+      <BlockTaskDialog
+        open={blockTaskDialog.open}
+        onOpenChange={(open) =>
+          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+        }
+        onConfirm={handleBlockTaskConfirm}
+        taskName={blockTaskDialog.taskName}
+        isLoading={blockTaskMutation.isPending}
+      />
     </>
   );
 }

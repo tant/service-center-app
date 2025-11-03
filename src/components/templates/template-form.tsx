@@ -28,12 +28,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { SortableTaskItem } from "./sortable-task-item";
 import { useTemplateTasks } from "./use-template-tasks";
+import { validateWorkflow, type WorkflowValidationResult } from "@/lib/workflow-validation";
+import { ValidationSummary } from "@/components/workflows/validation-summary";
+import { WorkflowPreview } from "@/components/workflows/workflow-preview";
+import { Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface TemplateFormData {
   name: string;
   description: string;
   service_type: "warranty" | "paid" | "replacement";
   enforce_sequence: boolean;
+  notes?: string;
 }
 
 interface TemplateFormProps {
@@ -60,6 +72,7 @@ export function TemplateForm({
     description: initialData?.description || "",
     service_type: initialData?.service_type || "warranty",
     enforce_sequence: initialData?.enforce_sequence ?? true,
+    notes: initialData?.notes || "",
   });
 
   // Convert initial tasks to TaskItem format with temporary IDs
@@ -83,19 +96,22 @@ export function TemplateForm({
     handleRemoveTask,
   } = useTemplateTasks(initialTaskItems);
 
+  // Real-time validation
+  const validation = React.useMemo<WorkflowValidationResult>(() => {
+    return validateWorkflow({
+      name: formData.name,
+      description: formData.description,
+      service_type: formData.service_type,
+      enforce_sequence: formData.enforce_sequence,
+      tasks: workflowTasks,
+    });
+  }, [formData, workflowTasks]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate
-    if (!formData.name.trim()) {
-      return;
-    }
-
-    if (workflowTasks.length === 0) {
-      return;
-    }
-
-    if (workflowTasks.some((t) => !t.task_type_id)) {
+    // Check validation before submitting
+    if (!validation.isValid) {
       return;
     }
 
@@ -144,6 +160,23 @@ export function TemplateForm({
               placeholder="Mô tả chi tiết về mẫu quy trình này"
               rows={2}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Ghi chú và hướng dẫn</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              placeholder="Thêm ghi chú, hướng dẫn chi tiết, lưu ý đặc biệt..."
+              rows={4}
+              maxLength={2000}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formData.notes?.length || 0}/2000 ký tự
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -255,25 +288,66 @@ export function TemplateForm({
         </CardContent>
       </Card>
 
+      {/* Validation Summary */}
+      <ValidationSummary validation={validation} />
+
       {/* Actions */}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="w-full sm:w-auto"
-        >
-          Hủy
-        </Button>
-        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-          {isSubmitting
-            ? mode === "create"
-              ? "Đang tạo..."
-              : "Đang cập nhật..."
-            : mode === "create"
-              ? "Tạo mẫu quy trình"
-              : "Cập nhật mẫu quy trình"}
-        </Button>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Preview Button */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={workflowTasks.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Xem trước quy trình
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Xem trước quy trình</DialogTitle>
+            </DialogHeader>
+            <WorkflowPreview
+              name={formData.name}
+              description={formData.description}
+              service_type={formData.service_type}
+              enforce_sequence={formData.enforce_sequence}
+              notes={formData.notes}
+              tasks={workflowTasks.map(t => ({
+                ...t,
+                task_name: tasks.find(task => task.id === t.task_type_id)?.name,
+              }))}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Save/Cancel Buttons */}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="w-full sm:w-auto"
+          >
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || !validation.isValid}
+            className="w-full sm:w-auto"
+          >
+            {isSubmitting
+              ? mode === "create"
+                ? "Đang tạo..."
+                : "Đang cập nhật..."
+              : mode === "create"
+                ? "Tạo mẫu quy trình"
+                : "Cập nhật mẫu quy trình"}
+          </Button>
+        </div>
       </div>
     </form>
   );

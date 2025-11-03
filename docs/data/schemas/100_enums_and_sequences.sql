@@ -78,6 +78,17 @@ CREATE TYPE public.task_status AS ENUM (
 );
 COMMENT ON TYPE public.task_status IS 'Task execution status within service ticket workflow';
 
+-- Entity Type Enum (for Polymorphic Tasks)
+DROP TYPE IF EXISTS public.entity_type CASCADE;
+CREATE TYPE public.entity_type AS ENUM (
+  'service_ticket',      -- Service repair/warranty tickets
+  'inventory_receipt',   -- Goods receipt notes (GRN)
+  'inventory_issue',     -- Goods issue notes (GIN)
+  'inventory_transfer',  -- Stock transfers between warehouses
+  'service_request'      -- Customer service requests
+);
+COMMENT ON TYPE public.entity_type IS 'Entity types that can have associated tasks in the polymorphic task system';
+
 -- Warehouse Type Enum
 DROP TYPE IF EXISTS public.warehouse_type CASCADE;
 CREATE TYPE public.warehouse_type AS ENUM (
@@ -211,6 +222,7 @@ GRANT USAGE ON TYPE public.priority_level TO authenticated;
 GRANT USAGE ON TYPE public.warranty_type TO authenticated;
 GRANT USAGE ON TYPE public.comment_type TO authenticated;
 GRANT USAGE ON TYPE public.task_status TO authenticated;
+GRANT USAGE ON TYPE public.entity_type TO authenticated;
 GRANT USAGE ON TYPE public.warehouse_type TO authenticated;
 GRANT USAGE ON TYPE public.request_status TO authenticated;
 GRANT USAGE ON TYPE public.product_condition TO authenticated;

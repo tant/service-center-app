@@ -15,16 +15,15 @@
 -- =====================================================
 
 -- =====================================================
--- TASK WORKFLOW TABLES
+-- TASK WORKFLOW TABLES (POLYMORPHIC)
 -- =====================================================
 
--- WORKFLOWS (formerly task_templates)
+-- WORKFLOWS
 CREATE TABLE IF NOT EXISTS public.workflows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  product_type UUID REFERENCES public.products(id) ON DELETE CASCADE,
-  service_type public.service_type NOT NULL DEFAULT 'warranty',
+  entity_type public.entity_type, -- Makes workflow entity-specific
   strict_sequence BOOLEAN NOT NULL DEFAULT false,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -32,10 +31,11 @@ CREATE TABLE IF NOT EXISTS public.workflows (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT workflows_name_unique UNIQUE(name)
 );
-COMMENT ON TABLE public.workflows IS 'Workflow templates for different product and service types';
+COMMENT ON TABLE public.workflows IS 'Workflow templates for different entity types';
+COMMENT ON COLUMN public.workflows.entity_type IS 'Entity type this workflow applies to (NULL for generic workflows)';
 CREATE TRIGGER trigger_workflows_updated_at BEFORE UPDATE ON public.workflows FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- TASKS (formerly task_types)
+-- TASKS (Library of task definitions)
 CREATE TABLE IF NOT EXISTS public.tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 COMMENT ON TABLE public.tasks IS 'Reusable library of task definitions';
 CREATE TRIGGER trigger_tasks_updated_at BEFORE UPDATE ON public.tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- WORKFLOW TASKS (Junction) (formerly task_templates_tasks)
+-- WORKFLOW TASKS (Junction)
 CREATE TABLE IF NOT EXISTS public.workflow_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workflow_id UUID NOT NULL REFERENCES public.workflows(id) ON DELETE CASCADE,
@@ -66,46 +66,56 @@ CREATE TABLE IF NOT EXISTS public.workflow_tasks (
 );
 COMMENT ON TABLE public.workflow_tasks IS 'Junction table mapping tasks to workflows with sequence order';
 
--- SERVICE TICKET TASKS
-CREATE TABLE IF NOT EXISTS public.service_ticket_tasks (
+-- ENTITY TASKS (Polymorphic task instances)
+CREATE TABLE IF NOT EXISTS public.entity_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_id UUID NOT NULL REFERENCES public.service_tickets(id) ON DELETE CASCADE,
+  entity_type public.entity_type NOT NULL,
+  entity_id UUID NOT NULL,
   task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE RESTRICT,
   workflow_task_id UUID REFERENCES public.workflow_tasks(id) ON DELETE SET NULL,
+  workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   sequence_order INT NOT NULL,
   status public.task_status NOT NULL DEFAULT 'pending',
   is_required BOOLEAN NOT NULL DEFAULT true,
   assigned_to_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  estimated_duration_minutes INT,
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
+  due_date TIMESTAMPTZ,
   completion_notes TEXT,
   blocked_reason TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_ticket_tasks_ticket_sequence_unique UNIQUE(ticket_id, sequence_order),
-  CONSTRAINT service_ticket_tasks_sequence_positive CHECK (sequence_order > 0),
-  CONSTRAINT service_ticket_tasks_completed_requires_notes CHECK (status != 'completed' OR completion_notes IS NOT NULL),
-  CONSTRAINT service_ticket_tasks_blocked_requires_reason CHECK (status != 'blocked' OR blocked_reason IS NOT NULL)
+  created_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  CONSTRAINT entity_tasks_sequence_positive CHECK (sequence_order > 0),
+  CONSTRAINT entity_tasks_completed_requires_notes CHECK (status != 'completed' OR completion_notes IS NOT NULL),
+  CONSTRAINT entity_tasks_blocked_requires_reason CHECK (status != 'blocked' OR blocked_reason IS NOT NULL),
+  CONSTRAINT entity_tasks_started_at_before_completed CHECK (started_at IS NULL OR completed_at IS NULL OR started_at <= completed_at),
+  CONSTRAINT entity_tasks_entity_sequence_unique UNIQUE(entity_type, entity_id, sequence_order)
 );
-COMMENT ON TABLE public.service_ticket_tasks IS 'Task instances for specific service tickets';
-CREATE TRIGGER trigger_service_ticket_tasks_updated_at BEFORE UPDATE ON public.service_ticket_tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+COMMENT ON TABLE public.entity_tasks IS 'Polymorphic task instances that can be associated with any entity type';
+COMMENT ON COLUMN public.entity_tasks.metadata IS 'Extensible JSON field for entity-specific task data (e.g., serial entry progress)';
+CREATE TRIGGER trigger_entity_tasks_updated_at BEFORE UPDATE ON public.entity_tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- TASK HISTORY
-CREATE TABLE IF NOT EXISTS public.task_history (
+-- ENTITY TASK HISTORY (Polymorphic audit trail)
+CREATE TABLE IF NOT EXISTS public.entity_task_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id UUID NOT NULL REFERENCES public.service_ticket_tasks(id) ON DELETE CASCADE,
-  ticket_id UUID NOT NULL REFERENCES public.service_tickets(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES public.entity_tasks(id) ON DELETE CASCADE,
+  entity_type public.entity_type NOT NULL,
+  entity_id UUID NOT NULL,
   old_status public.task_status,
   new_status public.task_status NOT NULL,
   changed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   notes TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-COMMENT ON TABLE public.task_history IS 'Immutable audit trail of task status changes';
+COMMENT ON TABLE public.entity_task_history IS 'Immutable audit trail of task status changes across all entity types';
 
--- TICKET WORKFLOW CHANGES (formerly ticket_template_changes)
+-- TICKET WORKFLOW CHANGES
 CREATE TABLE IF NOT EXISTS public.ticket_workflow_changes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL REFERENCES public.service_tickets(id) ON DELETE CASCADE,

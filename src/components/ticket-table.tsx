@@ -221,7 +221,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   }, [initialData]);
 
   const updateTicketMutation = trpc.tickets.updateTicket.useMutation({
-    onSuccess: (result, variables) => {
+    onSuccess: (_result, _variables) => {
       toast.success("Cập nhật phiếu dịch vụ thành công");
 
       // Refresh from server since the mutation and table use different schemas
@@ -234,7 +234,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   });
 
   const updateStatusMutation = trpc.tickets.updateTicketStatus.useMutation({
-    onSuccess: (result, variables) => {
+    onSuccess: (_result, _variables) => {
       toast.success("Cập nhật trạng thái thành công");
 
       // Refresh from server to get updated data
@@ -251,7 +251,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   });
 
   // Helper to map database status back to UI status
-  const mapDatabaseStatusToUI = (
+  const _mapDatabaseStatusToUI = (
     dbStatus: string,
   ): "open" | "in_progress" | "resolved" | "closed" => {
     return STATUS_DB_TO_UI[dbStatus] || "open";

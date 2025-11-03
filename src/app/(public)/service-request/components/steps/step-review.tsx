@@ -26,7 +26,7 @@ const formatWarrantyDate = (iso?: string | null) => {
     return undefined;
   }
   const date = new Date(iso);
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return undefined;
   }
   return format(date, "dd/MM/yyyy");
@@ -78,7 +78,7 @@ function ProductBadge(props: { status: "success" | "error" | "pending" | "idle";
 
 function ProductSummary() {
   const state = useServiceRequestWizardState();
-  const dispatch = useServiceRequestWizardDispatch();
+  const _dispatch = useServiceRequestWizardDispatch();
 
   if (state.products.length === 0) {
     return (

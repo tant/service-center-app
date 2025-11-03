@@ -9,7 +9,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, X, AlertCircle, Loader2, Camera, Clipboard } from "lucide-react";
+import { Check, X, AlertCircle, Loader2, Camera, } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SerialInputProps {

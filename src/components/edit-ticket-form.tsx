@@ -34,7 +34,6 @@ import {
   IconClipboardText,
   IconCurrencyDollar,
   IconTool,
-  IconMinus,
 } from "@tabler/icons-react";
 import {
   Dialog,
@@ -231,7 +230,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   });
 
   const updatePartMutation = trpc.tickets.updateTicketPart.useMutation({
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log("[EditTicketForm] Update part success:", {
         ticketId: ticket.id,
         ticketPartId: editingPartId,
@@ -274,7 +273,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   });
 
   const deletePartMutation = trpc.tickets.deleteTicketPart.useMutation({
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log("[EditTicketForm] Delete part success:", {
         ticketId: ticket.id,
         ticketPartId: variables.id,
@@ -323,7 +322,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
   });
 
   const deleteAttachmentMutation = trpc.tickets.deleteAttachment.useMutation({
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       console.log("[EditTicketForm] Delete attachment success:", {
         ticketId: ticket.id,
         attachmentId: variables.id,
@@ -372,7 +371,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     });
   };
 
-  const handleCancel = () => {
+  const _handleCancel = () => {
     // Use safe navigation with unsaved changes check
     navigateWithCheck(`/tickets/${ticket.id}`);
   };
@@ -581,7 +580,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / k ** i) * 100) / 100 + " " + sizes[i];
+    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
   };
 
   const partsTotal = parts.reduce(

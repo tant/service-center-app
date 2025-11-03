@@ -20,7 +20,7 @@ export default function AdminAppSettingsPage() {
   const [seedProgress, setSeedProgress] = React.useState<string[]>([]);
 
   const seedMockDataMutation = trpc.admin.seedMockData.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (_data) => {
       toast.success("Tạo dữ liệu test thành công!");
       setSeedProgress([]);
       setIsSeeding(false);

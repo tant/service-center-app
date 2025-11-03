@@ -12,7 +12,6 @@ import {
   IconChevronsRight,
   IconLayoutColumns,
   IconPlus,
-  IconDatabase,
   IconEye,
 } from "@tabler/icons-react";
 import {
@@ -58,8 +57,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDeleteTemplate } from "@/hooks/use-workflow";
-import { toast } from "sonner";
-import { trpc } from "@/components/providers/trpc-provider";
 
 interface Workflow {
   id: string;

@@ -51,7 +51,7 @@ export function SerialEntryDrawer({
 
   const validateMutation = trpc.inventory.serials.validateSerials.useMutation();
   const addSerialsMutation = trpc.inventory.receipts.addSerials.useMutation();
-  const bulkAddMutation = trpc.inventory.serials.bulkAddSerials.useMutation();
+  const _bulkAddMutation = trpc.inventory.serials.bulkAddSerials.useMutation();
   const csvImportMutation = trpc.inventory.serials.bulkImportCSV.useMutation();
 
   const remaining = declaredQuantity - currentSerialCount;

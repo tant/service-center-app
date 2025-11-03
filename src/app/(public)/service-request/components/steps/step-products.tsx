@@ -299,7 +299,7 @@ export function StepProducts() {
     }
 
     lastAddedProductIdRef.current = null;
-  }, [state.products.length]);
+  }, []);
 
   return (
     <Card>

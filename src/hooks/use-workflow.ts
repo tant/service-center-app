@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/components/providers/trpc-provider';
-import type { Workflow, ServiceTicketTask, TaskProgressSummary } from '@/types/workflow';
+import type { ServiceTicketTask, TaskProgressSummary } from '@/types/workflow';
 
 /**
  * Hook for managing task types
@@ -233,7 +233,7 @@ export function useDeleteTemplate() {
  * Hook for managing tasks within a service ticket
  * TODO: Implement task execution logic (Story 1.3)
  */
-export function useTicketTasks(ticketId: string | undefined) {
+export function useTicketTasks(_ticketId: string | undefined) {
   // TODO: Implement with tRPC in Story 1.3
   const tasks: ServiceTicketTask[] = [];
   const isLoading = false;
@@ -251,7 +251,7 @@ export function useTicketTasks(ticketId: string | undefined) {
  * Hook for task progress analytics
  * TODO: Implement progress tracking
  */
-export function useTaskProgress(ticketId: string | undefined) {
+export function useTaskProgress(_ticketId: string | undefined) {
   // TODO: Implement with tRPC view query
   const progress: TaskProgressSummary | null = null;
   const isLoading = false;
@@ -295,7 +295,7 @@ export function useApplyTemplate() {
 export function useTaskTransition() {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const canTransition = useCallback((currentStatus: string, newStatus: string): boolean => {
+  const canTransition = useCallback((_currentStatus: string, _newStatus: string): boolean => {
     // TODO: Implement validation logic based on TASK_STATUS_TRANSITIONS
     return true;
   }, []);

@@ -5,11 +5,6 @@
 
 import { useState, useCallback } from 'react';
 import { trpc } from '@/components/providers/trpc-provider';
-import type {
-  ServiceRequest,
-  // ServiceRequestSummary, // TODO: Re-enable when view is recreated
-  TrackingTokenLookup,
-} from '@/types/service-request';
 
 /**
  * Story 1.11: Hook for verifying warranty status by serial number (public)
@@ -239,7 +234,7 @@ export function usePendingIncomingRequests(params?: {
  * Hook for service request analytics
  * TODO: Implement analytics queries
  */
-export function useServiceRequestAnalytics(period: string = '30d') {
+export function useServiceRequestAnalytics(_period: string = '30d') {
   // TODO: Implement with tRPC
   const analytics = null;
   const isLoading = false;

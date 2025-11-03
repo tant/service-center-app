@@ -49,16 +49,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -797,8 +787,7 @@ function CustomerModal({
           />
         </div>
         {mode === "edit" && customer && (
-          <>
-            <div className="border-t pt-4">
+          <div className="border-t pt-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                   <Label className="text-muted-foreground">
@@ -820,7 +809,6 @@ function CustomerModal({
                 </div>
               </div>
             </div>
-          </>
         )}
       </div>
     </FormDrawer>

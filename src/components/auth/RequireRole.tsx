@@ -67,12 +67,12 @@ export function RequireRole({
 
   // No role means user is not authenticated
   if (!role) {
-    return fallback ? <>{fallback}</> : null;
+    return fallback ? fallback : null;
   }
 
   // User doesn't have required role
   if (!hasAnyRole(allowedRoles)) {
-    return fallback ? <>{fallback}</> : null;
+    return fallback ? fallback : null;
   }
 
   // User has permission

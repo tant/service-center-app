@@ -51,7 +51,7 @@ function getUserFriendlyError(error: any): string {
 }
 
 export async function login(
-  prevState: LoginState,
+  _prevState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
   console.log("🔐 [LOGIN ACTION] Starting login process");

@@ -1,4 +1,4 @@
-import { test as setup, expect, type FullConfig, chromium } from '@playwright/test';
+import { expect, type FullConfig, chromium } from '@playwright/test';
 import { adminUser, testUsers } from './test-data';
 import { login, searchUser, isUserActive, activateUser } from './helpers';
 

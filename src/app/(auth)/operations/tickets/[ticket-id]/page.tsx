@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,17 +11,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
 import {
-  IconEdit,
   IconUser,
-  IconPhone,
-  IconMail,
   IconPackage,
-  IconCalendar,
   IconClipboardText,
   IconTool,
   IconCurrencyDollar,
 } from "@tabler/icons-react";
-import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
 import { TaskListAccordion } from "@/components/shared/task-list-accordion";
 import { TicketActions } from "@/components/ticket-actions";

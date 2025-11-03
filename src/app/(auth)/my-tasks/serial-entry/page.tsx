@@ -8,9 +8,8 @@
 
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
-import { TaskCard, TaskPriority } from "@/components/inventory/serials";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { TaskCard, } from "@/components/inventory/serials";
+import { Card, CardContent, CardHeader, } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -127,7 +126,7 @@ export default function SerialEntryTaskDashboard() {
     }
 
     return result;
-  }, [mockTasks, filter, currentUserId]);
+  }, [mockTasks, filter]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => {
@@ -195,7 +194,7 @@ export default function SerialEntryTaskDashboard() {
       overdue: overdueCount,
       available: availableCount,
     };
-  }, [mockTasks, currentUserId]);
+  }, [mockTasks]);
 
   const handleContinue = (receiptId: string) => {
     router.push(`/inventory/documents/receipts/${receiptId}`);

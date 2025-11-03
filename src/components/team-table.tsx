@@ -685,7 +685,7 @@ function TeamMemberModal({
 
       setOpen(false);
       if (onSuccess) onSuccess();
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by useStaffApi
     } finally {
       setIsLoading(false);

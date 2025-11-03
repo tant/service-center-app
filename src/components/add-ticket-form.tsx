@@ -200,7 +200,7 @@ export function AddTicketForm() {
         }));
       }
     }
-  }, [phoneSearch, customers, customerData.id]);
+  }, [phoneSearch, customers, customerData.id, selectCustomer]);
 
   // Hàm chọn khách hàng từ popup
   const selectCustomer = (customer: any) => {
@@ -221,7 +221,7 @@ export function AddTicketForm() {
       if (productWithParts?.parts && productWithParts.parts.length > 0) {
         setAvailableParts(productWithParts.parts);
         setSelectedParts([]); // Reset selected parts when product changes
-      } else if (productWithParts && productWithParts.parts) {
+      } else if (productWithParts?.parts) {
         // Product has no parts configured
         setAvailableParts([]);
         setSelectedParts([]);
@@ -385,7 +385,7 @@ export function AddTicketForm() {
     console.log("[AddTicketForm] Submitting ticket:", {
       customerData,
       productId: ticketData.product_id,
-      description: ticketData.description.substring(0, 50) + "...",
+      description: `${ticketData.description.substring(0, 50)}...`,
       serviceFee: ticketData.service_fee,
       diagnosisFee: ticketData.diagnosis_fee,
       partsCount: selectedParts.length,
@@ -851,8 +851,7 @@ export function AddTicketForm() {
                 </div>
 
                 {availableParts.length > 0 ? (
-                  <>
-                    {availableParts.filter(
+                  availableParts.filter(
                       (part) => !selectedParts.find((sp) => sp.id === part.id),
                     ).length > 0 ? (
                       <div className="grid gap-3">
@@ -896,8 +895,7 @@ export function AddTicketForm() {
                           Tất cả linh kiện đã được thêm vào danh sách bên dưới.
                         </p>
                       </div>
-                    )}
-                  </>
+                    )
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Sản phẩm này chưa có linh kiện nào được cấu hình.</p>
@@ -944,7 +942,7 @@ export function AddTicketForm() {
                           onChange={(e) =>
                             handlePartQuantityChange(
                               part.id,
-                              parseInt(e.target.value) || 0,
+                              parseInt(e.target.value, 10) || 0,
                             )
                           }
                           className="w-20"

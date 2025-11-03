@@ -26,7 +26,7 @@ interface ConvertToTicketModalProps {
 }
 
 export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertToTicketModalProps) {
-  const router = useRouter();
+  const _router = useRouter();
   const { data: request, isLoading } = useRequestDetails(requestId);
   // const { convertToTicket, isConverting } = useConvertToTicket(); // DEPRECATED
   const isConverting = false; // Placeholder

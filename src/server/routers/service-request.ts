@@ -932,66 +932,6 @@ export const serviceRequestRouter = router({
       };
     }),
 
-  lookupByPhone: publicProcedure
-    .input(
-      z.object({
-        phone: z.string().min(6, "Phone number must be at least 6 characters"),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      const normalizedPhone = input.phone.replace(/\D/g, "");
-
-      if (normalizedPhone.length < 6) {
-        return {
-          found: false,
-        };
-      }
-
-      const { data, error } = await ctx.supabaseAdmin
-        .from("service_requests")
-        .select(
-          `
-          customer_name,
-          customer_email,
-          customer_phone,
-          customer_address,
-          delivery_method,
-          delivery_address,
-          updated_at
-        `
-        )
-        .eq("customer_phone", normalizedPhone)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[serviceRequest.lookupByPhone]", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Không thể tra cứu khách hàng",
-        });
-      }
-
-      if (!data) {
-        return {
-          found: false,
-        };
-      }
-
-      return {
-        found: true,
-        customer: {
-          name: data.customer_name,
-          email: data.customer_email,
-          phone: data.customer_phone,
-          address: data.customer_address,
-          preferred_delivery_method: data.delivery_method ?? null,
-          delivery_address: data.delivery_address ?? null,
-        },
-      };
-    }),
-
   /**
    * Story 1.12: Track service request by tracking token (public)
    * AC 1: Public tracking procedure, no authentication required

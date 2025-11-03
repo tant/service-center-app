@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { IconCheck, IconX } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";

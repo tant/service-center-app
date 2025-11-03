@@ -139,7 +139,7 @@ export async function logAudit(
  */
 export async function logTemplateSwitchWithCheck(
 	supabase: SupabaseClient,
-	userId: string,
+	_userId: string,
 	ticketId: string,
 	oldTemplateId: string,
 	newTemplateId: string,

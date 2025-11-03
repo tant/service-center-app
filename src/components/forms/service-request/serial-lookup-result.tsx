@@ -148,8 +148,6 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
             message: '💡 Sửa chữa có phí - Vui lòng thông báo khách hàng',
           };
         }
-
-        case 'no_warranty':
         default:
           return {
             icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,

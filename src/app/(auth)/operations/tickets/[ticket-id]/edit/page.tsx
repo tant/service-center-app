@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/utils/supabase/server";
 import { EditTicketForm } from "@/components/edit-ticket-form";

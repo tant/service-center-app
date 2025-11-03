@@ -4,8 +4,8 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockIssue, StockIssueWithRelations } from "@/types/inventory";
+import { requireManagerOrAbove } from "../../middleware/requireRole";
+import type { StockIssueWithRelations } from "@/types/inventory";
 
 export const issuesRouter = router({
   /**
@@ -152,7 +152,7 @@ export const issuesRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -235,7 +235,7 @@ export const issuesRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile) {
@@ -298,7 +298,7 @@ export const issuesRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -446,7 +446,7 @@ export const issuesRouter = router({
         return {
           issue_item_id: input.issueItemId,
           physical_product_id: ppId,
-          serial_number: pp!.serial_number,
+          serial_number: pp?.serial_number,
         };
       });
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { IconUserCheck, IconUserX } from "@tabler/icons-react";
-import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +39,7 @@ export function ToggleActiveButton({
     try {
       await toggleActive(userId, newStatus);
       onSuccess(newStatus);
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by useStaffApi
     }
   };

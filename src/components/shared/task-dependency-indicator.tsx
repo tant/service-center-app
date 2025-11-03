@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { IconLock, IconAlertTriangle } from "@tabler/icons-react";
 import {
   Tooltip,

@@ -5,7 +5,6 @@ import {
   IconGripVertical,
   IconPlus,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import {
   DndContext,
@@ -95,7 +94,7 @@ function SortableTaskItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const taskType = taskTypes.find((t) => t.id === task.task_type_id);
+  const _taskType = taskTypes.find((t) => t.id === task.task_type_id);
 
   return (
     <div

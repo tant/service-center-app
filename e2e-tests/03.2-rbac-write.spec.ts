@@ -1,6 +1,6 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect, } from "@playwright/test";
 import { adminUser, testUsers } from "./test-data";
-import { login, logout, searchUser } from "./helpers";
+import { login, logout, } from "./helpers";
 
 test.describe("RBAC Write Operations", () => {
   test.describe("Team Management Operations", () => {

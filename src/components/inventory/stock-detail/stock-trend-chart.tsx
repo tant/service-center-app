@@ -112,7 +112,7 @@ export function StockTrendChart({ productId }: StockTrendChartProps) {
           Biến động tồn kho trong {getTimeRangeLabel()}
         </CardDescription>
         <CardAction>
-          <Select value={timeRange.toString()} onValueChange={(v) => setTimeRange(Number.parseInt(v))}>
+          <Select value={timeRange.toString()} onValueChange={(v) => setTimeRange(Number.parseInt(v, 10))}>
             <SelectTrigger className="w-40" size="sm" aria-label="Chọn khoảng thời gian">
               <SelectValue />
             </SelectTrigger>

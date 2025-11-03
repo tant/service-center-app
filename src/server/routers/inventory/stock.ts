@@ -212,7 +212,7 @@ export const stockRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {

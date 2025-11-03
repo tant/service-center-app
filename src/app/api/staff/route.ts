@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { z } from "zod";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";

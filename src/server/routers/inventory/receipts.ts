@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../../trpc";
 import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockReceipt, StockReceiptWithRelations } from "@/types/inventory";
+import type { StockReceiptWithRelations } from "@/types/inventory";
 
 export const receiptsRouter = router({
   /**
@@ -147,7 +147,7 @@ export const receiptsRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -229,7 +229,7 @@ export const receiptsRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile) {
@@ -292,7 +292,7 @@ export const receiptsRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {

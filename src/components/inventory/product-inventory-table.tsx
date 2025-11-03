@@ -7,7 +7,6 @@
 
 import * as React from "react";
 import {
-  IconEdit,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -17,15 +16,9 @@ import {
   IconFileUpload,
 } from "@tabler/icons-react";
 import {
-  type ColumnDef,
   type ColumnFiltersState,
   flexRender,
   getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type SortingState,
   useReactTable,
   type VisibilityState,
@@ -54,12 +47,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { usePhysicalProducts } from "@/hooks/use-warehouse";
 import { trpc } from "@/components/providers/trpc-provider";
 import { EditProductDrawer } from "./edit-product-drawer";
 import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
-import { createProductColumns, CONDITION_LABELS } from "./product-inventory-table-columns";
+import { createProductColumns, } from "./product-inventory-table-columns";
 import type { PhysicalProduct } from "@/types/warehouse";
 
 // Extended type with relations from API
@@ -113,7 +105,7 @@ export function ProductInventoryTable() {
     if (warehouseFilter && warehouseFilter !== "all") {
       f.virtual_warehouse_id = warehouseFilter;
     }
-    if (searchQuery && searchQuery.trim()) {
+    if (searchQuery?.trim()) {
       f.search = searchQuery.trim();
     }
 
@@ -129,7 +121,7 @@ export function ProductInventoryTable() {
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [warehouseFilter, searchQuery]);
+  }, []);
 
   const handleEdit = React.useCallback((product: PhysicalProductWithRelations) => {
     setEditingProduct(product);

@@ -15,7 +15,7 @@ import type {
  * Hook for products with expiring warranties
  * TODO: Implement warranty expiration monitoring
  */
-export function useWarrantyExpiringSoon(daysAhead: number = 30) {
+export function useWarrantyExpiringSoon(_daysAhead: number = 30) {
   // TODO: Implement with tRPC view query
   const products: WarrantyExpiringSoon[] = [];
   const isLoading = false;

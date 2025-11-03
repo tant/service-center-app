@@ -1,5 +1,4 @@
 import {
-  IconKey,
   IconShield,
   IconTool,
   IconUser,

@@ -30,13 +30,6 @@ import {
 import { useVirtualWarehouses } from "@/hooks/use-warehouse";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,

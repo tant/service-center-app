@@ -5,7 +5,6 @@
  * Displays header information for a stock transfer
  */
 
-import { StockTransfer } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

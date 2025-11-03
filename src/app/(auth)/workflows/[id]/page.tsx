@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   IconEdit,
@@ -17,7 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { useTaskTemplate, useDeleteTemplate, useToggleTemplate } from "@/hooks/use-workflow";
-import { toast } from "sonner";
 
 export default function TemplateDetailPage() {
   const router = useRouter();

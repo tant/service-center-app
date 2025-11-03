@@ -4,7 +4,6 @@
  * Features: color-coded progress, multiple variants, customizable display
  */
 
-import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -157,8 +156,7 @@ export function SerialProgressBar({
         )}
       </div>
       {showMessage && (
-        <>
-          {isComplete ? (
+        isComplete ? (
             <p className="text-xs text-green-600 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
               Đã hoàn thành tất cả số serial!
@@ -178,8 +176,7 @@ export function SerialProgressBar({
               <AlertTriangle className="h-3 w-3" />
               Còn lại {total - current} số ({100 - percentage}%)
             </p>
-          )}
-        </>
+          )
       )}
     </div>
   );

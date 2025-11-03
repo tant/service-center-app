@@ -53,7 +53,7 @@ export function SortableTaskItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const selectedTask = tasks.find((t) => t.id === task.task_type_id);
+  const _selectedTask = tasks.find((t) => t.id === task.task_type_id);
 
   return (
     <div

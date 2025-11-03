@@ -74,7 +74,7 @@ export function PasswordResetButton({
       await resetPassword(userId, newPassword, fullName);
       setShowDialog(false);
       setNewPassword("");
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by useStaffApi
     } finally {
       setIsLoading(false);

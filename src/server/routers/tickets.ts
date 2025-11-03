@@ -15,7 +15,6 @@ import {
   requireManagerOrAbove,
   requireAdmin,
 } from "../middleware/requireRole";
-import { logAudit } from "../utils/auditLog";
 import { createTasksFromWorkflow, getTicketTasksWithProgress } from "../utils/workflow-tasks";
 
 /**
@@ -690,7 +689,7 @@ export const ticketsRouter = router({
           .eq('id', input.id)
           .single();
 
-        if (fullTicket && fullTicket.customer && fullTicket.product) {
+        if (fullTicket?.customer && fullTicket.product) {
           const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
           const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
 
@@ -1620,7 +1619,7 @@ ${changes.join("\n")}
         .eq('id', input.ticket_id)
         .single();
 
-      if (fullTicket && fullTicket.customer && fullTicket.product) {
+      if (fullTicket?.customer && fullTicket.product) {
         const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
         const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
 

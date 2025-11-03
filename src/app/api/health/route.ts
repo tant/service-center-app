@@ -176,7 +176,7 @@ export async function HEAD() {
     }
 
     return new NextResponse(null, { status: 200 });
-  } catch (error) {
+  } catch (_error) {
     return new NextResponse(null, { status: 503 });
   }
 }

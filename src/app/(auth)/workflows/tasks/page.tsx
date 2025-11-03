@@ -5,7 +5,6 @@
 
 "use client";
 
-import * as React from "react";
 import { PageHeader } from "@/components/page-header";
 import { TaskTypesTable } from "@/components/tables/task-types-table";
 

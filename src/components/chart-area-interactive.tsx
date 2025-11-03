@@ -43,7 +43,7 @@ const chartConfig = {
 
 export function ChartAreaInteractive() {
   // Get mobile state and set time range
-  const isMobile = useIsMobile();
+  const _isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("7d");
 
   // Get chart data

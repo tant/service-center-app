@@ -140,7 +140,7 @@ export function VirtualWarehouseFormModal({
     }
   };
 
-  const handleCancel = () => {
+  const _handleCancel = () => {
     onClose();
   };
 

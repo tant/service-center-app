@@ -8,7 +8,6 @@
 import { trpc } from "@/components/providers/trpc-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Package } from "lucide-react";
 import { StockStatusBadge } from "../shared/stock-status-badge";
 

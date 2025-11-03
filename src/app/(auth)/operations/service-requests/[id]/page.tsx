@@ -19,8 +19,7 @@ import {
   IconX,
   IconUser,
   IconPackage,
-  IconFileText, IconTrash, IconTruck, IconEdit,
-  IconTruckDelivery,
+  IconFileText, IconTrash, IconEdit,
   IconInfoCircle,
   IconCalendarEvent,
 } from "@tabler/icons-react";
@@ -477,11 +476,11 @@ export default function ServiceRequestDetailPage() {
                             typeof item.warranty_end_date === "string" ? item.warranty_end_date : null;
                           const warrantyEndDateDisplay = formatDisplayDate(warrantyEndDateIso);
                           const warrantyBadge = getWarrantyBadgeInfo(warrantyStatus);
-                          const warrantyDetailBadgeLabel = getWarrantyDetailBadgeLabel(
+                          const _warrantyDetailBadgeLabel = getWarrantyDetailBadgeLabel(
                             warrantyStatus,
                             item.warranty_days_remaining ?? null
                           );
-                          const warrantyDetailBadgeVariant = warrantyBadge?.variant ?? "outline";
+                          const _warrantyDetailBadgeVariant = warrantyBadge?.variant ?? "outline";
 
                           return (
                             <AccordionItem key={accordionValue} value={accordionValue}>

@@ -46,7 +46,7 @@ export function UpdateShippingInfoDrawer({
       // Convert date to YYYY-MM-DD format for DatePicker
       if (currentShippingDate) {
         const date = new Date(currentShippingDate);
-        if (!isNaN(date.getTime())) {
+        if (!Number.isNaN(date.getTime())) {
           // DatePicker expects ISO date string (YYYY-MM-DD)
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');

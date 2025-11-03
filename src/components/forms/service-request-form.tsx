@@ -217,7 +217,7 @@ export function ServiceRequestForm({
         form.removeEventListener("submit-draft", handleSaveDraft as EventListener);
       };
     }
-  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+  }, [onSaveDraft, handleSaveDraft]);
 
   // Listen for submit-and-send event
   useEffect(() => {
@@ -228,7 +228,7 @@ export function ServiceRequestForm({
         form.removeEventListener("submit-and-send", handleSubmitAndSend as EventListener);
       };
     }
-  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+  }, [onSubmitAndSend, handleSubmitAndSend]);
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">

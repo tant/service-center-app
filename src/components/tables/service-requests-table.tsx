@@ -37,7 +37,6 @@ import {
 } from "@tanstack/react-table";
 import { format, formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import Link from "next/link";
 import * as React from "react";
 import { ConfirmIncomingModal } from "@/components/modals/confirm-incoming-modal";
 import { Badge } from "@/components/ui/badge";
@@ -75,10 +74,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePendingIncomingRequests } from "@/hooks/use-service-request";
-import {
-  type ServiceRequestRow,
-  serviceRequestRowSchema,
-} from "@/lib/schemas/service-request";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 

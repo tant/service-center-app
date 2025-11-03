@@ -32,10 +32,10 @@ export function DatePicker({
     if (value) {
       try {
         const date = new Date(value);
-        if (!isNaN(date.getTime())) {
+        if (!Number.isNaN(date.getTime())) {
           setInputValue(format(date, "dd/MM/yyyy"));
         }
-      } catch (e) {
+      } catch (_e) {
         setInputValue("");
       }
     } else {
@@ -50,13 +50,13 @@ export function DatePicker({
     // Try to parse dd/mm/yyyy format
     const parts = val.split("/");
     if (parts.length === 3) {
-      const day = parseInt(parts[0]);
-      const month = parseInt(parts[1]) - 1; // 0-indexed
-      const year = parseInt(parts[2]);
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // 0-indexed
+      const year = parseInt(parts[2], 10);
 
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      if (!Number.isNaN(day) && !Number.isNaN(month) && !Number.isNaN(year)) {
         const date = new Date(year, month, day);
-        if (!isNaN(date.getTime())) {
+        if (!Number.isNaN(date.getTime())) {
           // Valid date, convert to ISO string (YYYY-MM-DD)
           const isoString = format(date, "yyyy-MM-dd");
           onChange?.(isoString);

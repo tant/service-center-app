@@ -13,7 +13,6 @@ import { ReceiptDetailHeader } from "@/components/inventory/documents/receipt-de
 import { ReceiptItemsTable } from "@/components/inventory/documents/receipt-items-table";
 import { SerialEntryCard, type SerialEntryStatus } from "@/components/inventory/serials";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -37,7 +36,7 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
   const rejectReceipt = trpc.inventory.receipts.reject.useMutation();
   const deleteReceipt = trpc.inventory.receipts.delete.useMutation();
 
-  const utils = trpc.useUtils();
+  const _utils = trpc.useUtils();
 
   const handleSubmitForApproval = async () => {
     try {

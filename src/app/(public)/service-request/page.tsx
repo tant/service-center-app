@@ -10,24 +10,24 @@ import { useVerifyWarranty, useSubmitServiceRequest } from "@/hooks/use-service-
 
 export default function ServiceRequestPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [_step, _setStep] = useState(1);
 
   // Step 1: Serial verification
-  const [serial, setSerial] = useState("");
+  const [serial, _setSerial] = useState("");
   const { verifyWarranty, isVerifying, data: verificationResult } = useVerifyWarranty();
 
   // Step 2: Customer details
-  const [customerName, setCustomerName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [problemDescription, setProblemDescription] = useState("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [honeypot, setHoneypot] = useState(""); // AC 12: Spam protection
+  const [customerName, _setCustomerName] = useState("");
+  const [email, _setEmail] = useState("");
+  const [phone, _setPhone] = useState("");
+  const [problemDescription, _setProblemDescription] = useState("");
+  const [deliveryMethod, _setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryAddress, _setDeliveryAddress] = useState("");
+  const [honeypot, _setHoneypot] = useState(""); // AC 12: Spam protection
 
   const { submitRequest, isSubmitting } = useSubmitServiceRequest();
 
-  const handleVerify = () => {
+  const _handleVerify = () => {
     if (!serial || serial.length < 5) {
       toast.error("Serial number must be at least 5 characters");
       return;
@@ -43,7 +43,7 @@ export default function ServiceRequestPage() {
     );
   };
 
-  const handleSubmit = () => {
+  const _handleSubmit = () => {
     // AC 11: Client-side validation
     if (!customerName || customerName.length < 2) {
       toast.error("Name must be at least 2 characters");

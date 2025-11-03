@@ -40,7 +40,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
     if (!date) return "";
     try {
       const d = new Date(date);
-      if (isNaN(d.getTime())) return "";
+      if (Number.isNaN(d.getTime())) return "";
       // Format as YYYY-MM-DD
       return d.toISOString().split("T")[0];
     } catch {
@@ -58,7 +58,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
       });
       setErrors({});
     }
-  }, [product]);
+  }, [product, formatDateForInput]);
 
   const handleSubmit = () => {
     // Validation
@@ -181,7 +181,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
               if (input.showPicker) {
                 try {
                   input.showPicker();
-                } catch (error) {
+                } catch (_error) {
                   // Fallback: let browser handle it
                   console.log("showPicker not supported");
                 }
@@ -210,7 +210,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
               if (input.showPicker) {
                 try {
                   input.showPicker();
-                } catch (error) {
+                } catch (_error) {
                   // Fallback: let browser handle it
                   console.log("showPicker not supported");
                 }

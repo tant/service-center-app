@@ -4,8 +4,7 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockTransfer } from "@/types/inventory";
+import { requireManagerOrAbove } from "../../middleware/requireRole";
 
 export const transfersRouter = router({
   /**
@@ -132,7 +131,7 @@ export const transfersRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -227,7 +226,7 @@ export const transfersRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile) {
@@ -291,7 +290,7 @@ export const transfersRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -332,7 +331,7 @@ export const transfersRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
@@ -451,7 +450,7 @@ export const transfersRouter = router({
         return {
           transfer_item_id: input.transferItemId,
           physical_product_id: ppId,
-          serial_number: pp!.serial_number,
+          serial_number: pp?.serial_number,
         };
       });
 
@@ -730,7 +729,7 @@ export const transfersRouter = router({
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {

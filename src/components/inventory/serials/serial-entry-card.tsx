@@ -44,7 +44,7 @@ export function SerialEntryCard({
   canEdit,
   children,
 }: SerialEntryCardProps) {
-  const percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+  const _percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   // Determine background color based on status
   const getStatusStyles = () => {
@@ -73,7 +73,6 @@ export function SerialEntryCard({
           icon: <Clock className="h-5 w-5" />,
           label: "Đang tiến hành",
         };
-      case "pending":
       default:
         return {
           bg: "bg-red-50 dark:bg-red-950/30",
@@ -164,8 +163,7 @@ export function SerialEntryCard({
 
         {/* Action Section - Different display based on edit permission */}
         {status !== "complete" && (
-          <>
-            {canEdit && onContinue ? (
+          canEdit && onContinue ? (
               // Editable: Show clickable button
               <Button
                 onClick={onContinue}
@@ -180,8 +178,7 @@ export function SerialEntryCard({
               <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground text-center">
                 <p>Người phụ trách: <span className="font-medium text-foreground">{assignedTo.full_name}</span></p>
               </div>
-            )}
-          </>
+            )
         )}
 
         {/* Stock Update Info */}

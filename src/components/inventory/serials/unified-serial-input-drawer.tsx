@@ -60,7 +60,7 @@ export function UnifiedSerialInputDrawer({
   const isMobile = useIsMobile();
   const [serialInput, setSerialInput] = useState("");
   const [mode, setMode] = useState<"manual" | "csv">("manual");
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [_csvFile, setCsvFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
   // Mutations based on document type

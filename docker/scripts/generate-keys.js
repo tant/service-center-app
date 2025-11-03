@@ -66,9 +66,9 @@ const serviceToken = jwt.sign(
 
 console.log("✅ Keys generated successfully!\n");
 console.log("Add these to your .env file:\n");
-console.log("SUPABASE_ANON_KEY=" + anonToken);
+console.log(`SUPABASE_ANON_KEY=${anonToken}`);
 console.log("");
-console.log("SUPABASE_SERVICE_ROLE_KEY=" + serviceToken);
+console.log(`SUPABASE_SERVICE_ROLE_KEY=${serviceToken}`);
 console.log("");
 console.log(
   "⚠️  Keep SERVICE_ROLE_KEY secret - it bypasses all security rules!",

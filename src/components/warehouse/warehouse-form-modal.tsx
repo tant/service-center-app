@@ -124,7 +124,7 @@ export function WarehouseFormModal({
     }
   };
 
-  const handleCancel = () => {
+  const _handleCancel = () => {
     onClose();
   };
 

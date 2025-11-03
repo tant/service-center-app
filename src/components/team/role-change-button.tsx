@@ -46,7 +46,7 @@ export function RoleChangeButton({
     try {
       await updateRole(userId, newRole);
       onSuccess(newRole);
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by useStaffApi
     }
   };

@@ -3,16 +3,11 @@
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/components/providers/trpc-provider';
 import type {
-  PhysicalWarehouse,
-  VirtualWarehouse,
-  PhysicalProduct,
   // WarehouseStockLevel, // TODO: Re-enable when view is recreated
   StockMovement,
-  SerialVerification,
 } from '@/types/warehouse';
 
 /**
@@ -365,7 +360,7 @@ export function useAssignToTicket() {
  * Hook for stock movements
  * TODO: Implement movement tracking
  */
-export function useStockMovements(productId?: string) {
+export function useStockMovements(_productId?: string) {
   // TODO: Implement with tRPC
   const movements: StockMovement[] = [];
   const isLoading = false;
@@ -411,7 +406,7 @@ export function useBulkProductImport() {
  * Hook for warehouse analytics
  * TODO: Implement analytics queries
  */
-export function useWarehouseAnalytics(period: string = '30d') {
+export function useWarehouseAnalytics(_period: string = '30d') {
   // TODO: Implement with tRPC
   const analytics = null;
   const isLoading = false;

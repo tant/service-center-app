@@ -6,7 +6,6 @@
  */
 
 import { SerialComplianceWidget } from "@/components/inventory/serials";
-import { trpc } from "@/components/providers/trpc-provider";
 
 export function SerialComplianceSection() {
   // TODO: Replace with actual tRPC query when backend is implemented

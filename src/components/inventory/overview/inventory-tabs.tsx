@@ -8,6 +8,13 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { InventoryTableAll } from "./inventory-table-all";
 import { InventoryTablePhysical } from "./inventory-table-physical";
 import { InventoryTableVirtual } from "./inventory-table-virtual";
@@ -21,21 +28,31 @@ export function InventoryTabs() {
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full flex-col justify-start gap-6">
       {/* Tab Header */}
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        {/* Mobile: Select Dropdown */}
+        <Select value={activeTab} onValueChange={setActiveTab}>
+          <SelectTrigger className="flex w-fit @4xl/main:hidden" size="sm">
+            <SelectValue placeholder="Chọn view" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả kho</SelectItem>
+            <SelectItem value="physical">Kho vật lý</SelectItem>
+            <SelectItem value="virtual">Kho ảo</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Desktop: Tab List */}
+        <TabsList className="hidden @4xl/main:flex">
           <TabsTrigger value="all" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            <span className="hidden sm:inline">Tất cả kho</span>
-            <span className="sm:hidden">Tất cả</span>
+            <span>Tất cả kho</span>
           </TabsTrigger>
           <TabsTrigger value="physical" className="flex items-center gap-2">
             <Warehouse className="h-4 w-4" />
-            <span className="hidden sm:inline">Kho vật lý</span>
-            <span className="sm:hidden">Vật lý</span>
+            <span>Kho vật lý</span>
           </TabsTrigger>
           <TabsTrigger value="virtual" className="flex items-center gap-2">
             <Box className="h-4 w-4" />
-            <span className="hidden sm:inline">Kho ảo</span>
-            <span className="sm:hidden">Ảo</span>
+            <span>Kho ảo</span>
           </TabsTrigger>
         </TabsList>
 

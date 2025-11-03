@@ -6,15 +6,19 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IconLoader2, IconPlus, IconTrash, IconUser, IconPackage } from "@tabler/icons-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { ProductSerialInput } from "./service-request/product-serial-input";
+import { trpc } from "@/components/providers/trpc-provider";
 
 interface ProductItem {
   serial_number: string;
@@ -27,8 +31,8 @@ interface ServiceRequestFormData {
   customer_phone: string;
   issue_description: string;
   items: ProductItem[];
-  service_type: "warranty" | "paid" | "replacement";
-  preferred_delivery_method: "pickup" | "delivery";
+  receipt_status: "received" | "pending_receipt";
+  preferred_delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
 }
 
@@ -36,6 +40,8 @@ interface ServiceRequestFormProps {
   initialData?: Partial<ServiceRequestFormData>;
   mode: "create" | "edit";
   onSubmit: (data: ServiceRequestFormData) => void;
+  onSaveDraft?: (data: ServiceRequestFormData) => void;
+  onSubmitAndSend?: (data: ServiceRequestFormData) => void;
   isSubmitting: boolean;
 }
 
@@ -43,6 +49,8 @@ export function ServiceRequestForm({
   initialData,
   mode,
   onSubmit,
+  onSaveDraft,
+  onSubmitAndSend,
   isSubmitting,
 }: ServiceRequestFormProps) {
   // Form state
@@ -50,16 +58,55 @@ export function ServiceRequestForm({
   const [customerEmail, setCustomerEmail] = useState(initialData?.customer_email || "");
   const [customerPhone, setCustomerPhone] = useState(initialData?.customer_phone || "");
   const [issueDescription, setIssueDescription] = useState(initialData?.issue_description || "");
-  const [serviceType, setServiceType] = useState<"warranty" | "paid" | "replacement">(
-    initialData?.service_type || "warranty"
+  const [receiptStatus, setReceiptStatus] = useState<"received" | "pending_receipt">(
+    initialData?.receipt_status || "received"
   );
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">(
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | undefined>(
     initialData?.preferred_delivery_method || "pickup"
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
   const [items, setItems] = useState<ProductItem[]>(
     initialData?.items || [{ serial_number: "" }]
   );
+
+  // Lookup state
+  const [lookupPhone, setLookupPhone] = useState("");
+  const [customerFound, setCustomerFound] = useState(false);
+
+  // Customer lookup query (only enabled when phone is valid)
+  const customerLookup = trpc.customers.getByPhone.useQuery(
+    { phone: lookupPhone },
+    {
+      enabled: lookupPhone.length >= 10,
+      retry: false,
+    }
+  );
+
+  // Debounced phone lookup
+  useEffect(() => {
+    if (customerPhone.length >= 10) {
+      const timer = setTimeout(() => {
+        setLookupPhone(customerPhone);
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(timer);
+    } else {
+      setLookupPhone("");
+      setCustomerFound(false);
+    }
+  }, [customerPhone]);
+
+  // Auto-fill when customer found
+  useEffect(() => {
+    if (customerLookup.data) {
+      setCustomerName(customerLookup.data.name);
+      setCustomerEmail(customerLookup.data.email || "");
+      setCustomerFound(true);
+      toast.success(`Đã tìm thấy khách hàng: ${customerLookup.data.name}`);
+    } else if (customerLookup.isFetched && lookupPhone && !customerLookup.data) {
+      setCustomerFound(false);
+    }
+  }, [customerLookup.data, customerLookup.isFetched, lookupPhone]);
 
   const handleAddItem = () => {
     if (items.length >= 10) {
@@ -83,97 +130,108 @@ export function ServiceRequestForm({
     setItems(newItems);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validate form (returns true if valid)
+  const validateForm = (isDraft = false): boolean => {
+    // For drafts, we can be more lenient
+    if (isDraft) {
+      if (!customerPhone || customerPhone.length < 10) {
+        toast.error("Số điện thoại phải có ít nhất 10 ký tự");
+        return false;
+      }
+      if (items.length === 0 || items.every((item) => !item.serial_number)) {
+        toast.error("Phải có ít nhất 1 sản phẩm");
+        return false;
+      }
+      return true;
+    }
 
-    // Validation
+    // For submission, validate all fields
     if (!customerName || customerName.length < 2) {
       toast.error("Tên khách hàng phải có ít nhất 2 ký tự");
-      return;
+      return false;
     }
-    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       toast.error("Email không hợp lệ");
-      return;
+      return false;
     }
     if (!customerPhone || customerPhone.length < 10) {
       toast.error("Số điện thoại phải có ít nhất 10 ký tự");
-      return;
+      return false;
     }
-    if (!issueDescription || issueDescription.length < 20) {
-      toast.error("Mô tả vấn đề phải có ít nhất 20 ký tự");
-      return;
+    if (!issueDescription || issueDescription.trim().length === 0) {
+      toast.error("Mô tả vấn đề không được để trống");
+      return false;
     }
     if (items.some((item) => !item.serial_number || item.serial_number.length < 5)) {
       toast.error("Tất cả serial number phải có ít nhất 5 ký tự");
-      return;
+      return false;
     }
     if (deliveryMethod === "delivery" && !deliveryAddress) {
-      toast.error("Địa chỉ giao hàng là bắt buộc");
-      return;
+      toast.error("Địa chỉ giao hàng là bắt buộc khi chọn giao hàng tận nơi");
+      return false;
     }
-
-    onSubmit({
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      issue_description: issueDescription,
-      items: items.map((item) => ({
-        serial_number: item.serial_number.toUpperCase(),
-        issue_description: item.issue_description,
-      })),
-      service_type: serviceType,
-      preferred_delivery_method: deliveryMethod,
-      delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
-    });
+    return true;
   };
+
+  // Build form data
+  const buildFormData = (): ServiceRequestFormData => ({
+    customer_name: customerName,
+    customer_email: customerEmail,
+    customer_phone: customerPhone,
+    issue_description: issueDescription,
+    items: items.map((item) => ({
+      serial_number: item.serial_number.toUpperCase(),
+      issue_description: item.issue_description,
+    })),
+    receipt_status: receiptStatus,
+    preferred_delivery_method: deliveryMethod,
+    delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm(false)) return;
+    onSubmit(buildFormData());
+  };
+
+  const handleSaveDraft = (e: Event) => {
+    e.preventDefault();
+    if (!onSaveDraft) return;
+    if (!validateForm(true)) return;
+    onSaveDraft(buildFormData());
+  };
+
+  const handleSubmitAndSend = (e: Event) => {
+    e.preventDefault();
+    if (!onSubmitAndSend) return;
+    if (!validateForm(false)) return;
+    onSubmitAndSend(buildFormData());
+  };
+
+  // Listen for submit-draft event
+  useEffect(() => {
+    const form = document.getElementById("service-request-form");
+    if (form && onSaveDraft) {
+      form.addEventListener("submit-draft", handleSaveDraft as EventListener);
+      return () => {
+        form.removeEventListener("submit-draft", handleSaveDraft as EventListener);
+      };
+    }
+  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+
+  // Listen for submit-and-send event
+  useEffect(() => {
+    const form = document.getElementById("service-request-form");
+    if (form && onSubmitAndSend) {
+      form.addEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+      return () => {
+        form.removeEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+      };
+    }
+  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">
-      {/* Customer Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <IconUser className="h-4 w-4" />
-            Thông tin khách hàng
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="customer-name">Họ tên *</Label>
-              <Input
-                id="customer-name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nguyễn Văn A"
-                disabled={isSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-phone">Số điện thoại *</Label>
-              <Input
-                id="customer-phone"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="0912345678"
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="customer-email">Email *</Label>
-            <Input
-              id="customer-email"
-              type="email"
-              value={customerEmail}
-              onChange={(e) => setCustomerEmail(e.target.value)}
-              placeholder="customer@example.com"
-              disabled={isSubmitting}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Products */}
       <Card>
         <CardHeader>
@@ -197,43 +255,16 @@ export function ServiceRequestForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item, index) => (
-            <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
-              <div className="flex-1 space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor={`serial-${index}`}>Serial Number #{index + 1} *</Label>
-                  <Input
-                    id={`serial-${index}`}
-                    value={item.serial_number}
-                    onChange={(e) => handleUpdateItem(index, "serial_number", e.target.value)}
-                    placeholder="VD: ZT-RTX4090-001234"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`issue-${index}`}>Vấn đề cụ thể (tùy chọn)</Label>
-                  <Textarea
-                    id={`issue-${index}`}
-                    value={item.issue_description || ""}
-                    onChange={(e) => handleUpdateItem(index, "issue_description", e.target.value)}
-                    placeholder="Vấn đề riêng của sản phẩm này..."
-                    rows={2}
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-              {items.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveItem(index)}
-                  className="mt-8"
-                  disabled={isSubmitting}
-                >
-                  <IconTrash className="h-4 w-4 text-destructive" />
-                </Button>
-              )}
-            </div>
+            <ProductSerialInput
+              key={index}
+              index={index}
+              serial={item.serial_number}
+              onSerialChange={(serial) => handleUpdateItem(index, "serial_number", serial)}
+              onRemove={() => handleRemoveItem(index)}
+              canRemove={items.length > 1}
+              disabled={isSubmitting}
+              totalProducts={items.length}
+            />
           ))}
         </CardContent>
       </Card>
@@ -248,77 +279,156 @@ export function ServiceRequestForm({
             id="issue-description"
             value={issueDescription}
             onChange={(e) => setIssueDescription(e.target.value)}
-            placeholder="Mô tả chung về vấn đề của các sản phẩm... (tối thiểu 20 ký tự)"
+            placeholder="Mô tả chung về vấn đề của các sản phẩm..."
             rows={3}
             disabled={isSubmitting}
           />
-          <p className="text-xs text-muted-foreground">{issueDescription.length}/20 ký tự</p>
+          <p className="text-xs text-muted-foreground">{issueDescription.length} ký tự</p>
         </CardContent>
       </Card>
 
-      {/* Service Type */}
+      {/* Customer Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Loại dịch vụ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={serviceType}
-            onValueChange={(value: any) => setServiceType(value)}
-            disabled={isSubmitting}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="warranty" id="warranty" />
-              <Label htmlFor="warranty">Bảo hành</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="paid" id="paid" />
-              <Label htmlFor="paid">Sửa chữa có phí</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="replacement" id="replacement" />
-              <Label htmlFor="replacement">Đổi trả bảo hành</Label>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
-
-      {/* Delivery Method */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Phương thức nhận hàng</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <IconUser className="h-4 w-4" />
+            Thông tin khách hàng
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <RadioGroup
-            value={deliveryMethod}
-            onValueChange={(value: any) => setDeliveryMethod(value)}
-            disabled={isSubmitting}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="pickup" id="pickup" />
-              <Label htmlFor="pickup">Tự đến lấy</Label>
+          <div className="space-y-2">
+            <Label htmlFor="customer-phone">Số điện thoại *</Label>
+            <div className="relative">
+              <Input
+                id="customer-phone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="0912345678"
+                disabled={isSubmitting}
+                className={customerFound ? "pr-10" : ""}
+              />
+              {customerLookup.isLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {customerFound && !customerLookup.isLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <IconCheck className="h-4 w-4 text-green-600" />
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="delivery" id="delivery" />
-              <Label htmlFor="delivery">Giao hàng tận nơi</Label>
-            </div>
-          </RadioGroup>
-
-          {deliveryMethod === "delivery" && (
+            {customerFound && (
+              <p className="text-xs text-green-600">
+                ✓ Đã tìm thấy thông tin khách hàng
+              </p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="delivery-address">Địa chỉ giao hàng *</Label>
-              <Textarea
-                id="delivery-address"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
-                rows={2}
+              <Label htmlFor="customer-name">Họ tên *</Label>
+              <Input
+                id="customer-name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Nguyễn Văn A"
                 disabled={isSubmitting}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer-email">Email</Label>
+              <Input
+                id="customer-email"
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="customer@example.com (không bắt buộc)"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Receipt Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Tình trạng nhận hàng</CardTitle>
+          <CardDescription>
+            Đánh dấu nếu đã nhận sản phẩm từ khách hàng. Bỏ chọn nếu khách sẽ gửi sau.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="receipt-status"
+              checked={receiptStatus === "received"}
+              onCheckedChange={(checked) =>
+                setReceiptStatus(checked ? "received" : "pending_receipt")
+              }
+              disabled={isSubmitting}
+            />
+            <Label
+              htmlFor="receipt-status"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Đã nhận sản phẩm từ khách hàng
+            </Label>
+          </div>
+          {receiptStatus === "pending_receipt" && (
+            <p className="text-xs text-muted-foreground mt-3 p-3 bg-muted rounded-md">
+              💡 Phiếu sửa chữa sẽ được tạo tự động khi đánh dấu đã nhận sản phẩm
+            </p>
           )}
         </CardContent>
       </Card>
+
+      {/* Delivery Method - Optional */}
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="delivery" className="border rounded-lg px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <IconTruck className="h-4 w-4" />
+              Thông tin giao hàng (tùy chọn)
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4 pt-2">
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Có thể cập nhật sau khi sản phẩm được sửa chữa xong
+              </p>
+              <RadioGroup
+                value={deliveryMethod}
+                onValueChange={(value: any) => setDeliveryMethod(value)}
+                disabled={isSubmitting}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pickup" id="pickup" />
+                  <Label htmlFor="pickup">Tự đến lấy</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="delivery" id="delivery" />
+                  <Label htmlFor="delivery">Giao hàng tận nơi</Label>
+                </div>
+              </RadioGroup>
+
+              {deliveryMethod === "delivery" && (
+                <div className="space-y-2">
+                  <Label htmlFor="delivery-address">Địa chỉ giao hàng *</Label>
+                  <Textarea
+                    id="delivery-address"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
+                    rows={2}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </form>
   );
 }

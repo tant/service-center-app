@@ -68,7 +68,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <>
       <PageHeader title={`Chỉnh sửa phiếu ${ticket.ticket_number}`}>
-        <Link href={`/tickets/${ticketId}`}>
+        <Link href={`/operations/tickets/${ticketId}`}>
           <Button variant="outline" size="sm">
             <IconEye className="h-4 w-4" />
             Xem chi tiết phiếu

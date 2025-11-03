@@ -16,10 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { StockStatusBadge } from "../shared/stock-status-badge";
 import { PhysicalWarehouseSelector } from "../shared/warehouse-selector";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import Link from "next/link";
 
 export function InventoryTablePhysical() {
   const [search, setSearch] = useState("");
@@ -60,9 +62,9 @@ export function InventoryTablePhysical() {
       ) : (
         <>
           {/* Table */}
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg border">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted sticky top-0 z-10">
                 <TableRow>
                   <TableHead>Sản phẩm</TableHead>
                   <TableHead>SKU</TableHead>
@@ -93,9 +95,12 @@ export function InventoryTablePhysical() {
                       <TableCell className="font-medium">{item.product_name}</TableCell>
                       <TableCell className="text-muted-foreground">{item.sku || "-"}</TableCell>
                       <TableCell>
-                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 rounded">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+                        >
                           {item.virtual_warehouse_name}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">{item.declared_quantity.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{item.actual_serial_count.toLocaleString()}</TableCell>
@@ -111,9 +116,11 @@ export function InventoryTablePhysical() {
                         <StockStatusBadge status={item.stock_status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm">
-                          Cập nhật
-                        </Button>
+                        <Link href={`/inventory/products/${item.product_id}/stock`}>
+                          <Button variant="outline" size="sm">
+                            Xem chi tiết
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))

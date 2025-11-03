@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import type { VirtualWarehouse } from "@/types/warehouse";
 import type { WarehouseType } from "@/types/enums";
+import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
 
 // Extended type to include new fields from migration
 type VirtualWarehouseWithPhysical = VirtualWarehouse & {
@@ -143,12 +144,15 @@ export function VirtualWarehouseFormModal({
     onClose();
   };
 
-  const warehouseTypeOptions = [
-    { value: "warranty_stock", label: "Kho Bảo Hành" },
-    { value: "rma_staging", label: "Kho RMA" },
-    { value: "dead_stock", label: "Kho Hỏng" },
-    { value: "in_service", label: "Đang Sửa Chữa" },
-    { value: "parts", label: "Kho Linh Kiện" },
+  // All 7 warehouse types from system
+  const warehouseTypeOptions: { value: WarehouseType; label: string }[] = [
+    { value: "main", label: WAREHOUSE_TYPE_LABELS.main },
+    { value: "warranty_stock", label: WAREHOUSE_TYPE_LABELS.warranty_stock },
+    { value: "rma_staging", label: WAREHOUSE_TYPE_LABELS.rma_staging },
+    { value: "dead_stock", label: WAREHOUSE_TYPE_LABELS.dead_stock },
+    { value: "in_service", label: WAREHOUSE_TYPE_LABELS.in_service },
+    { value: "parts", label: WAREHOUSE_TYPE_LABELS.parts },
+    { value: "customer_installed", label: WAREHOUSE_TYPE_LABELS.customer_installed },
   ];
 
   return (
@@ -236,14 +240,15 @@ export function VirtualWarehouseFormModal({
 
           {/* Warehouse Type */}
           <div className="grid gap-2">
-            <Label htmlFor="warehouse_type">Loại Kho</Label>
+            <Label htmlFor="warehouse_type">
+              Loại Kho <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={formData.warehouse_type}
-              onValueChange={(
-                value: "warranty_stock" | "rma_staging" | "dead_stock" | "in_service" | "parts"
-              ) => {
+              onValueChange={(value: WarehouseType) => {
                 setFormData({ ...formData, warehouse_type: value });
               }}
+              disabled={isEditMode}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -256,9 +261,15 @@ export function VirtualWarehouseFormModal({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Loại kho xác định mục đích sử dụng
-            </p>
+            {isEditMode ? (
+              <p className="text-xs text-muted-foreground">
+                Loại kho không thể thay đổi sau khi tạo vì ảnh hưởng đến dữ liệu
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Loại kho xác định mục đích sử dụng
+              </p>
+            )}
           </div>
 
           {/* Description Field */}

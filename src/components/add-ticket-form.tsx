@@ -84,6 +84,7 @@ export function AddTicketForm() {
     priority_level: "normal" as "low" | "normal" | "high" | "urgent",
     warranty_type: "paid" as "warranty" | "paid" | "goodwill",
     product_id: "",
+    workflow_id: "",
     description: "",
     service_fee: 0,
     diagnosis_fee: 0,
@@ -100,6 +101,9 @@ export function AddTicketForm() {
     { id: ticketData.product_id },
     { enabled: !!ticketData.product_id },
   );
+  const { data: workflows } = trpc.workflow.template.list.useQuery({
+    is_active: true,
+  });
 
   // Prepare products options for searchable select
   const productsOptions: SearchableSelectOption[] = React.useMemo(
@@ -137,7 +141,7 @@ export function AddTicketForm() {
         ? `Phiếu dịch vụ đã được tạo thành công với ${taskCount} tasks!`
         : "Phiếu dịch vụ đã được tạo thành công!";
       toast.success(message);
-      router.push(`/tickets/${data.ticket.id}`);
+      router.push(`/operations/tickets/${data.ticket.id}`);
     },
     onError: (error) => {
       console.error("[AddTicketForm] Create ticket error:", {
@@ -398,6 +402,7 @@ export function AddTicketForm() {
           email: customerData.email || null,
         },
         product_id: ticketData.product_id,
+        workflow_id: ticketData.workflow_id || undefined,
         description: ticketData.description,
         priority_level: ticketData.priority_level,
         warranty_type: ticketData.warranty_type,
@@ -694,6 +699,46 @@ export function AddTicketForm() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Quy trình xử lý (tùy chọn)</Label>
+              <Select
+                value={ticketData.workflow_id}
+                onValueChange={(value) =>
+                  setTicketData((prev) => ({ ...prev, workflow_id: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="-- Chọn quy trình --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Không sử dụng quy trình</SelectItem>
+                  {workflows
+                    ?.filter((wf) => wf.service_type === ticketData.warranty_type || !wf.service_type)
+                    ?.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name} ({workflow.tasks?.length || 0} bước)
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {ticketData.workflow_id && workflows && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
+                  <ol className="list-decimal ml-4 space-y-1">
+                    {workflows
+                      ?.find((w) => w.id === ticketData.workflow_id)
+                      ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                      ?.map((task: any) => (
+                        <li key={task.id} className="text-sm text-muted-foreground">
+                          {task.task_type?.name || 'Unknown task'}
+                          {task.is_required && <span className="text-red-500 ml-1">*</span>}
+                        </li>
+                      ))}
+                  </ol>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

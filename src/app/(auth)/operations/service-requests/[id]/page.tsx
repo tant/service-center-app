@@ -19,7 +19,7 @@ import {
   IconX,
   IconUser,
   IconPackage,
-  IconFileText,
+  IconFileText, IconTrash, IconTruck, IconEdit,
   IconTruckDelivery,
   IconInfoCircle,
   IconCalendarEvent,
@@ -32,14 +32,17 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { WarrantyStatus } from "@/utils/warranty";
+import { trpc } from "@/components/providers/trpc-provider";
 
 // Status mapping
 const STATUS_MAP = {
-  submitted: { label: "Đã gửi", variant: "outline" as const },
-  received: { label: "Đã tiếp nhận", variant: "secondary" as const },
+  draft: { label: "Nháp", variant: "outline" as const },
+  submitted: { label: "Đã gửi", variant: "secondary" as const },
+  pickingup: { label: "Chờ lấy hàng", variant: "secondary" as const },
+  received: { label: "Đã tiếp nhận", variant: "default" as const },
   processing: { label: "Đang xử lý", variant: "default" as const },
-  rejected: { label: "Đã từ chối", variant: "destructive" as const },
-  converted: { label: "Đã chuyển", variant: "default" as const },
+  completed: { label: "Hoàn thành", variant: "default" as const },
+  cancelled: { label: "Đã hủy", variant: "destructive" as const },
 };
 
 const DELIVERY_METHOD_LABELS: Record<"pickup" | "delivery", string> = {
@@ -211,6 +214,16 @@ export default function ServiceRequestDetailPage() {
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
   const { rejectRequest, isRejecting } = useRejectRequest();
 
+  const deleteDraft = trpc.serviceRequest.deleteDraft.useMutation({
+    onSuccess: () => {
+      toast.success("Đã xóa bản nháp");
+      router.push("/operations/service-requests");
+    },
+    onError: (error: any) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -254,6 +267,12 @@ export default function ServiceRequestDetailPage() {
         },
       }
     );
+  };
+
+  const handleDeleteDraft = () => {
+    if (confirm("Bạn có chắc muốn xóa bản nháp này? Hành động này không thể hoàn tác.")) {
+      deleteDraft.mutate({ request_id: requestId });
+    }
   };
 
   if (isLoading) {
@@ -715,6 +734,34 @@ export default function ServiceRequestDetailPage() {
         </div>
       </div>
       {/* Page Footer with Actions */}
+      {request.status === "draft" && (
+        <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">
+          <Button
+            variant="outline"
+            onClick={handleDeleteDraft}
+            disabled={deleteDraft.isPending}
+          >
+            {deleteDraft.isPending ? (
+              <>
+                <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                Đang xóa...
+              </>
+            ) : (
+              <>
+                <IconTrash className="h-4 w-4 mr-2" />
+                Xóa nháp
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={() => router.push(`/operations/service-requests/${requestId}/edit`)}
+            disabled={deleteDraft.isPending}
+          >
+            <IconEdit className="h-4 w-4 mr-2" />
+            Chỉnh sửa
+          </Button>
+        </div>
+      )}
       {(request.status === "submitted" || request.status === "received") && (
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">
           {!showRejectForm && (

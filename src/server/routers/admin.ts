@@ -817,7 +817,7 @@ export const adminRouter = router({
             continue;
           }
 
-          // Step 6.1: Create receipt (draft)
+          // Step 6.1: Create receipt (draft) with historical timestamp
           const { data: receiptData, error: receiptError } = await supabaseAdmin
             .from("stock_receipts")
             .insert({
@@ -827,6 +827,7 @@ export const adminRouter = router({
               notes: receipt.notes,
               status: "draft",
               created_by_id: adminUserId,
+              created_at: receipt.receiptDate, // Use historical date
             })
             .select()
             .single();
@@ -898,13 +899,13 @@ export const adminRouter = router({
             continue;
           }
 
-          // Step 6.4: Approve receipt
+          // Step 6.4: Approve receipt (use receipt_date for historical data)
           const { error: approveError } = await supabaseAdmin
             .from("stock_receipts")
             .update({
               status: "approved",
               approved_by_id: adminUserId,
-              approved_at: new Date().toISOString(),
+              approved_at: receipt.receiptDate, // Use historical date for trend chart
             })
             .eq("id", receiptData.id);
 
@@ -915,12 +916,16 @@ export const adminRouter = router({
           }
 
           // Step 6.5: Complete receipt (creates physical_products)
+          // Use receipt_date + 1 hour for historical data consistency
+          const completedDate = new Date(receipt.receiptDate);
+          completedDate.setHours(completedDate.getHours() + 1);
+
           const { error: completeError } = await supabaseAdmin
             .from("stock_receipts")
             .update({
               status: "completed",
               completed_by_id: adminUserId,
-              completed_at: new Date().toISOString(),
+              completed_at: completedDate.toISOString(),
             })
             .eq("id", receiptData.id);
 
@@ -965,151 +970,9 @@ export const adminRouter = router({
       console.log(`✅ SEED: Found ${taskTypeMap.size} existing task types`);
       results.push(`✅ Tìm thấy ${taskTypeMap.size} task types`);
 
-      // OLD CODE - no longer creates task types
-      /*
-      for (const taskType of mockData.taskTypes) {
-        try {
-          // Check if task type already exists
-          const { data: existingTaskType } = await supabaseAdmin
-            .from("task_types")
-            .select("id, name")
-            .eq("name", taskType.name)
-            .single();
-
-          if (existingTaskType) {
-            console.log(`⚠️ SEED: Task type ${taskType.name} already exists, skipping...`);
-            results.push(`⚠️ Task type ${taskType.name} đã tồn tại, bỏ qua`);
-            taskTypeMap.set(taskType.name, existingTaskType.id);
-            continue;
-          }
-
-          const { data: taskTypeData, error: taskTypeError } = await supabaseAdmin
-            .from("task_types")
-            .insert({
-              name: taskType.name,
-              description: taskType.description,
-              category: taskType.category,
-              estimated_duration_minutes: taskType.estimatedDurationMinutes,
-              requires_notes: taskType.requiresNotes,
-              requires_photo: taskType.requiresPhoto,
-              is_active: true,
-            })
-            .select("id")
-            .single();
-
-          if (taskTypeError) {
-            console.error(`❌ SEED: Failed to create task type ${taskType.name}:`, taskTypeError);
-            results.push(`❌ Lỗi tạo task type ${taskType.name}: ${taskTypeError.message}`);
-            continue;
-          }
-
-          taskTypeMap.set(taskType.name, taskTypeData.id);
-          console.log(`✅ SEED: Created task type ${taskType.name}`);
-          results.push(`✅ Tạo task type ${taskType.name}`);
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating task type ${taskType.name}:`, error);
-          results.push(`❌ Lỗi tạo task type ${taskType.name}: ${error.message}`);
-        }
-      }
-      */
-
-      // Step 8: Skip Task Templates (no longer in mock-data.json - already in database)
-      console.log("\n📋 SEED STEP 8: Skipping task templates (already exist in database)...");
-      results.push("📋 Bước 8: Bỏ qua Task Templates (đã tồn tại trong database)...");
-
-      // OLD CODE - no longer creates task templates
-      /*
-      for (const template of mockData.taskTemplates) {
-        try {
-          // Check if template already exists
-          const { data: existingTemplate } = await supabaseAdmin
-            .from("task_templates")
-            .select("id, name")
-            .eq("name", template.name)
-            .single();
-
-          if (existingTemplate) {
-            console.log(`⚠️ SEED: Template ${template.name} already exists, skipping...`);
-            results.push(`⚠️ Template ${template.name} đã tồn tại, bỏ qua`);
-            continue;
-          }
-
-          const productId = productMap.get(template.productSku);
-
-          if (!productId) {
-            console.error(`❌ SEED: Product ${template.productSku} not found for template ${template.name}`);
-            results.push(`❌ Không tìm thấy product ${template.productSku} cho template ${template.name}`);
-            continue;
-          }
-
-          const { data: templateData, error: templateError } = await supabaseAdmin
-            .from("task_templates")
-            .insert({
-              name: template.name,
-              description: template.description,
-              product_type: productId,
-              service_type: template.serviceType,
-              strict_sequence: template.strictSequence,
-              is_active: true,
-              created_by_id: adminUserId,
-            })
-            .select("id")
-            .single();
-
-          if (templateError) {
-            console.error(`❌ SEED: Failed to create template ${template.name}:`, templateError);
-            results.push(`❌ Lỗi tạo template ${template.name}: ${templateError.message}`);
-            continue;
-          }
-
-          console.log(`✅ SEED: Created template ${template.name}`);
-          results.push(`✅ Tạo template ${template.name}`);
-
-          // Create template tasks
-          for (const task of template.tasks) {
-            const taskTypeId = taskTypeMap.get(task.taskTypeName);
-
-            if (!taskTypeId) {
-              console.warn(`⚠️ SEED: Task type ${task.taskTypeName} not found for template ${template.name}`);
-              continue;
-            }
-
-            // Check if template task already exists
-            const { data: existingTemplateTask } = await supabaseAdmin
-              .from("task_templates_tasks")
-              .select("template_id")
-              .eq("template_id", templateData.id)
-              .eq("task_type_id", taskTypeId)
-              .eq("sequence_order", task.sequenceOrder)
-              .single();
-
-            if (existingTemplateTask) {
-              console.log(`⚠️ SEED: Template task ${task.taskTypeName} already exists for ${template.name}, skipping...`);
-              continue;
-            }
-
-            const { error: templateTaskError } = await supabaseAdmin
-              .from("task_templates_tasks")
-              .insert({
-                template_id: templateData.id,
-                task_type_id: taskTypeId,
-                sequence_order: task.sequenceOrder,
-                is_required: task.isRequired,
-                custom_instructions: task.customInstructions,
-              });
-
-            if (templateTaskError) {
-              console.error(`❌ SEED: Failed to create template task ${task.taskTypeName}:`, templateTaskError);
-            }
-          }
-
-          results.push(`  ↳ Thêm ${template.tasks.length} tasks vào template ${template.name}`);
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating template ${template.name}:`, error);
-          results.push(`❌ Lỗi tạo template ${template.name}: ${error.message}`);
-        }
-      }
-      */
+      // Step 8: Skip workflows (already seeded in database via migrations)
+      console.log("\n📋 SEED STEP 8: Skipping workflows (already exist in database)...");
+      results.push("📋 Bước 8: Bỏ qua Workflows (đã tồn tại trong database)...");
 
       console.log("\n✅ SEED: Mock data seeding completed successfully");
       results.push("✅ Hoàn tất tạo dữ liệu test!");

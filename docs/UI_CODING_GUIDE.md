@@ -883,7 +883,19 @@ function MyEntityModal({ mode, trigger, onSuccess }) {
 ### Các thành phần chính
 
 1.  **`PageHeader` với Nút Quay lại:**
-    *   `PageHeader` phải có một prop `backHref` để hiển thị một nút mũi tên cho phép người dùng quay lại trang danh sách trước đó.
+    *   **Bắt buộc:** Mọi trang thêm/sửa hay trang con chuyên dụng PHẢI sử dụng `PageHeader` với prop `backHref`.
+    *   Prop `backHref` sẽ nhận một đường dẫn (URL string) đến trang danh sách trước đó.
+    *   Khi `backHref` được cung cấp, component sẽ tự động hiển thị một nút "Quay lại" (biểu tượng mũi tên) ngay bên trái của tiêu đề trang.
+    *   **Hành vi:** Nhấp vào nút này sẽ điều hướng người dùng về lại `backHref`.
+    *   **Lợi ích:** Cung cấp một lối thoát rõ ràng, nhất quán, giúp người dùng không bị "lạc" sau khi hoàn thành hoặc hủy bỏ một tác vụ.
+    *   **Ví dụ:**
+        ```tsx
+        // Trang tạo phiếu dịch vụ mới
+        <PageHeader 
+          title="Tạo Phiếu Dịch Vụ Mới" 
+          backHref="/operations/service-requests" 
+        />
+        ```
     *   Tiêu đề phải rõ ràng, ví dụ: "Tạo Phiếu sửa chữa Mới" hoặc "Chỉnh sửa Sản phẩm".
 
 2.  **Form chính:**

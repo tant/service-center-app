@@ -114,7 +114,7 @@ export async function logAudit(
  *
  * Template switches are sensitive operations that require a detailed reason.
  * This function validates the reason and logs to both audit_logs and
- * ticket_template_changes tables.
+ * ticket_workflow_changes tables.
  *
  * @param supabase - Supabase admin client
  * @param userId - ID of the user performing the switch

@@ -26,6 +26,7 @@ import {
 import { StockStatusBadge } from "../shared/stock-status-badge";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import Link from "next/link";
 
 export function InventoryTableAll() {
   const [search, setSearch] = useState("");
@@ -63,9 +64,9 @@ export function InventoryTableAll() {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted sticky top-0 z-10">
             <TableRow>
               <TableHead>Sản phẩm</TableHead>
               <TableHead>SKU</TableHead>
@@ -108,9 +109,11 @@ export function InventoryTableAll() {
                     <StockStatusBadge status={item.stock_status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm">
-                      Xem chi tiết
-                    </Button>
+                    <Link href={`/inventory/products/${item.product_id}/stock`}>
+                      <Button variant="outline" size="sm">
+                        Xem chi tiết
+                      </Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))

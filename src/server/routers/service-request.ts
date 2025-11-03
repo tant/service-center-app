@@ -176,7 +176,7 @@ const requestItemSchema = z.object({
   product_brand: z.string().optional(),
   product_model: z.string().optional(),
   purchase_date: z.string().optional(),
-  issue_description: z.string().min(10, "Issue description must be at least 10 characters").optional(),
+  issue_description: z.string().optional().or(z.literal("")),
   service_option: z.enum(["warranty", "paid", "replacement"]),
   service_option_notes: z.string().optional(),
   attachments: z
@@ -193,12 +193,13 @@ const requestItemSchema = z.object({
 
 const submitRequestSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters"),
-  customer_email: z.string().email("Invalid email format"),
+  customer_email: z.string().email("Invalid email format").optional().or(z.literal("")),
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
   customer_address: z.string().optional(),
-  issue_overview: z.string().optional(),
+  issue_overview: z.string().min(1, "Description is required"),,
   items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
-  preferred_delivery_method: z.enum(["pickup", "delivery"]),
+  receipt_status: z.enum(["received", "pending_receipt"]).default("received"),
+  preferred_delivery_method: z.enum(["pickup", "delivery"]).default("pickup"),
   delivery_address: z.string().optional(),
   preferred_schedule: z.string().optional(),
   pickup_notes: z.string().optional(),
@@ -214,6 +215,146 @@ export const serviceRequestRouter = router({
   // ========================================
   // PUBLIC ENDPOINTS (Story 1.11, 1.12)
   // ========================================
+  /**
+   * Serial Lookup for Service Request Form (Story: Serial Lookup Feature)
+   * Returns comprehensive product, warranty, and location information
+   * Used for real-time validation in service request form
+   */
+  lookupSerial: publicProcedure
+    .input(
+      z.object({
+        serial_number: z.string().min(5, "Serial number must be at least 5 characters"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Query physical_products with all necessary joins
+      // Note: Must explicitly specify foreign key relationship because physical_products
+      // has two FKs to virtual_warehouses (virtual_warehouse_id and previous_virtual_warehouse_id)
+      const { data, error } = await ctx.supabaseAdmin
+        .from('physical_products')
+        .select(`
+          id,
+          serial_number,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
+          last_known_customer_id,
+          current_ticket_id,
+          condition,
+          product:products (
+            id,
+            name,
+            sku,
+            brand:brands (
+              name
+            )
+          ),
+          virtual_warehouse:virtual_warehouses!physical_products_virtual_warehouse_id_fkey (
+            name,
+            warehouse_type,
+            physical_warehouse:physical_warehouses (
+              name
+            )
+          )
+        `)
+        .eq('serial_number', input.serial_number.toUpperCase())
+        .single();
+
+      if (error || !data) {
+        return {
+          found: false,
+          product: null,
+          error: error?.code === 'PGRST116' ? 'Serial không tìm thấy trong kho hàng đã bán' : `Database error: ${error?.message || 'Unknown'}`
+        };
+      }
+
+      // Check if product is in customer_installed warehouse
+      const virtualWarehouseData = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
+      if (!virtualWarehouseData || virtualWarehouseData.warehouse_type !== 'customer_installed') {
+        return {
+          found: false,
+          product: null,
+          error: 'Serial không tìm thấy trong kho hàng đã bán'
+        };
+      }
+
+      // Fetch customer data separately if exists
+      let customerData = null;
+      if (data.last_known_customer_id) {
+        const { data: customer } = await ctx.supabaseAdmin
+          .from('customers')
+          .select('id, name')
+          .eq('id', data.last_known_customer_id)
+          .single();
+        customerData = customer;
+      }
+
+      // Fetch ticket data separately if exists
+      let ticketData = null;
+      if (data.current_ticket_id) {
+        const { data: ticket } = await ctx.supabaseAdmin
+          .from('service_tickets')
+          .select('id, ticket_number')
+          .eq('id', data.current_ticket_id)
+          .single();
+        ticketData = ticket;
+      }
+
+      // Calculate warranty status
+      const effectiveWarrantyDate = data.user_warranty_end_date || data.manufacturer_warranty_end_date;
+      let warrantyStatus: 'active' | 'expiring_soon' | 'expired' | 'no_warranty' = 'no_warranty';
+      let daysRemaining: number | null = null;
+
+      if (effectiveWarrantyDate) {
+        const endDate = new Date(effectiveWarrantyDate);
+        const today = new Date();
+        daysRemaining = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining < 0) {
+          warrantyStatus = 'expired';
+        } else if (daysRemaining <= 30) {
+          warrantyStatus = 'expiring_soon';
+        } else {
+          warrantyStatus = 'active';
+        }
+      }
+
+      // Extract nested data (handle Supabase array wrapping)
+      const productData = Array.isArray(data.product) ? data.product[0] : data.product;
+      const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
+      const virtualWarehouse = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
+      const physicalWarehouse = virtualWarehouse?.physical_warehouse
+        ? (Array.isArray(virtualWarehouse.physical_warehouse) ? virtualWarehouse.physical_warehouse[0] : virtualWarehouse.physical_warehouse)
+        : null;
+
+      return {
+        found: true,
+        product: {
+          id: productData?.id || '',
+          name: productData?.name || 'Unknown',
+          sku: productData?.sku || '',
+          brand: brandData?.name || 'Unknown',
+          warranty_status: warrantyStatus,
+          warranty_end_date: effectiveWarrantyDate,
+          manufacturer_warranty_end_date: data.manufacturer_warranty_end_date,
+          user_warranty_end_date: data.user_warranty_end_date,
+          days_remaining: daysRemaining,
+          last_customer: customerData ? {
+            id: customerData.id,
+            name: customerData.name,
+          } : null,
+          current_location: {
+            physical_warehouse: physicalWarehouse?.name || 'Unknown',
+            virtual_warehouse: virtualWarehouse?.name || 'Unknown',
+            warehouse_type: virtualWarehouse?.warehouse_type || 'main',
+          },
+          service_history_count: 0, // TODO: Calculate from service tickets
+          current_ticket_id: data.current_ticket_id,
+          current_ticket_number: ticketData?.ticket_number || null,
+        },
+        error: undefined,
+      };
+    }),
+
   /**
    * AC 2: Verify warranty status by serial number (public, read-only)
    * AC 8: Show warranty status and days remaining
@@ -324,22 +465,12 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Verify all serial numbers exist and get product details
-      const productLookups = await Promise.all(
+      // Verify all serial numbers exist in the system
+      await Promise.all(
         input.items.map(async (item) => {
           const { data: physicalProduct } = await ctx.supabaseAdmin
             .from("physical_products")
-            .select(
-              `
-              id,
-              serial_number,
-              product:products(
-                id,
-                name,
-                brand:brands(name)
-              )
-            `
-            )
+            .select("id")
             .eq("serial_number", item.serial_number)
             .single();
 
@@ -374,7 +505,13 @@ export const serviceRequestRouter = router({
 
       // AC 2, 3: Create service request
       // AC 5: Tracking token auto-generated by database trigger
-      // AC 6: Status defaults to 'submitted'
+      // AC 6: Status based on receipt_status
+      //   - receipt_status = 'received' → status = 'received' (triggers auto ticket creation)
+      //   - receipt_status = 'pending_receipt' → status = 'pickingup' (waiting for pickup)
+      const initialStatus = input.receipt_status === 'received' ? 'received' : 'pickingup';
+
+      // Always insert with pending_receipt first, then update after items exist
+      // This prevents trigger from running before items are inserted
       const { data: request, error: requestError } = await ctx.supabaseAdmin
         .from("service_requests")
         .insert({
@@ -383,6 +520,7 @@ export const serviceRequestRouter = router({
           customer_phone: input.customer_phone,
           customer_address: input.customer_address ?? null,
           issue_description: input.issue_overview ?? null,
+          receipt_status: 'pending_receipt',
           preferred_delivery_method: input.preferred_delivery_method,
           delivery_address:
             input.preferred_delivery_method === "delivery"
@@ -395,7 +533,7 @@ export const serviceRequestRouter = router({
           submitted_ip: submittedIp,
           user_agent: userAgent,
         })
-        .select("id, tracking_token")
+        .select("id, tracking_token, status")
         .single();
 
       if (requestError || !request) {
@@ -405,7 +543,7 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Insert items
+      // Insert items - only store serial numbers and issue descriptions
       const { error: itemsError } = await ctx.supabaseAdmin
         .from("service_request_items")
         .insert(
@@ -437,33 +575,360 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Now update receipt_status to actual value to trigger ticket creation
+      // Items exist now, so trigger can find them
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          receipt_status: input.receipt_status,
+          status: initialStatus,
+        })
+        .eq("id", request.id);
+
+      if (updateError) {
+        console.error('[UPDATE ERROR] Failed to update receipt status:', updateError);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update request status: ${updateError.message}`,
+        });
+      }
+
       // AC 9: Return tracking token
 
       // Story 1.15: Send email notification (async, non-blocking)
-      const productSummary = productLookups.length === 1
-        ? `${productLookups[0].product_model} (SN: ${productLookups[0].serial_number})`
-        : `${productLookups.length} products`;
+      // Only send if customer provided email
+      if (input.customer_email && input.customer_email.trim() !== '') {
+        const productSummary = input.items.length === 1
+          ? `Serial: ${input.items[0].serial_number}`
+          : `${input.items.length} sản phẩm`;
 
-      sendEmailNotification(
-        ctx,
-        'request_submitted',
-        input.customer_email,
-        input.customer_name,
-        {
-          trackingToken: request.tracking_token,
-          productName: productSummary,
-          serialNumber: productLookups.length === 1 ? productLookups[0].serial_number : undefined,
-        },
-        request.id
-      ).catch((err) => {
-        console.error('[EMAIL ERROR] request_submitted failed:', err);
-      });
+        sendEmailNotification(
+          ctx,
+          'request_submitted',
+          input.customer_email,
+          input.customer_name,
+          {
+            trackingToken: request.tracking_token,
+            productName: productSummary,
+            serialNumber: input.items.length === 1 ? input.items[0].serial_number : undefined,
+          },
+          request.id
+        ).catch((err) => {
+          console.error('[EMAIL ERROR] request_submitted failed:', err);
+        });
+      }
 
       return {
         success: true,
         tracking_token: request.tracking_token,
         request_id: request.id,
-        item_count: productLookups.length,
+        item_count: input.items.length,
+        status: request.status,
+      };
+    }),
+
+  /**
+   * Save service request as draft (staff only)
+   * Draft requests can be edited and deleted before submission
+   */
+  saveDraft: publicProcedure
+    .input(submitRequestSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Extract IP and User-Agent
+      const submittedIp =
+        ctx.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        ctx.req.headers.get('x-real-ip') ||
+        null;
+      const userAgent = ctx.req.headers.get('user-agent') || null;
+
+      // Create draft request
+      const { data: request, error: requestError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .insert({
+          customer_name: input.customer_name,
+          customer_email: input.customer_email,
+          customer_phone: input.customer_phone,
+          issue_description: input.issue_overview,
+          receipt_status: input.receipt_status,
+          delivery_method: input.preferred_delivery_method || null,
+          delivery_address:
+            input.preferred_delivery_method === "delivery"
+              ? input.delivery_address
+              : null,
+          status: "draft",
+          reviewed_by_id: profile.id,
+          submitted_ip: submittedIp,
+          user_agent: userAgent,
+        })
+        .select("id, tracking_token")
+        .single();
+
+      if (requestError || !request) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save draft: ${requestError?.message}`,
+        });
+      }
+
+      // Insert items
+      const { error: itemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .insert(
+          input.items.map((item) => ({
+            request_id: request.id,
+            serial_number: item.serial_number,
+            issue_description: item.issue_description,
+          }))
+        );
+
+      if (itemsError) {
+        // Rollback request if items fail
+        await ctx.supabaseAdmin
+          .from("service_requests")
+          .delete()
+          .eq("id", request.id);
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save draft items: ${itemsError.message}`,
+        });
+      }
+
+      return {
+        success: true,
+        tracking_token: request.tracking_token,
+        request_id: request.id,
+        item_count: input.items.length,
+      };
+    }),
+
+  /**
+   * Delete draft service request (staff only)
+   * Only drafts can be deleted
+   */
+  deleteDraft: publicProcedure
+    .input(z.object({ request_id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Check if request is draft
+      const { data: request, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("status")
+        .eq("id", input.request_id)
+        .single();
+
+      if (fetchError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Request not found",
+        });
+      }
+
+      if (request.status !== "draft") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chỉ có thể xóa các phiếu yêu cầu ở trạng thái nháp",
+        });
+      }
+
+      // Delete request (items will be cascade deleted)
+      const { error: deleteError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .delete()
+        .eq("id", input.request_id);
+
+      if (deleteError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete draft: ${deleteError.message}`,
+        });
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * Update draft service request (staff only)
+   * Only drafts can be updated
+   */
+  updateDraft: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        data: submitRequestSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Check if request is draft
+      const { data: request, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("status")
+        .eq("id", input.request_id)
+        .single();
+
+      if (fetchError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Request not found",
+        });
+      }
+
+      if (request.status !== "draft") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chỉ có thể chỉnh sửa các phiếu yêu cầu ở trạng thái nháp",
+        });
+      }
+
+      // Update request
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          customer_name: input.data.customer_name,
+          customer_email: input.data.customer_email,
+          customer_phone: input.data.customer_phone,
+          issue_description: input.data.issue_description,
+          receipt_status: input.data.receipt_status,
+          delivery_method: input.data.preferred_delivery_method || null,
+          delivery_address:
+            input.data.preferred_delivery_method === "delivery"
+              ? input.data.delivery_address
+              : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.request_id);
+
+      if (updateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update draft: ${updateError.message}`,
+        });
+      }
+
+      // Delete existing items
+      const { error: deleteItemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .delete()
+        .eq("request_id", input.request_id);
+
+      if (deleteItemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete old items: ${deleteItemsError.message}`,
+        });
+      }
+
+      // Insert new items
+      const { error: itemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .insert(
+          input.data.items.map((item) => ({
+            request_id: input.request_id,
+            serial_number: item.serial_number,
+            issue_description: item.issue_description,
+          }))
+        );
+
+      if (itemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save updated items: ${itemsError.message}`,
+        });
+      }
+
+      return {
+        success: true,
+        request_id: input.request_id,
+        item_count: input.data.items.length,
+      };
+    }),
+
+  lookupByPhone: publicProcedure
+    .input(
+      z.object({
+        phone: z.string().min(6, "Phone number must be at least 6 characters"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const normalizedPhone = input.phone.replace(/\D/g, "");
+
+      if (normalizedPhone.length < 6) {
+        return {
+          found: false,
+        };
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select(
+          `
+          customer_name,
+          customer_email,
+          customer_phone,
+          customer_address,
+          delivery_method,
+          delivery_address,
+          updated_at
+        `
+        )
+        .eq("customer_phone", normalizedPhone)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[serviceRequest.lookupByPhone]", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Không thể tra cứu khách hàng",
+        });
+      }
+
+      if (!data) {
+        return {
+          found: false,
+        };
+      }
+
+      return {
+        found: true,
+        customer: {
+          name: data.customer_name,
+          email: data.customer_email,
+          phone: data.customer_phone,
+          address: data.customer_address,
+          preferred_delivery_method: data.delivery_method ?? null,
+          delivery_address: data.delivery_address ?? null,
+        },
       };
     }),
 
@@ -981,7 +1446,7 @@ export const serviceRequestRouter = router({
       }
 
       // Story 1.15: Send email notification when status changes to 'received'
-      if (input.status === 'received') {
+      if (input.status === 'received' && data.customer_email && data.customer_email.trim() !== '') {
         sendEmailNotification(
           ctx,
           'request_received',
@@ -1068,21 +1533,23 @@ export const serviceRequestRouter = router({
       }
 
       // Story 1.15: Send rejection email notification
-      sendEmailNotification(
-        ctx,
-        'request_rejected',
-        data.customer_email,
-        data.customer_name,
-        {
-          trackingToken: data.tracking_token,
-          productName: data.product_model,
-          serialNumber: data.serial_number,
-          rejectionReason: input.rejection_reason,
-        },
-        data.id
-      ).catch((err) => {
-        console.error('[EMAIL ERROR] request_rejected failed:', err);
-      });
+      if (data.customer_email && data.customer_email.trim() !== '') {
+        sendEmailNotification(
+          ctx,
+          'request_rejected',
+          data.customer_email,
+          data.customer_name,
+          {
+            trackingToken: data.tracking_token,
+            productName: data.product_model,
+            serialNumber: data.serial_number,
+            rejectionReason: input.rejection_reason,
+          },
+          data.id
+        ).catch((err) => {
+          console.error('[EMAIL ERROR] request_rejected failed:', err);
+        });
+      }
 
       return data;
     }),
@@ -1109,4 +1576,140 @@ export const serviceRequestRouter = router({
 
     return count || 0;
   }),
+
+  /**
+   * Submit an existing draft service request (staff only)
+   * Validates serial numbers, updates draft, and changes status to trigger ticket creation
+   */
+  submitDraft: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        data: submitRequestSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Check if request is draft
+      const { data: request, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("status, tracking_token")
+        .eq("id", input.request_id)
+        .single();
+
+      if (fetchError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Request not found",
+        });
+      }
+
+      if (request.status !== "draft") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chỉ có thể gửi các phiếu yêu cầu ở trạng thái nháp",
+        });
+      }
+
+      // Validate serial numbers exist
+      await Promise.all(
+        input.data.items.map(async (item) => {
+          const { data: physicalProduct } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id")
+            .eq("serial_number", item.serial_number)
+            .single();
+
+          if (!physicalProduct) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Serial number not found: ${item.serial_number}`,
+            });
+          }
+        })
+      );
+
+      const initialStatus = input.data.receipt_status === 'received' ? 'received' : 'pickingup';
+
+      // Update request with pending_receipt first (to prevent trigger from running too early)
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          customer_name: input.data.customer_name,
+          customer_email: input.data.customer_email,
+          customer_phone: input.data.customer_phone,
+          issue_description: input.data.issue_description,
+          receipt_status: 'pending_receipt',
+          delivery_method: input.data.preferred_delivery_method || null,
+          delivery_address:
+            input.data.preferred_delivery_method === "delivery"
+              ? input.data.delivery_address
+              : null,
+          status: 'submitted',
+          reviewed_by_id: profile.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.request_id);
+
+      if (updateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update draft: ${updateError.message}`,
+        });
+      }
+
+      // Delete and re-insert items
+      await ctx.supabaseAdmin
+        .from("service_request_items")
+        .delete()
+        .eq("request_id", input.request_id);
+
+      const { error: itemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .insert(
+          input.data.items.map((item) => ({
+            request_id: input.request_id,
+            serial_number: item.serial_number,
+            issue_description: item.issue_description,
+          }))
+        );
+
+      if (itemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save items: ${itemsError.message}`,
+        });
+      }
+
+      // Now update to final status to trigger ticket creation
+      const { error: finalUpdateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          receipt_status: input.data.receipt_status,
+          status: initialStatus,
+        })
+        .eq("id", input.request_id);
+
+      if (finalUpdateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to submit draft: ${finalUpdateError.message}`,
+        });
+      }
+
+      return {
+        success: true,
+        tracking_token: request.tracking_token,
+        status: initialStatus,
+      };
+    }),
 });

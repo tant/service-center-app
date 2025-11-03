@@ -80,17 +80,36 @@ import {
   serviceRequestRowSchema,
 } from "@/lib/schemas/service-request";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
-export const serviceRequestSchema = serviceRequestRowSchema;
-export type ServiceRequest = ServiceRequestRow;
+// Schema
+export const serviceRequestSchema = z.object({
+  id: z.string(),
+  tracking_token: z.string(),
+  customer_name: z.string(),
+  customer_email: z.string().nullable(),
+  customer_phone: z.string(),
+  product_brand: z.string().nullable(),
+  product_model: z.string(),
+  serial_number: z.string().nullable(),
+  issue_description: z.string(),
+  status: z.enum(["draft", "submitted", "pickingup", "received", "processing", "completed", "cancelled"]),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+  linked_ticket_id: z.string().nullable(),
+});
+
+export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
 
 // Status mapping
 const STATUS_MAP = {
-  submitted: { label: "Đã gửi", variant: "outline" as const },
-  received: { label: "Đã tiếp nhận", variant: "secondary" as const },
+  draft: { label: "Nháp", variant: "outline" as const },
+  submitted: { label: "Đã gửi", variant: "secondary" as const },
+  pickingup: { label: "Chờ lấy hàng", variant: "secondary" as const },
+  received: { label: "Đã tiếp nhận", variant: "default" as const },
   processing: { label: "Đang xử lý", variant: "default" as const },
-  rejected: { label: "Đã từ chối", variant: "destructive" as const },
-  converted: { label: "Đã chuyển", variant: "default" as const },
+  completed: { label: "Hoàn thành", variant: "default" as const },
+  cancelled: { label: "Đã hủy", variant: "destructive" as const },
 };
 
 const INTAKE_METHOD_MAP = {
@@ -327,9 +346,11 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
   // Calculate stats
   const stats = {
     total: data.length,
+    draft: data.filter((r) => r.status === "draft").length,
+    pickingup: data.filter((r) => r.status === "pickingup").length,
     received: data.filter((r) => r.status === "received").length,
     processing: data.filter((r) => r.status === "processing").length,
-    converted: data.filter((r) => r.status === "converted").length,
+    completed: data.filter((r) => r.status === "completed").length,
   };
 
   return (
@@ -432,20 +453,20 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
             </CardHeader>
           </Card>
 
-          <Card className="@container/card">
-            <CardHeader>
-              <CardDescription>Đã hoàn thành</CardDescription>
-              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {stats.converted}
-              </CardTitle>
-              <CardAction>
-                <Badge className="bg-purple-100 text-purple-800">
-                  Đã chuyển ticket
-                </Badge>
-              </CardAction>
-            </CardHeader>
-          </Card>
-        </div>
+        <Card className="@container/card">
+          <CardHeader>
+            <CardDescription>Hoàn thành</CardDescription>
+            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              {stats.completed}
+            </CardTitle>
+            <CardAction>
+              <Badge className="bg-green-100 text-green-800">
+                Đã chuyển ticket
+              </Badge>
+            </CardAction>
+          </CardHeader>
+        </Card>
+      </div>
 
         {/* Table Section with proper padding */}
         <div className="px-4 lg:px-6">
@@ -581,90 +602,82 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
               </Table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-muted-foreground">
-                Hiển thị{" "}
-                {table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                  1}{" "}
-                đến{" "}
-                {Math.min(
-                  (table.getState().pagination.pageIndex + 1) *
-                    table.getState().pagination.pageSize,
-                  table.getFilteredRowModel().rows.length
-                )}{" "}
-                trong tổng số {table.getFilteredRowModel().rows.length} yêu cầu
+          {/* Pagination */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Hiển thị {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} đến{" "}
+              {Math.min(
+                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                table.getFilteredRowModel().rows.length
+              )}{" "}
+              trong tổng số {table.getFilteredRowModel().rows.length} yêu cầu
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
+              <div className="ml-8 flex items-center space-x-2">
+                <p className="text-sm font-medium">Số dòng mỗi trang</p>
+                <Select
+                  value={`${table.getState().pagination.pageSize}`}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value));
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={table.getState().pagination.pageSize} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm font-medium">Số dòng mỗi trang</p>
-                  <Select
-                    value={`${table.getState().pagination.pageSize}`}
-                    onValueChange={(value) => {
-                      table.setPageSize(Number(value));
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-[70px]">
-                      <SelectValue
-                        placeholder={table.getState().pagination.pageSize}
-                      />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                      {[10, 20, 30, 40, 50].map((pageSize) => (
-                        <SelectItem key={pageSize} value={`${pageSize}`}>
-                          {pageSize}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                  Trang {table.getState().pagination.pageIndex + 1} /{" "}
-                  {table.getPageCount()}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    className="hidden h-8 w-8 p-0 lg:flex"
-                    onClick={() => table.setPageIndex(0)}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <span className="sr-only">Trang đầu</span>
-                    <IconChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-8 w-8 p-0"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <span className="sr-only">Trang trước</span>
-                    <IconChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-8 w-8 p-0"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <span className="sr-only">Trang sau</span>
-                    <IconChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="hidden h-8 w-8 p-0 lg:flex"
-                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <span className="sr-only">Trang cuối</span>
-                    <IconChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Trang đầu</span>
+                  <IconChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Trang trước</span>
+                  <IconChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Trang sau</span>
+                  <IconChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Trang cuối</span>
+                  <IconChevronsRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
         </div>
+      </div>
       </TabsContent>
 
       {/* Tab 2: Pending Incoming Items */}

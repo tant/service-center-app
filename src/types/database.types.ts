@@ -1025,15 +1025,17 @@ export type Database = {
           converted_at: string | null
           created_at: string
           customer_address: string | null
-          customer_email: string
+          customer_email: string | null
           customer_name: string
           customer_phone: string | null
           delivery_address: string | null
+          delivery_method: Database["public"]["Enums"]["delivery_method"] | null
           id: string
           issue_description: string | null
           pickup_notes: string | null
           preferred_delivery_method: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule: string | null
+          receipt_status: Database["public"]["Enums"]["receipt_status"]
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by_id: string | null
@@ -1048,15 +1050,19 @@ export type Database = {
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
-          customer_email: string
+          customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
           delivery_address?: string | null
+          delivery_method?:
+            | Database["public"]["Enums"]["delivery_method"]
+            | null
           id?: string
           issue_description?: string | null
           pickup_notes?: string | null
           preferred_delivery_method?: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status"]
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
@@ -1071,15 +1077,19 @@ export type Database = {
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
-          customer_email?: string
+          customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
           delivery_address?: string | null
+          delivery_method?:
+            | Database["public"]["Enums"]["delivery_method"]
+            | null
           id?: string
           issue_description?: string | null
           pickup_notes?: string | null
           preferred_delivery_method?: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status"]
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
@@ -1584,6 +1594,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_task_progress_summary"
+            referencedColumns: ["workflow_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3122,7 +3146,9 @@ export type Database = {
         | "disposal"
       priority_level: "low" | "normal" | "high" | "urgent"
       product_condition: "new" | "refurbished" | "used" | "faulty" | "for_parts"
+      receipt_status: "received" | "pending_receipt"
       request_status:
+        | "draft"
         | "submitted"
         | "pickingup"
         | "received"
@@ -3302,7 +3328,9 @@ export const Constants = {
       ],
       priority_level: ["low", "normal", "high", "urgent"],
       product_condition: ["new", "refurbished", "used", "faulty", "for_parts"],
+      receipt_status: ["received", "pending_receipt"],
       request_status: [
+        "draft",
         "submitted",
         "pickingup",
         "received",

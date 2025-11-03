@@ -14,9 +14,25 @@ import { toast } from "sonner";
 
 export default function NewServiceRequestPage() {
   const router = useRouter();
+
   const createRequest = trpc.serviceRequest.submit.useMutation({
     onSuccess: (data) => {
-      toast.success(`Đã tạo phiếu yêu cầu ${data.tracking_token} với ${data.item_count} sản phẩm`);
+      const statusMessage = data.status === 'received'
+        ? 'và đang tự động tạo phiếu sửa chữa'
+        : data.status === 'pickingup'
+        ? 'và đang chờ lấy hàng'
+        : '';
+      toast.success(`Đã tạo phiếu yêu cầu ${data.tracking_token} ${statusMessage}`);
+      router.push("/operations/service-requests");
+    },
+    onError: (error: any) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const saveDraft = trpc.serviceRequest.saveDraft.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Đã lưu nháp ${data.tracking_token}`);
       router.push("/operations/service-requests");
     },
     onError: (error: any) => {
@@ -26,6 +42,10 @@ export default function NewServiceRequestPage() {
 
   const handleSubmit = (data: any) => {
     createRequest.mutate(data);
+  };
+
+  const handleSaveDraft = (data: any) => {
+    saveDraft.mutate(data);
   };
 
   const handleCancel = () => {
@@ -43,7 +63,8 @@ export default function NewServiceRequestPage() {
             <ServiceRequestForm
               mode="create"
               onSubmit={handleSubmit}
-              isSubmitting={createRequest.isPending}
+              onSaveDraft={handleSaveDraft}
+              isSubmitting={createRequest.isPending || saveDraft.isPending}
             />
           </div>
         </div>
@@ -51,13 +72,30 @@ export default function NewServiceRequestPage() {
 
       {/* Page Footer with Actions */}
       <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">
-        <Button variant="outline" onClick={handleCancel} disabled={createRequest.isPending}>
+        <Button
+          variant="outline"
+          onClick={handleCancel}
+          disabled={createRequest.isPending || saveDraft.isPending}
+        >
           Hủy bỏ
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            const form = document.getElementById("service-request-form") as HTMLFormElement;
+            if (form) {
+              const event = new Event("submit-draft", { bubbles: true, cancelable: true });
+              form.dispatchEvent(event);
+            }
+          }}
+          disabled={createRequest.isPending || saveDraft.isPending}
+        >
+          {saveDraft.isPending ? "Đang lưu..." : "Lưu nháp"}
         </Button>
         <Button
           type="submit"
           form="service-request-form"
-          disabled={createRequest.isPending}
+          disabled={createRequest.isPending || saveDraft.isPending}
         >
           {createRequest.isPending ? "Đang tạo..." : "Tạo phiếu yêu cầu"}
         </Button>

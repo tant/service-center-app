@@ -136,7 +136,7 @@ function BlockedTasksAlert() {
         {blockedTickets.slice(0, 3).map((ticket) => (
           <div key={ticket.ticket_id} className="flex items-center justify-between text-sm border-t pt-2">
             <div>
-              <Link href={`/tickets/${ticket.ticket_id}`} className="font-medium hover:underline">
+              <Link href={`/operations/tickets/${ticket.ticket_id}`} className="font-medium hover:underline">
                 {ticket.ticket_number}
               </Link>
               <span className="text-muted-foreground ml-2">

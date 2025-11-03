@@ -75,6 +75,34 @@ async function getTicketData(ticketId: string) {
         id,
         name
       ),
+      tasks:service_ticket_tasks (
+        id,
+        name,
+        description,
+        sequence_order,
+        status,
+        is_required,
+        assigned_to_id,
+        started_at,
+        completed_at,
+        completion_notes,
+        blocked_reason,
+        estimated_duration_minutes,
+        created_at,
+        updated_at,
+        task_type:tasks (
+          id,
+          name,
+          category,
+          description
+        ),
+        assigned_to:profiles!assigned_to_id (
+          id,
+          full_name,
+          email,
+          avatar_url
+        )
+      ),
       service_ticket_parts (
         id,
         quantity,

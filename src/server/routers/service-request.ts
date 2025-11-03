@@ -171,7 +171,7 @@ const requestItemSchema = z.object({
     .min(5, "Serial number must be at least 5 characters")
     .regex(/^[A-Z0-9_-]+$/i, "Serial number must be alphanumeric")
     .transform((val) => val.toUpperCase()),
-  issue_description: z.string().min(10, "Issue description must be at least 10 characters").optional(),
+  issue_description: z.string().optional().or(z.literal("")),
 });
 
 const submitRequestSchema = z.object({
@@ -476,6 +476,8 @@ export const serviceRequestRouter = router({
       //   - receipt_status = 'pending_receipt' → status = 'pickingup' (waiting for pickup)
       const initialStatus = input.receipt_status === 'received' ? 'received' : 'pickingup';
 
+      // Always insert with pending_receipt first, then update after items exist
+      // This prevents trigger from running before items are inserted
       const { data: request, error: requestError } = await ctx.supabaseAdmin
         .from("service_requests")
         .insert({
@@ -483,13 +485,13 @@ export const serviceRequestRouter = router({
           customer_email: input.customer_email,
           customer_phone: input.customer_phone,
           issue_description: input.issue_description,
-          receipt_status: input.receipt_status,
+          receipt_status: 'pending_receipt',
           delivery_method: input.preferred_delivery_method || null,
           delivery_address:
             input.preferred_delivery_method === "delivery"
               ? input.delivery_address
               : null,
-          status: initialStatus,
+          status: 'submitted',
           submitted_ip: submittedIp,
           user_agent: userAgent,
         })
@@ -524,6 +526,24 @@ export const serviceRequestRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to create request items: ${itemsError.message}`,
+        });
+      }
+
+      // Now update receipt_status to actual value to trigger ticket creation
+      // Items exist now, so trigger can find them
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          receipt_status: input.receipt_status,
+          status: initialStatus,
+        })
+        .eq("id", request.id);
+
+      if (updateError) {
+        console.error('[UPDATE ERROR] Failed to update receipt status:', updateError);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update request status: ${updateError.message}`,
         });
       }
 
@@ -698,6 +718,112 @@ export const serviceRequestRouter = router({
       }
 
       return { success: true };
+    }),
+
+  /**
+   * Update draft service request (staff only)
+   * Only drafts can be updated
+   */
+  updateDraft: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        data: submitRequestSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Check if request is draft
+      const { data: request, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("status")
+        .eq("id", input.request_id)
+        .single();
+
+      if (fetchError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Request not found",
+        });
+      }
+
+      if (request.status !== "draft") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chỉ có thể chỉnh sửa các phiếu yêu cầu ở trạng thái nháp",
+        });
+      }
+
+      // Update request
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          customer_name: input.data.customer_name,
+          customer_email: input.data.customer_email,
+          customer_phone: input.data.customer_phone,
+          issue_description: input.data.issue_description,
+          receipt_status: input.data.receipt_status,
+          delivery_method: input.data.preferred_delivery_method || null,
+          delivery_address:
+            input.data.preferred_delivery_method === "delivery"
+              ? input.data.delivery_address
+              : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.request_id);
+
+      if (updateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update draft: ${updateError.message}`,
+        });
+      }
+
+      // Delete existing items
+      const { error: deleteItemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .delete()
+        .eq("request_id", input.request_id);
+
+      if (deleteItemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete old items: ${deleteItemsError.message}`,
+        });
+      }
+
+      // Insert new items
+      const { error: itemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .insert(
+          input.data.items.map((item) => ({
+            request_id: input.request_id,
+            serial_number: item.serial_number,
+            issue_description: item.issue_description,
+          }))
+        );
+
+      if (itemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save updated items: ${itemsError.message}`,
+        });
+      }
+
+      return {
+        success: true,
+        request_id: input.request_id,
+        item_count: input.data.items.length,
+      };
     }),
 
   /**
@@ -910,7 +1036,13 @@ export const serviceRequestRouter = router({
         .select(
           `
           *,
-          linked_ticket:service_tickets(id, ticket_number, status)
+          items:service_request_items(
+            id,
+            serial_number,
+            issue_description,
+            issue_photos,
+            ticket:service_tickets(id, ticket_number, status)
+          )
         `
         )
         .eq("id", input.request_id)
@@ -1104,4 +1236,140 @@ export const serviceRequestRouter = router({
 
     return count || 0;
   }),
+
+  /**
+   * Submit an existing draft service request (staff only)
+   * Validates serial numbers, updates draft, and changes status to trigger ticket creation
+   */
+  submitDraft: publicProcedure
+    .input(
+      z.object({
+        request_id: z.string().uuid(),
+        data: submitRequestSchema,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Require authentication
+      const { profile } = await getAuthenticatedUserWithRole(ctx);
+
+      if (!["admin", "manager", "reception"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied. Admin, manager, or reception role required.",
+        });
+      }
+
+      // Check if request is draft
+      const { data: request, error: fetchError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .select("status, tracking_token")
+        .eq("id", input.request_id)
+        .single();
+
+      if (fetchError || !request) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Request not found",
+        });
+      }
+
+      if (request.status !== "draft") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Chỉ có thể gửi các phiếu yêu cầu ở trạng thái nháp",
+        });
+      }
+
+      // Validate serial numbers exist
+      await Promise.all(
+        input.data.items.map(async (item) => {
+          const { data: physicalProduct } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id")
+            .eq("serial_number", item.serial_number)
+            .single();
+
+          if (!physicalProduct) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Serial number not found: ${item.serial_number}`,
+            });
+          }
+        })
+      );
+
+      const initialStatus = input.data.receipt_status === 'received' ? 'received' : 'pickingup';
+
+      // Update request with pending_receipt first (to prevent trigger from running too early)
+      const { error: updateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          customer_name: input.data.customer_name,
+          customer_email: input.data.customer_email,
+          customer_phone: input.data.customer_phone,
+          issue_description: input.data.issue_description,
+          receipt_status: 'pending_receipt',
+          delivery_method: input.data.preferred_delivery_method || null,
+          delivery_address:
+            input.data.preferred_delivery_method === "delivery"
+              ? input.data.delivery_address
+              : null,
+          status: 'submitted',
+          reviewed_by_id: profile.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.request_id);
+
+      if (updateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update draft: ${updateError.message}`,
+        });
+      }
+
+      // Delete and re-insert items
+      await ctx.supabaseAdmin
+        .from("service_request_items")
+        .delete()
+        .eq("request_id", input.request_id);
+
+      const { error: itemsError } = await ctx.supabaseAdmin
+        .from("service_request_items")
+        .insert(
+          input.data.items.map((item) => ({
+            request_id: input.request_id,
+            serial_number: item.serial_number,
+            issue_description: item.issue_description,
+          }))
+        );
+
+      if (itemsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to save items: ${itemsError.message}`,
+        });
+      }
+
+      // Now update to final status to trigger ticket creation
+      const { error: finalUpdateError } = await ctx.supabaseAdmin
+        .from("service_requests")
+        .update({
+          receipt_status: input.data.receipt_status,
+          status: initialStatus,
+        })
+        .eq("id", input.request_id);
+
+      if (finalUpdateError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to submit draft: ${finalUpdateError.message}`,
+        });
+      }
+
+      return {
+        success: true,
+        tracking_token: request.tracking_token,
+        status: initialStatus,
+      };
+    }),
 });

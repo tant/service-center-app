@@ -53,7 +53,7 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
     //       toast.success(`Đã tạo phiếu dịch vụ ${data.ticket.ticket_number}`);
     //       onOpenChange(false);
     //       // Navigate to ticket detail page
-    //       router.push(`/tickets/${data.ticket.id}`);
+    //       router.push(`/operations/tickets/${data.ticket.id}`);
     //     },
     //     onError: (error: any) => {
     //       toast.error(`Lỗi: ${error.message}`);

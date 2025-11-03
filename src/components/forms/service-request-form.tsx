@@ -41,6 +41,7 @@ interface ServiceRequestFormProps {
   mode: "create" | "edit";
   onSubmit: (data: ServiceRequestFormData) => void;
   onSaveDraft?: (data: ServiceRequestFormData) => void;
+  onSubmitAndSend?: (data: ServiceRequestFormData) => void;
   isSubmitting: boolean;
 }
 
@@ -49,6 +50,7 @@ export function ServiceRequestForm({
   mode,
   onSubmit,
   onSaveDraft,
+  onSubmitAndSend,
   isSubmitting,
 }: ServiceRequestFormProps) {
   // Form state
@@ -199,6 +201,13 @@ export function ServiceRequestForm({
     onSaveDraft(buildFormData());
   };
 
+  const handleSubmitAndSend = (e: Event) => {
+    e.preventDefault();
+    if (!onSubmitAndSend) return;
+    if (!validateForm(false)) return;
+    onSubmitAndSend(buildFormData());
+  };
+
   // Listen for submit-draft event
   useEffect(() => {
     const form = document.getElementById("service-request-form");
@@ -209,6 +218,17 @@ export function ServiceRequestForm({
       };
     }
   }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+
+  // Listen for submit-and-send event
+  useEffect(() => {
+    const form = document.getElementById("service-request-form");
+    if (form && onSubmitAndSend) {
+      form.addEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+      return () => {
+        form.removeEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+      };
+    }
+  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">

@@ -137,7 +137,7 @@ export function AddTicketForm() {
         ? `Phiếu dịch vụ đã được tạo thành công với ${taskCount} tasks!`
         : "Phiếu dịch vụ đã được tạo thành công!";
       toast.success(message);
-      router.push(`/tickets/${data.ticket.id}`);
+      router.push(`/operations/tickets/${data.ticket.id}`);
     },
     onError: (error) => {
       console.error("[AddTicketForm] Create ticket error:", {

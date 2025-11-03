@@ -208,7 +208,7 @@ CREATE TABLE "service_ticket_comments" (
   "is_internal" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID NOT NULL REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("user_id"),
   "updated_by" UUID REFERENCES "profiles"("user_id"),
 
   CONSTRAINT "service_ticket_comments_pkey" PRIMARY KEY ("id")

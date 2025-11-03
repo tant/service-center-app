@@ -501,7 +501,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/tickets/${ticket.id}`)}
+                onClick={() => router.push(`/operations/tickets/${ticket.id}`)}
                 className="h-8 w-8 p-0"
                 aria-label="Xem chi tiết"
                 data-testid={`view-ticket-${ticket.id}`}
@@ -512,7 +512,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/tickets/${ticket.id}/edit`)}
+                onClick={() => router.push(`/operations/tickets/${ticket.id}/edit`)}
                 className="h-8 w-8 p-0"
                 aria-label="Chỉnh sửa"
                 data-testid={`edit-ticket-${ticket.id}`}

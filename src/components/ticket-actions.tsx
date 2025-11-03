@@ -33,7 +33,7 @@ export function TicketActions({
   return (
     <div className="flex items-center gap-2">
       {/* Edit Button */}
-      <Link href={`/tickets/${ticketId}/edit`}>
+      <Link href={`/operations/tickets/${ticketId}/edit`}>
         <Button variant="outline" size="sm">
           <IconEdit className="h-4 w-4" />
           Chỉnh sửa

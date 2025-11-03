@@ -87,8 +87,8 @@ COMMENT ON VIEW public.v_task_progress_summary IS 'Task completion progress summ
 -- TODO: This view needs redesign for 1:N relationship (service_requests -> service_request_items)
 -- Commented out until redesigned
 -- CREATE OR REPLACE VIEW public.v_service_request_summary AS
--- SELECT sr.id, sr.tracking_token, sr.status, sr.customer_name, sr.customer_email, sr.customer_phone,
---   sr.issue_description, sr.service_type, sr.delivery_method, sr.delivery_address,
+-- SELECT sr.id, sr.tracking_token, sr.status, sr.receipt_status, sr.customer_name, sr.customer_email, sr.customer_phone,
+--   sr.issue_description, sr.delivery_method, sr.delivery_address,
 --   sr.reviewed_by_id, prof.full_name AS reviewed_by_name, sr.reviewed_at, sr.rejection_reason,
 --   sr.converted_at, sr.created_at AS submitted_at, sr.updated_at,
 --   CASE WHEN sr.reviewed_at IS NOT NULL THEN EXTRACT(EPOCH FROM (sr.reviewed_at - sr.created_at)) / 3600 ELSE NULL END AS hours_to_review,
@@ -100,7 +100,7 @@ COMMENT ON VIEW public.v_task_progress_summary IS 'Task completion progress summ
 -- LEFT JOIN public.service_request_items sri ON sr.id = sri.request_id
 -- GROUP BY sr.id, prof.full_name
 -- ORDER BY sr.created_at DESC;
--- COMMENT ON VIEW public.v_service_request_summary IS 'Service requests with customer info, conversion status, and time metrics';
+-- COMMENT ON VIEW public.v_service_request_summary IS 'Service requests with customer info, receipt status, conversion status, and time metrics';
 
 -- Stock Movement History View
 CREATE OR REPLACE VIEW public.v_stock_movement_history AS

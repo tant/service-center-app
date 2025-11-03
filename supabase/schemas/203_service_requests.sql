@@ -82,7 +82,7 @@ BEGIN
         name,
         email,
         phone,
-        created_by_id
+        created_by
       ) VALUES (
         NEW.customer_name,
         NEW.customer_email,
@@ -118,7 +118,7 @@ BEGIN
         issue_description,
         status,
         request_id,
-        created_by_id
+        created_by
       ) VALUES (
         v_customer_id,
         v_product_id,
@@ -135,16 +135,26 @@ BEGIN
       WHERE id = v_item.id;
 
       -- Add initial comment
+      -- If reviewed_by_id is NULL, it's from customer (public submission)
       INSERT INTO public.service_ticket_comments (
         ticket_id,
         comment,
-        created_by_id
+        created_by
       ) VALUES (
         v_ticket_id,
-        format('Auto-created from service request %s - Serial: %s',
-          NEW.tracking_token,
-          v_item.serial_number
-        ),
+        CASE
+          WHEN NEW.reviewed_by_id IS NULL THEN
+            format('Yêu cầu từ khách hàng %s - Mã theo dõi: %s - Serial: %s',
+              NEW.customer_name,
+              NEW.tracking_token,
+              v_item.serial_number
+            )
+          ELSE
+            format('Auto-created from service request %s - Serial: %s',
+              NEW.tracking_token,
+              v_item.serial_number
+            )
+        END,
         NEW.reviewed_by_id
       );
 
@@ -160,14 +170,14 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received';
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
 
 -- =====================================================
 -- TRIGGERS
 -- =====================================================
 CREATE TRIGGER trigger_generate_service_request_tracking_token BEFORE INSERT ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.generate_tracking_token();
 CREATE TRIGGER trigger_service_requests_updated_at BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-CREATE TRIGGER trigger_auto_create_tickets BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.auto_create_tickets_on_received();
+CREATE TRIGGER trigger_auto_create_tickets BEFORE INSERT OR UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION public.auto_create_tickets_on_received();
 
 -- =====================================================
 -- SERVICE REQUEST ITEMS TABLE

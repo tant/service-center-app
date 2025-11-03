@@ -21,9 +21,6 @@ import {
   IconClipboardText,
   IconTool,
   IconCurrencyDollar,
-  IconTruckDelivery,
-  IconCheck,
-  IconClock,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
@@ -101,10 +98,6 @@ async function getTicketData(ticketId: string) {
           full_name,
           role
         )
-      ),
-      delivery_confirmed_by:profiles!service_tickets_delivery_confirmed_by_id_fkey (
-        id,
-        full_name
       )
     `)
     .eq("id", ticketId)
@@ -335,71 +328,6 @@ export default async function Page({ params }: PageProps) {
                     {new Date(ticket.completed_at).toLocaleDateString("vi-VN")}
                   </span>
                 </div>
-              )}
-              {ticket.status === "completed" && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <IconTruckDelivery className="h-4 w-4" />
-                      Trạng thái giao hàng:
-                    </span>
-                    {ticket.delivery_confirmed_at ? (
-                      <Badge variant="default" className="gap-1">
-                        <IconCheck className="h-3 w-3" />
-                        Đã giao
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <IconClock className="h-3 w-3" />
-                        Chờ giao
-                      </Badge>
-                    )}
-                  </div>
-                  {ticket.delivery_confirmed_at && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Ngày giao hàng:
-                        </span>
-                        <span>
-                          {new Date(ticket.delivery_confirmed_at).toLocaleDateString("vi-VN")}
-                        </span>
-                      </div>
-                      {ticket.delivery_confirmed_by && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Người xác nhận:
-                          </span>
-                          <span>{ticket.delivery_confirmed_by.full_name}</span>
-                        </div>
-                      )}
-                      {ticket.delivery_signature_url && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Chữ ký:
-                          </span>
-                          <a
-                            href={ticket.delivery_signature_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            Xem chữ ký
-                          </a>
-                        </div>
-                      )}
-                      {ticket.delivery_notes && (
-                        <div>
-                          <span className="text-muted-foreground block mb-1">
-                            Ghi chú giao hàng:
-                          </span>
-                          <p className="text-sm">{ticket.delivery_notes}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
               )}
             </CardContent>
           </Card>

@@ -1118,18 +1118,21 @@ export const adminRouter = router({
                 continue;
               }
 
-              // For approved or completed issues, link random physical products from warehouse
-              if (["approved", "completed"].includes(issue.status) && itemData) {
-                // Get available physical products that are NOT already linked to any serials
-                const { data: availableProducts } = await supabaseAdmin
+              // Link serials for all statuses to enable testing (draft/pending/approved/completed)
+              if (["draft", "pending_approval", "approved", "completed"].includes(issue.status) && itemData) {
+                // Get available physical products in the source warehouse
+                const { data: availableProducts, error: availErr } = await supabaseAdmin
                   .from("physical_products")
                   .select("id, serial_number")
                   .eq("product_id", productId)
                   .eq("virtual_warehouse_id", vwId)
-                  .is("current_ticket_id", null) // Not linked to any ticket
-                  .not("id", "in", `(SELECT physical_product_id FROM stock_issue_serials WHERE physical_product_id IS NOT NULL)`)
-                  .not("id", "in", `(SELECT physical_product_id FROM stock_transfer_serials WHERE physical_product_id IS NOT NULL)`)
+                  .is("current_ticket_id", null)
+                  .order("created_at", { ascending: true })
                   .limit(item.quantity);
+
+                if (availErr) {
+                  console.error(`✖ SEED: Failed to query available products for issue item ${item.productSku}:`, availErr);
+                }
 
                 if (availableProducts && availableProducts.length > 0) {
                   const serialsToInsert = availableProducts.map(pp => ({
@@ -1234,18 +1237,21 @@ export const adminRouter = router({
                 continue;
               }
 
-              // For approved or completed transfers, link random physical products from source warehouse
-              if (["approved", "completed"].includes(transfer.status) && itemData) {
-                // Get available physical products that are NOT already linked to any serials
-                const { data: availableProducts } = await supabaseAdmin
+              // Link serials for all statuses to enable testing (draft/pending/approved/completed)
+              if (["draft", "pending_approval", "approved", "completed"].includes(transfer.status) && itemData) {
+                // Get available physical products in the source warehouse
+                const { data: availableProducts, error: availErr } = await supabaseAdmin
                   .from("physical_products")
                   .select("id, serial_number")
                   .eq("product_id", productId)
                   .eq("virtual_warehouse_id", fromVwId)
-                  .is("current_ticket_id", null) // Not linked to any ticket
-                  .not("id", "in", `(SELECT physical_product_id FROM stock_issue_serials WHERE physical_product_id IS NOT NULL)`)
-                  .not("id", "in", `(SELECT physical_product_id FROM stock_transfer_serials WHERE physical_product_id IS NOT NULL)`)
+                  .is("current_ticket_id", null)
+                  .order("created_at", { ascending: true })
                   .limit(item.quantity);
+
+                if (availErr) {
+                  console.error(`✖ SEED: Failed to query available products for transfer item ${item.productSku}:`, availErr);
+                }
 
                 if (availableProducts && availableProducts.length > 0) {
                   const serialsToInsert = availableProducts.map(pp => ({

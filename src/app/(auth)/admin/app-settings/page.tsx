@@ -15,6 +15,46 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+function QuickGenerators() {
+  const createRandomIssue = trpc.admin.createRandomIssue.useMutation();
+  const createRandomTransfer = trpc.admin.createRandomTransfer.useMutation();
+
+  const handleRandomIssue = async () => {
+    const res = await createRandomIssue.mutateAsync();
+    toast.success(`Đã tạo phiếu xuất ${res.issueNumber} (${res.serials} serial)`);
+  };
+
+  const handleRandomTransfer = async () => {
+    const res = await createRandomTransfer.mutateAsync();
+    toast.success(`Đã tạo phiếu chuyển ${res.transferNumber} (${res.serials} serial)`);
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-2">
+      <Button variant="outline" onClick={handleRandomIssue} disabled={createRandomIssue.isPending}>
+        {createRandomIssue.isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Đang tạo phiếu xuất...
+          </>
+        ) : (
+          "Tạo phiếu xuất ngẫu nhiên"
+        )}
+      </Button>
+      <Button variant="outline" onClick={handleRandomTransfer} disabled={createRandomTransfer.isPending}>
+        {createRandomTransfer.isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Đang tạo phiếu chuyển...
+          </>
+        ) : (
+          "Tạo phiếu chuyển ngẫu nhiên"
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export default function AdminAppSettingsPage() {
   const [isSeeding, setIsSeeding] = React.useState(false);
   const [seedProgress, setSeedProgress] = React.useState<string[]>([]);
@@ -96,9 +136,9 @@ export default function AdminAppSettingsPage() {
                 <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
                   <p className="font-medium mb-2">⚠️ Lưu ý quan trọng:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Physical Warehouses → Virtual Warehouses → Brands → Parts → Products → Physical Products → Task Types → Task Templates</li>
-                    <li>Virtual Warehouses giờ là các thực thể riêng biệt với ID duy nhất (không còn nested trong Physical Warehouses)</li>
-                    <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v2.0.0)</li>
+                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Customers → Brands → Products → Task Library → Workflows → Test Scenarios (Receipts, Tickets, Requests, Transfers)</li>
+                    <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v4.0.0)</li>
+                    <li>Bao gồm dữ liệu test đầy đủ cho Polymorphic Task Management System (PTMS)</li>
                     <li>Chỉ dùng trong môi trường development để test</li>
                   </ul>
                 </div>

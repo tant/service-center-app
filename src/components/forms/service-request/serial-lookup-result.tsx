@@ -13,6 +13,7 @@ import { IconLoader2, IconCircleCheck, IconAlertCircle, IconCircleX } from "@tab
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 type LookupStatus = 'idle' | 'checking' | 'found' | 'not_found' | 'error';
 
@@ -46,9 +47,17 @@ interface SerialLookupResultProps {
   status: LookupStatus;
   product: ProductLookupResult | null;
   error?: string;
+  serviceOption: "warranty" | "paid";
+  serviceOptionManual: boolean;
 }
 
-export function SerialLookupResult({ status, product, error }: SerialLookupResultProps) {
+export function SerialLookupResult({
+  status,
+  product,
+  error,
+  serviceOption,
+  serviceOptionManual,
+}: SerialLookupResultProps) {
   // State 1: Idle - No display needed
   if (status === 'idle') {
     return null;
@@ -74,6 +83,12 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
           <p className="text-xs text-muted-foreground mt-0.5">
             Chỉ sản phẩm đã bán cho khách hàng mới có thể tạo phiếu yêu cầu dịch vụ
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant="secondary">Thu phí</Badge>
+            <span className="text-xs text-muted-foreground">
+              Hệ thống mặc định chọn Thu phí để đảm bảo hồ sơ hợp lệ.
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -89,6 +104,12 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
           <p className="text-xs text-muted-foreground mt-0.5">
             {error || "Không thể kiểm tra serial. Vui lòng thử lại."}
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant="secondary">Thu phí</Badge>
+            <span className="text-xs text-muted-foreground">
+              Giá trị sẽ duy trì Thu phí cho tới khi tra cứu thành công.
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -96,6 +117,9 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
 
   // State 3: Found - Show product info
   if (status === 'found' && product) {
+    const serviceOptionLabel = serviceOption === "warranty" ? "Bảo hành" : "Thu phí";
+    const serviceOptionVariant = serviceOption === "warranty" ? "resolved" : "secondary";
+
     // Determine warranty display
     const getWarrantyDisplay = () => {
       if (product.current_ticket_id) {
@@ -179,6 +203,12 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
             <span className="text-xs text-muted-foreground">•</span>
             <span className={cn("text-xs font-medium", warrantyDisplay.textColor)}>
               {warrantyDisplay.label}
+            </span>
+            <Badge variant={serviceOptionVariant}>
+              {serviceOptionLabel}
+            </Badge>
+            <span className="text-[11px] text-muted-foreground">
+              {serviceOptionManual ? "Đã chỉnh tay" : "Tự động đề xuất"}
             </span>
           </div>
 

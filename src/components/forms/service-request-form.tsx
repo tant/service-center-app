@@ -6,31 +6,39 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { IconCheck, IconLoader2, IconPackage, IconPlus, IconTruck, IconUser } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+import { trpc } from "@/components/providers/trpc-provider";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck } from "@tabler/icons-react";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { ProductSerialInput } from "./service-request/product-serial-input";
-import { trpc } from "@/components/providers/trpc-provider";
 
-interface ProductItem {
+export type ServiceOption = "warranty" | "paid";
+
+export interface ServiceRequestFormItem {
   serial_number: string;
   issue_description?: string;
+  service_option: ServiceOption;
 }
 
-interface ServiceRequestFormData {
+interface ProductItem extends ServiceRequestFormItem {
+  service_option_manual?: boolean;
+}
+
+export interface ServiceRequestFormData {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
   issue_description: string | null;
-  items: ProductItem[];
+  items: ServiceRequestFormItem[];
   receipt_status: "received" | "pending_receipt";
   delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
@@ -47,7 +55,7 @@ interface ServiceRequestFormProps {
 
 export function ServiceRequestForm({
   initialData,
-  mode,
+  mode: _mode,
   onSubmit,
   onSaveDraft,
   onSubmitAndSend,
@@ -68,7 +76,12 @@ export function ServiceRequestForm({
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
   const [items, setItems] = useState<ProductItem[]>(
-    initialData?.items || [{ serial_number: "" }]
+    initialData?.items?.map((item) => ({
+      serial_number: item.serial_number,
+      issue_description: item.issue_description,
+      service_option: item.service_option ?? "paid",
+      service_option_manual: false,
+    })) || [{ serial_number: "", service_option: "paid", service_option_manual: false }]
   );
 
   // Lookup state
@@ -115,7 +128,10 @@ export function ServiceRequestForm({
       toast.error("Tối đa 10 sản phẩm mỗi phiếu yêu cầu");
       return;
     }
-    setItems([...items, { serial_number: "" }]);
+    setItems([
+      ...items,
+      { serial_number: "", service_option: "paid", service_option_manual: false },
+    ]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -126,10 +142,52 @@ export function ServiceRequestForm({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleUpdateItem = (index: number, field: keyof ProductItem, value: string) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
+  const updateItem = (
+    index: number,
+    updater: (item: ProductItem) => ProductItem
+  ) => {
+    setItems((prev) => {
+      const current = prev[index];
+      const updated = updater(current);
+      if (updated === current) {
+        return prev;
+      }
+      const next = [...prev];
+      next[index] = updated;
+      return next;
+    });
+  };
+
+  const handleSerialChange = (index: number, serial: string) => {
+    updateItem(index, (item) => ({
+      ...item,
+      serial_number: serial,
+      service_option_manual: false,
+      service_option: "paid",
+    }));
+  };
+
+  const handleServiceOptionManualChange = (index: number, option: ServiceOption) => {
+    updateItem(index, (item) => ({
+      ...item,
+      service_option: option,
+      service_option_manual: true,
+    }));
+  };
+
+  const handleServiceOptionAutoSelect = (index: number, option: ServiceOption) => {
+    updateItem(index, (item) => {
+      if (item.service_option_manual) {
+        return item;
+      }
+      if (item.service_option === option) {
+        return item;
+      }
+      return {
+        ...item,
+        service_option: option,
+      };
+    });
   };
 
   // Validate form (returns true if valid)
@@ -183,6 +241,7 @@ export function ServiceRequestForm({
     items: items.map((item) => ({
       serial_number: item.serial_number.toUpperCase(),
       issue_description: item.issue_description,
+      service_option: item.service_option,
     })),
     receipt_status: receiptStatus,
     delivery_method: deliveryMethod,
@@ -260,7 +319,15 @@ export function ServiceRequestForm({
               key={index}
               index={index}
               serial={item.serial_number}
-              onSerialChange={(serial) => handleUpdateItem(index, "serial_number", serial)}
+              serviceOption={item.service_option}
+              serviceOptionManual={item.service_option_manual ?? false}
+              onSerialChange={(serial) => handleSerialChange(index, serial)}
+              onServiceOptionAutoSelect={(option) =>
+                handleServiceOptionAutoSelect(index, option)
+              }
+              onServiceOptionManualChange={(option) =>
+                handleServiceOptionManualChange(index, option)
+              }
               onRemove={() => handleRemoveItem(index)}
               canRemove={items.length > 1}
               disabled={isSubmitting}
@@ -400,7 +467,7 @@ export function ServiceRequestForm({
               </p>
               <RadioGroup
                 value={deliveryMethod}
-                onValueChange={(value: any) => setDeliveryMethod(value)}
+                onValueChange={(value) => setDeliveryMethod(value as "pickup" | "delivery")}
                 disabled={isSubmitting}
               >
                 <div className="flex items-center space-x-2">

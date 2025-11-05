@@ -679,6 +679,7 @@ export const serviceRequestRouter = router({
               item.issue_description ??
               input.issue_overview ??
               "",
+            service_option: item.service_option,
           }))
         );
 
@@ -853,6 +854,7 @@ export const serviceRequestRouter = router({
               item.issue_description ??
               input.data.issue_overview ??
               "",
+            service_option: item.service_option,
           }))
         );
 
@@ -1279,6 +1281,9 @@ export const serviceRequestRouter = router({
             ? item.ticket[0]
             : item.ticket ?? null;
 
+          const serviceOption: "warranty" | "paid" =
+            item.service_option === "warranty" ? "warranty" : "paid";
+
           const normalizedItem: {
             id: string;
             product_brand: string | null;
@@ -1286,7 +1291,7 @@ export const serviceRequestRouter = router({
             serial_number: string | null;
             purchase_date: string | null;
             issue_description: string | null;
-            service_option: string | null;
+            service_option: "warranty" | "paid";
             issue_photos: unknown;
             warranty_status: WarrantyStatus | null;
             warranty_end_date: string | null;
@@ -1305,7 +1310,7 @@ export const serviceRequestRouter = router({
             serial_number: item.serial_number,
             purchase_date: null,
             issue_description: item.issue_description,
-            service_option: item.service_option,
+            service_option: serviceOption,
             issue_photos: item.issue_photos,
             warranty_status: null,
             warranty_end_date: null,

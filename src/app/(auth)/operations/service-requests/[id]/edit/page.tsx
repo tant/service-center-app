@@ -7,7 +7,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { ServiceRequestForm } from "@/components/forms/service-request-form";
+import {
+  ServiceRequestForm,
+  type ServiceRequestFormData,
+} from "@/components/forms/service-request-form";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
@@ -124,15 +127,17 @@ export default function EditServiceRequestPage() {
   }
 
   // Transform request data to form data
-  const initialData = {
-    customer_name: request.customer_name,
+  const initialData: Partial<ServiceRequestFormData> = {
+    customer_name: request.customer_name ?? "",
     customer_email: request.customer_email || "",
     customer_phone: request.customer_phone || "",
     issue_description: request.issue_description,
-    items: request.items?.map((item: any) => ({
-      serial_number: item.serial_number,
-      issue_description: item.issue_description || "",
-    })) || [],
+    items:
+      request.items?.map((item) => ({
+        serial_number: item.serial_number ?? "",
+        issue_description: item.issue_description ?? "",
+        service_option: item.service_option,
+      })) ?? [],
     receipt_status: request.receipt_status as "received" | "pending_receipt",
     delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,
     delivery_address: request.delivery_address || "",

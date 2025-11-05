@@ -223,7 +223,7 @@ export function ProductInventoryTable() {
         {/* Filters Row */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
-            placeholder="Tìm kiếm theo số serial hoặc tên sản phẩm..."
+            placeholder="Tìm kiếm theo số serial, tên sản phẩm, hoặc SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full"

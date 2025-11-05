@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Trash2 } from "lucide-react";
 import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
+import { SerialListAccordion } from "../serials/serial-list-accordion";
 
 interface ReceiptItemsTableProps {
   receipt: StockReceiptWithRelations;
@@ -52,6 +53,9 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
   // v2.0 Workflow: Serial entry is non-blocking and can continue even after approval/completion
   const canEdit = receipt.status === "draft" || receipt.status === "pending_approval" || receipt.status === "approved" || receipt.status === "completed";
 
+  // Serial deletion only allowed in draft
+  const isDraft = receipt.status === "draft";
+
   return (
     <>
       <Card>
@@ -82,49 +86,67 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                   const serialCount = item.serials?.length || 0;
                   const progress = (serialCount / item.declared_quantity) * 100;
                   const isComplete = serialCount === item.declared_quantity;
+                  const hasSerials = serialCount > 0;
 
                   return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.product?.name || "Unknown Product"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.product?.sku || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={item.declared_quantity < 0 ? "text-red-600 font-medium" : ""}>
-                          {item.declared_quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={isComplete ? "text-green-600 font-semibold" : ""}>
-                          {serialCount}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={progress} className="flex-1" />
-                          <span className="text-sm text-muted-foreground min-w-[45px] text-right">
-                            {Math.round(progress)}%
-                          </span>
-                        </div>
-                      </TableCell>
-                      {canEdit && (
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAddSerials(item.id)}
-                            disabled={isComplete}
-                          >
-                            <Plus className="h-4 w-4" />
-                            <span className="hidden lg:inline">
-                              {serialCount === 0 ? "Thêm serial" : "Bổ sung"}
-                            </span>
-                          </Button>
+                    <>
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          {item.product?.name || "Unknown Product"}
                         </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.product?.sku || "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={item.declared_quantity < 0 ? "text-red-600 font-medium" : ""}>
+                            {item.declared_quantity}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={isComplete ? "text-green-600 font-semibold" : ""}>
+                            {serialCount}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={progress} className="flex-1" />
+                            <span className="text-sm text-muted-foreground min-w-[45px] text-right">
+                              {Math.round(progress)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        {canEdit && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddSerials(item.id)}
+                              disabled={isComplete}
+                            >
+                              <Plus className="h-4 w-4" />
+                              <span className="hidden lg:inline">
+                                {serialCount === 0 ? "Thêm serial" : "Bổ sung"}
+                              </span>
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      {/* Serial List Row - Always visible when serials exist */}
+                      {hasSerials && (
+                        <TableRow key={`${item.id}-serials`}>
+                          <TableCell colSpan={canEdit ? 6 : 5} className="bg-muted/20 p-0">
+                            <div className="px-4 py-2">
+                              <SerialListAccordion
+                                serials={item.serials || []}
+                                productName={item.product?.name || "Unknown Product"}
+                                isDraft={isDraft}
+                                onSerialRemoved={onSerialsAdded}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </TableRow>
+                    </>
                   );
                 })
               )}

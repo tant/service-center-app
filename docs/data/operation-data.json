@@ -1,0 +1,403 @@
+{
+  "version": "1.0",
+  "description": "Inventory operations data for seeding - 90 day timeline (Aug 7 - Nov 5, 2025)",
+  "totalDocuments": 34,
+  "documents": [
+    {
+      "type": "receipt",
+      "number": "GRN-2025-001",
+      "date": "2025-08-07T09:00:00",
+      "warehouse": "customer_installed",
+      "notes": "Cập nhật tồn kho ban đầu - Sản phẩm đã bán trước đó",
+      "items": [
+        { "sku": "ZT-RTX4090-24G", "quantity": 25, "serialPrefix": "ZT4090-CUS", "serialStart": 1, "condition": "used" },
+        { "sku": "ZT-RTX4070-12G", "quantity": 20, "serialPrefix": "ZT4070-CUS", "serialStart": 1, "condition": "used" },
+        { "sku": "SSTC-SSD-1TB-G4", "quantity": 30, "serialPrefix": "SSTC1TB-CUS", "serialStart": 1, "condition": "used" },
+        { "sku": "SSTC-SSD-512G-G3", "quantity": 15, "serialPrefix": "SSTC512-CUS", "serialStart": 1, "condition": "used" },
+        { "sku": "SSTC-RAM-16G-DDR4", "quantity": 25, "serialPrefix": "SSTCRAM16-CUS", "serialStart": 1, "condition": "used" }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-002",
+      "date": "2025-08-07T14:00:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng mới từ nhà cung cấp - Lô đầu tiên tháng 8",
+      "items": [
+        { "sku": "ZT-RTX4090-24G", "quantity": 10, "serialPrefix": "ZT4090-NEW", "serialStart": 1, "condition": "new" },
+        { "sku": "ZT-RTX4070-12G", "quantity": 15, "serialPrefix": "ZT4070-NEW", "serialStart": 1, "condition": "new" },
+        { "sku": "SSTC-SSD-1TB-G4", "quantity": 12, "serialPrefix": "SSTC1TB-NEW", "serialStart": 1, "condition": "new" },
+        { "sku": "SSTC-SSD-512G-G3", "quantity": 8, "serialPrefix": "SSTC512-NEW", "serialStart": 1, "condition": "new" },
+        { "sku": "SSTC-RAM-16G-DDR4", "quantity": 10, "serialPrefix": "SSTCRAM16-NEW", "serialStart": 1, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-001",
+      "date": "2025-08-08T10:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "warranty_stock",
+      "notes": "Phân bổ hàng dự trữ cho bảo hành",
+      "items": [
+        { "serials": ["ZT4090-NEW-0001", "ZT4090-NEW-0002", "ZT4090-NEW-0003", "ZT4090-NEW-0004", "ZT4090-NEW-0005"] },
+        { "serials": ["ZT4070-NEW-0001", "ZT4070-NEW-0002", "ZT4070-NEW-0003", "ZT4070-NEW-0004", "ZT4070-NEW-0005"] },
+        { "serials": ["SSTC1TB-NEW-0001", "SSTC1TB-NEW-0002", "SSTC1TB-NEW-0003", "SSTC1TB-NEW-0004", "SSTC1TB-NEW-0005"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-003",
+      "date": "2025-08-09T09:30:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng Mini PC và RAM DDR5",
+      "items": [
+        { "sku": "ZT-ZBOX-CI669", "quantity": 10, "serialPrefix": "ZTZBOX-NEW", "serialStart": 1, "condition": "new" },
+        { "sku": "SSTC-RAM-32G-DDR5", "quantity": 15, "serialPrefix": "SSTCRAM32-NEW", "serialStart": 1, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-002",
+      "date": "2025-08-10T11:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Giao hàng cho khách hàng mới",
+      "items": [
+        { "serials": ["ZT4090-NEW-0006", "ZT4090-NEW-0007"] },
+        { "serials": ["ZTZBOX-NEW-0001", "ZTZBOX-NEW-0002", "ZTZBOX-NEW-0003"] },
+        { "serials": ["SSTCRAM32-NEW-0001", "SSTCRAM32-NEW-0002", "SSTCRAM32-NEW-0003"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-003",
+      "date": "2025-08-13T09:00:00",
+      "fromWarehouse": "customer_installed",
+      "toWarehouse": "in_service",
+      "notes": "Nhận sản phẩm từ khách - Lỗi màn hình không hiển thị",
+      "items": [
+        { "serials": ["ZT4090-CUS-0001"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-004",
+      "date": "2025-08-15T10:00:00",
+      "warehouse": "main",
+      "notes": "Nhập SSD Gen4 2TB - Sản phẩm cao cấp",
+      "items": [
+        { "sku": "SSTC-SSD-2TB-G4", "quantity": 20, "serialPrefix": "SSTC2TB-NEW", "serialStart": 1, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-004",
+      "date": "2025-08-16T14:00:00",
+      "fromWarehouse": "in_service",
+      "toWarehouse": "rma_staging",
+      "notes": "Xác nhận lỗi phần cứng - Chuẩn bị RMA",
+      "items": [
+        { "serials": ["ZT4090-CUS-0001"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-005",
+      "date": "2025-08-17T10:00:00",
+      "fromWarehouse": "warranty_stock",
+      "toWarehouse": "customer_installed",
+      "notes": "Thay thế sản phẩm lỗi - Bảo hành",
+      "items": [
+        { "serials": ["ZT4090-NEW-0001"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-005",
+      "date": "2025-08-21T09:00:00",
+      "warehouse": "parts",
+      "notes": "Nhập linh kiện thay thế",
+      "items": [
+        { "sku": "SSTC-SSD-512G-G3", "quantity": 15, "serialPrefix": "SSTC512-PART", "serialStart": 1, "condition": "new" },
+        { "sku": "SSTC-RAM-16G-DDR4", "quantity": 15, "serialPrefix": "SSTCRAM16-PART", "serialStart": 1, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-006",
+      "date": "2025-08-23T13:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Bán combo Mini PC + SSD + RAM",
+      "items": [
+        { "serials": ["ZTZBOX-NEW-0004", "ZTZBOX-NEW-0005", "ZTZBOX-NEW-0006"] },
+        { "serials": ["SSTC2TB-NEW-0001", "SSTC2TB-NEW-0002", "SSTC2TB-NEW-0003"] },
+        { "serials": ["SSTCRAM32-NEW-0004", "SSTCRAM32-NEW-0005", "SSTCRAM32-NEW-0006"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-006",
+      "date": "2025-08-28T09:00:00",
+      "warehouse": "main",
+      "notes": "Nhập RTX 4060 Ti - Dòng sản phẩm phổ thông",
+      "items": [
+        { "sku": "ZT-RTX4060Ti-8G", "quantity": 30, "serialPrefix": "ZT4060Ti-NEW", "serialStart": 1, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-007",
+      "date": "2025-08-30T10:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "warranty_stock",
+      "notes": "Bổ sung tồn kho bảo hành",
+      "items": [
+        { "serials": ["ZT4070-NEW-0006", "ZT4070-NEW-0007", "ZT4070-NEW-0008", "ZT4070-NEW-0009", "ZT4070-NEW-0010"] },
+        { "serials": ["ZT4060Ti-NEW-0001", "ZT4060Ti-NEW-0002", "ZT4060Ti-NEW-0003", "ZT4060Ti-NEW-0004", "ZT4060Ti-NEW-0005"] },
+        { "serials": ["ZTZBOX-NEW-0007", "ZTZBOX-NEW-0008"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-008",
+      "date": "2025-09-03T11:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Đơn hàng doanh nghiệp - 15 VGA cards",
+      "items": [
+        { "serials": ["ZT4060Ti-NEW-0006", "ZT4060Ti-NEW-0007", "ZT4060Ti-NEW-0008", "ZT4060Ti-NEW-0009", "ZT4060Ti-NEW-0010", "ZT4060Ti-NEW-0011", "ZT4060Ti-NEW-0012", "ZT4060Ti-NEW-0013", "ZT4060Ti-NEW-0014", "ZT4060Ti-NEW-0015", "ZT4060Ti-NEW-0016", "ZT4060Ti-NEW-0017", "ZT4060Ti-NEW-0018", "ZT4060Ti-NEW-0019", "ZT4060Ti-NEW-0020"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-009",
+      "date": "2025-09-05T09:00:00",
+      "fromWarehouse": "customer_installed",
+      "toWarehouse": "in_service",
+      "notes": "Lỗi SSD không nhận - Kiểm tra bảo hành",
+      "items": [
+        { "serials": ["SSTC1TB-CUS-0001", "SSTC1TB-CUS-0002"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-007",
+      "date": "2025-09-10T10:00:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng định kỳ tháng 9",
+      "items": [
+        { "sku": "ZT-RTX4070-12G", "quantity": 15, "serialPrefix": "ZT4070-NEW", "serialStart": 16, "condition": "new" },
+        { "sku": "SSTC-SSD-1TB-G4", "quantity": 15, "serialPrefix": "SSTC1TB-NEW", "serialStart": 13, "condition": "new" },
+        { "sku": "SSTC-RAM-16G-DDR4", "quantity": 10, "serialPrefix": "SSTCRAM16-NEW", "serialStart": 11, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-010",
+      "date": "2025-09-12T14:00:00",
+      "fromWarehouse": "in_service",
+      "toWarehouse": "rma_staging",
+      "notes": "Xác nhận lỗi SSD - Chờ đổi mới từ nhà cung cấp",
+      "items": [
+        { "serials": ["SSTC1TB-CUS-0001", "SSTC1TB-CUS-0002"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-011",
+      "date": "2025-09-13T11:00:00",
+      "fromWarehouse": "warranty_stock",
+      "toWarehouse": "customer_installed",
+      "notes": "Thay thế 2 SSD lỗi - Bảo hành",
+      "items": [
+        { "serials": ["SSTC1TB-NEW-0002", "SSTC1TB-NEW-0003"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-012",
+      "date": "2025-09-17T10:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Combo Gaming: VGA + SSD + RAM",
+      "items": [
+        { "serials": ["ZT4070-NEW-0011", "ZT4070-NEW-0012", "ZT4070-NEW-0013", "ZT4070-NEW-0014"] },
+        { "serials": ["SSTC2TB-NEW-0004", "SSTC2TB-NEW-0005", "SSTC2TB-NEW-0006", "SSTC2TB-NEW-0007"] },
+        { "serials": ["SSTCRAM32-NEW-0007", "SSTCRAM32-NEW-0008", "SSTCRAM32-NEW-0009", "SSTCRAM32-NEW-0010"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-008",
+      "date": "2025-09-20T09:00:00",
+      "warehouse": "main",
+      "notes": "Nhập RTX 4090 - Dòng cao cấp",
+      "items": [
+        { "sku": "ZT-RTX4090-24G", "quantity": 15, "serialPrefix": "ZT4090-NEW", "serialStart": 11, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-013",
+      "date": "2025-09-24T10:00:00",
+      "fromWarehouse": "customer_installed",
+      "toWarehouse": "in_service",
+      "notes": "RAM bị lỗi - Kiểm tra bảo hành",
+      "items": [
+        { "serials": ["SSTCRAM16-CUS-0001", "SSTCRAM16-CUS-0002", "SSTCRAM16-CUS-0003"] }
+      ]
+    },
+    {
+      "type": "issue",
+      "number": "GIN-2025-001",
+      "date": "2025-09-26T14:00:00",
+      "warehouse": "dead_stock",
+      "fromWarehouse": "rma_staging",
+      "notes": "Nhà cung cấp từ chối RMA - Chuyển sang hàng hỏng",
+      "items": [
+        { "serials": ["ZT4090-CUS-0001"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-014",
+      "date": "2025-09-27T11:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Bán 5 RTX 4090 cho khách VIP",
+      "items": [
+        { "serials": ["ZT4090-NEW-0011", "ZT4090-NEW-0012", "ZT4090-NEW-0013", "ZT4090-NEW-0014", "ZT4090-NEW-0015"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-009",
+      "date": "2025-10-01T09:00:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng đầu tháng 10",
+      "items": [
+        { "sku": "ZT-RTX4060Ti-8G", "quantity": 20, "serialPrefix": "ZT4060Ti-NEW", "serialStart": 31, "condition": "new" },
+        { "sku": "SSTC-SSD-1TB-G4", "quantity": 20, "serialPrefix": "SSTC1TB-NEW", "serialStart": 28, "condition": "new" },
+        { "sku": "SSTC-RAM-32G-DDR5", "quantity": 10, "serialPrefix": "SSTCRAM32-NEW", "serialStart": 16, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-015",
+      "date": "2025-10-03T10:00:00",
+      "fromWarehouse": "parts",
+      "toWarehouse": "customer_installed",
+      "notes": "Thay thế RAM lỗi từ kho linh kiện",
+      "items": [
+        { "serials": ["SSTCRAM16-PART-0001", "SSTCRAM16-PART-0002", "SSTCRAM16-PART-0003"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-016",
+      "date": "2025-10-08T13:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Đơn hàng doanh nghiệp - Build PC văn phòng",
+      "items": [
+        { "serials": ["ZT4060Ti-NEW-0031", "ZT4060Ti-NEW-0032", "ZT4060Ti-NEW-0033", "ZT4060Ti-NEW-0034", "ZT4060Ti-NEW-0035", "ZT4060Ti-NEW-0036", "ZT4060Ti-NEW-0037", "ZT4060Ti-NEW-0038", "ZT4060Ti-NEW-0039", "ZT4060Ti-NEW-0040"] },
+        { "serials": ["SSTC1TB-NEW-0028", "SSTC1TB-NEW-0029", "SSTC1TB-NEW-0030", "SSTC1TB-NEW-0031", "SSTC1TB-NEW-0032", "SSTC1TB-NEW-0033", "SSTC1TB-NEW-0034", "SSTC1TB-NEW-0035", "SSTC1TB-NEW-0036", "SSTC1TB-NEW-0037"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-010",
+      "date": "2025-10-11T10:00:00",
+      "warehouse": "main",
+      "notes": "Nhập ZBOX Mini PC - Lô mới",
+      "items": [
+        { "sku": "ZT-ZBOX-CI669", "quantity": 15, "serialPrefix": "ZTZBOX-NEW", "serialStart": 11, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-017",
+      "date": "2025-10-15T09:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "warranty_stock",
+      "notes": "Bổ sung kho bảo hành cuối tháng",
+      "items": [
+        { "serials": ["ZT4070-NEW-0016", "ZT4070-NEW-0017", "ZT4070-NEW-0018", "ZT4070-NEW-0019", "ZT4070-NEW-0020"] },
+        { "serials": ["SSTC1TB-NEW-0013", "SSTC1TB-NEW-0014", "SSTC1TB-NEW-0015", "SSTC1TB-NEW-0016", "SSTC1TB-NEW-0017"] },
+        { "serials": ["SSTCRAM32-NEW-0016", "SSTCRAM32-NEW-0017", "SSTCRAM32-NEW-0018", "SSTCRAM32-NEW-0019", "SSTCRAM32-NEW-0020"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-018",
+      "date": "2025-10-18T11:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Combo Mini PC cho văn phòng",
+      "items": [
+        { "serials": ["ZTZBOX-NEW-0011", "ZTZBOX-NEW-0012", "ZTZBOX-NEW-0013", "ZTZBOX-NEW-0014", "ZTZBOX-NEW-0015", "ZTZBOX-NEW-0016"] },
+        { "serials": ["SSTC1TB-NEW-0038", "SSTC1TB-NEW-0039", "SSTC1TB-NEW-0040", "SSTC1TB-NEW-0041", "SSTC1TB-NEW-0042", "SSTC1TB-NEW-0043"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-011",
+      "date": "2025-10-22T09:00:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng cuối tháng - Chuẩn bị cho tháng 11",
+      "items": [
+        { "sku": "ZT-RTX4070-12G", "quantity": 15, "serialPrefix": "ZT4070-NEW", "serialStart": 31, "condition": "new" },
+        { "sku": "SSTC-SSD-2TB-G4", "quantity": 10, "serialPrefix": "SSTC2TB-NEW", "serialStart": 21, "condition": "new" },
+        { "sku": "SSTC-RAM-32G-DDR5", "quantity": 10, "serialPrefix": "SSTCRAM32-NEW", "serialStart": 26, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-019",
+      "date": "2025-10-25T10:00:00",
+      "fromWarehouse": "customer_installed",
+      "toWarehouse": "in_service",
+      "notes": "Mini PC không khởi động - Kiểm tra bảo hành",
+      "items": [
+        { "serials": ["ZTZBOX-NEW-0001"] }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-020",
+      "date": "2025-10-29T11:00:00",
+      "fromWarehouse": "warranty_stock",
+      "toWarehouse": "customer_installed",
+      "notes": "Thay thế Mini PC lỗi",
+      "items": [
+        { "serials": ["ZTZBOX-NEW-0007"] }
+      ]
+    },
+    {
+      "type": "receipt",
+      "number": "GRN-2025-012",
+      "date": "2025-11-01T09:00:00",
+      "warehouse": "main",
+      "notes": "Nhập hàng tháng 11 - Sản phẩm mới",
+      "items": [
+        { "sku": "ZT-RTX4090-24G", "quantity": 10, "serialPrefix": "ZT4090-NEW", "serialStart": 26, "condition": "new" },
+        { "sku": "ZT-RTX4060Ti-8G", "quantity": 15, "serialPrefix": "ZT4060Ti-NEW", "serialStart": 51, "condition": "new" },
+        { "sku": "SSTC-SSD-2TB-G4", "quantity": 15, "serialPrefix": "SSTC2TB-NEW", "serialStart": 31, "condition": "new" }
+      ]
+    },
+    {
+      "type": "transfer",
+      "number": "TRF-2025-021",
+      "date": "2025-11-05T10:00:00",
+      "fromWarehouse": "main",
+      "toWarehouse": "customer_installed",
+      "notes": "Đơn hàng mới nhất - Build PC Gaming",
+      "items": [
+        { "serials": ["ZT4090-NEW-0026", "ZT4090-NEW-0027"] },
+        { "serials": ["SSTC2TB-NEW-0031", "SSTC2TB-NEW-0032", "SSTC2TB-NEW-0033", "SSTC2TB-NEW-0034"] },
+        { "serials": ["SSTCRAM32-NEW-0026", "SSTCRAM32-NEW-0027"] }
+      ]
+    }
+  ]
+}

@@ -279,6 +279,26 @@ CREATE INDEX idx_stock_issue_serials_product ON public.stock_issue_serials(physi
 
 COMMENT ON TABLE public.stock_issue_serials IS 'Serial numbers in stock issues';
 
+-- Validation trigger: Ensure physical_product_id is NOT NULL on insert
+-- (It becomes NULL after the delete trigger runs, which is expected for audit trail)
+CREATE OR REPLACE FUNCTION public.validate_issue_serial_physical_product()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.physical_product_id IS NULL THEN
+    RAISE EXCEPTION 'physical_product_id cannot be NULL when inserting issue serial';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_validate_issue_serial_physical_product
+  BEFORE INSERT ON public.stock_issue_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_issue_serial_physical_product();
+
 -- =====================================================
 -- STOCK TRANSFERS (Phiếu Chuyển Kho)
 -- =====================================================
@@ -397,6 +417,26 @@ CREATE INDEX idx_stock_transfer_serials_item ON public.stock_transfer_serials(tr
 
 COMMENT ON TABLE public.stock_transfer_serials IS 'Serial numbers in stock transfers';
 
+-- Validation trigger: Ensure physical_product_id is NOT NULL on insert
+-- (It becomes NULL after auto-generated issue deletes the product, which is expected for audit trail)
+CREATE OR REPLACE FUNCTION public.validate_transfer_serial_physical_product()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.physical_product_id IS NULL THEN
+    RAISE EXCEPTION 'physical_product_id cannot be NULL when inserting transfer serial';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_validate_transfer_serial_physical_product
+  BEFORE INSERT ON public.stock_transfer_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_transfer_serial_physical_product();
+
 -- =====================================================
 -- PRODUCT WAREHOUSE STOCK (Simplified)
 -- =====================================================
@@ -436,114 +476,16 @@ CREATE TRIGGER trigger_product_warehouse_stock_updated_at
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- AUTO-GENERATION TRIGGERS FOR TRANSFERS
+-- TRANSFER APPROVAL: Handled in 600_stock_triggers.sql
 -- =====================================================
-
-CREATE OR REPLACE FUNCTION public.auto_generate_transfer_documents()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
-DECLARE
-  v_issue_id UUID;
-  v_receipt_id UUID;
-  v_transfer_item RECORD;
-BEGIN
-  IF NEW.status = 'approved' AND OLD.status != 'approved' AND NEW.generated_issue_id IS NULL THEN
-
-    -- Create Issue Document
-    INSERT INTO public.stock_issues (
-      issue_type, status, virtual_warehouse_id, issue_date,
-      reference_document_number, created_by_id, approved_by_id,
-      approved_at, auto_generated, notes
-    ) VALUES (
-      'normal', 'approved', NEW.from_virtual_warehouse_id, NEW.transfer_date,
-      'PC-' || NEW.transfer_number, NEW.created_by_id, NEW.approved_by_id,
-      NEW.approved_at, true, 'Phiếu xuất tự động từ ' || NEW.transfer_number
-    ) RETURNING id INTO v_issue_id;
-
-    -- Create Receipt Document
-    INSERT INTO public.stock_receipts (
-      receipt_type, status, virtual_warehouse_id, receipt_date,
-      reference_document_number, created_by_id, approved_by_id,
-      approved_at, notes
-    ) VALUES (
-      'normal', 'approved', NEW.to_virtual_warehouse_id, NEW.transfer_date,
-      'PC-' || NEW.transfer_number, NEW.created_by_id, NEW.approved_by_id,
-      NEW.approved_at, 'Phiếu nhập tự động từ ' || NEW.transfer_number
-    ) RETURNING id INTO v_receipt_id;
-
-    -- Copy items
-    FOR v_transfer_item IN
-      SELECT product_id, quantity, notes
-      FROM public.stock_transfer_items
-      WHERE transfer_id = NEW.id
-    LOOP
-      INSERT INTO public.stock_issue_items (issue_id, product_id, quantity, notes)
-      VALUES (v_issue_id, v_transfer_item.product_id, v_transfer_item.quantity, v_transfer_item.notes);
-
-      INSERT INTO public.stock_receipt_items (receipt_id, product_id, declared_quantity, notes)
-      VALUES (v_receipt_id, v_transfer_item.product_id, v_transfer_item.quantity, v_transfer_item.notes);
-    END LOOP;
-
-    -- Copy serials
-    INSERT INTO public.stock_issue_serials (issue_item_id, physical_product_id, serial_number)
-    SELECT sii.id, sts.physical_product_id, sts.serial_number
-    FROM public.stock_transfer_serials sts
-    JOIN public.stock_transfer_items sti ON sts.transfer_item_id = sti.id
-    JOIN public.stock_issue_items sii ON sii.issue_id = v_issue_id AND sii.product_id = sti.product_id
-    WHERE sti.transfer_id = NEW.id;
-
-    INSERT INTO public.stock_receipt_serials (receipt_item_id, serial_number, physical_product_id)
-    SELECT sri.id, sts.serial_number, sts.physical_product_id
-    FROM public.stock_transfer_serials sts
-    JOIN public.stock_transfer_items sti ON sts.transfer_item_id = sti.id
-    JOIN public.stock_receipt_items sri ON sri.receipt_id = v_receipt_id AND sri.product_id = sti.product_id
-    WHERE sti.transfer_id = NEW.id;
-
-    NEW.generated_issue_id := v_issue_id;
-    NEW.generated_receipt_id := v_receipt_id;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trigger_auto_generate_transfer_documents
-  BEFORE UPDATE ON public.stock_transfers
-  FOR EACH ROW
-  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
-  EXECUTE FUNCTION public.auto_generate_transfer_documents();
-
-CREATE OR REPLACE FUNCTION public.auto_complete_transfer_documents()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
-BEGIN
-  IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-    IF NEW.generated_issue_id IS NOT NULL THEN
-      UPDATE public.stock_issues
-      SET status = 'completed', completed_by_id = NEW.received_by_id, completed_at = NEW.completed_at
-      WHERE id = NEW.generated_issue_id;
-    END IF;
-
-    IF NEW.generated_receipt_id IS NOT NULL THEN
-      UPDATE public.stock_receipts
-      SET status = 'completed', completed_by_id = NEW.received_by_id, completed_at = NEW.completed_at
-      WHERE id = NEW.generated_receipt_id;
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trigger_auto_complete_transfer_documents
-  AFTER UPDATE ON public.stock_transfers
-  FOR EACH ROW
-  WHEN (NEW.status = 'completed' AND OLD.status != 'completed')
-  EXECUTE FUNCTION public.auto_complete_transfer_documents();
+-- Transfer approval logic moved to update_stock_on_transfer_approval()
+-- in 600_stock_triggers.sql which simply:
+--   1. Updates virtual_warehouse_id on physical products (moves them)
+--   2. Decrements stock from source warehouse
+--   3. Increments stock to destination warehouse
+--
+-- NO auto-generated issue/receipt documents are created.
+-- Transfers CANNOT create or destroy physical products - they only MOVE them.
 
 -- =====================================================
 -- STOCK DOCUMENT ATTACHMENTS

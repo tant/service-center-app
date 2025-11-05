@@ -1,12 +1,16 @@
 {
-  "version": "3.2.0",
-  "description": "Mock data for SSTC Service Center - 22 receipts across 3 months with weekly RTX 4070 imports",
-  "created": "2025-01-28",
-  "updated": "2025-11-01",
-  "changelog": "v3.2.0 - Updated to Aug-Oct 2025 dates, 22 receipts with weekly RTX 4070 imports; v3.1.1 - Fixed warehouse names to Vietnamese (matching database); v3.1.0 - Removed taskTypes and taskTemplates (already in schema); v3.0.0 - Removed physical/virtual warehouse creation",
+  "version": "4.0.0",
+  "description": "Enhanced mock data for SSTC Service Center - Complete PTMS testing dataset",
+  "created": "2025-11-03",
+  "updated": "2025-11-03",
+  "changelog": "v4.0.0 - Added comprehensive PTMS testing data: customers, workflows, tasks, service tickets, service requests, issues, transfers, and entity tasks",
 
-  "_note_warehouses": "Uses system default warehouses created by seed.sql",
-  "_note_tasks": "taskTypes and taskTemplates are NOT in this file - they already exist from previous seed runs",
+  "_testing_notes": {
+    "purpose": "Complete E2E testing of Polymorphic Task Management System (Phases 1-4)",
+    "coverage": "All 5 entity types, all user roles, all workflows",
+    "test_users": "Use existing staff accounts from v3.2.0",
+    "test_duration": "8-11 hours of manual testing"
+  },
 
   "staffUsers": [
     {
@@ -18,26 +22,99 @@
     {
       "email": "tech1@sstc.vn",
       "password": "tantran",
-      "fullName": "Kỹ Thuật Viên 1",
+      "fullName": "Trần Văn Tech",
       "role": "technician"
     },
     {
       "email": "tech2@sstc.vn",
       "password": "tantran",
-      "fullName": "Kỹ Thuật Viên 2",
+      "fullName": "Lê Thị Kỹ Thuật",
       "role": "technician"
     },
     {
       "email": "tech3@sstc.vn",
       "password": "tantran",
-      "fullName": "Kỹ Thuật Viên 3",
+      "fullName": "Phạm Văn Sửa Chữa",
       "role": "technician"
     },
     {
       "email": "reception@sstc.vn",
       "password": "tantran",
-      "fullName": "Lễ Tân",
+      "fullName": "Nguyễn Thị Lễ Tân",
       "role": "reception"
+    }
+  ],
+
+  "customers": [
+    {
+      "fullName": "Nguyễn Văn A",
+      "phone": "0912345678",
+      "email": "nguyenvana@gmail.com",
+      "address": "123 Nguyễn Huệ, Quận 1, TP.HCM",
+      "notes": "Khách hàng thân thiết, mua nhiều VGA"
+    },
+    {
+      "fullName": "Trần Thị B",
+      "phone": "0987654321",
+      "email": "tranthib@yahoo.com",
+      "address": "456 Lê Lợi, Quận 3, TP.HCM",
+      "notes": "Khách hàng doanh nghiệp, mua số lượng lớn"
+    },
+    {
+      "fullName": "Lê Văn C",
+      "phone": "0901234567",
+      "email": "levanc@outlook.com",
+      "address": "789 Trần Hưng Đạo, Quận 5, TP.HCM",
+      "notes": null
+    },
+    {
+      "fullName": "Phạm Thị D",
+      "phone": "0909876543",
+      "email": "phamthid@hotmail.com",
+      "address": "321 Võ Văn Tần, Quận 3, TP.HCM",
+      "notes": "Khách hàng mới, lần đầu mua hàng"
+    },
+    {
+      "fullName": "Hoàng Văn E",
+      "phone": "0918765432",
+      "email": null,
+      "address": "654 Hai Bà Trưng, Quận 1, TP.HCM",
+      "notes": "Khách hàng không có email"
+    },
+    {
+      "fullName": "Vũ Thị F",
+      "phone": "0938765432",
+      "email": "vuthif@gmail.com",
+      "address": "987 Nguyễn Trãi, Quận 5, TP.HCM",
+      "notes": "Gaming enthusiast, thích VGA cao cấp"
+    },
+    {
+      "fullName": "Đặng Văn G",
+      "phone": "0928765432",
+      "email": "dangvang@company.com",
+      "address": "147 Điện Biên Phủ, Quận 3, TP.HCM",
+      "notes": "Công ty IT, mua hàng định kỳ"
+    },
+    {
+      "fullName": "Bùi Thị H",
+      "phone": "0948765432",
+      "email": "buithih@gmail.com",
+      "address": "258 Lý Thường Kiệt, Quận 10, TP.HCM",
+      "notes": null
+    },
+    {
+      "fullName": "Ngô Văn I",
+      "phone": "0958765432",
+      "email": "ngovani@yahoo.com",
+      "address": "369 Cách Mạng Tháng 8, Quận 3, TP.HCM",
+      "notes": "Khách hàng có nhiều sản phẩm cần bảo hành"
+    },
+    {
+      "fullName": "Trương Thị K",
+      "phone": "0968765432",
+      "email": "truongthik@gmail.com",
+      "address": "741 Phan Đăng Lưu, Quận Bình Thạnh, TP.HCM",
+      "notes": "Khách hàng VIP"
     }
   ],
 
@@ -60,661 +137,1185 @@
     }
   ],
 
-  "parts": [
-    {
-      "name": "Fan VGA ZOTAC 90mm",
-      "partNumber": "FAN-ZT-90",
-      "category": "Cooling",
-      "price": 150000,
-      "costPrice": 80000,
-      "stockQuantity": 20,
-      "minStockLevel": 5
-    },
-    {
-      "name": "Capacitor 470uF 16V",
-      "partNumber": "CAP-470-16",
-      "category": "Electronics",
-      "price": 10000,
-      "costPrice": 5000,
-      "stockQuantity": 100,
-      "minStockLevel": 20
-    },
-    {
-      "name": "VRM Mosfet",
-      "partNumber": "VRM-MOSFET",
-      "category": "Electronics",
-      "price": 50000,
-      "costPrice": 25000,
-      "stockQuantity": 50,
-      "minStockLevel": 10,
-      "description": "Mosfet cho VRM (Voltage Regulator Module), điều chỉnh điện áp cho GPU"
-    },
-    {
-      "name": "HDMI Port Female",
-      "partNumber": "HDMI-F",
-      "category": "Connectors",
-      "price": 30000,
-      "costPrice": 15000,
-      "stockQuantity": 30,
-      "minStockLevel": 10
-    },
-    {
-      "name": "DisplayPort Female",
-      "partNumber": "DP-F",
-      "category": "Connectors",
-      "price": 35000,
-      "costPrice": 18000,
-      "stockQuantity": 25,
-      "minStockLevel": 8
-    },
-    {
-      "name": "Power Connector 8-pin",
-      "partNumber": "PWR-8PIN",
-      "category": "Connectors",
-      "price": 25000,
-      "costPrice": 12000,
-      "stockQuantity": 40,
-      "minStockLevel": 10
-    },
-    {
-      "name": "VRAM Chip GDDR6 1GB",
-      "partNumber": "VRAM-GDDR6-1G",
-      "category": "Memory",
-      "price": 500000,
-      "costPrice": 250000,
-      "stockQuantity": 10,
-      "minStockLevel": 3,
-      "description": "Chip VRAM GDDR6 1GB, dùng để thay thế chip bộ nhớ hỏng trên VGA"
-    }
-  ],
-
   "products": [
     {
-      "name": "ZOTAC RTX 4070 Gaming",
+      "name": "ZOTAC RTX 4090 24GB",
+      "type": "VGA",
+      "brand": "ZOTAC",
+      "model": "RTX 4090",
+      "sku": "ZT-RTX4090-24G",
+      "warrantyMonths": 36
+    },
+    {
+      "name": "ZOTAC RTX 4070 12GB",
       "type": "VGA",
       "brand": "ZOTAC",
       "model": "RTX 4070",
-      "sku": "ZT-4070-G",
-      "warrantyMonths": 36,
-      "compatibleParts": [
-        "FAN-ZT-90",
-        "CAP-470-16",
-        "VRM-MOSFET",
-        "HDMI-F",
-        "DP-F",
-        "PWR-8PIN",
-        "VRAM-GDDR6-1G"
-      ]
+      "sku": "ZT-RTX4070-12G",
+      "warrantyMonths": 36
     },
     {
-      "name": "ZOTAC RTX 4060 Ti",
+      "name": "ZOTAC RTX 4060 Ti 8GB",
       "type": "VGA",
       "brand": "ZOTAC",
       "model": "RTX 4060 Ti",
-      "sku": "ZT-4060Ti",
-      "warrantyMonths": 36,
-      "compatibleParts": [
-        "FAN-ZT-90",
-        "CAP-470-16",
-        "VRM-MOSFET",
-        "HDMI-F",
-        "DP-F",
-        "PWR-8PIN",
-        "VRAM-GDDR6-1G"
-      ]
+      "sku": "ZT-RTX4060Ti-8G",
+      "warrantyMonths": 36
+    },
+    {
+      "name": "ZOTAC ZBOX CI669 Mini PC",
+      "type": "MiniPC",
+      "brand": "ZOTAC",
+      "model": "ZBOX CI669",
+      "sku": "ZT-ZBOX-CI669",
+      "warrantyMonths": 36
+    },
+    {
+      "name": "SSTC SSD NVMe Gen4 2TB",
+      "type": "SSD",
+      "brand": "SSTC",
+      "model": "NVMe Gen4 2TB",
+      "sku": "SSTC-SSD-2TB-G4",
+      "warrantyMonths": 60
     },
     {
       "name": "SSTC SSD NVMe Gen4 1TB",
       "type": "SSD",
       "brand": "SSTC",
       "model": "NVMe Gen4 1TB",
-      "sku": "SSTC-1TB-G4",
-      "warrantyMonths": 60,
-      "compatibleParts": []
+      "sku": "SSTC-SSD-1TB-G4",
+      "warrantyMonths": 60
     },
     {
       "name": "SSTC SSD NVMe Gen3 512GB",
       "type": "SSD",
       "brand": "SSTC",
       "model": "NVMe Gen3 512GB",
-      "sku": "SSTC-512GB-G3",
-      "warrantyMonths": 60,
-      "compatibleParts": []
+      "sku": "SSTC-SSD-512G-G3",
+      "warrantyMonths": 60
+    },
+    {
+      "name": "SSTC DDR5 32GB 5600MHz",
+      "type": "RAM",
+      "brand": "SSTC",
+      "model": "DDR5 32GB 5600",
+      "sku": "SSTC-RAM-32G-DDR5",
+      "warrantyMonths": 60
     },
     {
       "name": "SSTC DDR4 16GB 3200MHz",
       "type": "RAM",
       "brand": "SSTC",
       "model": "DDR4 16GB 3200",
-      "sku": "SSTC-16GB-3200",
-      "warrantyMonths": 60,
-      "compatibleParts": []
-    },
-    {
-      "name": "ZOTAC ZBOX Mini PC",
-      "type": "MiniPC",
-      "brand": "ZOTAC",
-      "model": "ZBOX CI series",
-      "sku": "ZBOX-CI",
-      "warrantyMonths": 36,
-      "compatibleParts": []
+      "sku": "SSTC-RAM-16G-DDR4",
+      "warrantyMonths": 60
     }
   ],
 
-  "physicalProducts": {
-    "_note": "22 receipts distributed across 3 months (Aug 2025 - Oct 2025)",
-    "_distribution": {
-      "RTX 4070 imports": "Weekly (every week has at least one receipt with 4070)",
-      "Total receipts": 22,
-      "Date range": "2025-08-04 to 2025-10-27"
-    },
-    "receipts": [
+  "taskLibrary": {
+    "_note": "Task definitions for the task library (reusable across workflows)",
+    "tasks": [
       {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 8",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-08-04",
-        "notes": "Phiếu nhập kho bảo hành - Hàng mới tuần đầu tháng 8",
-        "items": [
+        "name": "Kiểm tra sản phẩm",
+        "category": "inspection",
+        "estimatedMinutes": 30,
+        "description": "Kiểm tra tổng quan tình trạng sản phẩm"
+      },
+      {
+        "name": "Nhập serial vào hệ thống",
+        "category": "serial_entry",
+        "estimatedMinutes": 15,
+        "description": "Nhập serial number cho sản phẩm trong phiếu nhập kho"
+      },
+      {
+        "name": "Phê duyệt phiếu",
+        "category": "approval",
+        "estimatedMinutes": 10,
+        "description": "Quản lý phê duyệt phiếu trước khi thực hiện"
+      },
+      {
+        "name": "Chẩn đoán lỗi",
+        "category": "diagnosis",
+        "estimatedMinutes": 60,
+        "description": "Chẩn đoán và xác định nguyên nhân lỗi"
+      },
+      {
+        "name": "Thay linh kiện",
+        "category": "repair",
+        "estimatedMinutes": 120,
+        "description": "Thay thế linh kiện hư hỏng"
+      },
+      {
+        "name": "Kiểm tra chất lượng",
+        "category": "quality_check",
+        "estimatedMinutes": 30,
+        "description": "Kiểm tra chất lượng sau sửa chữa"
+      },
+      {
+        "name": "Liên hệ khách hàng",
+        "category": "customer_service",
+        "estimatedMinutes": 15,
+        "description": "Liên hệ thông báo khách hàng"
+      },
+      {
+        "name": "Đóng gói sản phẩm",
+        "category": "packaging",
+        "estimatedMinutes": 15,
+        "description": "Đóng gói và chuẩn bị giao hàng"
+      },
+      {
+        "name": "Xác nhận nhận hàng",
+        "category": "receiving",
+        "estimatedMinutes": 30,
+        "description": "Xác nhận đã nhận hàng từ khách hàng"
+      },
+      {
+        "name": "Tạo phiếu sửa chữa",
+        "category": "ticketing",
+        "estimatedMinutes": 20,
+        "description": "Tạo phiếu sửa chữa cho yêu cầu dịch vụ"
+      },
+      {
+        "name": "Kiểm kê kho",
+        "category": "inventory",
+        "estimatedMinutes": 60,
+        "description": "Kiểm kê số lượng hàng trong kho"
+      },
+      {
+        "name": "Cập nhật tồn kho",
+        "category": "inventory",
+        "estimatedMinutes": 15,
+        "description": "Cập nhật số liệu tồn kho sau nhập/xuất"
+      }
+    ]
+  },
+
+  "workflows": {
+    "_note": "Workflow templates for each entity type",
+    "templates": [
+      {
+        "name": "Quy trình nhập kho chuẩn",
+        "description": "Quy trình chuẩn cho phiếu nhập kho với serial entry",
+        "entityType": "inventory_receipt",
+        "enforceSequence": true,
+        "isActive": true,
+        "notes": "Áp dụng cho tất cả phiếu nhập kho. Serial entry là bắt buộc.",
+        "tasks": [
           {
-            "productSku": "ZT-4070-G",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2028-08-04",
-            "userWarrantyEndDate": "2029-02-04",
-            "serials": ["ZT4070-W01-001", "ZT4070-W01-002", "ZT4070-W01-003", "ZT4070-W01-004", "ZT4070-W01-005", "ZT4070-W01-006", "ZT4070-W01-007", "ZT4070-W01-008"]
+            "taskName": "Kiểm tra sản phẩm",
+            "sequenceOrder": 1,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra tình trạng hàng nhập, đảm bảo không hư hỏng"
           },
           {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2030-08-04",
-            "userWarrantyEndDate": "2031-02-04",
-            "serials": ["SSD1TB-W01-001", "SSD1TB-W01-002", "SSD1TB-W01-003", "SSD1TB-W01-004", "SSD1TB-W01-005", "SSD1TB-W01-006", "SSD1TB-W01-007", "SSD1TB-W01-008", "SSD1TB-W01-009", "SSD1TB-W01-010"]
+            "taskName": "Phê duyệt phiếu",
+            "sequenceOrder": 2,
+            "isRequired": true,
+            "customInstructions": "Quản lý phê duyệt phiếu nhập kho"
+          },
+          {
+            "taskName": "Nhập serial vào hệ thống",
+            "sequenceOrder": 3,
+            "isRequired": true,
+            "customInstructions": "Nhập đầy đủ serial cho tất cả sản phẩm"
+          },
+          {
+            "taskName": "Kiểm kê kho",
+            "sequenceOrder": 4,
+            "isRequired": false,
+            "customInstructions": "Kiểm kê sau khi nhập kho (optional)"
           }
         ]
       },
       {
-        "receiptType": "normal",
-        "supplier": "SSTC Supplier - RAM và SSD",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-08-06",
-        "notes": "Nhập RAM và SSD từ SSTC",
-        "items": [
+        "name": "Quy trình xuất kho chuẩn",
+        "description": "Quy trình chuẩn cho phiếu xuất kho",
+        "entityType": "inventory_issue",
+        "enforceSequence": true,
+        "isActive": true,
+        "notes": "Áp dụng cho xuất kho nội bộ và xuất bán hàng",
+        "tasks": [
           {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2030-08-06",
-            "userWarrantyEndDate": "2031-02-06",
-            "serials": ["RAM16G-W01-001", "RAM16G-W01-002", "RAM16G-W01-003", "RAM16G-W01-004", "RAM16G-W01-005", "RAM16G-W01-006", "RAM16G-W01-007", "RAM16G-W01-008", "RAM16G-W01-009", "RAM16G-W01-010", "RAM16G-W01-011", "RAM16G-W01-012"]
+            "taskName": "Phê duyệt phiếu",
+            "sequenceOrder": 1,
+            "isRequired": true,
+            "customInstructions": "Quản lý phê duyệt phiếu xuất kho"
           },
           {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2030-08-06",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD512-W01-001", "SSD512-W01-002", "SSD512-W01-003", "SSD512-W01-004", "SSD512-W01-005", "SSD512-W01-006", "SSD512-W01-007", "SSD512-W01-008"]
+            "taskName": "Kiểm tra sản phẩm",
+            "sequenceOrder": 2,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra sản phẩm trước khi xuất"
+          },
+          {
+            "taskName": "Cập nhật tồn kho",
+            "sequenceOrder": 3,
+            "isRequired": true,
+            "customInstructions": "Cập nhật số liệu tồn kho sau xuất"
           }
         ]
       },
       {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 8",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-08-11",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 và 4060Ti",
-        "items": [
+        "name": "Quy trình chuyển kho",
+        "description": "Quy trình chuyển hàng giữa các kho",
+        "entityType": "inventory_transfer",
+        "enforceSequence": true,
+        "isActive": true,
+        "notes": "Yêu cầu phê duyệt cho chuyển kho giá trị cao (>10M)",
+        "tasks": [
           {
-            "productSku": "ZT-4070-G",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-08-11",
-            "userWarrantyEndDate": "2029-02-11",
-            "serials": ["ZT4070-W02-001", "ZT4070-W02-002", "ZT4070-W02-003", "ZT4070-W02-004", "ZT4070-W02-005", "ZT4070-W02-006", "ZT4070-W02-007", "ZT4070-W02-008", "ZT4070-W02-009", "ZT4070-W02-010"]
+            "taskName": "Phê duyệt phiếu",
+            "sequenceOrder": 1,
+            "isRequired": true,
+            "customInstructions": "Quản lý phê duyệt chuyển kho (bắt buộc nếu >10M)"
           },
           {
-            "productSku": "ZT-4060Ti",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2028-08-11",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-W02-001", "ZT4060-W02-002", "ZT4060-W02-003", "ZT4060-W02-004", "ZT4060-W02-005", "ZT4060-W02-006", "ZT4060-W02-007", "ZT4060-W02-008", "ZT4060-W02-009", "ZT4060-W02-010", "ZT4060-W02-011", "ZT4060-W02-012"]
+            "taskName": "Kiểm tra sản phẩm",
+            "sequenceOrder": 2,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra trước khi chuyển"
+          },
+          {
+            "taskName": "Cập nhật tồn kho",
+            "sequenceOrder": 3,
+            "isRequired": true,
+            "customInstructions": "Cập nhật tồn kho cả 2 kho"
           }
         ]
       },
       {
-        "receiptType": "normal",
-        "supplier": "RMA Return - Sản phẩm lỗi",
-        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
-        "receiptDate": "2025-08-14",
-        "notes": "Phiếu nhập kho RMA - Sản phẩm lỗi chờ trả về hãng",
-        "items": [
+        "name": "Quy trình xử lý yêu cầu dịch vụ",
+        "description": "Quy trình từ yêu cầu dịch vụ đến tạo phiếu sửa chữa",
+        "entityType": "service_request",
+        "enforceSequence": true,
+        "isActive": true,
+        "notes": "Áp dụng cho yêu cầu dịch vụ từ khách hàng",
+        "tasks": [
           {
-            "productSku": "ZT-4070-G",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2027-08-14",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4070-RMA-W02-001", "ZT4070-RMA-W02-002", "ZT4070-RMA-W02-003"]
+            "taskName": "Xác nhận nhận hàng",
+            "sequenceOrder": 1,
+            "isRequired": true,
+            "customInstructions": "Xác nhận đã nhận sản phẩm từ khách hàng"
           },
           {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2029-08-14",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD1TB-RMA-W02-001", "SSD1TB-RMA-W02-002"]
+            "taskName": "Kiểm tra sản phẩm",
+            "sequenceOrder": 2,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra tình trạng sản phẩm khách gửi"
+          },
+          {
+            "taskName": "Tạo phiếu sửa chữa",
+            "sequenceOrder": 3,
+            "isRequired": true,
+            "customInstructions": "Tạo phiếu sửa chữa cho từng sản phẩm"
           }
         ]
       },
       {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 8",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-08-18",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3",
-        "items": [
+        "name": "Quy trình sửa chữa chuẩn",
+        "description": "Quy trình sửa chữa sản phẩm bảo hành",
+        "entityType": "service_ticket",
+        "enforceSequence": true,
+        "isActive": true,
+        "notes": "Quy trình chuẩn cho tất cả phiếu sửa chữa",
+        "tasks": [
           {
-            "productSku": "ZT-4070-G",
-            "quantity": 6,
-            "manufacturerWarrantyEndDate": "2028-08-18",
-            "userWarrantyEndDate": "2029-02-18",
-            "serials": ["ZT4070-W03-001", "ZT4070-W03-002", "ZT4070-W03-003", "ZT4070-W03-004", "ZT4070-W03-005", "ZT4070-W03-006"]
+            "taskName": "Kiểm tra sản phẩm",
+            "sequenceOrder": 1,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra ban đầu và ghi nhận lỗi"
           },
           {
-            "productSku": "ZBOX-CI",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2028-08-18",
-            "userWarrantyEndDate": null,
-            "serials": ["ZBOX-W03-001", "ZBOX-W03-002", "ZBOX-W03-003", "ZBOX-W03-004"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Dead Stock - Không sửa được",
-        "toVirtualWarehouseName": "Kho Hàng Hỏng",
-        "receiptDate": "2025-08-21",
-        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hư hỏng nặng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2026-08-21",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4070-DEAD-W03-001", "ZT4070-DEAD-W03-002"]
+            "taskName": "Chẩn đoán lỗi",
+            "sequenceOrder": 2,
+            "isRequired": true,
+            "customInstructions": "Xác định nguyên nhân và phương án sửa chữa"
           },
           {
-            "productSku": "ZT-4060Ti",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2026-08-21",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-DEAD-W03-001", "ZT4060-DEAD-W03-002"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 8",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-08-25",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2028-08-25",
-            "userWarrantyEndDate": "2029-02-25",
-            "serials": ["ZT4070-W04-001", "ZT4070-W04-002", "ZT4070-W04-003", "ZT4070-W04-004", "ZT4070-W04-005", "ZT4070-W04-006", "ZT4070-W04-007", "ZT4070-W04-008", "ZT4070-W04-009", "ZT4070-W04-010", "ZT4070-W04-011", "ZT4070-W04-012"]
+            "taskName": "Thay linh kiện",
+            "sequenceOrder": 3,
+            "isRequired": false,
+            "customInstructions": "Thay thế linh kiện nếu cần"
           },
           {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2030-08-25",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD512-W04-001", "SSD512-W04-002", "SSD512-W04-003", "SSD512-W04-004", "SSD512-W04-005", "SSD512-W04-006", "SSD512-W04-007", "SSD512-W04-008", "SSD512-W04-009", "SSD512-W04-010"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 9",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-09-02",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 đầu tháng 9",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-09-02",
-            "userWarrantyEndDate": "2029-03-02",
-            "serials": ["ZT4070-W05-001", "ZT4070-W05-002", "ZT4070-W05-003", "ZT4070-W05-004", "ZT4070-W05-005", "ZT4070-W05-006", "ZT4070-W05-007", "ZT4070-W05-008", "ZT4070-W05-009", "ZT4070-W05-010"]
+            "taskName": "Kiểm tra chất lượng",
+            "sequenceOrder": 4,
+            "isRequired": true,
+            "customInstructions": "Kiểm tra hoạt động sau sửa chữa"
           },
           {
-            "productSku": "ZT-4060Ti",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2028-09-02",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-W05-001", "ZT4060-W05-002", "ZT4060-W05-003", "ZT4060-W05-004", "ZT4060-W05-005", "ZT4060-W05-006", "ZT4060-W05-007", "ZT4060-W05-008"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Service Tickets - Đang xử lý",
-        "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
-        "receiptDate": "2025-09-05",
-        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang bảo hành",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2028-03-05",
-            "userWarrantyEndDate": "2028-09-05",
-            "serials": ["ZT4070-SVC-W05-001", "ZT4070-SVC-W05-002", "ZT4070-SVC-W05-003", "ZT4070-SVC-W05-004"]
+            "taskName": "Liên hệ khách hàng",
+            "sequenceOrder": 5,
+            "isRequired": true,
+            "customInstructions": "Thông báo khách hàng hoàn thành"
           },
           {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2030-09-05",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD1TB-SVC-W05-001", "SSD1TB-SVC-W05-002", "SSD1TB-SVC-W05-003"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 9",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-09-09",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 2 tháng 9",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2028-09-09",
-            "userWarrantyEndDate": "2029-03-09",
-            "serials": ["ZT4070-W06-001", "ZT4070-W06-002", "ZT4070-W06-003", "ZT4070-W06-004", "ZT4070-W06-005", "ZT4070-W06-006", "ZT4070-W06-007", "ZT4070-W06-008"]
-          },
-          {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2030-09-09",
-            "userWarrantyEndDate": "2031-03-09",
-            "serials": ["SSD1TB-W06-001", "SSD1TB-W06-002", "SSD1TB-W06-003", "SSD1TB-W06-004", "SSD1TB-W06-005", "SSD1TB-W06-006", "SSD1TB-W06-007", "SSD1TB-W06-008", "SSD1TB-W06-009", "SSD1TB-W06-010", "SSD1TB-W06-011", "SSD1TB-W06-012"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Customer Sales - Đã bán",
-        "toVirtualWarehouseName": "Hàng Đã Bán",
-        "receiptDate": "2025-09-12",
-        "notes": "Phiếu nhập hàng đã bán - Sản phẩm ở địa điểm khách hàng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 5,
-            "manufacturerWarrantyEndDate": "2028-09-12",
-            "userWarrantyEndDate": "2029-03-12",
-            "serials": ["ZT4070-SOLD-W06-001", "ZT4070-SOLD-W06-002", "ZT4070-SOLD-W06-003", "ZT4070-SOLD-W06-004", "ZT4070-SOLD-W06-005"]
-          },
-          {
-            "productSku": "ZBOX-CI",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2028-09-12",
-            "userWarrantyEndDate": null,
-            "serials": ["ZBOX-SOLD-W06-001", "ZBOX-SOLD-W06-002"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 9",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-09-16",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3 tháng 9",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-09-16",
-            "userWarrantyEndDate": "2029-03-16",
-            "serials": ["ZT4070-W07-001", "ZT4070-W07-002", "ZT4070-W07-003", "ZT4070-W07-004", "ZT4070-W07-005", "ZT4070-W07-006", "ZT4070-W07-007", "ZT4070-W07-008", "ZT4070-W07-009", "ZT4070-W07-010"]
-          },
-          {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 15,
-            "manufacturerWarrantyEndDate": "2030-09-16",
-            "userWarrantyEndDate": "2031-03-16",
-            "serials": ["RAM16G-W07-001", "RAM16G-W07-002", "RAM16G-W07-003", "RAM16G-W07-004", "RAM16G-W07-005", "RAM16G-W07-006", "RAM16G-W07-007", "RAM16G-W07-008", "RAM16G-W07-009", "RAM16G-W07-010", "RAM16G-W07-011", "RAM16G-W07-012", "RAM16G-W07-013", "RAM16G-W07-014", "RAM16G-W07-015"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "RMA Return - Sản phẩm lỗi",
-        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
-        "receiptDate": "2025-09-19",
-        "notes": "Phiếu nhập kho RMA - Lỗi nghiêm trọng chờ trả hãng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 4,
-            "manufacturerWarrantyEndDate": "2027-09-19",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4070-RMA-W07-001", "ZT4070-RMA-W07-002", "ZT4070-RMA-W07-003", "ZT4070-RMA-W07-004"]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2027-09-19",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-RMA-W07-001", "ZT4060-RMA-W07-002", "ZT4060-RMA-W07-003"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 9",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-09-23",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4 tháng 9",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 15,
-            "manufacturerWarrantyEndDate": "2028-09-23",
-            "userWarrantyEndDate": "2029-03-23",
-            "serials": ["ZT4070-W08-001", "ZT4070-W08-002", "ZT4070-W08-003", "ZT4070-W08-004", "ZT4070-W08-005", "ZT4070-W08-006", "ZT4070-W08-007", "ZT4070-W08-008", "ZT4070-W08-009", "ZT4070-W08-010", "ZT4070-W08-011", "ZT4070-W08-012", "ZT4070-W08-013", "ZT4070-W08-014", "ZT4070-W08-015"]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-09-23",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-W08-001", "ZT4060-W08-002", "ZT4060-W08-003", "ZT4060-W08-004", "ZT4060-W08-005", "ZT4060-W08-006", "ZT4060-W08-007", "ZT4060-W08-008", "ZT4060-W08-009", "ZT4060-W08-010"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 1 tháng 10",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-10-02",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 đầu tháng 10",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2028-10-02",
-            "userWarrantyEndDate": "2029-04-02",
-            "serials": ["ZT4070-W09-001", "ZT4070-W09-002", "ZT4070-W09-003", "ZT4070-W09-004", "ZT4070-W09-005", "ZT4070-W09-006", "ZT4070-W09-007", "ZT4070-W09-008", "ZT4070-W09-009", "ZT4070-W09-010", "ZT4070-W09-011", "ZT4070-W09-012"]
-          },
-          {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2030-10-02",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD512-W09-001", "SSD512-W09-002", "SSD512-W09-003", "SSD512-W09-004", "SSD512-W09-005", "SSD512-W09-006", "SSD512-W09-007", "SSD512-W09-008", "SSD512-W09-009", "SSD512-W09-010"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Dead Stock - Không sửa được",
-        "toVirtualWarehouseName": "Kho Hàng Hỏng",
-        "receiptDate": "2025-10-06",
-        "notes": "Phiếu nhập kho hàng hỏng - Sản phẩm hư hỏng nặng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2026-10-06",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4070-DEAD-W09-001", "ZT4070-DEAD-W09-002", "ZT4070-DEAD-W09-003"]
-          },
-          {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2027-10-06",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD1TB-DEAD-W09-001", "SSD1TB-DEAD-W09-002"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 2 tháng 10",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-10-09",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 2 tháng 10",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2028-10-09",
-            "userWarrantyEndDate": "2029-04-09",
-            "serials": ["ZT4070-W10-001", "ZT4070-W10-002", "ZT4070-W10-003", "ZT4070-W10-004", "ZT4070-W10-005", "ZT4070-W10-006", "ZT4070-W10-007", "ZT4070-W10-008"]
-          },
-          {
-            "productSku": "SSTC-1TB-G4",
-            "quantity": 15,
-            "manufacturerWarrantyEndDate": "2030-10-09",
-            "userWarrantyEndDate": "2031-04-09",
-            "serials": ["SSD1TB-W10-001", "SSD1TB-W10-002", "SSD1TB-W10-003", "SSD1TB-W10-004", "SSD1TB-W10-005", "SSD1TB-W10-006", "SSD1TB-W10-007", "SSD1TB-W10-008", "SSD1TB-W10-009", "SSD1TB-W10-010", "SSD1TB-W10-011", "SSD1TB-W10-012", "SSD1TB-W10-013", "SSD1TB-W10-014", "SSD1TB-W10-015"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Service Tickets - Đang xử lý",
-        "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
-        "receiptDate": "2025-10-13",
-        "notes": "Phiếu nhập kho sửa chữa - Sản phẩm đang bảo hành",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2028-04-13",
-            "userWarrantyEndDate": "2028-10-13",
-            "serials": ["ZT4070-SVC-W10-001", "ZT4070-SVC-W10-002", "ZT4070-SVC-W10-003"]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 2,
-            "manufacturerWarrantyEndDate": "2028-04-13",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-SVC-W10-001", "ZT4060-SVC-W10-002"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 3 tháng 10",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-10-16",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 3 tháng 10",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-10-16",
-            "userWarrantyEndDate": "2029-04-16",
-            "serials": ["ZT4070-W11-001", "ZT4070-W11-002", "ZT4070-W11-003", "ZT4070-W11-004", "ZT4070-W11-005", "ZT4070-W11-006", "ZT4070-W11-007", "ZT4070-W11-008", "ZT4070-W11-009", "ZT4070-W11-010"]
-          },
-          {
-            "productSku": "ZBOX-CI",
-            "quantity": 5,
-            "manufacturerWarrantyEndDate": "2028-10-16",
-            "userWarrantyEndDate": null,
-            "serials": ["ZBOX-W11-001", "ZBOX-W11-002", "ZBOX-W11-003", "ZBOX-W11-004", "ZBOX-W11-005"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "Customer Sales - Đã bán",
-        "toVirtualWarehouseName": "Hàng Đã Bán",
-        "receiptDate": "2025-10-20",
-        "notes": "Phiếu nhập hàng đã bán - Sản phẩm ở địa điểm khách hàng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 6,
-            "manufacturerWarrantyEndDate": "2028-10-20",
-            "userWarrantyEndDate": "2029-04-20",
-            "serials": ["ZT4070-SOLD-W11-001", "ZT4070-SOLD-W11-002", "ZT4070-SOLD-W11-003", "ZT4070-SOLD-W11-004", "ZT4070-SOLD-W11-005", "ZT4070-SOLD-W11-006"]
-          },
-          {
-            "productSku": "SSTC-16GB-3200",
-            "quantity": 8,
-            "manufacturerWarrantyEndDate": "2030-10-20",
-            "userWarrantyEndDate": "2031-04-20",
-            "serials": ["RAM16G-SOLD-W11-001", "RAM16G-SOLD-W11-002", "RAM16G-SOLD-W11-003", "RAM16G-SOLD-W11-004", "RAM16G-SOLD-W11-005", "RAM16G-SOLD-W11-006", "RAM16G-SOLD-W11-007", "RAM16G-SOLD-W11-008"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "ZOTAC Supplier - Nhập hàng tuần 4 tháng 10",
-        "toVirtualWarehouseName": "Kho Bảo Hành",
-        "receiptDate": "2025-10-23",
-        "notes": "Phiếu nhập kho bảo hành - RTX 4070 tuần 4 tháng 10",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 10,
-            "manufacturerWarrantyEndDate": "2028-10-23",
-            "userWarrantyEndDate": "2029-04-23",
-            "serials": ["ZT4070-W12-001", "ZT4070-W12-002", "ZT4070-W12-003", "ZT4070-W12-004", "ZT4070-W12-005", "ZT4070-W12-006", "ZT4070-W12-007", "ZT4070-W12-008", "ZT4070-W12-009", "ZT4070-W12-010"]
-          },
-          {
-            "productSku": "ZT-4060Ti",
-            "quantity": 12,
-            "manufacturerWarrantyEndDate": "2028-10-23",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4060-W12-001", "ZT4060-W12-002", "ZT4060-W12-003", "ZT4060-W12-004", "ZT4060-W12-005", "ZT4060-W12-006", "ZT4060-W12-007", "ZT4060-W12-008", "ZT4060-W12-009", "ZT4060-W12-010", "ZT4060-W12-011", "ZT4060-W12-012"]
-          }
-        ]
-      },
-      {
-        "receiptType": "normal",
-        "supplier": "RMA Return - Sản phẩm lỗi cuối tháng",
-        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
-        "receiptDate": "2025-10-27",
-        "notes": "Phiếu nhập kho RMA - Lỗi nghiêm trọng chờ trả hãng",
-        "items": [
-          {
-            "productSku": "ZT-4070-G",
-            "quantity": 5,
-            "manufacturerWarrantyEndDate": "2027-10-27",
-            "userWarrantyEndDate": null,
-            "serials": ["ZT4070-RMA-W12-001", "ZT4070-RMA-W12-002", "ZT4070-RMA-W12-003", "ZT4070-RMA-W12-004", "ZT4070-RMA-W12-005"]
-          },
-          {
-            "productSku": "SSTC-512GB-G3",
-            "quantity": 3,
-            "manufacturerWarrantyEndDate": "2028-10-27",
-            "userWarrantyEndDate": null,
-            "serials": ["SSD512-RMA-W12-001", "SSD512-RMA-W12-002", "SSD512-RMA-W12-003"]
+            "taskName": "Đóng gói sản phẩm",
+            "sequenceOrder": 6,
+            "isRequired": true,
+            "customInstructions": "Đóng gói và chuẩn bị giao hàng"
           }
         ]
       }
+    ]
+  },
+
+  "inventoryOperations": {
+    "_note": "Completed inventory operations for Aug-Oct 2025 with physical products",
+
+    "receipts": [
+      {
+        "documentNumber": "GRN-2025-001",
+        "supplier": "ZOTAC Official Distributor",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-08-05",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-05T09:30:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 20 },
+          { "productSku": "ZT-4060Ti", "quantity": 15 }
+        ],
+        "notes": "First batch - August inventory"
+      },
+      {
+        "documentNumber": "GRN-2025-002",
+        "supplier": "SSTC Factory",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-08-12",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-12T10:15:00Z",
+        "items": [
+          { "productSku": "SSTC-1TB-G4", "quantity": 30 },
+          { "productSku": "SSTC-512GB-G3", "quantity": 25 },
+          { "productSku": "SSTC-16GB-3200", "quantity": 40 }
+        ],
+        "notes": "SSTC products - August batch"
+      },
+      {
+        "documentNumber": "GRN-2025-003",
+        "supplier": "ZOTAC Official Distributor",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-08-20",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-20T11:00:00Z",
+        "items": [
+          { "productSku": "ZBOX-CI", "quantity": 12 }
+        ],
+        "notes": "Mini PC arrival"
+      },
+      {
+        "documentNumber": "GRN-2025-004",
+        "supplier": "ZOTAC Official Distributor",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-09-03",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-03T08:45:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 18 },
+          { "productSku": "ZT-4060Ti", "quantity": 22 }
+        ],
+        "notes": "September VGA restock"
+      },
+      {
+        "documentNumber": "GRN-2025-005",
+        "supplier": "SSTC Factory",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-09-15",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-15T09:20:00Z",
+        "items": [
+          { "productSku": "SSTC-1TB-G4", "quantity": 25 },
+          { "productSku": "SSTC-16GB-3200", "quantity": 35 }
+        ],
+        "notes": "September SSTC delivery"
+      },
+      {
+        "documentNumber": "GRN-2025-006",
+        "supplier": "ZOTAC Official Distributor",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-10-02",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-10-02T10:00:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 15 },
+          { "productSku": "ZBOX-CI", "quantity": 10 }
+        ],
+        "notes": "October restock"
+      },
+      {
+        "documentNumber": "GRN-2025-007",
+        "supplier": "SSTC Factory",
+        "toVirtualWarehouseName": "Công ty - Kho Chính",
+        "receiptDate": "2025-10-18",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-10-18T11:30:00Z",
+        "items": [
+          { "productSku": "SSTC-512GB-G3", "quantity": 30 },
+          { "productSku": "SSTC-16GB-3200", "quantity": 28 }
+        ],
+        "notes": "October SSTC batch"
+      }
+    ],
+
+    "issues": [
+      {
+        "documentNumber": "GIN-2025-001",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "issueDate": "2025-08-10",
+        "issueType": "normal",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-10T14:00:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 5 },
+          { "productSku": "SSTC-1TB-G4", "quantity": 8 }
+        ],
+        "notes": "Sales to customer - move to customer_installed"
+      },
+      {
+        "documentNumber": "GIN-2025-002",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "issueDate": "2025-08-15",
+        "issueType": "normal",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-15T10:30:00Z",
+        "items": [
+          { "productSku": "ZT-4060Ti", "quantity": 3 },
+          { "productSku": "SSTC-512GB-G3", "quantity": 4 }
+        ],
+        "notes": "Warranty replacements - send to customers"
+      },
+      {
+        "documentNumber": "GIN-2025-003",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "issueDate": "2025-09-08",
+        "issueType": "normal",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-08T15:20:00Z",
+        "items": [
+          { "productSku": "ZBOX-CI", "quantity": 4 },
+          { "productSku": "SSTC-16GB-3200", "quantity": 10 }
+        ],
+        "notes": "Corporate sales order"
+      },
+      {
+        "documentNumber": "GIN-2025-004",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "issueDate": "2025-09-20",
+        "issueType": "normal",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-20T11:00:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 6 }
+        ],
+        "notes": "Warranty replacements batch 2"
+      },
+      {
+        "documentNumber": "GIN-2025-005",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "issueDate": "2025-10-05",
+        "issueType": "normal",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-10-05T13:45:00Z",
+        "items": [
+          { "productSku": "SSTC-1TB-G4", "quantity": 12 },
+          { "productSku": "SSTC-512GB-G3", "quantity": 8 }
+        ],
+        "notes": "October sales"
+      }
+    ],
+
+    "transfers": [
+      {
+        "documentNumber": "TRF-2025-001",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "transferDate": "2025-08-18",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-18T09:00:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 8 },
+          { "productSku": "ZT-4060Ti", "quantity": 6 }
+        ],
+        "notes": "Reserve for warranty claims"
+      },
+      {
+        "documentNumber": "TRF-2025-002",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "toVirtualWarehouseName": "Kho Bảo Hành",
+        "transferDate": "2025-09-12",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-12T10:15:00Z",
+        "items": [
+          { "productSku": "SSTC-1TB-G4", "quantity": 10 },
+          { "productSku": "SSTC-512GB-G3", "quantity": 8 }
+        ],
+        "notes": "September warranty stock"
+      },
+      {
+        "documentNumber": "TRF-2025-003",
+        "fromVirtualWarehouseName": "Kho Bảo Hành",
+        "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
+        "transferDate": "2025-08-25",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-08-25T14:30:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 3 },
+          { "productSku": "SSTC-512GB-G3", "quantity": 2 }
+        ],
+        "notes": "Defective units - prepare for RMA"
+      },
+      {
+        "documentNumber": "TRF-2025-004",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "toVirtualWarehouseName": "Kho Đang Sửa Chữa",
+        "transferDate": "2025-09-05",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-09-05T11:00:00Z",
+        "items": [
+          { "productSku": "ZT-4060Ti", "quantity": 5 },
+          { "productSku": "ZBOX-CI", "quantity": 3 }
+        ],
+        "notes": "Products currently in service tickets"
+      },
+      {
+        "documentNumber": "TRF-2025-005",
+        "fromVirtualWarehouseName": "Công ty - Kho Chính",
+        "toVirtualWarehouseName": "Kho Hàng Hỏng",
+        "transferDate": "2025-10-10",
+        "status": "completed",
+        "approvedBy": "manager@sstc.vn",
+        "approvedAt": "2025-10-10T16:00:00Z",
+        "items": [
+          { "productSku": "ZT-4070-G", "quantity": 2 },
+          { "productSku": "SSTC-16GB-3200", "quantity": 3 }
+        ],
+        "notes": "Unrepairable units - dead stock"
+      }
+    ]
+  },
+
+  "testDataScenarios": {
+    "_note": "Pre-configured test scenarios with entity tasks",
+
+    "scenario1_serialEntry": {
+      "name": "Serial Entry Automation Test",
+      "description": "3 inventory receipts at different serial entry stages",
+      "receipts": [
+        {
+          "supplier": "Test Scenario 1A - No serials yet",
+          "toVirtualWarehouseName": "Kho Chính",
+          "receiptDate": "2025-11-01",
+          "status": "approved",
+          "notes": "Testing: Serial entry task should be created and pending",
+          "items": [
+            {
+              "productSku": "ZT-4070-G",
+              "quantity": 10,
+              "manufacturerWarrantyEndDate": "2028-11-01",
+              "userWarrantyEndDate": "2029-05-01",
+              "serials": []
+            }
+          ],
+          "expectedTasks": [
+            {
+              "taskName": "Nhập serial vào hệ thống",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending",
+              "progress": "0/10"
+            }
+          ]
+        },
+        {
+          "supplier": "Test Scenario 1B - Partial serials",
+          "toVirtualWarehouseName": "Kho Chính",
+          "receiptDate": "2025-11-01",
+          "status": "approved",
+          "notes": "Testing: 50% progress, should show yellow progress bar",
+          "items": [
+            {
+              "productSku": "ZT-4060Ti",
+              "quantity": 20,
+              "manufacturerWarrantyEndDate": "2028-11-01",
+              "userWarrantyEndDate": null,
+              "serials": [
+                "TEST-4060-001", "TEST-4060-002", "TEST-4060-003", "TEST-4060-004", "TEST-4060-005",
+                "TEST-4060-006", "TEST-4060-007", "TEST-4060-008", "TEST-4060-009", "TEST-4060-010"
+              ]
+            }
+          ],
+          "expectedTasks": [
+            {
+              "taskName": "Nhập serial vào hệ thống",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "in_progress",
+              "progress": "10/20",
+              "startedAt": "2025-11-01T08:00:00Z"
+            }
+          ]
+        },
+        {
+          "supplier": "Test Scenario 1C - Almost complete",
+          "toVirtualWarehouseName": "Kho Chính",
+          "receiptDate": "2025-11-01",
+          "status": "approved",
+          "notes": "Testing: 90% progress, one serial away from auto-completion",
+          "items": [
+            {
+              "productSku": "SSTC-1TB-G4",
+              "quantity": 10,
+              "manufacturerWarrantyEndDate": "2030-11-01",
+              "userWarrantyEndDate": null,
+              "serials": [
+                "TEST-SSD-001", "TEST-SSD-002", "TEST-SSD-003", "TEST-SSD-004", "TEST-SSD-005",
+                "TEST-SSD-006", "TEST-SSD-007", "TEST-SSD-008", "TEST-SSD-009"
+              ]
+            }
+          ],
+          "expectedTasks": [
+            {
+              "taskName": "Nhập serial vào hệ thống",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "in_progress",
+              "progress": "9/10",
+              "startedAt": "2025-11-01T09:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+
+    "scenario2_serviceTickets": {
+      "name": "Service Ticket Workflow Test",
+      "description": "5 service tickets at different workflow stages",
+      "tickets": [
+        {
+          "customerPhone": "0912345678",
+          "productSerial": "ZT4070-W01-001",
+          "issueDescription": "VGA không lên hình",
+          "status": "in_progress",
+          "workflowName": "Quy trình sửa chữa chuẩn",
+          "createdAt": "2025-10-28",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-28T08:00:00Z",
+              "completedAt": "2025-10-28T08:30:00Z",
+              "notes": "Đã kiểm tra, VGA không lên hình, cần chẩn đoán"
+            },
+            {
+              "taskName": "Chẩn đoán lỗi",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "in_progress",
+              "startedAt": "2025-10-28T08:35:00Z"
+            },
+            {
+              "taskName": "Thay linh kiện",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Kiểm tra chất lượng",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Liên hệ khách hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Đóng gói sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "customerPhone": "0987654321",
+          "productSerial": "SSD1TB-W01-001",
+          "issueDescription": "SSD không nhận, cần kiểm tra firmware",
+          "status": "in_progress",
+          "workflowName": "Quy trình sửa chữa chuẩn",
+          "createdAt": "2025-10-29",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-29T09:00:00Z",
+              "completedAt": "2025-10-29T09:45:00Z",
+              "notes": "SSD lỗi firmware, cần update"
+            },
+            {
+              "taskName": "Chẩn đoán lỗi",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-29T09:50:00Z",
+              "completedAt": "2025-10-29T10:30:00Z",
+              "notes": "Firmware lỗi, update thành công"
+            },
+            {
+              "taskName": "Kiểm tra chất lượng",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Liên hệ khách hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Đóng gói sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "customerPhone": "0901234567",
+          "productSerial": "ZT4060-W02-001",
+          "issueDescription": "Quạt VGA kêu, cần thay quạt",
+          "status": "pending",
+          "workflowName": "Quy trình sửa chữa chuẩn",
+          "createdAt": "2025-11-01",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Chẩn đoán lỗi",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Thay linh kiện",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Kiểm tra chất lượng",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Liên hệ khách hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Đóng gói sản phẩm",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "customerPhone": "0909876543",
+          "productSerial": "RAM16G-W01-001",
+          "issueDescription": "RAM lỗi, máy không boot",
+          "status": "in_progress",
+          "workflowName": "Quy trình sửa chữa chuẩn",
+          "createdAt": "2025-10-30",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T10:00:00Z",
+              "completedAt": "2025-10-30T10:25:00Z",
+              "notes": "RAM lỗi hardware, cần thay mới"
+            },
+            {
+              "taskName": "Chẩn đoán lỗi",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T10:30:00Z",
+              "completedAt": "2025-10-30T11:30:00Z",
+              "notes": "Chip RAM hỏng, thay thế hoàn toàn"
+            },
+            {
+              "taskName": "Thay linh kiện",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T11:35:00Z",
+              "completedAt": "2025-10-30T13:30:00Z",
+              "notes": "Đã thay RAM mới"
+            },
+            {
+              "taskName": "Kiểm tra chất lượng",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "in_progress",
+              "startedAt": "2025-10-30T14:00:00Z"
+            },
+            {
+              "taskName": "Liên hệ khách hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Đóng gói sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "customerPhone": "0918765432",
+          "productSerial": "ZBOX-W03-001",
+          "issueDescription": "Mini PC không khởi động",
+          "status": "completed",
+          "workflowName": "Quy trình sửa chữa chuẩn",
+          "createdAt": "2025-10-25",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T08:00:00Z",
+              "completedAt": "2025-10-25T08:30:00Z",
+              "notes": "Nguồn hỏng"
+            },
+            {
+              "taskName": "Chẩn đoán lỗi",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T08:35:00Z",
+              "completedAt": "2025-10-25T09:30:00Z",
+              "notes": "Capacitor nguồn hỏng"
+            },
+            {
+              "taskName": "Thay linh kiện",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T09:35:00Z",
+              "completedAt": "2025-10-25T11:30:00Z",
+              "notes": "Đã thay capacitor"
+            },
+            {
+              "taskName": "Kiểm tra chất lượng",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T13:00:00Z",
+              "completedAt": "2025-10-25T13:30:00Z",
+              "notes": "Hoạt động tốt"
+            },
+            {
+              "taskName": "Liên hệ khách hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T14:00:00Z",
+              "completedAt": "2025-10-25T14:15:00Z",
+              "notes": "Đã thông báo khách hàng"
+            },
+            {
+              "taskName": "Đóng gói sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-25T14:20:00Z",
+              "completedAt": "2025-10-25T14:35:00Z",
+              "notes": "Đã đóng gói xong"
+            }
+          ]
+        }
+      ]
+    },
+
+    "scenario3_serviceRequests": {
+      "name": "Service Request Workflow Test",
+      "description": "4 service requests in different states",
+      "requests": [
+        {
+          "customerPhone": "0938765432",
+          "customerName": "Vũ Thị F",
+          "customerEmail": "vuthif@gmail.com",
+          "status": "draft",
+          "products": [
+            {
+              "productSerial": "ZT4070-W05-001",
+              "issueDescription": "VGA không lên hình, cần kiểm tra"
+            }
+          ],
+          "createdAt": "2025-11-02",
+          "notes": "Draft request, not yet submitted"
+        },
+        {
+          "customerPhone": "0928765432",
+          "customerName": "Đặng Văn G",
+          "customerEmail": "dangvang@company.com",
+          "status": "pickingup",
+          "products": [
+            {
+              "productSerial": "SSD512-W04-001",
+              "issueDescription": "SSD chậm, cần kiểm tra"
+            },
+            {
+              "productSerial": "SSD512-W04-002",
+              "issueDescription": "SSD không nhận"
+            }
+          ],
+          "createdAt": "2025-11-01",
+          "notes": "Waiting for customer to bring products"
+        },
+        {
+          "customerPhone": "0948765432",
+          "customerName": "Bùi Thị H",
+          "customerEmail": "buithih@gmail.com",
+          "status": "received",
+          "workflowName": "Quy trình xử lý yêu cầu dịch vụ",
+          "products": [
+            {
+              "productSerial": "ZT4060-W05-001",
+              "issueDescription": "Quạt VGA kêu to"
+            }
+          ],
+          "createdAt": "2025-11-01",
+          "tasks": [
+            {
+              "taskName": "Xác nhận nhận hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-11-01T10:00:00Z",
+              "completedAt": "2025-11-01T10:15:00Z",
+              "notes": "Đã nhận hàng từ khách"
+            },
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "in_progress",
+              "startedAt": "2025-11-01T10:20:00Z"
+            },
+            {
+              "taskName": "Tạo phiếu sửa chữa",
+              "assignedTo": "reception@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "customerPhone": "0958765432",
+          "customerName": "Ngô Văn I",
+          "customerEmail": "ngovani@yahoo.com",
+          "status": "processing",
+          "workflowName": "Quy trình xử lý yêu cầu dịch vụ",
+          "products": [
+            {
+              "productSerial": "RAM16G-W07-001",
+              "issueDescription": "RAM lỗi",
+              "ticketCreated": true
+            },
+            {
+              "productSerial": "RAM16G-W07-002",
+              "issueDescription": "RAM không nhận",
+              "ticketCreated": true
+            }
+          ],
+          "createdAt": "2025-10-30",
+          "tasks": [
+            {
+              "taskName": "Xác nhận nhận hàng",
+              "assignedTo": "reception@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T09:00:00Z",
+              "completedAt": "2025-10-30T09:10:00Z",
+              "notes": "Đã nhận 2 RAM"
+            },
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T09:15:00Z",
+              "completedAt": "2025-10-30T10:00:00Z",
+              "notes": "Cả 2 RAM đều lỗi"
+            },
+            {
+              "taskName": "Tạo phiếu sửa chữa",
+              "assignedTo": "reception@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-10-30T10:05:00Z",
+              "completedAt": "2025-10-30T10:25:00Z",
+              "notes": "Đã tạo 2 phiếu sửa chữa"
+            }
+          ]
+        }
+      ]
+    },
+
+    "scenario4_transfers": {
+      "name": "Transfer Approval Test",
+      "description": "3 transfers with approval workflow",
+      "transfers": [
+        {
+          "fromVirtualWarehouseName": "Kho Chính",
+          "toVirtualWarehouseName": "Kho Bảo Hành",
+          "productSku": "ZT-4070-G",
+          "quantity": 5,
+          "estimatedValue": 8000000,
+          "transferDate": "2025-11-02",
+          "status": "pending",
+          "workflowName": "Quy trình chuyển kho",
+          "notes": "Low value transfer, no approval needed",
+          "tasks": [
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Cập nhật tồn kho",
+              "assignedTo": "tech1@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "fromVirtualWarehouseName": "Kho Chính",
+          "toVirtualWarehouseName": "Kho Bảo Hành",
+          "productSku": "ZT-4070-G",
+          "quantity": 15,
+          "estimatedValue": 24000000,
+          "transferDate": "2025-11-02",
+          "status": "pending_approval",
+          "workflowName": "Quy trình chuyển kho",
+          "notes": "High value transfer (>10M), requires manager approval",
+          "tasks": [
+            {
+              "taskName": "Phê duyệt phiếu",
+              "assignedTo": "manager@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "pending"
+            },
+            {
+              "taskName": "Cập nhật tồn kho",
+              "assignedTo": "tech2@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "fromVirtualWarehouseName": "Kho Bảo Hành",
+          "toVirtualWarehouseName": "Kho Chờ Trả Hàng",
+          "productSku": "ZT-4070-G",
+          "quantity": 3,
+          "estimatedValue": 4800000,
+          "transferDate": "2025-11-01",
+          "status": "approved",
+          "workflowName": "Quy trình chuyển kho",
+          "notes": "Transfer to RMA staging",
+          "tasks": [
+            {
+              "taskName": "Phê duyệt phiếu",
+              "assignedTo": "manager@sstc.vn",
+              "status": "completed",
+              "startedAt": "2025-11-01T08:00:00Z",
+              "completedAt": "2025-11-01T08:10:00Z",
+              "notes": "Approved by manager"
+            },
+            {
+              "taskName": "Kiểm tra sản phẩm",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "in_progress",
+              "startedAt": "2025-11-01T08:15:00Z"
+            },
+            {
+              "taskName": "Cập nhật tồn kho",
+              "assignedTo": "tech3@sstc.vn",
+              "status": "pending"
+            }
+          ]
+        }
+      ]
+    },
+
+    "scenario5_mixedWorkload": {
+      "name": "Mixed Workload for Smart Assignment Test",
+      "description": "Different workloads per technician to test assignment suggestions",
+      "technicianWorkloads": {
+        "tech1@sstc.vn": {
+          "name": "Trần Văn Tech",
+          "activeTasks": 5,
+          "pendingTasks": 3,
+          "inProgressTasks": 2,
+          "avgCompletionTimeHours": 1.8,
+          "tasks": [
+            "Service ticket diagnosis (in_progress)",
+            "Service ticket part replacement (in_progress)",
+            "Service ticket inspection (pending)",
+            "Transfer check (pending)",
+            "Service request receiving (pending)"
+          ]
+        },
+        "tech2@sstc.vn": {
+          "name": "Lê Thị Kỹ Thuật",
+          "activeTasks": 2,
+          "pendingTasks": 1,
+          "inProgressTasks": 1,
+          "avgCompletionTimeHours": 1.5,
+          "tasks": [
+            "Service ticket QA (in_progress)",
+            "Serial entry (pending)"
+          ]
+        },
+        "tech3@sstc.vn": {
+          "name": "Phạm Văn Sửa Chữa",
+          "activeTasks": 3,
+          "pendingTasks": 2,
+          "inProgressTasks": 1,
+          "avgCompletionTimeHours": 2.2,
+          "tasks": [
+            "Transfer check (in_progress)",
+            "Service ticket inspection (pending)",
+            "Receipt inspection (pending)"
+          ]
+        }
+      },
+      "expectedSuggestion": {
+        "forNewSerialEntryTask": "tech2@sstc.vn",
+        "reason": "Lê Thị Kỹ Thuật có 2 công việc đang thực hiện và thường hoàn thành trong 1.5h"
+      }
+    }
+  },
+
+  "_implementation_notes": {
+    "howToUse": "This mock data should be loaded via a setup script that:",
+    "steps": [
+      "1. Imports staff users (already exist from v3.2.0)",
+      "2. Imports customers",
+      "3. Imports task library definitions",
+      "4. Creates workflow templates with task assignments",
+      "5. Creates test scenario entities (receipts, tickets, requests, transfers)",
+      "6. Creates entity_tasks with correct status and timestamps",
+      "7. Updates analytics views with historical data"
+    ],
+    "testingOrder": [
+      "Scenario 1: Serial Entry (Phase 2 tests)",
+      "Scenario 2: Service Tickets (Phase 1 & 3 tests)",
+      "Scenario 3: Service Requests (Phase 3 tests)",
+      "Scenario 4: Transfers (Phase 3 tests)",
+      "Scenario 5: Smart Assignment (Phase 4 tests)"
     ]
   }
 }

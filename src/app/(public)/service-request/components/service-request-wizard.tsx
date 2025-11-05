@@ -107,7 +107,8 @@ function validateWizardStep(
         toast.error("Họ và tên phải có ít nhất 2 ký tự.");
         return false;
       }
-      if (!CONTACT_RULES.emailPattern.test(state.customer.email.trim())) {
+      const emailInput = state.customer.email.trim();
+      if (emailInput.length > 0 && !CONTACT_RULES.emailPattern.test(emailInput)) {
         toast.error("Email không hợp lệ.");
         return false;
       }
@@ -117,7 +118,7 @@ function validateWizardStep(
         return false;
       }
       if (
-        state.delivery.preferredDeliveryMethod === "delivery" &&
+        state.delivery.deliveryMethod === "delivery" &&
         (state.delivery.deliveryAddress?.trim().length ?? 0) <
           CONTACT_RULES.deliveryAddressMinLength
       ) {
@@ -372,7 +373,7 @@ function StepNavigation() {
     }
 
     if (
-      payload.delivery.preferred_delivery_method === "delivery" &&
+      payload.delivery.delivery_method === "delivery" &&
       !payload.delivery.delivery_address
     ) {
       toast.error("Vui lòng bổ sung địa chỉ giao nhận.");
@@ -381,20 +382,36 @@ function StepNavigation() {
     }
 
     try {
-      const result = await submitRequestAsync({
+      const submitInput = {
         customer_name: payload.customer.name,
         customer_email: payload.customer.email,
         customer_phone: payload.customer.phone,
         customer_address: payload.customer.address,
-        issue_overview: payload.issue_overview ?? "",
         items: payload.items,
-        preferred_delivery_method: payload.delivery.preferred_delivery_method,
+        delivery_method: payload.delivery.delivery_method,
         delivery_address: payload.delivery.delivery_address,
         preferred_schedule: payload.delivery.preferred_schedule,
         pickup_notes: payload.delivery.pickup_notes,
-        contact_notes: payload.delivery.contact_notes,
         honeypot: payload.honeypot,
-      });
+      } as {
+        customer_name: string;
+        customer_email?: string;
+        customer_phone: string;
+        customer_address?: string;
+        issue_overview?: string;
+        items: typeof payload.items;
+        delivery_method: typeof payload.delivery.delivery_method;
+        delivery_address?: string;
+        preferred_schedule?: string;
+        pickup_notes?: string;
+        honeypot?: string;
+      };
+
+      if (payload.issue_overview !== undefined) {
+        submitInput.issue_overview = payload.issue_overview;
+      }
+
+      const result = await submitRequestAsync(submitInput);
 
       if (result?.tracking_token) {
         router.push(`/service-request/success?token=${result.tracking_token}`);

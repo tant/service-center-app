@@ -32,7 +32,7 @@ interface ServiceRequestFormData {
   issue_description: string | null;
   items: ProductItem[];
   receipt_status: "received" | "pending_receipt";
-  preferred_delivery_method?: "pickup" | "delivery";
+  delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
 }
 
@@ -64,7 +64,7 @@ export function ServiceRequestForm({
     initialData?.receipt_status || "received"
   );
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | undefined>(
-    initialData?.preferred_delivery_method || "pickup"
+    initialData?.delivery_method || "pickup"
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
   const [items, setItems] = useState<ProductItem[]>(
@@ -185,7 +185,7 @@ export function ServiceRequestForm({
       issue_description: item.issue_description,
     })),
     receipt_status: receiptStatus,
-    preferred_delivery_method: deliveryMethod,
+    delivery_method: deliveryMethod,
     delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
   });
 

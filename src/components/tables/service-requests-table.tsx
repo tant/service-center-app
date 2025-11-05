@@ -120,7 +120,7 @@ interface IncomingRequestSummary {
   status?: string;
   created_at: string;
   issue_description?: string | null;
-  preferred_delivery_method?: "pickup" | "delivery" | null;
+  delivery_method?: "pickup" | "delivery" | null;
   delivery_address?: string | null;
   pickup_notes?: string | null;
   preferred_schedule?: string | null;
@@ -223,10 +223,10 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     },
     {
       id: "intake",
-      accessorFn: (row) => row.preferred_delivery_method,
+      accessorFn: (row) => row.delivery_method,
       header: "Tiếp nhận",
       cell: ({ row }) => {
-        const method = row.original.preferred_delivery_method;
+        const method = row.original.delivery_method;
         const config = INTAKE_METHOD_MAP[method] ?? INTAKE_METHOD_MAP.pickup;
 
         return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -756,8 +756,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                         (primaryItem ? 1 : 0);
                       const extraItems =
                         itemsCount && itemsCount > 1 ? itemsCount - 1 : 0;
-                      const method =
-                        request.preferred_delivery_method ?? "pickup";
+                      const method = request.delivery_method ?? "pickup";
                       const isDelivery = method === "delivery";
                       const methodLabel = isDelivery
                         ? "Giao nhận"

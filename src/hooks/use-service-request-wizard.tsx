@@ -57,11 +57,10 @@ export interface WizardCustomer {
 }
 
 export interface WizardDelivery {
-  preferredDeliveryMethod: DeliveryMethod;
+  deliveryMethod: DeliveryMethod;
   deliveryAddress?: string;
   preferredSchedule?: string;
   pickupNotes?: string;
-  contactNotes?: string;
 }
 
 export interface ServiceRequestWizardState {
@@ -94,16 +93,15 @@ export interface WizardSubmitProductPayload {
 export interface WizardSubmitPayload {
   customer: {
     name: string;
-    email: string;
+    email?: string;
     phone: string;
     address?: string;
   };
   delivery: {
-    preferred_delivery_method: DeliveryMethod;
+    delivery_method: DeliveryMethod;
     delivery_address?: string;
     preferred_schedule?: string;
     pickup_notes?: string;
-    contact_notes?: string;
   };
   issue_overview?: string;
   items: WizardSubmitProductPayload[];
@@ -140,11 +138,10 @@ const createInitialCustomer = (): WizardCustomer => ({
 });
 
 const createInitialDelivery = (): WizardDelivery => ({
-  preferredDeliveryMethod: "pickup",
+  deliveryMethod: "pickup",
   deliveryAddress: "",
   preferredSchedule: "",
   pickupNotes: "",
-  contactNotes: "",
 });
 
 const createInitialState = (): ServiceRequestWizardState => ({
@@ -414,22 +411,24 @@ export function buildWizardPayload(
   const payload: WizardSubmitPayload = {
     customer: {
       name: state.customer.name.trim(),
-      email: state.customer.email.trim().toLowerCase(),
+      email:
+        state.customer.email.trim().length > 0
+          ? state.customer.email.trim().toLowerCase()
+          : undefined,
       phone: state.customer.phone.trim(),
       address: state.customer.address?.trim() || undefined,
     },
     delivery: {
-      preferred_delivery_method: state.delivery.preferredDeliveryMethod,
+      delivery_method: state.delivery.deliveryMethod,
       delivery_address:
-        state.delivery.preferredDeliveryMethod === "delivery"
+        state.delivery.deliveryMethod === "delivery"
           ? state.delivery.deliveryAddress?.trim() || undefined
           : undefined,
       preferred_schedule: state.delivery.preferredSchedule?.trim() || undefined,
       pickup_notes:
-        state.delivery.preferredDeliveryMethod === "pickup"
+        state.delivery.deliveryMethod === "pickup"
           ? state.delivery.pickupNotes?.trim() || undefined
           : undefined,
-      contact_notes: state.delivery.contactNotes?.trim() || undefined,
     },
     issue_overview: state.requestIssueOverview.trim() || undefined,
     items: sanitizedItems,

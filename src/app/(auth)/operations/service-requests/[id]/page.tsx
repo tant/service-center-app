@@ -303,22 +303,17 @@ export default function ServiceRequestDetailPage() {
   const status = request.status as keyof typeof STATUS_MAP;
   const statusConfig = STATUS_MAP[status];
   const items = Array.isArray(request.items) ? request.items : [];
-  const deliveryMethod = (request.preferred_delivery_method ?? "pickup") as keyof typeof DELIVERY_METHOD_LABELS;
+  const deliveryMethod = (request.delivery_method ?? "pickup") as keyof typeof DELIVERY_METHOD_LABELS;
   const deliveryLabel = DELIVERY_METHOD_LABELS[deliveryMethod] ?? "Khác";
   const preferredSchedule = formatDisplayDate(request.preferred_schedule);
-  const reviewedAt = formatDisplayDateTime(request.reviewed_at);
   const convertedAt = formatDisplayDateTime(request.converted_at);
   const createdAt = formatDisplayDateTime(request.created_at);
   const updatedAt = formatDisplayDateTime(request.updated_at);
-  const reviewedByName = request.reviewed_by?.full_name ?? null;
-  const showReviewInfo =
-    Boolean(request.reviewed_at) ||
-    Boolean(request.reviewed_by) ||
-    Boolean(request.rejection_reason) ||
-    Boolean(request.converted_at);
+  const showProcessingInfo =
+    Boolean(request.rejection_reason) || Boolean(convertedAt);
   const showSystemInfo = Boolean(createdAt) || Boolean(updatedAt);
   const hasSupportingInfo =
-    showReviewInfo || Boolean(request.linked_ticket_id);
+    showProcessingInfo || Boolean(request.linked_ticket_id);
   const displayOrDash = (value: string | null | undefined) => {
     if (typeof value !== "string") {
       return "-";
@@ -413,12 +408,6 @@ export default function ServiceRequestDetailPage() {
                         <p className="text-sm text-muted-foreground">Ghi chú nhận hàng</p>
                         <p className="text-sm whitespace-pre-wrap">
                           {displayOrDash(request.pickup_notes)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Thông tin liên hệ ưu tiên</p>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {displayOrDash(request.contact_notes)}
                         </p>
                       </div>
                     </div>
@@ -595,9 +584,9 @@ export default function ServiceRequestDetailPage() {
                 </CardContent>
               </Card>
 
-            {hasSupportingInfo ? (
-              <div className="space-y-6 lg:col-span-1">
-                {showReviewInfo && (
+{hasSupportingInfo ? (
+  <div className="space-y-6 lg:col-span-1">
+                {showProcessingInfo && (
                   <Card>
                       <CardHeader>
                         <CardTitle className="text-sm flex items-center gap-2">
@@ -606,18 +595,6 @@ export default function ServiceRequestDetailPage() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        {reviewedByName && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">Người duyệt</p>
-                            <p className="text-sm">{reviewedByName}</p>
-                          </div>
-                        )}
-                        {reviewedAt && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">Thời gian duyệt</p>
-                            <p className="text-sm">{reviewedAt}</p>
-                          </div>
-                        )}
                         {request.rejection_reason && (
                           <div>
                             <p className="text-sm text-muted-foreground">Lý do từ chối</p>

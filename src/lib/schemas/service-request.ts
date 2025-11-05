@@ -17,7 +17,7 @@ export const serviceRequestRowSchema = z.object({
     "cancelled",
   ]),
   created_at: z.string(),
-  preferred_delivery_method: z.enum(["pickup", "delivery"]),
+  delivery_method: z.enum(["pickup", "delivery"]),
   delivery_address: z.string().nullable(),
   pickup_notes: z.string().nullable(),
   preferred_schedule: z.string().nullable(),

@@ -174,15 +174,14 @@ export function StepReview() {
           />
           <SummaryRow
             label="Phương thức"
-            value={state.delivery.preferredDeliveryMethod === "delivery" ? "Giao nhận" : "Khách tự mang tới"}
+            value={state.delivery.deliveryMethod === "delivery" ? "Giao nhận" : "Khách tự mang tới"}
           />
-          {state.delivery.preferredDeliveryMethod === "delivery" ? (
+          {state.delivery.deliveryMethod === "delivery" ? (
             <SummaryRow label="Địa chỉ giao nhận" value={state.delivery.deliveryAddress} />
           ) : (
             <SummaryRow label="Ghi chú khi mang đến" value={state.delivery.pickupNotes} />
           )}
           <SummaryRow label="Lịch hẹn mong muốn" value={state.delivery.preferredSchedule} />
-          <SummaryRow label="Ghi chú liên hệ" value={state.delivery.contactNotes} />
         </div>
 
         <Separator />

@@ -21,27 +21,28 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   customer_email VARCHAR(255),
   customer_phone VARCHAR(50),
   customer_address TEXT,
-  issue_description TEXT NOT NULL,
+  issue_description TEXT,
   status public.request_status NOT NULL DEFAULT 'submitted',
   receipt_status public.receipt_status NOT NULL DEFAULT 'received',
-  delivery_method public.delivery_method,
   delivery_address TEXT,
-  reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  reviewed_at TIMESTAMPTZ,
+  delivery_method public.delivery_method NOT NULL DEFAULT 'pickup',
+  preferred_schedule DATE,
+  pickup_notes TEXT,
   rejection_reason TEXT,
   converted_at TIMESTAMPTZ,
-  submitted_ip VARCHAR(45),
-  user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL)
+  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL),
+  CONSTRAINT service_requests_delivery_requires_address CHECK ((delivery_method <> 'delivery') OR (delivery_address IS NOT NULL))
 );
 
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
 COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue description for the entire request (specific issues per product in service_request_items)';
 COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products have been received from customer (triggers ticket creation)';
-COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preference for product delivery (pickup or delivery)';
 COMMENT ON COLUMN public.service_requests.delivery_address IS 'Delivery address if delivery_method is delivery';
+COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preferred method for handling product intake (pickup or delivery)';
+COMMENT ON COLUMN public.service_requests.preferred_schedule IS 'Requested appointment date for pickup/delivery if applicable';
+COMMENT ON COLUMN public.service_requests.pickup_notes IS 'Additional notes provided for pickup/drop-off logistics';
 
 -- =====================================================
 -- AUTO-CREATE TICKETS FUNCTION
@@ -81,13 +82,11 @@ BEGIN
       INSERT INTO public.customers (
         name,
         email,
-        phone,
-        created_by
+        phone
       ) VALUES (
         NEW.customer_name,
         NEW.customer_email,
-        NEW.customer_phone,
-        NEW.reviewed_by_id
+        NEW.customer_phone
       )
       RETURNING id INTO v_customer_id;
     END IF;
@@ -95,7 +94,7 @@ BEGIN
     -- Create a ticket for each item in the request
     FOR v_item IN
       SELECT * FROM public.service_request_items
-      WHERE request_id = NEW.id AND ticket_id IS NULL
+      WHERE request_id = NEW.id AND linked_ticket_id IS NULL
     LOOP
       -- Find product_id from serial_number
       v_product_id := NULL;
@@ -117,45 +116,33 @@ BEGIN
         product_id,
         issue_description,
         status,
-        request_id,
-        created_by
+        request_id
       ) VALUES (
         v_customer_id,
         v_product_id,
         COALESCE(v_item.issue_description, NEW.issue_description),
         'pending',
-        NEW.id,
-        NEW.reviewed_by_id
+        NEW.id
       )
       RETURNING id INTO v_ticket_id;
 
       -- Link ticket back to item
       UPDATE public.service_request_items
-      SET ticket_id = v_ticket_id
+      SET linked_ticket_id = v_ticket_id
       WHERE id = v_item.id;
 
       -- Add initial comment
-      -- If reviewed_by_id is NULL, it's from customer (public submission)
       INSERT INTO public.service_ticket_comments (
         ticket_id,
         comment,
         created_by
       ) VALUES (
         v_ticket_id,
-        CASE
-          WHEN NEW.reviewed_by_id IS NULL THEN
-            format('Yêu cầu từ khách hàng %s - Mã theo dõi: %s - Serial: %s',
-              NEW.customer_name,
-              NEW.tracking_token,
-              v_item.serial_number
-            )
-          ELSE
-            format('Auto-created from service request %s - Serial: %s',
-              NEW.tracking_token,
-              v_item.serial_number
-            )
-        END,
-        NEW.reviewed_by_id
+        format('Auto-created from service request %s - Serial: %s',
+          NEW.tracking_token,
+          v_item.serial_number
+        ),
+        NULL
       );
 
     END LOOP;

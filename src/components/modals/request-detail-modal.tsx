@@ -60,7 +60,6 @@ export function RequestDetailModal({
     ? (request.items as RequestItem[])
     : [];
   const deliveryMethod =
-    (request?.preferred_delivery_method as "pickup" | "delivery" | undefined) ??
     (request as { delivery_method?: "pickup" | "delivery" }).delivery_method ??
     "pickup";
   const isDelivery = deliveryMethod === "delivery";

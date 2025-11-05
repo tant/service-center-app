@@ -19,10 +19,6 @@ export type EmailNotificationUpdate = Database['public']['Tables']['email_notifi
 
 // Extended types
 export interface ServiceRequestWithDetails extends ServiceRequest {
-  reviewed_by?: {
-    id: string;
-    full_name: string;
-  };
   ticket?: {
     id: string;
     ticket_number: string;
@@ -49,16 +45,15 @@ export interface PublicServiceRequestItem {
 
 export interface PublicServiceRequestPayload {
   customer_name: string;
-  customer_email: string;
+  customer_email?: string;
   customer_phone: string;
   customer_address?: string;
   issue_overview?: string;
   items: PublicServiceRequestItem[];
-  preferred_delivery_method: DeliveryMethod;
+  delivery_method: DeliveryMethod;
   delivery_address?: string;
   preferred_schedule?: string;
   pickup_notes?: string;
-  contact_notes?: string;
   honeypot?: string;
 }
 

@@ -134,7 +134,7 @@ export default function EditServiceRequestPage() {
       issue_description: item.issue_description || "",
     })) || [],
     receipt_status: request.receipt_status as "received" | "pending_receipt",
-    preferred_delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,
+    delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,
     delivery_address: request.delivery_address || "",
   };
 

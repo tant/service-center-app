@@ -1012,7 +1012,6 @@ export type Database = {
       }
       service_requests: {
         Row: {
-          contact_notes: string | null
           converted_at: string | null
           created_at: string
           customer_address: string | null
@@ -1020,24 +1019,18 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           delivery_address: string | null
-          delivery_method: Database["public"]["Enums"]["delivery_method"] | null
+          delivery_method: Database["public"]["Enums"]["delivery_method"]
           id: string
           issue_description: string | null
           pickup_notes: string | null
-          preferred_delivery_method: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule: string | null
           receipt_status: Database["public"]["Enums"]["receipt_status"]
           rejection_reason: string | null
-          reviewed_at: string | null
-          reviewed_by_id: string | null
           status: Database["public"]["Enums"]["request_status"]
-          submitted_ip: string | null
           tracking_token: string
           updated_at: string
-          user_agent: string | null
         }
         Insert: {
-          contact_notes?: string | null
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
@@ -1045,26 +1038,18 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           delivery_address?: string | null
-          delivery_method?:
-            | Database["public"]["Enums"]["delivery_method"]
-            | null
+          delivery_method?: Database["public"]["Enums"]["delivery_method"]
           id?: string
           issue_description?: string | null
           pickup_notes?: string | null
-          preferred_delivery_method?: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
           rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
-          submitted_ip?: string | null
           tracking_token: string
           updated_at?: string
-          user_agent?: string | null
         }
         Update: {
-          contact_notes?: string | null
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
@@ -1072,33 +1057,18 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           delivery_address?: string | null
-          delivery_method?:
-            | Database["public"]["Enums"]["delivery_method"]
-            | null
+          delivery_method?: Database["public"]["Enums"]["delivery_method"]
           id?: string
           issue_description?: string | null
           pickup_notes?: string | null
-          preferred_delivery_method?: Database["public"]["Enums"]["delivery_method"]
           preferred_schedule?: string | null
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
           rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
-          submitted_ip?: string | null
           tracking_token?: string
           updated_at?: string
-          user_agent?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "service_requests_reviewed_by_id_fkey"
-            columns: ["reviewed_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       service_ticket_attachments: {
         Row: {

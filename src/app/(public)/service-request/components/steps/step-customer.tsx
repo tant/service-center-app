@@ -34,7 +34,7 @@ export function StepCustomer() {
       email?: string | null;
       phone?: string | null;
       address?: string | null;
-      preferred_delivery_method?: "pickup" | "delivery" | null;
+      delivery_method?: "pickup" | "delivery" | null;
       delivery_address?: string | null;
     } | null;
   };
@@ -53,25 +53,24 @@ export function StepCustomer() {
       address: state.customer.address || lookup.address || "",
     });
 
-    if (lookup.preferred_delivery_method) {
+    if (lookup.delivery_method) {
       setWizardDelivery(dispatch, {
-        preferredDeliveryMethod: lookup.preferred_delivery_method,
+        deliveryMethod: lookup.delivery_method,
         deliveryAddress: state.delivery.deliveryAddress || lookup.delivery_address || "",
         preferredSchedule: state.delivery.preferredSchedule,
         pickupNotes: state.delivery.pickupNotes,
-        contactNotes: state.delivery.contactNotes,
       });
     }
-  }, [data, dispatch, state.customer.address, state.customer.email, state.customer.name, state.customer.phone, state.delivery.contactNotes, state.delivery.deliveryAddress, state.delivery.pickupNotes, state.delivery.preferredSchedule]);
+  }, [data, dispatch, state.customer.address, state.customer.email, state.customer.name, state.customer.phone, state.delivery.deliveryAddress, state.delivery.pickupNotes, state.delivery.preferredSchedule]);
 
   const customerName = state.customer.name.trim();
   const customerEmail = state.customer.email.trim();
   const phoneDigits = state.customer.phone.replace(/\D/g, "");
   const deliveryAddress = state.delivery.deliveryAddress?.trim() ?? "";
-  const deliveryMethod = state.delivery.preferredDeliveryMethod;
+  const deliveryMethod = state.delivery.deliveryMethod;
 
   const nameValid = customerName.length >= MIN_NAME_LENGTH;
-  const emailValid = EMAIL_REGEX.test(customerEmail);
+  const emailValid = customerEmail.length === 0 || EMAIL_REGEX.test(customerEmail);
   const phoneValid = phoneDigits.length >= MIN_PHONE_DIGITS;
   const deliveryAddressRequired = deliveryMethod === "delivery";
   const deliveryAddressValid = !deliveryAddressRequired || deliveryAddress.length >= MIN_ADDRESS_LENGTH;
@@ -109,9 +108,7 @@ export function StepCustomer() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customer-email">
-              Email <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="customer-email">Email</Label>
             <Input
               id="customer-email"
               type="email"
@@ -120,10 +117,9 @@ export function StepCustomer() {
                 setWizardCustomer(dispatch, { ...state.customer, email: event.target.value })
               }
               onBlur={() => markTouched("email")}
-              required
               aria-invalid={touched.email && !emailValid}
             />
-            {touched.email && !emailValid && (
+            {touched.email && !emailValid && customerEmail.length > 0 && (
               <p className="text-xs text-destructive">Email không hợp lệ.</p>
             )}
           </div>
@@ -181,11 +177,11 @@ export function StepCustomer() {
         <div className="space-y-3">
           <Label>Phương thức tiếp nhận</Label>
           <RadioGroup
-            value={state.delivery.preferredDeliveryMethod}
+            value={state.delivery.deliveryMethod}
             onValueChange={(value) =>
               setWizardDelivery(dispatch, {
                 ...state.delivery,
-                preferredDeliveryMethod: value as typeof state.delivery.preferredDeliveryMethod,
+                deliveryMethod: value as typeof state.delivery.deliveryMethod,
               })
             }
             className="flex flex-col gap-2 md:flex-row"
@@ -205,7 +201,7 @@ export function StepCustomer() {
           </RadioGroup>
         </div>
 
-        {state.delivery.preferredDeliveryMethod === "delivery" ? (
+        {state.delivery.deliveryMethod === "delivery" ? (
           <div className="space-y-2">
             <Label htmlFor="delivery-address">
               Địa chỉ giao nhận <span className="text-destructive">*</span>
@@ -252,16 +248,6 @@ export function StepCustomer() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="contact-notes">Ghi chú liên hệ (tuỳ chọn)</Label>
-          <Textarea
-            id="contact-notes"
-            value={state.delivery.contactNotes ?? ""}
-            onChange={(event) =>
-              setWizardDelivery(dispatch, { ...state.delivery, contactNotes: event.target.value })
-            }
-          />
-        </div>
       </CardContent>
     </Card>
   );

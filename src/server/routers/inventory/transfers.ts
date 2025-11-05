@@ -629,11 +629,12 @@ export const transfersRouter = router({
         throw new Error("Transfer not found");
       }
 
-      // Validate physical products exist and belong to source warehouse
+      // Validate physical products exist, are ACTIVE, and belong to source warehouse
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
-        .in("id", input.physicalProductIds);
+        .in("id", input.physicalProductIds)
+        .eq("status", "active");
 
       if (validateError) {
         throw new Error(`Failed to validate physical products: ${validateError.message}`);
@@ -818,12 +819,13 @@ export const transfersRouter = router({
         throw new Error("Kho nguồn không khớp với phiếu chuyển. Chỉ có thể chọn serial từ kho nguồn.");
       }
 
-      // Find physical products by serial numbers in source warehouse
+      // Find ACTIVE physical products by serial numbers in source warehouse
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id")
         .eq("product_id", transferItem.product_id)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active")
         .in("serial_number", input.serialNumbers);
 
       if (findError) {

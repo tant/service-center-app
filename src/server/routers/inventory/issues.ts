@@ -619,11 +619,12 @@ export const issuesRouter = router({
         throw new Error("Issue not found");
       }
 
-      // Validate physical products exist and belong to correct warehouse/product
+      // Validate physical products exist, are ACTIVE, and belong to correct warehouse/product
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id, virtual_warehouse:virtual_warehouses!virtual_warehouse_id(physical_warehouse_id)")
-        .in("id", input.physicalProductIds);
+        .in("id", input.physicalProductIds)
+        .eq("status", "active");
 
       if (validateError) {
         throw new Error(`Failed to validate physical products: ${validateError.message}`);
@@ -787,12 +788,13 @@ export const issuesRouter = router({
         throw new Error("Kho nguồn không khớp với phiếu xuất. Chỉ có thể chọn serial từ kho xuất.");
       }
 
-      // Find physical products by serial numbers
+      // Find ACTIVE physical products by serial numbers
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id")
         .eq("product_id", issueItem.product_id)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active")
         .in("serial_number", input.serialNumbers);
 
       if (findError) {

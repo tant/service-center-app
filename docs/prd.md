@@ -1,9 +1,9 @@
 # Service Center - Product Requirements Document
 
-**Version:** 1.0
-**Last Updated:** 2025-10-28
+**Version:** 2.0
+**Last Updated:** 2025-11-05
 **Status:** Production (v0.2.1)
-**Document Type:** Current State PRD
+**Document Type:** Current State PRD (Consolidated)
 
 ---
 
@@ -13,16 +13,16 @@ Service Center is a **comprehensive service and repair management platform** for
 
 **Key Metrics:**
 - **Pages:** 45+ pages (authenticated + public)
-- **Database Tables:** 37 tables
-- **API Endpoints:** 160+ tRPC procedures across 14 routers
-- **Components:** 138 React components
+- **Database Tables:** 40+ tables (including polymorphic task system)
+- **API Endpoints:** 170+ tRPC procedures across 17 routers
+- **Components:** 140+ React components
 - **User Roles:** 4 roles with granular RBAC
 
 **Core Capabilities:**
 1. Service ticket lifecycle management with automated workflows
-2. Task-based workflow system with templates and dependencies
-3. Two-tier warehouse management (physical + virtual)
-4. Serialized product tracking with warranty management
+2. Polymorphic task-based workflow system supporting multiple entity types
+3. Two-tier warehouse management (physical + virtual with lifecycle tracking)
+4. Serialized product tracking with warranty management and status lifecycle
 5. Public service request portal with tracking
 6. Role-based access control with audit trails
 7. Email notification system
@@ -149,117 +149,205 @@ cancelled    cancelled
 - Technician: Limited to assigned tickets, task execution only
 - Reception: Create and edit pending tickets only
 
-### 2.2 Task Workflow System
+### 2.2 Polymorphic Task Workflow System
 
-#### 2.2.1 Task Templates
+**Architecture Update (2025-10-31):** The task system was refactored to use industry-standard terminology and support multiple entity types beyond service tickets.
 
-**Purpose:** Define standardized workflows for different service types and products
+#### 2.2.1 Overview
+
+**Polymorphic Design:** Tasks can be associated with any entity type, not just service tickets:
+- `service_ticket` - Service repair/warranty tickets
+- `inventory_receipt` - Goods receipt notes (automatic serial entry tasks)
+- `inventory_issue` - Goods issue notes
+- `inventory_transfer` - Stock transfers between warehouses
+- `service_request` - Customer service requests
+
+**Core Components:**
+1. **Tasks** (formerly "Task Types") - Reusable task definitions
+2. **Workflows** (formerly "Task Templates") - Ordered sequences of tasks
+3. **Entity Tasks** - Task instances attached to any entity
+4. **Entity Task History** - Audit trail across all entity types
+
+#### 2.2.2 Workflows
+
+**Purpose:** Define standardized workflows for different entity types
 
 **Structure:**
-- Template name and description
-- Product association (optional)
-- Service type linkage
-- Ordered list of tasks
-- Enforcement mode: strict (enforced sequence) or flexible
-- Version tracking
-
-**Task Types:** Reusable task definitions with:
-- Category (Intake, Diagnosis, Repair, QA, Closing)
-- Name and description
-- Estimated duration
-- Default instructions
+- Workflow name and description
+- Entity type (service_ticket, inventory_receipt, etc.) or NULL for generic
+- Ordered list of tasks via junction table
+- Enforcement mode: `strict_sequence` (enforced order) or flexible
 - Active/inactive status
 
-**Template Operations:**
-- Create template with drag-and-drop task ordering
-- Edit template (creates new version, marks old inactive)
-- Preview template before activation
-- Assign template to product + service type combinations
-- Delete unused templates
-- Dynamic template switching (mid-workflow, with mandatory reason)
+**Workflow Operations:**
+- Create workflow with drag-and-drop task ordering
+- Edit workflow (creates new version, marks old inactive)
+- Preview workflow before activation
+- Assign workflow to specific entity types
+- Delete unused workflows
+- Dynamic workflow switching (mid-execution, with mandatory reason logging)
 
-**Task Library Categories:**
+#### 2.2.3 Tasks (Task Library)
+
+**Purpose:** Reusable library of task definitions
+
+**Task Attributes:**
+- Category (Intake, Diagnosis, Repair, QA, Closing, Serial Entry, etc.)
+- Name and description
+- Estimated duration in minutes
+- Validation requirements (requires_notes, requires_photo)
+- Active/inactive status
+
+**Standard Task Categories:**
 1. **Intake:** Initial Inspection, Document Product Condition, Record Serial Numbers
 2. **Diagnosis:** Run Diagnostic Tests, Identify Problem, Estimate Cost
 3. **Repair:** Replace Components, Clean/Service Unit, Update Firmware
 4. **QA:** Quality Check, Performance Test, Final Inspection
 5. **Closing:** Package Product, Update Documentation, Customer Notification
+6. **Serial Entry:** Automated tasks for inventory receipt serial entry
 
-#### 2.2.2 Task Execution
+#### 2.2.4 Workflow Tasks (Junction Table)
+
+**Purpose:** Maps tasks to workflows with sequence and configuration
+
+**Fields:**
+- workflow_id → references workflows
+- task_id → references tasks
+- sequence_order (unique per workflow)
+- is_required (boolean)
+- custom_instructions (override default task instructions)
+
+#### 2.2.5 Entity Tasks (Polymorphic Task Instances)
+
+**Purpose:** Task instances that can be attached to any entity type
 
 **Task Lifecycle:**
 ```
 pending → in_progress → completed
-            ↓
-         blocked
+            ↓            ↓
+         blocked      skipped
 ```
 
+**Entity Task Fields:**
+- entity_type (ENUM: service_ticket, inventory_receipt, etc.)
+- entity_id (UUID of the associated entity)
+- task_id (references tasks library)
+- workflow_task_id (optional, if created from workflow)
+- workflow_id (optional, workflow this task belongs to)
+- name, description, sequence_order
+- status, assigned_to_id
+- started_at, completed_at, due_date
+- completion_notes (required for completed status)
+- blocked_reason (required for blocked status)
+- metadata (JSONB for entity-specific data like serial entry progress)
+
 **Task Execution Features:**
-- Start task (sets started_at timestamp)
-- Add findings and notes
-- Mark complete (sets completed_at timestamp, auto-advances next dependent task)
-- Mark blocked (with reason)
+- Start task (sets started_at timestamp, status = in_progress)
+- Add findings and completion notes
+- Mark complete (sets completed_at timestamp, auto-advances next task if dependencies met)
+- Mark blocked (with mandatory reason)
 - Skip task (with mandatory reason)
 - View dependency status
-- Task history audit trail
+- Task history audit trail (entity_task_history table)
 
 **Task Dependencies:**
-- Sequential dependencies (Task B requires Task A completion)
+- Sequential dependencies via sequence_order
+- Workflow enforcement mode controls strict vs flexible ordering
 - Dependency validation prevents completing dependent tasks before prerequisites
 - Blocked task detection and alerts
 - Dependency visualization in UI
 
 **Automatic Task Generation:**
-- Trigger fires on ticket creation
-- Finds template by product + service type
-- Creates task instances linked to ticket
+- **Service Tickets:** Trigger fires on ticket creation, finds workflow by product + service type
+- **Inventory Receipts:** Trigger fires on receipt approval, creates serial entry tasks per product
+- **Generic:** Manual task creation via API for any entity type
+- Creates entity_task instances linked to entity
 - Sets initial status = pending
-- Copies instructions and estimated duration
-- Maintains task sequence order
+- Copies instructions and estimated duration from task library
+- Maintains sequence order
 
 **Task Progress Tracking:**
-- Manager dashboard shows all task progress across tickets
-- Filter by status, technician, overdue
+- Manager dashboard shows all task progress across ALL entity types
+- Filter by entity type, status, technician, overdue
 - Blocked task alerts
-- Task completion rate metrics
+- Task completion rate metrics per entity type
 - Estimated vs actual duration tracking
+- Real-time progress updates via metadata field (e.g., serial entry 45/100)
 
 ### 2.3 Warehouse and Inventory Management
 
 #### 2.3.1 Warehouse Hierarchy
 
+**Architecture Note (2025-10-31):** Virtual warehouses use a simplified single-instance model with system-wide unique warehouse types.
+
 **Physical Warehouses:** Physical storage locations
-- Name and code
+- Name and code (unique)
 - Address and contact information
 - Active/inactive status
-- Multiple virtual warehouses per physical location
+- System default flag (only one can be system default)
+- Cannot delete default warehouse or warehouses with active stock
 
-**Virtual Warehouses:** Logical stock categories (5 types)
-1. **Warranty Stock** (`warranty_stock`) - Products for warranty replacements
-2. **RMA Staging** (`rma_staging`) - Products prepared for return to supplier
-3. **Dead Stock** (`dead_stock`) - Obsolete or unsellable inventory
-4. **In-Service** (`in_service`) - Products currently being serviced
-5. **Parts** (`parts`) - Component inventory
+**Virtual Warehouses:** Logical stock categories (7 fixed types, one instance per type system-wide)
+1. **Main** (`main`) - Primary storage / general inventory
+2. **Warranty Stock** (`warranty_stock`) - Products for warranty replacements
+3. **RMA Staging** (`rma_staging`) - Products prepared for return to supplier
+4. **Dead Stock** (`dead_stock`) - Obsolete or unsellable inventory
+5. **In-Service** (`in_service`) - Products currently being serviced
+6. **Parts** (`parts`) - Component inventory
+7. **Customer Installed** (`customer_installed`) - Products sold and at customer sites
+
+**Virtual Warehouse Architecture:**
+- Each warehouse_type can only exist once (UNIQUE constraint)
+- Virtual warehouses are not tied to specific physical warehouses
+- Physical products reference specific virtual_warehouse_id
+- Stock can be tracked across virtual warehouse categories
+- Default virtual warehouses seeded automatically on database reset
 
 **Warehouse Operations:**
 - Create/edit physical warehouses
-- Create/edit virtual warehouses (assigned to physical locations)
-- Set default virtual warehouses by type
-- Monitor stock levels by warehouse
-- Stock movement tracking between warehouses
+- Virtual warehouses are pre-seeded (7 types, system-managed)
+- Monitor stock levels by virtual warehouse type
+- Stock movement tracking between virtual warehouses
+- Physical warehouse info retrieved via JOIN (virtual_warehouse → physical_warehouse)
 
 #### 2.3.2 Physical Product Tracking
+
+**Architecture Update (2025-11-05):** Physical products now include lifecycle status tracking to prevent double-selection and ensure data integrity.
 
 **Product Master Data:** Serialized product instances with:
 - Serial number (unique constraint across all products)
 - Product reference (SKU from catalog)
 - Product condition: new, refurbished, used, faulty, for_parts
-- Current warehouse location (physical + virtual)
-- Service ticket assignment (if in service)
-- RMA batch assignment (if in RMA process)
-- Warranty tracking (manufacturer + company)
-- Purchase date and cost
-- Supplier information
+- **Lifecycle status** (NEW): draft, active, transferring, issued, disposed
+- Virtual warehouse location (virtual_warehouse_id)
+- Previous virtual warehouse (for RMA restoration)
+- Service ticket assignment (current_ticket_id, if in service)
+- RMA batch assignment (rma_batch_id, if in RMA process)
+- Last known customer (for customer_installed products)
+- Warranty tracking (manufacturer + user warranty end dates)
+- Notes and metadata
+
+**Physical Product Status Lifecycle (Added 2025-11-05):**
+```
+Receipt draft → draft (serial added, temporary)
+    ↓
+Receipt approved → active (available in stock)
+    ↓
+Add to issue/transfer → transferring (locked, prevents double-selection)
+    ↓
+Issue approved → issued (out of stock permanently)
+OR
+Transfer approved → active (in destination warehouse)
+OR
+Document cancelled → active (restored)
+```
+
+**Status Business Rules:**
+- ✅ Only `active` products can be selected for new stock documents
+- ✅ `draft` products auto-deleted when receipt cancelled
+- ✅ `transferring` status prevents product from being selected by multiple documents
+- ✅ Only `active` products count toward available stock
+- ✅ Complete audit trail of all status transitions
 
 **Warranty Management:**
 - Manufacturer warranty period (months)
@@ -823,13 +911,13 @@ Phase 2: Serial Entry Task (parallel) → Technician enters serials → 100% Com
 - `service_ticket_comments` - Comments and audit trail
 - `service_ticket_attachments` - Image/file uploads
 
-**Workflows:**
-- `task_templates` - Workflow templates
-- `task_types` - Reusable task definitions
-- `task_templates_tasks` - Template-task junction table
-- `service_ticket_tasks` - Task instances in tickets
-- `task_history` - Task status audit trail
-- `ticket_template_changes` - Template switch audit
+**Workflows (Updated 2025-10-31 - Polymorphic System):**
+- `workflows` - Workflow templates (formerly task_templates)
+- `tasks` - Reusable task definitions (formerly task_types)
+- `workflow_tasks` - Workflow-task junction table (formerly task_templates_tasks)
+- `entity_tasks` - Polymorphic task instances for any entity type (replaces service_ticket_tasks)
+- `entity_task_history` - Polymorphic task status audit trail (replaces task_history)
+- `ticket_workflow_changes` - Workflow switch audit (formerly ticket_template_changes)
 
 **Warehouse and Inventory:**
 - `physical_warehouses` - Physical storage locations
@@ -867,22 +955,30 @@ Phase 2: Serial Entry Task (parallel) → Technician enters serials → 100% Com
 service_tickets → customers (N:1)
 service_tickets → products (N:1)
 service_tickets → profiles (N:1, assigned_to)
-service_tickets → task_templates (N:1)
+service_tickets → workflows (N:1)
 service_tickets → service_requests (N:1)
-service_tickets ← service_ticket_tasks (1:N, cascade delete)
+service_tickets ← entity_tasks (1:N via polymorphic, entity_type='service_ticket')
 service_tickets ← service_ticket_parts (1:N, cascade delete)
 service_tickets ← service_ticket_comments (1:N, cascade delete)
 service_tickets ← service_ticket_attachments (1:N, cascade delete)
 ```
 
-**Task Workflow Relationships:**
+**Task Workflow Relationships (Updated 2025-10-31 - Polymorphic System):**
 ```
-task_templates → products (N:1)
-task_templates ← task_templates_tasks (1:N, cascade delete)
-task_templates_tasks → task_types (N:1)
-service_ticket_tasks → service_tickets (N:1, cascade delete)
-service_ticket_tasks → task_types (N:1)
-service_ticket_tasks ← task_history (1:N, immutable)
+workflows → entity_type (ENUM: service_ticket, inventory_receipt, etc.)
+workflows ← workflow_tasks (1:N, cascade delete)
+workflow_tasks → tasks (N:1, restrict)
+entity_tasks → tasks (N:1, restrict)
+entity_tasks → workflows (N:1, set null)
+entity_tasks → workflow_tasks (N:1, set null)
+entity_tasks ← entity_task_history (1:N, immutable)
+
+-- Polymorphic relationships (via entity_type + entity_id):
+entity_tasks → service_tickets (polymorphic)
+entity_tasks → stock_receipts (polymorphic)
+entity_tasks → stock_issues (polymorphic)
+entity_tasks → stock_transfers (polymorphic)
+entity_tasks → service_requests (polymorphic)
 ```
 
 **Warehouse Relationships:**
@@ -924,8 +1020,11 @@ stock_transfer_items ← stock_transfer_serials (1:N)
 **Check Constraints:**
 - `service_tickets.total_cost >= 0` - No negative costs
 - `physical_products.warranty_months >= 0` - No negative warranty periods
-- `task_templates.is_strict IN (true, false)` - Boolean enforcement
+- `workflows.strict_sequence IN (true, false)` - Boolean enforcement
 - `stock_movements.quantity > 0` - Positive quantities only
+- `entity_tasks.sequence_order > 0` - Positive sequence numbers
+- `entity_tasks.completed_requires_notes` - Completion notes required when status='completed'
+- `entity_tasks.blocked_requires_reason` - Blocked reason required when status='blocked'
 
 ### 4.4 Database Functions and Triggers
 
@@ -1015,8 +1114,10 @@ stock_transfer_items ← stock_transfer_serials (1:N)
   └─ /management/team - Team/user management
 
 ⚙️ Workflows (Process Templates)
-  └─ /workflows/templates - Task templates
-  └─ /workflows/task-types - Task type library
+  └─ /workflows - Workflows (formerly templates)
+  └─ /workflows/tasks - Task library (formerly task-types)
+  └─ /workflows/[id] - View workflow
+  └─ /workflows/[id]/edit - Edit workflow
 
 🔧 Settings (Configuration)
   └─ /settings/account - User account
@@ -1297,34 +1398,37 @@ stock_transfer_items ← stock_transfer_serials (1:N)
 
 ### 6.1 tRPC Routers
 
-**14 Main Routers:**
+**17 Main Routers (Updated 2025-11-05):**
 
 | Router | Purpose | Key Procedures | Middleware |
 |--------|---------|----------------|------------|
 | `admin` | System setup and initialization | `setup`, `createFirstAdmin`, `checkSetup`, `getSystemInfo` | Public |
 | `profile` | User profile management | `getCurrent`, `update`, `getAll`, `getById` | Auth required |
 | `tickets` | Service ticket CRUD and workflow | `list`, `getById`, `create`, `update`, `delete`, `updateStatus`, `addPart`, `removePart`, `confirmDelivery` | Role-based |
-| `customers` | Customer management | `list`, `getById`, `create`, `update`, `delete`, `search` | Role-based |
+| `customers` | Customer management | `list`, `getById`, `create`, `update`, `delete`, `search`, `getByPhone` | Role-based |
 | `products` | Product catalog | `list`, `getById`, `create`, `update`, `delete`, `toggleActive` | Role-based |
 | `parts` | Parts inventory | `list`, `getById`, `create`, `update`, `delete`, `adjustStock` | Role-based |
 | `brands` | Brand management | `list`, `getById`, `create`, `update`, `delete`, `toggleActive` | Role-based |
-| `workflow` | Task templates and types | `taskType.list/create/update/toggleActive`, `template.list/create/update/assign/switchTemplate`, `task.list/getById/start/complete/updateStatus` | Role-based |
-| `warehouse` | Warehouse configuration | `physical.list/create/update`, `virtual.list/create/update/getByPhysical` | Role-based |
+| `workflow` | Workflows and tasks (polymorphic) | `task.list/create/update/toggleActive`, `workflow.list/create/update/assign/switchWorkflow`, `entityTask.list/getById/start/complete/updateStatus` | Role-based |
+| `warehouse` | Warehouse configuration | `physical.list/create/update`, `virtual.list/getAll` | Role-based |
 | `inventory` | Inventory operations (sub-routers) | See below | Role-based |
 | `physicalProducts` | Serialized products | `list`, `getById`, `create`, `bulkImport`, `transfer`, `assignToTicket`, `addToRMA` | Role-based |
-| `serviceRequest` | Public service requests | `create`, `getByToken`, `list`, `getById`, `accept`, `reject`, `convertToTicket`, `updateStatus` | Mixed (public + auth) |
+| `serviceRequest` | Public service requests | `create`, `getByToken`, `list`, `getById`, `accept`, `reject`, `convertToTicket`, `updateStatus`, `saveDraft`, `deleteDraft`, `submit` | Mixed (public + auth) |
 | `revenue` | Analytics and reporting | `getRevenueByPeriod`, `getRevenueByServiceType`, `getRevenueByTechnician`, `getTicketStats` | Manager+ |
 | `notifications` | Email notifications | `list`, `getById`, `send`, `resend`, `getStats` | Role-based |
+| `tasks` | Polymorphic task operations | `list`, `getById`, `getByEntity`, `create`, `update`, `delete`, `start`, `complete`, `block` | Role-based |
+| `analytics` | Dashboard analytics | `getMetrics`, `getTaskProgress`, `getSerialCompliance`, `getRevenueAnalytics` | Manager+ |
+| `assignments` | Task assignment management | `list`, `assign`, `unassign`, `reassign`, `getByTechnician` | Manager+ |
 
 **Inventory Sub-Routers** (`inventory.*`):
 - `stock.*` - Stock queries: `getByProduct`, `getByWarehouse`, `getLowStock`, `getMovementHistory`
-- `receipts.*` - Stock receipts: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`
-- `issues.*` - Stock issues: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`
-- `transfers.*` - Stock transfers: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`
-- `serials.*` - Serial utilities: `getComplianceMetrics`, `getSerialEntryTasks`, `addSerial`, `removeSerial`, `bulkAddSerials`, `bulkImportCSV`, `validateSerials`
+- `receipts.*` - Stock receipts: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`, `addSerials`, `removeSerials`
+- `issues.*` - Stock issues: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`, `selectSerials`, `removeSerials`
+- `transfers.*` - Stock transfers: `list`, `getById`, `create`, `update`, `submit`, `approve`, `reject`, `selectSerials`, `removeSerials`
+- `serials.*` - Serial utilities: `getComplianceMetrics`, `getSerialEntryTasks`, `addSerial`, `removeSerial`, `bulkAddSerials`, `bulkImportCSV`, `validateSerials`, `searchSerials`
 - `approvals.*` - Approval workflow: `listPending`, `approve`, `reject`, `getBatchApprovals`
 
-**Total Procedures:** 160+
+**Total Procedures:** 170+
 
 ### 6.2 Authorization Middleware
 
@@ -1752,8 +1856,10 @@ NEXT_PUBLIC_BASE_URL=https://service-center.example.com
 - **Service Role:** Supabase administrative client that bypasses RLS policies
 - **Virtual Warehouse:** Logical stock category (warranty_stock, rma_staging, etc.)
 - **Physical Warehouse:** Physical storage location
-- **Task Template:** Predefined workflow with ordered task sequence
-- **Task Instance:** Individual task created from template, linked to specific ticket
+- **Workflow:** Predefined process template with ordered task sequence (formerly "Task Template", renamed 2025-10-31)
+- **Task:** Reusable task definition in the task library (formerly "Task Type", renamed 2025-10-31)
+- **Entity Task:** Polymorphic task instance that can be attached to any entity type (service tickets, inventory receipts, etc.)
+- **Entity Type:** Classification of entities that support tasks (service_ticket, inventory_receipt, inventory_issue, inventory_transfer, service_request)
 - **Turbopack:** Next.js bundler (faster than Webpack)
 - **shadcn/ui:** Component library built on Radix UI primitives
 - **Phiếu Nhập Kho:** Vietnamese for Stock Receipt
@@ -1777,19 +1883,33 @@ NEXT_PUBLIC_BASE_URL=https://service-center.example.com
 
 ## 10. Change History
 
+**Version 2.0** (2025-11-05)
+- **CONSOLIDATED** main PRD with sharded documents into single source of truth
+- **UPDATED** terminology: task_types → tasks, task_templates → workflows (2025-10-31)
+- **ADDED** polymorphic task system documentation (entity_tasks supporting 5 entity types)
+- **ADDED** physical product status lifecycle system (draft/active/transferring/issued/disposed)
+- **UPDATED** virtual warehouse architecture (single-instance model with UNIQUE constraint)
+- **UPDATED** API routers count: 14 → 17 (added tasks, analytics, assignments)
+- **UPDATED** database tables: 37 → 40+ (polymorphic task tables)
+- **UPDATED** URLs: /workflows/templates → /workflows, /workflows/task-types → /workflows/tasks
+- **UPDATED** all references to reflect current implementation state
+
 **Version 1.0** (2025-10-28)
 - Complete PRD rewrite as current state document
 - Removed all change logs, legacy planning, story-based structure
 - Consolidated requirements from existing codebase
 - Added comprehensive feature documentation
-- Documented all 37 database tables, 14 routers, 45+ pages
 - Present-tense descriptions of what exists NOW
-- No historical baggage, single source of truth
 
 ---
 
 **End of Product Requirements Document**
 
-*For technical implementation details, see `docs/architecture/` (10 shards, 62KB+)*
+*For technical implementation details, see `docs/architecture/` (15+ documents)*
 *For project instructions, see `CLAUDE.md`*
 *For development setup, see `DEVELOPMENT.md`*
+*For recent architecture changes, see:*
+- *`docs/architecture/TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md` (2025-10-31)*
+- *`docs/architecture/INVENTORY-WORKFLOW-V2.md` (2025-10-29, updated 2025-11-05)*
+- *`docs/architecture/PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md` (2025-10-31)*
+- *`docs/architecture/SERIAL-ENTRY-WORKFLOW-ARCHITECTURE.md` (2025-11-05)*

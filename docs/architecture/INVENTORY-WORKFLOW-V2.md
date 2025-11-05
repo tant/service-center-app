@@ -201,6 +201,179 @@ function selectSerialsByNumbers_Transfer() {
 
 ---
 
+## 📦 Physical Product Status Lifecycle
+
+**Date Added:** 2025-11-05
+**Status:** ✅ Implemented
+
+### Overview
+
+Physical products have a `status` field that tracks their lifecycle from creation through various warehouse transitions. This prevents double-selection and ensures data integrity.
+
+### Status ENUM
+
+```sql
+CREATE TYPE public.physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary, can be deleted)
+  'active',       -- In stock, available (receipt approved)
+  'transferring', -- In draft issue/transfer document (locked, cannot be selected)
+  'issued',       -- Issued out (via approved stock issue document)
+  'disposed'      -- Disposed/scrapped (no longer usable)
+);
+```
+
+### Lifecycle Flow
+
+```
+Receipt Draft → draft (serial added)
+    ↓
+Receipt Approved → active (available in stock)
+    ↓
+Add to Issue/Transfer → transferring (locked, prevents double-selection)
+    ↓
+Issue Approved → issued (out of stock)
+OR
+Transfer Approved → active (in destination warehouse)
+```
+
+### Status Transitions
+
+| Transition | Trigger | Business Rule |
+|------------|---------|---------------|
+| `NULL → draft` | Serial added to draft receipt | Products created immediately but marked as temporary |
+| `draft → active` | Receipt approved | Products become available in stock |
+| `active → transferring` | Serial added to draft issue/transfer | Product locked, cannot be selected by other documents |
+| `transferring → active` | Serial removed from draft OR document cancelled | Unlock product, restore availability |
+| `transferring → issued` | Issue approved | Product leaves warehouse permanently |
+| `transferring → active` | Transfer approved | Product available in destination warehouse |
+| `active → disposed` | Manual disposal operation | Product marked as scrapped/unusable |
+
+### Key Benefits
+
+1. **Prevents Double-Selection**
+   - Products in `transferring` status cannot be selected by other documents
+   - Only `active` products shown in selection lists
+
+2. **Orphaned Data Cleanup**
+   - Draft products automatically cleaned up when receipt cancelled
+   - Transferring products restored to active when removed from draft documents
+
+3. **Accurate Stock Counting**
+   - Only `active` products count toward available stock
+   - Excludes `draft` (not yet approved) and `transferring` (locked in documents)
+
+4. **Full Audit Trail**
+   - Every status change tracked
+   - Complete product lifecycle history
+
+### Validation Rules
+
+**Receipt Serial Entry (3 Checkpoints):**
+```typescript
+// Only check ACTIVE products to avoid false positives
+const duplicates = await supabase
+  .from("physical_products")
+  .select("serial_number")
+  .in("serial_number", serialNumbers)
+  .eq("status", "active");  // ✅ Exclude draft & transferring
+```
+
+**Issue/Transfer Serial Selection:**
+```typescript
+// Only allow selection of ACTIVE products
+const products = await supabase
+  .from("physical_products")
+  .select("*")
+  .eq("status", "active")  // ✅ Only active products
+  .in("id", productIds);
+```
+
+### Database Triggers
+
+**1. Create Draft Product (Receipt Serial Insert)**
+```sql
+CREATE TRIGGER trigger_create_physical_product_from_receipt_serial
+  BEFORE INSERT ON stock_receipt_serials
+  EXECUTE FUNCTION create_physical_product_from_receipt_serial();
+
+-- Function sets: status = 'draft'
+```
+
+**2. Activate Products (Receipt Approval)**
+```sql
+CREATE TRIGGER trigger_activate_physical_products_on_receipt_approval
+  AFTER UPDATE ON stock_receipts
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION activate_physical_products_on_receipt_approval();
+
+-- Function updates: draft → active
+```
+
+**3. Lock Product (Issue/Transfer Serial Insert)**
+```sql
+CREATE TRIGGER trigger_mark_physical_product_as_transferring_on_issue
+  AFTER INSERT ON stock_issue_serials
+  EXECUTE FUNCTION mark_physical_product_as_transferring_on_issue();
+
+-- Function updates: active → transferring
+
+CREATE TRIGGER trigger_mark_physical_product_as_transferring_on_transfer
+  AFTER INSERT ON stock_transfer_serials
+  EXECUTE FUNCTION mark_physical_product_as_transferring_on_transfer();
+```
+
+**4. Restore Product (Serial Removal)**
+```sql
+CREATE TRIGGER trigger_restore_active_status_on_issue_serial_removal
+  BEFORE DELETE ON stock_issue_serials
+  EXECUTE FUNCTION restore_active_status_on_issue_serial_removal();
+
+-- Function updates: transferring → active (if was transferring)
+
+CREATE TRIGGER trigger_restore_active_status_on_transfer_serial_removal
+  BEFORE DELETE ON stock_transfer_serials
+  EXECUTE FUNCTION restore_active_status_on_transfer_serial_removal();
+```
+
+**5. Finalize Status (Document Approval)**
+```sql
+-- Issue approval: transferring → issued
+CREATE TRIGGER trigger_mark_physical_products_as_issued_on_issue_approval
+  AFTER UPDATE ON stock_issues
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION mark_physical_products_as_issued_on_issue_approval();
+
+-- Transfer approval: transferring → active (in new warehouse)
+CREATE TRIGGER trigger_restore_active_status_on_transfer_approval
+  AFTER UPDATE ON stock_transfers
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION restore_active_status_on_transfer_approval();
+```
+
+**6. Restore on Cancellation**
+```sql
+CREATE TRIGGER trigger_restore_active_status_on_issue_cancel
+  AFTER UPDATE ON stock_issues
+  WHEN (NEW.status = 'cancelled' AND OLD.status != 'cancelled')
+  EXECUTE FUNCTION restore_active_status_on_issue_cancel();
+
+CREATE TRIGGER trigger_restore_active_status_on_transfer_cancel
+  AFTER UPDATE ON stock_transfers
+  WHEN (NEW.status = 'cancelled' AND OLD.status != 'cancelled')
+  EXECUTE FUNCTION restore_active_status_on_transfer_cancel();
+
+-- Both functions update: transferring → active
+```
+
+### Schema Location
+
+- **ENUM Definition:** `docs/data/schemas/100_enums_and_sequences.sql` (lines 130-138)
+- **Table Column:** `docs/data/schemas/202_task_and_warehouse.sql` (physical_products table)
+- **Triggers:** `docs/data/schemas/600_stock_triggers.sql`
+- **API Validation:** `src/server/routers/inventory/{receipts,issues,transfers}.ts`
+
+---
+
 ## 🗄️ Database Triggers
 
 ### Helper Function

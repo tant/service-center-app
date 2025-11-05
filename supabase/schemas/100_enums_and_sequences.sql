@@ -126,6 +126,17 @@ CREATE TYPE public.product_condition AS ENUM (
 );
 COMMENT ON TYPE public.product_condition IS 'Physical condition classification for inventory products';
 
+-- Physical Product Status Enum
+DROP TYPE IF EXISTS public.physical_product_status CASCADE;
+CREATE TYPE public.physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary, can be deleted)
+  'active',       -- In stock, available (receipt approved)
+  'transferring', -- In draft issue/transfer document (locked, cannot be selected by other documents)
+  'issued',       -- Issued out (via approved stock issue document)
+  'disposed'      -- Disposed/scrapped (no longer usable)
+);
+COMMENT ON TYPE public.physical_product_status IS 'Lifecycle status: draft (unapproved receipt) → active (available) → transferring (locked in draft issue/transfer) → issued (out) / disposed';
+
 -- Service Type Enum
 DROP TYPE IF EXISTS public.service_type CASCADE;
 CREATE TYPE public.service_type AS ENUM (

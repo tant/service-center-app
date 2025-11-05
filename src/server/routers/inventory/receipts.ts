@@ -399,7 +399,7 @@ export const receiptsRouter = router({
   submitForApproval: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // VALIDATION CHECKPOINT #2: Verify all serials don't exist in system before submit
+      // VALIDATION CHECKPOINT #2: Verify all serials don't exist in OTHER receipts before submit
 
       // Get all item IDs for this receipt
       const { data: receiptItems } = await ctx.supabaseAdmin
@@ -408,24 +408,33 @@ export const receiptsRouter = router({
         .eq("receipt_id", input.id);
 
       if (receiptItems && receiptItems.length > 0) {
-        // Get all serials in this receipt
+        // Get all serials in this receipt (including their physical_product_ids)
         const receiptItemIds = receiptItems.map(item => item.id);
         const { data: receiptSerials } = await ctx.supabaseAdmin
           .from("stock_receipt_serials")
-          .select("serial_number")
+          .select("serial_number, physical_product_id")
           .in("receipt_item_id", receiptItemIds);
 
         if (receiptSerials && receiptSerials.length > 0) {
           const serialNumbers = receiptSerials.map(s => s.serial_number);
+          const currentPhysicalProductIds = receiptSerials
+            .map(s => s.physical_product_id)
+            .filter(Boolean) as string[];
 
-          // Check if any serial already exists in physical_products
+          // Check if any serial exists in ACTIVE physical_products (excluding current receipt)
           const { data: existing } = await ctx.supabaseAdmin
             .from("physical_products")
-            .select("serial_number")
-            .in("serial_number", serialNumbers);
+            .select("id, serial_number")
+            .in("serial_number", serialNumbers)
+            .eq("status", "active");
 
-          if (existing && existing.length > 0) {
-            const duplicates = existing.map(e => e.serial_number).join(", ");
+          // Filter out physical products from current receipt
+          const duplicatesInOtherReceipts = existing?.filter(
+            pp => !currentPhysicalProductIds.includes(pp.id)
+          ) || [];
+
+          if (duplicatesInOtherReceipts.length > 0) {
+            const duplicates = duplicatesInOtherReceipts.map(e => e.serial_number).join(", ");
             throw new Error(`Không thể gửi duyệt: Các serial sau đã tồn tại trong hệ thống: ${duplicates}`);
           }
         }
@@ -463,7 +472,7 @@ export const receiptsRouter = router({
         throw new Error("Unauthorized: Only admin and manager can approve receipts");
       }
 
-      // VALIDATION CHECKPOINT #3: Verify all serials don't exist in system before approval
+      // VALIDATION CHECKPOINT #3: Verify all serials don't exist in OTHER receipts before approval
 
       // Get all item IDs for this receipt
       const { data: receiptItems } = await ctx.supabaseAdmin
@@ -472,24 +481,33 @@ export const receiptsRouter = router({
         .eq("receipt_id", input.id);
 
       if (receiptItems && receiptItems.length > 0) {
-        // Get all serials in this receipt
+        // Get all serials in this receipt (including their physical_product_ids)
         const receiptItemIds = receiptItems.map(item => item.id);
         const { data: receiptSerials } = await ctx.supabaseAdmin
           .from("stock_receipt_serials")
-          .select("serial_number")
+          .select("serial_number, physical_product_id")
           .in("receipt_item_id", receiptItemIds);
 
         if (receiptSerials && receiptSerials.length > 0) {
           const serialNumbers = receiptSerials.map(s => s.serial_number);
+          const currentPhysicalProductIds = receiptSerials
+            .map(s => s.physical_product_id)
+            .filter(Boolean) as string[];
 
-          // Check if any serial already exists in physical_products
+          // Check if any serial exists in ACTIVE physical_products (excluding current receipt)
           const { data: existing } = await ctx.supabaseAdmin
             .from("physical_products")
-            .select("serial_number")
-            .in("serial_number", serialNumbers);
+            .select("id, serial_number")
+            .in("serial_number", serialNumbers)
+            .eq("status", "active");
 
-          if (existing && existing.length > 0) {
-            const duplicates = existing.map(e => e.serial_number).join(", ");
+          // Filter out physical products from current receipt
+          const duplicatesInOtherReceipts = existing?.filter(
+            pp => !currentPhysicalProductIds.includes(pp.id)
+          ) || [];
+
+          if (duplicatesInOtherReceipts.length > 0) {
+            const duplicates = duplicatesInOtherReceipts.map(e => e.serial_number).join(", ");
             throw new Error(`Không thể duyệt phiếu: Các serial sau đã tồn tại trong hệ thống: ${duplicates}`);
           }
         }
@@ -561,11 +579,23 @@ export const receiptsRouter = router({
       // VALIDATION CHECKPOINT #1: Ensure serials don't exist in system yet
       const serialNumbers = input.serials.map((s) => s.serialNumber);
 
-      // Check in physical_products (already created products)
+      // Get receipt_id to exclude current receipt from duplicate check
+      const { data: receiptItem } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("receipt_id")
+        .eq("id", input.receiptItemId)
+        .single();
+
+      if (!receiptItem) {
+        throw new Error("Receipt item not found");
+      }
+
+      // Check in physical_products (only ACTIVE products - exclude draft)
       const { data: existing, error: checkError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("serial_number")
-        .in("serial_number", serialNumbers);
+        .in("serial_number", serialNumbers)
+        .eq("status", "active");
 
       if (checkError) {
         throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
@@ -576,14 +606,28 @@ export const receiptsRouter = router({
         throw new Error(`Serial đã tồn tại trong hệ thống: ${duplicates}`);
       }
 
-      // Also check in stock_receipt_serials (serials in other receipts)
+      // Also check in stock_receipt_serials (serials in OTHER receipts, not current receipt)
+      // First get all receipt_item_ids of current receipt
+      const { data: currentReceiptItems } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("id")
+        .eq("receipt_id", receiptItem.receipt_id);
+
+      const currentReceiptItemIds = currentReceiptItems?.map(item => item.id) || [];
+
+      // Check for duplicates in other receipts
       const { data: existingInReceipts } = await ctx.supabaseAdmin
         .from("stock_receipt_serials")
-        .select("serial_number")
+        .select("serial_number, receipt_item_id")
         .in("serial_number", serialNumbers);
 
-      if (existingInReceipts && existingInReceipts.length > 0) {
-        const duplicates = existingInReceipts.map((e) => e.serial_number).join(", ");
+      // Filter out serials from current receipt
+      const duplicatesInOtherReceipts = existingInReceipts?.filter(
+        serial => !currentReceiptItemIds.includes(serial.receipt_item_id)
+      ) || [];
+
+      if (duplicatesInOtherReceipts.length > 0) {
+        const duplicates = duplicatesInOtherReceipts.map((e) => e.serial_number).join(", ");
         throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
       }
 
@@ -606,18 +650,18 @@ export const receiptsRouter = router({
 
       // Auto-complete: Check if all serials are complete
       // Get receipt item to know declared_quantity
-      const { data: receiptItem } = await ctx.supabaseAdmin
+      const { data: receiptItemForComplete } = await ctx.supabaseAdmin
         .from("stock_receipt_items")
         .select("declared_quantity, receipt_id")
         .eq("id", input.receiptItemId)
         .single();
 
-      if (receiptItem) {
+      if (receiptItemForComplete) {
         // Get receipt status
         const { data: receipt } = await ctx.supabaseAdmin
           .from("stock_receipts")
           .select("status")
-          .eq("id", receiptItem.receipt_id)
+          .eq("id", receiptItemForComplete.receipt_id)
           .single();
 
         if (receipt && receipt.status === "approved") {
@@ -629,7 +673,7 @@ export const receiptsRouter = router({
               declared_quantity,
               stock_receipt_serials(id)
             `)
-            .eq("receipt_id", receiptItem.receipt_id);
+            .eq("receipt_id", receiptItemForComplete.receipt_id);
 
           if (allItems) {
             const totalDeclared = allItems.reduce((sum, item) => sum + item.declared_quantity, 0);
@@ -644,7 +688,7 @@ export const receiptsRouter = router({
                   completed_at: new Date().toISOString(),
                   completed_by_id: ctx.user?.id
                 })
-                .eq("id", receiptItem.receipt_id)
+                .eq("id", receiptItemForComplete.receipt_id)
                 .eq("status", "approved");
             }
           }

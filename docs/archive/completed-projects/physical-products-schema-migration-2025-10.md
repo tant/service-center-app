@@ -65,6 +65,9 @@ CREATE TABLE public.physical_products (
   previous_virtual_warehouse_id UUID
     REFERENCES virtual_warehouses(id) ON DELETE SET NULL,
 
+  -- ✅ MỚI (2025-11-05): Lifecycle status tracking
+  status public.physical_product_status NOT NULL DEFAULT 'draft',
+
   -- ❌ ĐÃ XÓA: Không cần physical_warehouse_id nữa
   -- physical_warehouse_id - Lấy từ virtual_warehouse.physical_warehouse_id
 
@@ -85,6 +88,8 @@ CREATE INDEX idx_physical_products_virtual_warehouse
 CREATE INDEX idx_physical_products_previous_warehouse
   ON physical_products(previous_virtual_warehouse_id)
   WHERE previous_virtual_warehouse_id IS NOT NULL;
+CREATE INDEX idx_physical_products_status
+  ON physical_products(status);
 ```
 
 ### 2.2 So Sánh Các Trường (Field Comparison)
@@ -95,6 +100,33 @@ CREATE INDEX idx_physical_products_previous_warehouse
 | `virtual_warehouse_id` | ❌ Không có | ✅ UUID NOT NULL | Tham chiếu kho ảo cụ thể, linh hoạt |
 | `physical_warehouse_id` | ✅ UUID Nullable | ❌ Đã xóa | Dư thừa - lấy từ virtual_warehouse |
 | `previous_virtual_warehouse_id` | ❌ Không có | ✅ UUID Nullable | Hỗ trợ RMA batch management |
+| `status` | ❌ Không có | ✅ ENUM NOT NULL (2025-11-05) | Lifecycle tracking, prevent double-selection |
+
+### 2.3 Physical Product Status ENUM (Added 2025-11-05)
+
+```sql
+CREATE TYPE public.physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary, can be deleted)
+  'active',       -- In stock, available (receipt approved)
+  'transferring', -- In draft issue/transfer document (locked)
+  'issued',       -- Issued out (via approved stock issue document)
+  'disposed'      -- Disposed/scrapped (no longer usable)
+);
+```
+
+**Lifecycle Flow:**
+```
+draft (serial added to receipt)
+  → active (receipt approved)
+  → transferring (added to issue/transfer)
+  → issued (issue approved) OR active (transfer approved)
+```
+
+**Key Benefits:**
+- ✅ Prevents products from being selected by multiple draft documents
+- ✅ Automatic cleanup of orphaned draft products
+- ✅ Only 'active' products count toward available stock
+- ✅ Full audit trail of product lifecycle
 
 ---
 

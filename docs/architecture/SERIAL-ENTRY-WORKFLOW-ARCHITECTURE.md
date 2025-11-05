@@ -1,9 +1,21 @@
 # Serial Entry Workflow Architecture
 
-**Version:** 1.0
-**Date:** November 3, 2025
+**Version:** 1.1
+**Date:** November 3, 2025 (Updated November 5, 2025)
 **Phase:** 2 - Serial Entry Tasks
 **Status:** ✅ **APPROVED**
+
+---
+
+## ⚠️ Important Update (November 5, 2025)
+
+**Physical Product Status System:** This document has been updated to reflect the new physical product lifecycle status system implemented on November 5, 2025. Key changes:
+
+- Physical products are now created with `status='draft'` when serials are added to `stock_receipt_serials`
+- Products transition to `status='active'` when receipt is approved
+- Products use `status='transferring'` when added to draft issues/transfers (prevents double-selection)
+- Products transition to `status='issued'` when issue is approved
+- See `docs/architecture/INVENTORY-WORKFLOW-V2.md` for complete status lifecycle documentation
 
 ---
 
@@ -218,24 +230,28 @@ ON physical_products(receipt_id);
 
 **Trigger Name:** `auto_complete_serial_entry_task()`
 
-**Fires When:** Serial number inserted/deleted in `physical_products` table
+**Fires When:** Serial number inserted/deleted in `stock_receipt_serials` table
+
+**Important Note (Updated 2025-11-05):**
+When a serial is added to `stock_receipt_serials`, it automatically creates a corresponding `physical_product` with `status='draft'`. When the receipt is approved, these draft products transition to `status='active'`. See `docs/architecture/INVENTORY-WORKFLOW-V2.md` for details on the physical product status lifecycle.
 
 **Logic:**
 
 ```
-1. Get receipt_id from physical_product
-2. Get product_id from physical_product
+1. Get receipt_id from stock_receipt_serial
+2. Get product_id from stock_receipt_serial
 3. Count serials for this receipt + product:
-   SELECT COUNT(*) FROM physical_products
-   WHERE receipt_id = X AND product_id = Y
-4. Get expected_quantity from receipt_products
-5. Calculate progress: (serial_count / expected_quantity) * 100
+   SELECT COUNT(*) FROM stock_receipt_serials srs
+   JOIN stock_receipt_items sri ON srs.receipt_item_id = sri.id
+   WHERE sri.receipt_id = X AND sri.product_id = Y
+4. Get declared_quantity from stock_receipt_items
+5. Calculate progress: (serial_count / declared_quantity) * 100
 6. IF progress = 100%:
    a. Find entity_task for this receipt + product
    b. UPDATE entity_task SET status = 'completed', completed_at = NOW()
    c. Check if ALL tasks for receipt are complete
    d. IF all complete:
-      UPDATE inventory_receipt SET status = 'completed'
+      UPDATE stock_receipt SET status = 'completed'
 7. ELSE IF progress < 100% AND task was previously completed:
    a. Reopen task (set status = 'in_progress')
    b. Reopen receipt (set status = 'approved')

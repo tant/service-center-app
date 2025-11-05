@@ -99,6 +99,45 @@ CREATE TRIGGER trigger_update_stock_on_receipt_approval
 COMMENT ON FUNCTION public.update_stock_on_receipt_approval IS 'Increment stock when receipt is approved';
 
 -- =====================================================
+-- RECEIPT APPROVAL: Activate draft physical products
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.activate_physical_products_on_receipt_approval()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to approved status
+  IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
+
+    -- Update all draft physical products from this receipt to 'active'
+    UPDATE public.physical_products pp
+    SET
+      status = 'active',
+      updated_at = NOW()
+    FROM public.stock_receipt_serials srs
+    JOIN public.stock_receipt_items sri ON srs.receipt_item_id = sri.id
+    WHERE
+      sri.receipt_id = NEW.id
+      AND pp.id = srs.physical_product_id
+      AND pp.status = 'draft';
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_activate_physical_products_on_receipt_approval
+  AFTER UPDATE ON public.stock_receipts
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION public.activate_physical_products_on_receipt_approval();
+
+COMMENT ON FUNCTION public.activate_physical_products_on_receipt_approval IS 'Activate draft physical products when receipt is approved (draft → active)';
+
+-- =====================================================
 -- SERIAL MANAGEMENT: Auto-create/update physical products
 -- =====================================================
 
@@ -127,12 +166,13 @@ BEGIN
   JOIN public.stock_receipts sr ON sri.receipt_id = sr.id
   WHERE sri.id = NEW.receipt_item_id;
 
-  -- Create physical product
+  -- Create physical product with status='draft'
   INSERT INTO public.physical_products (
     product_id,
     serial_number,
     virtual_warehouse_id,
     condition,
+    status,
     manufacturer_warranty_end_date,
     user_warranty_end_date
   ) VALUES (
@@ -140,6 +180,7 @@ BEGIN
     NEW.serial_number,
     v_virtual_warehouse_id,
     'new',
+    'draft',  -- Always start as draft
     NEW.manufacturer_warranty_end_date,
     NEW.user_warranty_end_date
   )
@@ -169,59 +210,197 @@ CREATE TRIGGER trigger_create_physical_product_from_receipt_serial
 
 COMMENT ON FUNCTION public.create_physical_product_from_receipt_serial IS 'Create physical product when serial is added to receipt. If receipt already approved, also updates product_warehouse_stock.';
 
--- 2. ISSUE SERIALS: Delete physical product when issued
-CREATE OR REPLACE FUNCTION public.delete_physical_product_on_issue()
+-- 1B. RECEIPT SERIALS CLEANUP: Delete draft physical product when serial removed
+CREATE OR REPLACE FUNCTION public.cleanup_draft_physical_product_on_serial_removal()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 DECLARE
-  v_product_id UUID;
-  v_virtual_warehouse_id UUID;
-  v_issue_status TEXT;
+  v_product_status TEXT;
 BEGIN
-  -- Get product info before deletion
-  SELECT
-    pp.product_id,
-    pp.virtual_warehouse_id
-  INTO
-    v_product_id,
-    v_virtual_warehouse_id
-  FROM public.physical_products pp
-  WHERE pp.id = NEW.physical_product_id;
+  -- Only delete if physical product exists and is still in draft status
+  IF OLD.physical_product_id IS NOT NULL THEN
+    SELECT status INTO v_product_status
+    FROM public.physical_products
+    WHERE id = OLD.physical_product_id;
 
-  -- Get issue status
-  SELECT si.status INTO v_issue_status
-  FROM public.stock_issue_items sii
-  JOIN public.stock_issues si ON sii.issue_id = si.id
-  WHERE sii.id = NEW.issue_item_id;
+    -- Only delete draft products (not active/issued/disposed)
+    IF v_product_status = 'draft' THEN
+      DELETE FROM public.physical_products
+      WHERE id = OLD.physical_product_id;
+    END IF;
+  END IF;
 
-  -- Delete the physical product (it's being issued out)
-  DELETE FROM public.physical_products
-  WHERE id = NEW.physical_product_id;
+  RETURN OLD;
+END;
+$$;
 
-  -- If issue is already approved, update product_warehouse_stock
-  -- This handles serials added AFTER approval (non-blocking workflow)
-  IF v_issue_status = 'approved' OR v_issue_status = 'completed' THEN
-    PERFORM public.upsert_product_stock(
-      v_product_id,
-      v_virtual_warehouse_id,
-      -1  -- Decrement by 1 for each serial issued
-    );
+CREATE TRIGGER trigger_cleanup_draft_physical_product_on_serial_removal
+  BEFORE DELETE ON public.stock_receipt_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.cleanup_draft_physical_product_on_serial_removal();
+
+COMMENT ON FUNCTION public.cleanup_draft_physical_product_on_serial_removal IS 'Delete draft physical product when serial is removed from receipt (cleanup orphaned draft products)';
+
+-- 1C. RECEIPT CANCELLATION: Delete all draft physical products when receipt cancelled
+CREATE OR REPLACE FUNCTION public.cleanup_draft_physical_products_on_receipt_cancel()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to cancelled status
+  IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+
+    -- Delete all draft physical products from this receipt
+    DELETE FROM public.physical_products pp
+    USING public.stock_receipt_serials srs
+    JOIN public.stock_receipt_items sri ON srs.receipt_item_id = sri.id
+    WHERE
+      sri.receipt_id = NEW.id
+      AND pp.id = srs.physical_product_id
+      AND pp.status = 'draft';
+
   END IF;
 
   RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER trigger_delete_physical_product_on_issue
+CREATE TRIGGER trigger_cleanup_draft_physical_products_on_receipt_cancel
+  AFTER UPDATE ON public.stock_receipts
+  FOR EACH ROW
+  WHEN (NEW.status = 'cancelled' AND OLD.status != 'cancelled')
+  EXECUTE FUNCTION public.cleanup_draft_physical_products_on_receipt_cancel();
+
+COMMENT ON FUNCTION public.cleanup_draft_physical_products_on_receipt_cancel IS 'Delete all draft physical products when receipt is cancelled (cleanup orphaned draft products)';
+
+-- 2. ISSUE SERIALS: Mark physical product as 'transferring' (lock it)
+CREATE OR REPLACE FUNCTION public.mark_physical_product_as_transferring_on_issue()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Mark the physical product as 'transferring' (lock it from other documents)
+  UPDATE public.physical_products
+  SET
+    status = 'transferring',
+    updated_at = NOW()
+  WHERE id = NEW.physical_product_id
+    AND status = 'active';  -- Only lock if currently active
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_mark_physical_product_as_transferring_on_issue
   AFTER INSERT ON public.stock_issue_serials
   FOR EACH ROW
-  EXECUTE FUNCTION public.delete_physical_product_on_issue();
+  EXECUTE FUNCTION public.mark_physical_product_as_transferring_on_issue();
 
-COMMENT ON FUNCTION public.delete_physical_product_on_issue IS 'Delete physical product when issued out of warehouse. If issue already approved, also updates product_warehouse_stock.';
+COMMENT ON FUNCTION public.mark_physical_product_as_transferring_on_issue IS 'Mark physical product as transferring (active → transferring) when added to issue document. Locks product from being selected by other documents.';
 
--- 3. TRANSFER SERIALS: Update warehouse location when transferred
+-- 2B. ISSUE SERIALS REMOVAL: Restore 'active' status when serial removed from draft issue
+CREATE OR REPLACE FUNCTION public.restore_active_status_on_issue_serial_removal()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_product_status TEXT;
+BEGIN
+  -- Only restore if physical product exists and is in 'transferring' status
+  IF OLD.physical_product_id IS NOT NULL THEN
+    SELECT status INTO v_product_status
+    FROM public.physical_products
+    WHERE id = OLD.physical_product_id;
+
+    -- Only restore if currently transferring (unlock it)
+    IF v_product_status = 'transferring' THEN
+      UPDATE public.physical_products
+      SET
+        status = 'active',
+        updated_at = NOW()
+      WHERE id = OLD.physical_product_id;
+    END IF;
+  END IF;
+
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trigger_restore_active_status_on_issue_serial_removal
+  BEFORE DELETE ON public.stock_issue_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.restore_active_status_on_issue_serial_removal();
+
+COMMENT ON FUNCTION public.restore_active_status_on_issue_serial_removal IS 'Restore active status (transferring → active) when serial is removed from issue document. Unlocks product for other documents.';
+
+-- 3A. TRANSFER SERIALS: Mark physical product as 'transferring' (lock it)
+CREATE OR REPLACE FUNCTION public.mark_physical_product_as_transferring_on_transfer()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Mark the physical product as 'transferring' (lock it from other documents)
+  UPDATE public.physical_products
+  SET
+    status = 'transferring',
+    updated_at = NOW()
+  WHERE id = NEW.physical_product_id
+    AND status = 'active';  -- Only lock if currently active
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_mark_physical_product_as_transferring_on_transfer
+  AFTER INSERT ON public.stock_transfer_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.mark_physical_product_as_transferring_on_transfer();
+
+COMMENT ON FUNCTION public.mark_physical_product_as_transferring_on_transfer IS 'Mark physical product as transferring (active → transferring) when added to transfer document. Locks product from being selected by other documents.';
+
+-- 3B. TRANSFER SERIALS REMOVAL: Restore 'active' status when serial removed from draft transfer
+CREATE OR REPLACE FUNCTION public.restore_active_status_on_transfer_serial_removal()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_product_status TEXT;
+BEGIN
+  -- Only restore if physical product exists and is in 'transferring' status
+  IF OLD.physical_product_id IS NOT NULL THEN
+    SELECT status INTO v_product_status
+    FROM public.physical_products
+    WHERE id = OLD.physical_product_id;
+
+    -- Only restore if currently transferring (unlock it)
+    IF v_product_status = 'transferring' THEN
+      UPDATE public.physical_products
+      SET
+        status = 'active',
+        updated_at = NOW()
+      WHERE id = OLD.physical_product_id;
+    END IF;
+  END IF;
+
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trigger_restore_active_status_on_transfer_serial_removal
+  BEFORE DELETE ON public.stock_transfer_serials
+  FOR EACH ROW
+  EXECUTE FUNCTION public.restore_active_status_on_transfer_serial_removal();
+
+COMMENT ON FUNCTION public.restore_active_status_on_transfer_serial_removal IS 'Restore active status (transferring → active) when serial is removed from transfer document. Unlocks product for other documents.';
+
+-- 3C. TRANSFER SERIALS (LEGACY TRIGGER - KEPT FOR APPROVED TRANSFERS ONLY): Update warehouse location when transferred
 CREATE OR REPLACE FUNCTION public.update_physical_product_warehouse_on_transfer()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -389,6 +568,159 @@ CREATE TRIGGER trigger_update_stock_on_transfer_approval
   EXECUTE FUNCTION public.update_stock_on_transfer_approval();
 
 COMMENT ON FUNCTION public.update_stock_on_transfer_approval IS 'Update stock counts when transfer is approved - decrements source warehouse and increments destination warehouse for all serials in the transfer';
+
+-- =====================================================
+-- ISSUE APPROVAL: Mark physical products as 'issued'
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.mark_physical_products_as_issued_on_issue_approval()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to approved status
+  IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
+
+    -- Update all transferring physical products from this issue to 'issued'
+    UPDATE public.physical_products pp
+    SET
+      status = 'issued',
+      updated_at = NOW()
+    FROM public.stock_issue_serials sis
+    JOIN public.stock_issue_items sii ON sis.issue_item_id = sii.id
+    WHERE
+      sii.issue_id = NEW.id
+      AND pp.id = sis.physical_product_id
+      AND pp.status = 'transferring';
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_mark_physical_products_as_issued_on_issue_approval
+  AFTER UPDATE ON public.stock_issues
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION public.mark_physical_products_as_issued_on_issue_approval();
+
+COMMENT ON FUNCTION public.mark_physical_products_as_issued_on_issue_approval IS 'Mark physical products as issued (transferring → issued) when issue is approved';
+
+-- =====================================================
+-- TRANSFER APPROVAL: Restore 'active' status and move warehouse
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.restore_active_status_on_transfer_approval()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to approved status
+  IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
+
+    -- Restore all transferring physical products from this transfer to 'active'
+    -- (They will be moved to destination warehouse by existing trigger)
+    UPDATE public.physical_products pp
+    SET
+      status = 'active',
+      updated_at = NOW()
+    FROM public.stock_transfer_serials sts
+    JOIN public.stock_transfer_items sti ON sts.transfer_item_id = sti.id
+    WHERE
+      sti.transfer_id = NEW.id
+      AND pp.id = sts.physical_product_id
+      AND pp.status = 'transferring';
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_restore_active_status_on_transfer_approval
+  AFTER UPDATE ON public.stock_transfers
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION public.restore_active_status_on_transfer_approval();
+
+COMMENT ON FUNCTION public.restore_active_status_on_transfer_approval IS 'Restore active status (transferring → active) when transfer is approved. Products remain active but in new warehouse.';
+
+-- =====================================================
+-- ISSUE/TRANSFER CANCELLATION: Restore 'active' status
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.restore_active_status_on_issue_cancel()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to cancelled status
+  IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+
+    -- Restore all transferring physical products from this issue to 'active'
+    UPDATE public.physical_products pp
+    SET
+      status = 'active',
+      updated_at = NOW()
+    FROM public.stock_issue_serials sis
+    JOIN public.stock_issue_items sii ON sis.issue_item_id = sii.id
+    WHERE
+      sii.issue_id = NEW.id
+      AND pp.id = sis.physical_product_id
+      AND pp.status = 'transferring';
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_restore_active_status_on_issue_cancel
+  AFTER UPDATE ON public.stock_issues
+  FOR EACH ROW
+  WHEN (NEW.status = 'cancelled' AND OLD.status != 'cancelled')
+  EXECUTE FUNCTION public.restore_active_status_on_issue_cancel();
+
+COMMENT ON FUNCTION public.restore_active_status_on_issue_cancel IS 'Restore active status (transferring → active) when issue is cancelled. Unlocks all products.';
+
+CREATE OR REPLACE FUNCTION public.restore_active_status_on_transfer_cancel()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Only trigger when transitioning to cancelled status
+  IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+
+    -- Restore all transferring physical products from this transfer to 'active'
+    UPDATE public.physical_products pp
+    SET
+      status = 'active',
+      updated_at = NOW()
+    FROM public.stock_transfer_serials sts
+    JOIN public.stock_transfer_items sti ON sts.transfer_item_id = sti.id
+    WHERE
+      sti.transfer_id = NEW.id
+      AND pp.id = sts.physical_product_id
+      AND pp.status = 'transferring';
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_restore_active_status_on_transfer_cancel
+  AFTER UPDATE ON public.stock_transfers
+  FOR EACH ROW
+  WHEN (NEW.status = 'cancelled' AND OLD.status != 'cancelled')
+  EXECUTE FUNCTION public.restore_active_status_on_transfer_cancel();
+
+COMMENT ON FUNCTION public.restore_active_status_on_transfer_cancel IS 'Restore active status (transferring → active) when transfer is cancelled. Unlocks all products.';
 
 -- =====================================================
 -- NOTES

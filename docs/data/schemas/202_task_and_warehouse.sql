@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE RESTRICT,
   serial_number VARCHAR(255) NOT NULL,
   condition public.product_condition NOT NULL DEFAULT 'new',
+  status public.physical_product_status NOT NULL DEFAULT 'draft',
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
   previous_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
   manufacturer_warranty_end_date DATE,
@@ -208,6 +209,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   CONSTRAINT physical_products_serial_unique UNIQUE(serial_number)
 );
 COMMENT ON TABLE public.physical_products IS 'Serialized product instances with warranty and location tracking';
+COMMENT ON COLUMN public.physical_products.status IS 'Lifecycle status: draft (from unapproved receipt) → active (in stock) → issued (out) / disposed (scrapped)';
 COMMENT ON COLUMN public.physical_products.virtual_warehouse_id IS 'Virtual warehouse this product belongs to (required - every product must be in a warehouse)';
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_id IS 'Previous virtual warehouse before RMA - used to restore location when removed from RMA batch';
 COMMENT ON COLUMN public.physical_products.manufacturer_warranty_end_date IS 'Manufacturer warranty end date (nullable - managed separately at /inventory/products)';
@@ -215,6 +217,8 @@ COMMENT ON COLUMN public.physical_products.user_warranty_end_date IS 'Extended w
 COMMENT ON COLUMN public.physical_products.last_known_customer_id IS 'Last known customer who owns/received this product. Updated when product moves to customer_installed warehouse.';
 CREATE TRIGGER trigger_physical_products_updated_at BEFORE UPDATE ON public.physical_products FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE INDEX IF NOT EXISTS idx_physical_products_status ON public.physical_products(status);
+CREATE INDEX IF NOT EXISTS idx_physical_products_serial_number ON public.physical_products(serial_number);
 CREATE INDEX IF NOT EXISTS idx_physical_products_last_customer ON public.physical_products(last_known_customer_id) WHERE last_known_customer_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_physical_products_virtual_warehouse ON public.physical_products(virtual_warehouse_id) WHERE virtual_warehouse_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_physical_products_previous_virtual_warehouse ON public.physical_products(previous_virtual_warehouse_id) WHERE previous_virtual_warehouse_id IS NOT NULL;

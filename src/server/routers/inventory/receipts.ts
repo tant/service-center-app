@@ -52,8 +52,37 @@ export const receiptsRouter = router({
         throw new Error(`Failed to list receipts: ${error.message}`);
       }
 
+      // Fetch serial counts for all receipts in this page
+      const receiptIds = data?.map(r => r.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+
+      if (receiptIds.length > 0) {
+        const { data: itemsData } = await ctx.supabaseAdmin
+          .from("stock_receipt_items")
+          .select("receipt_id, declared_quantity, serial_count")
+          .in("receipt_id", receiptIds);
+
+        // Aggregate counts by receipt_id
+        serialCounts = (itemsData || []).reduce((acc, item) => {
+          if (!acc[item.receipt_id]) {
+            acc[item.receipt_id] = { declared: 0, entered: 0 };
+          }
+          acc[item.receipt_id].declared += item.declared_quantity;
+          acc[item.receipt_id].entered += item.serial_count;
+          return acc;
+        }, {} as Record<string, { declared: number; entered: number }>);
+      }
+
+      // Merge serial counts with receipts
+      const receiptsWithSerials = (data || []).map(receipt => ({
+        ...receipt,
+        totalDeclaredQuantity: serialCounts[receipt.id]?.declared || 0,
+        totalSerialsEntered: serialCounts[receipt.id]?.entered || 0,
+        missingSerialsCount: (serialCounts[receipt.id]?.declared || 0) - (serialCounts[receipt.id]?.entered || 0),
+      }));
+
       return {
-        receipts: data || [],
+        receipts: receiptsWithSerials,
         total: count || 0,
         page: input.page,
         pageSize: input.pageSize,

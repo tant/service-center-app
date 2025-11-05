@@ -46,8 +46,57 @@ export const transfersRouter = router({
         throw new Error(`Failed to list transfers: ${error.message}`);
       }
 
+      // Fetch serial counts for all transfers in this page
+      const transferIds = data?.map(t => t.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+
+      if (transferIds.length > 0) {
+        // For transfers, count serials directly from stock_transfer_serials table
+        // (transfer items don't have serial_count column, they use existing physical products)
+        const { data: itemsData } = await ctx.supabaseAdmin
+          .from("stock_transfer_items")
+          .select(`
+            transfer_id,
+            quantity,
+            id
+          `)
+          .in("transfer_id", transferIds);
+
+        if (itemsData) {
+          // Get serial counts for all items
+          const itemIds = itemsData.map(item => item.id);
+          const { data: serialData } = await ctx.supabaseAdmin
+            .from("stock_transfer_serials")
+            .select("transfer_item_id")
+            .in("transfer_item_id", itemIds);
+
+          // Count serials per item
+          const serialCountsByItem: Record<string, number> = {};
+          (serialData || []).forEach(serial => {
+            serialCountsByItem[serial.transfer_item_id] = (serialCountsByItem[serial.transfer_item_id] || 0) + 1;
+          });
+
+          // Aggregate by transfer_id
+          itemsData.forEach(item => {
+            if (!serialCounts[item.transfer_id]) {
+              serialCounts[item.transfer_id] = { declared: 0, entered: 0 };
+            }
+            serialCounts[item.transfer_id].declared += item.quantity;
+            serialCounts[item.transfer_id].entered += (serialCountsByItem[item.id] || 0);
+          });
+        }
+      }
+
+      // Merge serial counts with transfers
+      const transfersWithSerials = (data || []).map(transfer => ({
+        ...transfer,
+        totalDeclaredQuantity: serialCounts[transfer.id]?.declared || 0,
+        totalSerialsEntered: serialCounts[transfer.id]?.entered || 0,
+        missingSerialsCount: (serialCounts[transfer.id]?.declared || 0) - (serialCounts[transfer.id]?.entered || 0),
+      }));
+
       return {
-        transfers: data || [],
+        transfers: transfersWithSerials,
         total: count || 0,
         page: input.page,
         pageSize: input.pageSize,

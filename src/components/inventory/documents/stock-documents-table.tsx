@@ -212,6 +212,7 @@ export function StockDocumentsTable() {
               <TableHead>Ngày</TableHead>
               <TableHead>Người tạo</TableHead>
               <TableHead>Trạng thái</TableHead>
+              <TableHead>Serial thiếu</TableHead>
               <TableHead>Ghi chú</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
@@ -219,13 +220,13 @@ export function StockDocumentsTable() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   Đang tải...
                 </TableCell>
               </TableRow>
             ) : allDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   Không tìm thấy chứng từ nào.
                 </TableCell>
               </TableRow>
@@ -246,6 +247,21 @@ export function StockDocumentsTable() {
                   </TableCell>
                   <TableCell>
                     <DocumentStatusBadge status={doc.status} />
+                  </TableCell>
+                  <TableCell>
+                    {doc.status === "approved" || doc.status === "completed" ? (
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
+                          doc.missingSerialsCount > 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
+                        {doc.missingSerialsCount > 0 ? `${doc.missingSerialsCount} serial` : "Hoàn thành"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {doc.notes || "-"}

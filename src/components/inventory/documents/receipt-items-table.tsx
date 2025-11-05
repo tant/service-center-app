@@ -5,7 +5,7 @@
  * Displays items in a receipt with serial entry functionality
  */
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { StockReceiptWithRelations } from "@/types/inventory";
 import {
   Table,
@@ -89,8 +89,8 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                   const hasSerials = serialCount > 0;
 
                   return (
-                    <>
-                      <TableRow key={item.id}>
+                    <React.Fragment key={item.id}>
+                      <TableRow>
                         <TableCell className="font-medium">
                           {item.product?.name || "Unknown Product"}
                         </TableCell>
@@ -146,7 +146,7 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })
               )}

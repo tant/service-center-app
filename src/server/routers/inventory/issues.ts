@@ -52,8 +52,57 @@ export const issuesRouter = router({
         throw new Error(`Failed to list issues: ${error.message}`);
       }
 
+      // Fetch serial counts for all issues in this page
+      const issueIds = data?.map(i => i.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+
+      if (issueIds.length > 0) {
+        // For issues, count serials directly from stock_issue_serials table
+        // (issue items don't have serial_count column, they use existing physical products)
+        const { data: itemsData } = await ctx.supabaseAdmin
+          .from("stock_issue_items")
+          .select(`
+            issue_id,
+            quantity,
+            id
+          `)
+          .in("issue_id", issueIds);
+
+        if (itemsData) {
+          // Get serial counts for all items
+          const itemIds = itemsData.map(item => item.id);
+          const { data: serialData } = await ctx.supabaseAdmin
+            .from("stock_issue_serials")
+            .select("issue_item_id")
+            .in("issue_item_id", itemIds);
+
+          // Count serials per item
+          const serialCountsByItem: Record<string, number> = {};
+          (serialData || []).forEach(serial => {
+            serialCountsByItem[serial.issue_item_id] = (serialCountsByItem[serial.issue_item_id] || 0) + 1;
+          });
+
+          // Aggregate by issue_id
+          itemsData.forEach(item => {
+            if (!serialCounts[item.issue_id]) {
+              serialCounts[item.issue_id] = { declared: 0, entered: 0 };
+            }
+            serialCounts[item.issue_id].declared += item.quantity;
+            serialCounts[item.issue_id].entered += (serialCountsByItem[item.id] || 0);
+          });
+        }
+      }
+
+      // Merge serial counts with issues
+      const issuesWithSerials = (data || []).map(issue => ({
+        ...issue,
+        totalDeclaredQuantity: serialCounts[issue.id]?.declared || 0,
+        totalSerialsEntered: serialCounts[issue.id]?.entered || 0,
+        missingSerialsCount: (serialCounts[issue.id]?.declared || 0) - (serialCounts[issue.id]?.entered || 0),
+      }));
+
       return {
-        issues: data || [],
+        issues: issuesWithSerials,
         total: count || 0,
         page: input.page,
         pageSize: input.pageSize,

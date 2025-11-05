@@ -8,6 +8,7 @@ This directory contains **archived documentation** that is no longer actively ma
 Superseded documentation replaced by numbered architecture shards (01-11).
 
 **Files:**
+- `architecture-old.md` - Navigation index for 10 shards - Superseded by `ARCHITECTURE-MASTER.md`
 - `coding-standards-old.md` - Superseded by `08-coding-standards.md`
 - `source-tree-old.md` - Superseded by `06-source-tree.md`
 - `tech-stack-old.md` - Superseded by `02-technology-stack.md`

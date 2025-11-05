@@ -27,6 +27,13 @@ Historical changelogs for past migrations and schema changes.
 **Files:**
 - `warranty-and-triggers-2025-10.md` - Warranty schema migration changelog
 
+### Frontend Architecture (`frontend/`)
+Detailed frontend architecture documentation consolidated into ARCHITECTURE-MASTER.md.
+
+**Files:**
+- `frontend-architecture-current-2025-10.md` - Production frontend state (21KB) - Consolidated into ARCHITECTURE-MASTER.md Section 11
+- `frontend-architecture-roadmap-2025-10.md` - Future planning (32KB) - Consolidated into ARCHITECTURE-MASTER.md Section 12
+
 ## When to Archive
 
 Archive documents when:

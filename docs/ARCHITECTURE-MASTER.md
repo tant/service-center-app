@@ -19,6 +19,8 @@
 8. [Recent Architectural Changes](#8-recent-architectural-changes)
 9. [Quick Reference](#9-quick-reference)
 10. [Documentation Index](#10-documentation-index)
+11. [Frontend Development Guidelines](#11-frontend-development-guidelines)
+12. [Future Enhancements (Roadmap)](#12-future-enhancements-roadmap)
 
 ---
 
@@ -1107,12 +1109,7 @@ pnpx supabase gen types typescript --local > src/types/database.types.ts
 - [SERIAL-ENTRY-WORKFLOW-ARCHITECTURE.md](architecture/SERIAL-ENTRY-WORKFLOW-ARCHITECTURE.md) - Serial entry task system
 - [11-audit-logging.md](architecture/11-audit-logging.md) - Immutable audit trail
 
-### 10.3 Frontend Architecture
-
-- [frontend-architecture-current.md](architecture/frontend-architecture-current.md) - Production frontend state (21KB)
-- [frontend-architecture-roadmap.md](architecture/frontend-architecture-roadmap.md) - Migration plan (32KB)
-
-### 10.4 Other Documentation
+### 10.3 Other Documentation
 
 - [prd.md](prd.md) - Complete product requirements (v2.0, 2025-11-05)
 - [CLAUDE.md](CLAUDE.md) - Project instructions for Claude Code
@@ -1121,7 +1118,7 @@ pnpx supabase gen types typescript --local > src/types/database.types.ts
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Local setup instructions
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Vietnamese deployment guide
 
-### 10.5 Schema Files (Source of Truth)
+### 10.4 Schema Files (Source of Truth)
 
 **Location:** `docs/data/schemas/`
 
@@ -1137,6 +1134,412 @@ pnpx supabase gen types typescript --local > src/types/database.types.ts
 - `600_stock_triggers.sql` - Stock updates + lifecycle triggers
 - `700_reporting_views.sql` - Analytics views
 - `900_default_warehouse_seed.sql` - Default warehouse seed data
+
+---
+
+## 11. Frontend Development Guidelines
+
+### 11.1 TypeScript Standards
+
+**🚨 ENFORCED RULE: Always use `type`, never `interface`**
+
+Enforced in `biome.json`:
+```json
+{
+  "linter": {
+    "rules": {
+      "style": {
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": { "mode": "type" }
+        }
+      }
+    }
+  }
+}
+```
+
+**✅ DO:**
+```typescript
+// Component props
+type TicketCardProps = {
+  ticket: Ticket
+  onUpdate?: (ticket: Ticket) => void
+  className?: string
+}
+
+// Type intersection
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant: "default" | "destructive"
+  isLoading?: boolean
+}
+
+// Discriminated unions
+type FormFieldProps =
+  | { type: "text"; placeholder: string }
+  | { type: "number"; min: number; max: number }
+```
+
+**❌ DON'T:**
+```typescript
+// ❌ Never use interface
+interface TicketCardProps {
+  ticket: Ticket
+}
+```
+
+### 11.2 Component Standards
+
+**Component Template:**
+```typescript
+"use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
+
+// External libraries
+import { toast } from "sonner"
+import { useForm } from "react-hook-form"
+
+// UI Components
+import { Button } from "@/components/ui/button"
+
+// Hooks & tRPC
+import { trpc } from "@/components/providers/trpc-provider"
+
+// Utils
+import { cn } from "@/lib/utils"
+
+// Types
+type TicketCardProps = {
+  ticket: Ticket
+  className?: string
+}
+
+// Component
+export function TicketCard({ ticket, className }: TicketCardProps) {
+  const router = useRouter()
+  const [isEditing, setIsEditing] = React.useState(false)
+
+  const { data } = trpc.tickets.getTicket.useQuery({ id: ticket.id })
+
+  return (
+    <div className={cn("rounded-lg border p-4", className)}>
+      {/* Component content */}
+    </div>
+  )
+}
+
+TicketCard.displayName = "TicketCard"
+```
+
+### 11.3 Naming Conventions
+
+| Type | Convention | Example |
+|------|-----------|---------|
+| **Files** | kebab-case | `ticket-card.tsx`, `add-ticket-form.tsx` |
+| **Components** | PascalCase | `TicketCard`, `AddTicketForm` |
+| **Props Types** | PascalCase + `Props` | `TicketCardProps` |
+| **Hooks** | camelCase with `use` prefix | `useTickets`, `useAuth` |
+| **Event Handlers** | camelCase with `handle` prefix | `handleSubmit`, `handleClick` |
+| **Boolean Props** | `is/has/can/should` prefix | `isLoading`, `hasError` |
+
+### 11.4 State Management
+
+**Philosophy:** Server state and client state are fundamentally different.
+
+**1. Server State (Primary) - TanStack Query via tRPC:**
+```typescript
+// Query example
+export function TicketList() {
+  const { data: tickets, isLoading, error } = trpc.tickets.getTickets.useQuery()
+
+  if (isLoading) return <TicketsSkeleton />
+  if (error) return <ErrorMessage error={error.message} />
+
+  return <TicketTable data={tickets} />
+}
+
+// Mutation example
+export function UpdateTicketButton({ ticketId }: { ticketId: string }) {
+  const utils = trpc.useUtils()
+
+  const updateStatus = trpc.tickets.updateTicketStatus.useMutation({
+    onSuccess: () => {
+      utils.tickets.getTickets.invalidate()
+      toast.success("Ticket updated!")
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
+
+  return <Button onClick={() => updateStatus.mutate({ id: ticketId })}>Start Work</Button>
+}
+```
+
+**2. Client State (Local) - React useState:**
+```typescript
+export function TicketCard({ ticket }: { ticket: Ticket }) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  return <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>...</Dialog>
+}
+```
+
+**3. Form State - react-hook-form:**
+```typescript
+export function AddTicketForm() {
+  const form = useForm<CreateTicketInput>({
+    resolver: zodResolver(createTicketSchema),
+    defaultValues: { customer_data: { name: "", phone: "" } },
+  })
+
+  const createTicket = trpc.tickets.createTicket.useMutation({
+    onSuccess: () => {
+      form.reset()
+      toast.success("Ticket created!")
+    },
+  })
+
+  return (
+    <form onSubmit={form.handleSubmit((data) => createTicket.mutate(data))}>
+      <input {...form.register("customer_data.name")} />
+    </form>
+  )
+}
+```
+
+### 11.5 Styling Guidelines
+
+**Design Token System:**
+```css
+:root {
+  /* Base colors */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+
+  /* Semantic colors */
+  --primary: oklch(0.637 0.237 25.331);
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* UI elements */
+  --card: oklch(1 0 0);
+  --border: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.637 0.237 25.331);
+
+  /* Border radius */
+  --radius: 0.65rem;
+}
+```
+
+**The cn() Utility:**
+```typescript
+import { cn } from "@/lib/utils"
+
+// Conditional classes
+<div className={cn(
+  "rounded-lg border p-4",
+  isActive && "bg-primary",
+  className
+)} />
+```
+
+**Best Practices:**
+```typescript
+// ✅ DO: Use design tokens
+<div className="bg-background text-foreground border-border" />
+
+// ❌ DON'T: Use arbitrary colors
+<div className="bg-white text-gray-900 border-gray-200" />
+
+// ✅ DO: Use cn() for dynamic classes
+<div className={cn("p-4", isActive && "bg-primary")} />
+
+// ❌ DON'T: String concatenation
+<div className={`p-4 ${isActive ? 'bg-primary' : ''}`} />
+```
+
+### 11.6 Critical Coding Rules
+
+**🚨 MUST FOLLOW:**
+
+```typescript
+// RULE 1: Always use `type`, never `interface`
+type ButtonProps = { variant: "primary" }
+
+// RULE 2: Export Zod schemas for reuse
+export const createTicketSchema = z.object({ /* ... */ })
+
+// RULE 3: Use Server Components by default
+export default async function Page() { /* ... */ }
+
+// RULE 4: Use cn() for dynamic classes
+<div className={cn("p-4", isActive && "bg-primary")} />
+
+// RULE 5: Use design tokens
+<div className="bg-background text-foreground" />
+
+// RULE 6: Use tRPC hooks for server state
+const { data } = trpc.tickets.getTickets.useQuery()
+
+// RULE 7: Invalidate queries after mutations
+onSuccess: () => utils.tickets.getTickets.invalidate()
+
+// RULE 8: Always validate tRPC input
+.input(createItemSchema)
+
+// RULE 9: Use supabaseAdmin for data
+await ctx.supabaseAdmin.from("tickets").select("*")
+```
+
+### 11.7 Frontend Tech Stack Details
+
+| Category | Technology | Version | Purpose |
+|----------|-----------|---------|---------|
+| **Framework** | Next.js | 15.5.4 | React framework with App Router, SSR/SSG |
+| **UI Library** | React | 19.1.0 | Core UI rendering |
+| **State Management** | TanStack Query | 5.90.2 | Server state caching |
+| **Styling** | Tailwind CSS | 4.0 | Utility-first CSS |
+| **Component Library** | shadcn/ui | Latest | Accessible components |
+| **Form Handling** | react-hook-form | Latest | Form validation |
+| **Icons** | Lucide React + Tabler Icons | 0.544.0 / 3.35.0 | Icon libraries |
+| **UI Primitives** | Radix UI | Various | Unstyled primitives |
+| **Drag & Drop** | dnd-kit | 6.3.1 | Accessible drag/drop |
+| **Data Visualization** | Recharts | 2.15.4 | Charts for dashboard |
+| **Notifications** | Sonner | 2.0.7 | Toast notifications |
+| **Theming** | next-themes | 0.4.6 | Dark mode support |
+| **Command Palette** | cmdk | 1.1.1 | Command menu UI |
+
+---
+
+## 12. Future Enhancements (Roadmap)
+
+### 12.1 Directory Reorganization
+
+**Goal:** Improve component organization from flat structure to feature-based grouping.
+
+**Current (Flat):**
+```
+src/components/
+├── ui/
+├── add-ticket-form.tsx
+├── edit-ticket-form.tsx
+├── ticket-table.tsx
+├── customer-table.tsx
+└── ... (20+ files)
+```
+
+**Target (Organized):**
+```
+src/components/
+├── ui/                        # Base components
+├── forms/                     # Business forms
+│   ├── add-ticket-form.tsx
+│   ├── edit-ticket-form.tsx
+│   └── ...
+├── tables/                    # Data tables
+│   ├── ticket-table.tsx
+│   ├── customer-table.tsx
+│   └── ...
+├── navigation/                # Navigation components
+│   ├── app-sidebar.tsx
+│   ├── nav-main.tsx
+│   └── ...
+├── modals/                    # Modal/Dialog components
+└── shared/                    # Shared business components
+```
+
+### 12.2 New Directories to Create
+
+**Phase 1: Essential Directories**
+```bash
+mkdir -p src/types           # TypeScript type definitions
+mkdir -p src/hooks           # Custom React hooks
+mkdir -p src/constants       # Application constants
+mkdir -p src/components/{forms,tables,navigation,modals,shared}
+```
+
+**Phase 2: Type Definitions**
+```typescript
+// src/types/models.ts
+export type ServiceTicket = {
+  id: string
+  ticket_number: string
+  customer_id: string
+  status: TicketStatus
+  // ...
+}
+
+// src/types/enums.ts
+export type TicketStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+
+// Status flow validation
+export const VALID_STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
+  pending: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+}
+```
+
+**Phase 3: Shared Constants**
+```typescript
+// src/constants/routes.ts
+export const ROUTES = {
+  HOME: '/',
+  LOGIN: '/login',
+  DASHBOARD: '/dashboard',
+  TICKETS: '/tickets',
+  TICKET_ADD: '/tickets/add',
+  TICKET_DETAIL: (id: string) => `/tickets/${id}`,
+  // ...
+}
+
+// src/constants/config.ts
+export const PAGINATION = {
+  DEFAULT_PAGE_SIZE: 20,
+  MAX_PAGE_SIZE: 100,
+}
+```
+
+### 12.3 Testing Infrastructure
+
+**Planned Testing Stack:**
+- **Unit Tests:** Vitest for utilities and hooks
+- **Component Tests:** React Testing Library
+- **E2E Tests:** Playwright (already configured)
+- **Visual Regression:** Storybook + Chromatic (planned)
+
+**Test Coverage Goals:**
+- Unit tests: 80%+ for utilities
+- Component tests: Key business logic components
+- E2E tests: Critical user flows (ticket creation, inventory operations)
+
+### 12.4 Implementation Phases
+
+**Phase 1: Foundation (2-3 weeks)**
+- Create new directory structure
+- Set up type definitions
+- Move constants to dedicated directory
+- No breaking changes
+
+**Phase 2: Component Reorganization (3-4 weeks)**
+- Move components to feature directories
+- Update all imports
+- Verify no regressions
+- Update documentation
+
+**Phase 3: Testing Infrastructure (4-6 weeks)**
+- Set up Vitest
+- Write utility tests
+- Write component tests
+- Integrate with CI/CD
+
+**Phase 4: Advanced Features (Ongoing)**
+- Storybook for component documentation
+- Visual regression testing
+- Performance monitoring
+- Accessibility audits
 
 ---
 
@@ -1166,8 +1569,8 @@ pnpx supabase gen types typescript --local > src/types/database.types.ts
 
 ---
 
-**Document Version:** 2.0
-**Last Updated:** 2025-11-05
+**Document Version:** 2.1
+**Last Updated:** 2025-11-05 (Consolidated frontend architecture)
 **Maintained By:** Development Team
 **Review Cycle:** Monthly or after major architectural changes
 

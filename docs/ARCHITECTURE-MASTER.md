@@ -260,9 +260,92 @@ JOIN physical_warehouses pw ON vw.physical_warehouse_id = pw.id
 WHERE pp.status = 'active';
 ```
 
-**See:**
-- [DEFAULT-WAREHOUSE-SYSTEM.md](architecture/DEFAULT-WAREHOUSE-SYSTEM.md)
-- [INVENTORY-WORKFLOW-V2.md](architecture/INVENTORY-WORKFLOW-V2.md)
+#### Default Physical Warehouse System
+
+**Purpose:** Ensure a system-managed physical warehouse always exists across database resets.
+
+**Default Warehouse "Công ty" (Company):**
+```sql
+CREATE TABLE physical_warehouses (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(20) NOT NULL UNIQUE,
+  location TEXT,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  is_system_default BOOLEAN NOT NULL DEFAULT false,  -- System-managed flag
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Unique partial index: only one warehouse can be system default
+CREATE UNIQUE INDEX physical_warehouses_system_default_unique
+ON physical_warehouses(is_system_default)
+WHERE is_system_default = true;
+```
+
+**Auto-Seeded Default Warehouse:**
+- **Name:** "Công ty"
+- **Code:** `COMPANY`
+- **Location:** "Trụ sở chính"
+- **Description:** "Kho mặc định của công ty, không thể xóa. Chứa tất cả các loại kho ảo."
+- **Flag:** `is_system_default = true`
+
+**Key Features:**
+```mermaid
+graph TB
+    subgraph "Default Physical Warehouse"
+        PW["Công ty<br/>(Company)<br/>is_system_default=true<br/>✅ Can Edit | ❌ Cannot Delete"]
+    end
+
+    subgraph "7 Virtual Warehouses Auto-Linked"
+        VW1[Main<br/>main]
+        VW2[Warranty Stock<br/>warranty_stock]
+        VW3[RMA Staging<br/>rma_staging]
+        VW4[Dead Stock<br/>dead_stock]
+        VW5[In Service<br/>in_service]
+        VW6[Parts<br/>parts]
+        VW7[Customer Installed<br/>customer_installed]
+    end
+
+    PW -.-> VW1
+    PW -.-> VW2
+    PW -.-> VW3
+    PW -.-> VW4
+    PW -.-> VW5
+    PW -.-> VW6
+    PW -.-> VW7
+
+    style PW fill:#FFD700,stroke:#FF6B6B,stroke-width:3px
+    style VW7 fill:#50C878,stroke:#4A90E2,stroke-width:2px
+```
+
+**System Behavior:**
+- ✅ **Auto-created** on `pnpx supabase db reset`
+- ✅ **Idempotent seeding** - safe to run migrations multiple times
+- ✅ **Can be edited** - name, location, description are modifiable
+- ❌ **Cannot be deleted** - API validation blocks deletion attempts
+- ✅ **All 7 virtual warehouses** automatically seeded and linked
+
+**API Protection:**
+```typescript
+// warehouse.deletePhysical - Validation
+if (warehouse?.is_system_default) {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `Cannot delete system default warehouse "${warehouse.name}".`
+  });
+}
+```
+
+**Use Cases:**
+1. **Database Init:** Run `pnpx supabase db reset` → "Công ty" created automatically
+2. **Edit Warehouse:** Admin can update name, location, description ✅
+3. **Delete Attempt:** API blocks deletion with error message ❌
+4. **Automatic Warranty:** Products auto-move to `customer_installed` on warranty replacement
+5. **Manual Sales:** Staff transfers products to `customer_installed` with customer selection
+
+**See:** [INVENTORY-WORKFLOW-V2.md](architecture/INVENTORY-WORKFLOW-V2.md)
 
 ### 2.3 Inventory Workflow v2.0 (Non-Blocking)
 

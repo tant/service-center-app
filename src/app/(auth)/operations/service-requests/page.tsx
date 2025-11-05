@@ -97,7 +97,7 @@ async function getServiceRequestsData(): Promise<
 
   const parsedRows = serviceRequestRowSchema.array().parse(baseRows);
 
-  let productLookup = new Map<
+  const productLookup = new Map<
     string,
     {
       brand: string | null;
@@ -130,19 +130,19 @@ async function getServiceRequestsData(): Promise<
         const serial = typeof entry.serial_number === "string" ? entry.serial_number : null;
         if (!serial) continue;
 
-        const productField = entry["product"];
+        const productField = entry.product;
         const productRaw = Array.isArray(productField)
           ? (productField[0] as Record<string, unknown> | undefined)
           : (productField as Record<string, unknown> | undefined);
-        const brandField = productRaw?.["brand"];
+        const brandField = productRaw?.brand;
         const brandObj = Array.isArray(brandField)
           ? (brandField[0] as Record<string, unknown> | undefined)
           : (brandField as Record<string, unknown> | undefined);
 
         const brandNameValue =
-          typeof brandObj?.["name"] === "string" ? brandObj["name"] : null;
+          typeof brandObj?.name === "string" ? brandObj.name : null;
         const modelNameValue =
-          typeof productRaw?.["model"] === "string" ? productRaw["model"] : null;
+          typeof productRaw?.model === "string" ? productRaw.model : null;
 
         productLookup.set(serial, {
           brand: brandNameValue,

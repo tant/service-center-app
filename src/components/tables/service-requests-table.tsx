@@ -76,7 +76,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePendingIncomingRequests } from "@/hooks/use-service-request";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { type ServiceRequestTableRow } from "@/lib/schemas/service-request";
+import type { ServiceRequestTableRow } from "@/lib/schemas/service-request";
 
 export type ServiceRequest = ServiceRequestTableRow;
 

@@ -44,8 +44,7 @@ const taskTypeToggleSchema = z.object({
 const templateCreateSchema = z.object({
   name: z.string().min(3).max(255),
   description: z.string().optional(),
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   enforce_sequence: z.boolean().default(true), // Story 1.5: Changed from strict_sequence, default true for strict mode
   is_active: z.boolean().default(true),
   tasks: z.array(z.object({
@@ -60,8 +59,7 @@ const templateUpdateSchema = z.object({
   template_id: z.string().uuid(),
   name: z.string().min(3).max(255),
   description: z.string().optional(),
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   enforce_sequence: z.boolean(), // Story 1.5: Changed from strict_sequence
   tasks: z.array(z.object({
     task_type_id: z.string().uuid(),
@@ -72,8 +70,7 @@ const templateUpdateSchema = z.object({
 });
 
 const templateListSchema = z.object({
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']).optional(),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -334,7 +331,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -346,11 +342,8 @@ export const workflowRouter = router({
           .order('created_at', { ascending: false });
 
         // Apply filters
-        if (input?.product_type) {
-          query = query.eq('product_type', input.product_type);
-        }
-        if (input?.service_type) {
-          query = query.eq('service_type', input.service_type);
+        if (input?.entity_type) {
+          query = query.eq('entity_type', input.entity_type);
         }
         if (input?.is_active !== undefined) {
           query = query.eq('is_active', input.is_active);
@@ -457,7 +450,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -605,7 +597,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -786,14 +777,14 @@ export const workflowRouter = router({
             oldValues: {
               name: oldTemplate.name,
               description: oldTemplate.description,
-              service_type: oldTemplate.service_type,
+              entity_type: oldTemplate.entity_type,
               strict_sequence: oldTemplate.strict_sequence,
               tasks: oldTemplate.tasks,
             },
             newValues: {
               name: updatedTemplate.name,
               description: updatedTemplate.description,
-              service_type: updatedTemplate.service_type,
+              entity_type: updatedTemplate.entity_type,
               strict_sequence: updatedTemplate.strict_sequence,
               tasks: input.tasks,
             },
@@ -812,7 +803,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -956,7 +946,7 @@ export const workflowRouter = router({
         // Fetch template info for audit log
         const { data: template } = await ctx.supabaseAdmin
           .from('workflows')
-          .select('name, service_type, is_active')
+          .select('name, entity_type, is_active')
           .eq('id', input.template_id)
           .single();
 
@@ -1890,12 +1880,10 @@ export const workflowRouter = router({
         .insert({
           name: new_name || `Copy of ${originalWorkflow.name}`,
           description: originalWorkflow.description,
-          product_type: originalWorkflow.product_type,
-          service_type: originalWorkflow.service_type,
+          entity_type: originalWorkflow.entity_type,
           strict_sequence: originalWorkflow.strict_sequence,
           is_active: false, // Clones start as inactive
           created_by_id: user.id,
-          entity_type: originalWorkflow.entity_type,
         })
         .select()
         .single();

@@ -142,7 +142,7 @@ BEGIN
           NEW.tracking_token,
           v_item.serial_number
         ),
-        NULL
+        '00000000-0000-4000-8000-000000000000'
       );
 
     END LOOP;
@@ -157,7 +157,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. Uses the system service account for auto-generated ticket comments.';
 
 -- =====================================================
 -- TRIGGERS

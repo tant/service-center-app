@@ -154,6 +154,19 @@ export function AddTicketForm() {
     },
   });
 
+  // Hàm chọn khách hàng từ popup
+  const selectCustomer = (customer: any) => {
+    setCustomerData({
+      id: customer.id,
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      address: customer.address || "",
+    });
+    setPhoneSearch(customer.phone || "");
+    setShowCustomerPopup(false);
+  };
+
   // Search customer by phone - cập nhật để hiển thị popup
   React.useEffect(() => {
     if (phoneSearch.length >= 3) {
@@ -200,20 +213,7 @@ export function AddTicketForm() {
         }));
       }
     }
-  }, [phoneSearch, customers, customerData.id, selectCustomer]);
-
-  // Hàm chọn khách hàng từ popup
-  const selectCustomer = (customer: any) => {
-    setCustomerData({
-      id: customer.id,
-      name: customer.name || "",
-      phone: customer.phone || "",
-      email: customer.email || "",
-      address: customer.address || "",
-    });
-    setPhoneSearch(customer.phone || "");
-    setShowCustomerPopup(false);
-  };
+  }, [phoneSearch, customers, customerData.id]);
 
   // Update available parts when product changes
   React.useEffect(() => {

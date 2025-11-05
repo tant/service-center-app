@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SYSTEM_USER_ID } from "@/lib/system-user";
 
 interface Comment {
   id: string;
@@ -161,8 +162,11 @@ export function TicketComments({
     });
   };
 
+  const isSystemComment = (comment: Comment) =>
+    comment.created_by === SYSTEM_USER_ID;
+
   // Check if a comment is auto-generated based on emoji prefixes
-  const isAutoComment = (commentText: string) => {
+  const isAutoByPrefix = (commentText: string) => {
     const autoCommentPrefixes = [
       "🔄",
       "➕",
@@ -181,11 +185,14 @@ export function TicketComments({
     return autoCommentPrefixes.some((prefix) => commentText.startsWith(prefix));
   };
 
+  const isAutoComment = (comment: Comment) =>
+    isSystemComment(comment) || isAutoByPrefix(comment.comment);
+
   // Filter comments based on selected filter
   const filteredComments = comments.filter((comment) => {
     if (commentFilter === "all") return true;
-    if (commentFilter === "bot") return isAutoComment(comment.comment);
-    if (commentFilter === "staff") return !isAutoComment(comment.comment);
+    if (commentFilter === "bot") return isAutoComment(comment);
+    if (commentFilter === "staff") return !isAutoComment(comment);
     return true;
   });
 
@@ -280,7 +287,8 @@ export function TicketComments({
         {filteredComments.length > 0 ? (
           <div className="space-y-4">
             {filteredComments.map((comment) => {
-              const isAuto = isAutoComment(comment.comment);
+              const isSystem = isSystemComment(comment);
+              const isAuto = isAutoComment(comment);
               return (
                 <div
                   key={comment.id}
@@ -309,7 +317,10 @@ export function TicketComments({
                         <p className="font-medium text-sm">
                           {isAuto ? (
                             <span className="flex items-center gap-1">
-                              {comment.profiles?.full_name || "Hệ thống"}
+                              {comment.profiles?.full_name ||
+                                (isSystem
+                                  ? "Hệ thống"
+                                  : "Bình luận tự động")}
                               <Badge variant="outline" className="text-xs">
                                 Tự động
                               </Badge>

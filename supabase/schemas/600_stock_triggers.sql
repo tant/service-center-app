@@ -26,22 +26,30 @@ LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 BEGIN
-  -- Insert or update stock record
-  INSERT INTO public.product_warehouse_stock (
-    product_id,
-    virtual_warehouse_id,
-    declared_quantity,
-    initial_stock_entry
-  ) VALUES (
-    p_product_id,
-    p_warehouse_id,
-    p_quantity_delta,
-    0
-  )
-  ON CONFLICT (product_id, virtual_warehouse_id)
-  DO UPDATE SET
-    declared_quantity = public.product_warehouse_stock.declared_quantity + p_quantity_delta,
-    updated_at = NOW();
+  -- Try to update existing row first
+  UPDATE public.product_warehouse_stock
+  SET
+    declared_quantity = declared_quantity + p_quantity_delta,
+    updated_at = NOW()
+  WHERE product_id = p_product_id
+    AND virtual_warehouse_id = p_warehouse_id;
+
+  -- If no row was updated, insert a new one
+  -- IMPORTANT: Use GREATEST to ensure initial insert is never negative
+  -- (prevents check constraint violation on INSERT before ON CONFLICT is evaluated)
+  IF NOT FOUND THEN
+    INSERT INTO public.product_warehouse_stock (
+      product_id,
+      virtual_warehouse_id,
+      declared_quantity,
+      initial_stock_entry
+    ) VALUES (
+      p_product_id,
+      p_warehouse_id,
+      GREATEST(p_quantity_delta, 0),
+      0
+    );
+  END IF;
 END;
 $$;
 
@@ -240,17 +248,18 @@ BEGIN
   JOIN public.stock_transfers st ON sti.transfer_id = st.id
   WHERE sti.id = NEW.transfer_item_id;
 
-  -- Update physical product location
-  UPDATE public.physical_products
-  SET
-    previous_virtual_warehouse_id = v_from_warehouse_id,
-    virtual_warehouse_id = v_to_warehouse_id,
-    updated_at = NOW()
-  WHERE id = NEW.physical_product_id;
-
-  -- If transfer is already approved, update product_warehouse_stock for both warehouses
-  -- This handles serials added AFTER approval (non-blocking workflow)
+  -- ONLY update physical product location if transfer is already approved
+  -- For draft/pending transfers, serials stay in source warehouse until approved
   IF v_transfer_status = 'approved' OR v_transfer_status = 'completed' THEN
+    -- Update physical product location
+    UPDATE public.physical_products
+    SET
+      previous_virtual_warehouse_id = v_from_warehouse_id,
+      virtual_warehouse_id = v_to_warehouse_id,
+      updated_at = NOW()
+    WHERE id = NEW.physical_product_id;
+
+    -- Update product_warehouse_stock for both warehouses
     -- Decrement from source warehouse
     PERFORM public.upsert_product_stock(
       v_product_id,
@@ -321,12 +330,74 @@ CREATE TRIGGER trigger_update_stock_on_issue_approval
 COMMENT ON FUNCTION public.update_stock_on_issue_approval IS 'Decrement stock when issue is approved';
 
 -- =====================================================
+-- TRANSFER APPROVAL: Update stock and move serials
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.update_stock_on_transfer_approval()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_serial RECORD;
+BEGIN
+  -- Only trigger when transitioning to approved status
+  IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
+
+    -- Move serials and update stock for each serial in the transfer
+    FOR v_serial IN
+      SELECT
+        sti.product_id,
+        sts.physical_product_id
+      FROM public.stock_transfer_items sti
+      JOIN public.stock_transfer_serials sts ON sts.transfer_item_id = sti.id
+      WHERE sti.transfer_id = NEW.id
+    LOOP
+      -- Move the physical product to destination warehouse
+      UPDATE public.physical_products
+      SET
+        previous_virtual_warehouse_id = OLD.from_virtual_warehouse_id,
+        virtual_warehouse_id = NEW.to_virtual_warehouse_id,
+        updated_at = NOW()
+      WHERE id = v_serial.physical_product_id;
+
+      -- Decrement from source warehouse
+      PERFORM public.upsert_product_stock(
+        v_serial.product_id,
+        OLD.from_virtual_warehouse_id,
+        -1
+      );
+
+      -- Increment to destination warehouse
+      PERFORM public.upsert_product_stock(
+        v_serial.product_id,
+        NEW.to_virtual_warehouse_id,
+        1
+      );
+    END LOOP;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_update_stock_on_transfer_approval
+  AFTER UPDATE ON public.stock_transfers
+  FOR EACH ROW
+  WHEN (NEW.status = 'approved' AND OLD.status != 'approved')
+  EXECUTE FUNCTION public.update_stock_on_transfer_approval();
+
+COMMENT ON FUNCTION public.update_stock_on_transfer_approval IS 'Update stock counts when transfer is approved - decrements source warehouse and increments destination warehouse for all serials in the transfer';
+
+-- =====================================================
 -- NOTES
 -- =====================================================
 
--- Transfers are automatically handled because:
--- 1. When transfer is approved, auto_generate_transfer_documents() creates:
---    - An issue document (status='approved') for source warehouse
---    - A receipt document (status='approved') for destination warehouse
--- 2. The above issue/receipt documents trigger their respective stock updates
--- 3. Result: Stock is decremented from source and incremented to destination
+-- Transfers stock updates (FIXED 2025-11-05):
+-- 1. When serials are selected for DRAFT/PENDING transfer: serials stay in source warehouse (virtual_warehouse_id NOT changed)
+-- 2. When transfer is APPROVED: trigger_update_stock_on_transfer_approval:
+--    a. Moves serials from source to destination (updates virtual_warehouse_id)
+--    b. Decrements stock from source warehouse
+--    c. Increments stock to destination warehouse
+-- 3. If serials are added AFTER approval: they are immediately moved and stock is updated (trigger_update_physical_product_warehouse_on_transfer)

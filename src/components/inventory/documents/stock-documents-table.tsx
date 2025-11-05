@@ -310,6 +310,10 @@ export function StockDocumentsTable() {
             <Layers className="h-4 w-4" />
             <span className="hidden sm:inline">Tất cả</span>
           </TabsTrigger>
+          <TabsTrigger value="transfer" className="flex items-center gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            <span className="hidden sm:inline">Phiếu chuyển</span>
+          </TabsTrigger>
           <TabsTrigger value="receipt" className="flex items-center gap-2">
             <PackagePlus className="h-4 w-4" />
             <span className="hidden sm:inline">Phiếu nhập</span>
@@ -318,14 +322,16 @@ export function StockDocumentsTable() {
             <PackageMinus className="h-4 w-4" />
             <span className="hidden sm:inline">Phiếu xuất</span>
           </TabsTrigger>
-          <TabsTrigger value="transfer" className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            <span className="hidden sm:inline">Phiếu chuyển</span>
-          </TabsTrigger>
         </TabsList>
 
         <div className="flex items-center gap-2">
           {/* Action Buttons */}
+          <Link href="/inventory/documents/transfers/new">
+            <Button variant="outline" size="sm">
+              <ArrowLeftRight className="h-4 w-4" />
+              <span className="hidden lg:inline">Tạo phiếu chuyển</span>
+            </Button>
+          </Link>
           <Link href="/inventory/documents/receipts/new">
             <Button variant="outline" size="sm">
               <PackagePlus className="h-4 w-4" />
@@ -336,12 +342,6 @@ export function StockDocumentsTable() {
             <Button variant="outline" size="sm">
               <PackageMinus className="h-4 w-4" />
               <span className="hidden lg:inline">Tạo phiếu xuất</span>
-            </Button>
-          </Link>
-          <Link href="/inventory/documents/transfers/new">
-            <Button variant="outline" size="sm">
-              <ArrowLeftRight className="h-4 w-4" />
-              <span className="hidden lg:inline">Tạo phiếu chuyển</span>
             </Button>
           </Link>
         </div>

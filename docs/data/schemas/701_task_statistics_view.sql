@@ -45,23 +45,7 @@ FROM
 LEFT JOIN
   public.profiles p ON t.assigned_to_id = p.id;
 
-COMMENT ON VIEW public.v_task_statistics IS 'Provides detailed statistics for each task, including actual vs. estimated duration and overdue status, for performance analytics.';
+COMMENT ON VIEW public.v_task_statistics IS 'Provides detailed statistics for each task, including actual vs. estimated duration and overdue status, for performance analytics. Security is inherited from underlying entity_tasks table RLS policies.';
 
--- RLS for the view
-ALTER VIEW public.v_task_statistics OWNER TO postgres;
-ALTER TABLE public.v_task_statistics ENABLE ROW LEVEL SECURITY;
-
--- Allow managers and admins to see all stats
-CREATE POLICY "Allow manager and admin to read all task stats"
-  ON public.v_task_statistics
-  FOR SELECT
-  USING (public.is_admin_or_manager());
-
--- Allow users to see their own stats
-CREATE POLICY "Allow users to read their own task stats"
-  ON public.v_task_statistics
-  FOR SELECT
-  USING (assigned_to_id = auth.uid());
-
--- Grant access
+-- Grant access to authenticated users (security inherited from entity_tasks RLS)
 GRANT SELECT ON public.v_task_statistics TO authenticated;

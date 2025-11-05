@@ -48,6 +48,7 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
   );
   const tasks = taskData?.tasks || [];
   const submitForApproval = trpc.inventory.transfers.submitForApproval.useMutation();
+  const approveTransfer = trpc.inventory.transfers.approve.useMutation();
   const confirmReceived = trpc.inventory.transfers.confirmReceived.useMutation();
   const deleteTransfer = trpc.inventory.transfers.delete.useMutation();
 
@@ -64,6 +65,20 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
       refetch();
     } catch (error: any) {
       toast.error(error.message || "Không thể gửi phiếu chuyển");
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!confirm("Bạn có chắc chắn muốn duyệt phiếu chuyển này?")) {
+      return;
+    }
+
+    try {
+      await approveTransfer.mutateAsync({ id });
+      toast.success("Đã duyệt phiếu chuyển");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể duyệt phiếu chuyển");
     }
   };
 
@@ -204,6 +219,7 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
   );
 
   const canSubmitForApproval = transfer.status === "draft" && allItemsComplete;
+  const canApprove = transfer.status === "pending_approval";
   const canConfirmReceived = transfer.status === "in_transit" && allItemsComplete;
   const canDelete = transfer.status === "draft";
 
@@ -265,6 +281,18 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                   >
                     <Send className="h-4 w-4" />
                     <span className="hidden lg:inline">Gửi duyệt</span>
+                  </Button>
+                )}
+
+                {canApprove && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApprove}
+                    disabled={approveTransfer.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="hidden lg:inline">Duyệt phiếu</span>
                   </Button>
                 )}
 

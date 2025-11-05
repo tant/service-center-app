@@ -136,7 +136,7 @@ export default function AdminAppSettingsPage() {
                 <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
                   <p className="font-medium mb-2">⚠️ Lưu ý quan trọng:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Customers → Brands → Products → Task Library → Workflows → Test Scenarios (Receipts, Tickets, Requests, Transfers)</li>
+                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Customers → Brands → Products → Task Library → Workflows</li>
                     <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v4.0.0)</li>
                     <li>Bao gồm dữ liệu test đầy đủ cho Polymorphic Task Management System (PTMS)</li>
                     <li>Chỉ dùng trong môi trường development để test</li>

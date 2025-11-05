@@ -266,7 +266,7 @@ COMMENT ON COLUMN public.stock_issue_items.quantity IS 'Quantity (can be negativ
 CREATE TABLE IF NOT EXISTS public.stock_issue_serials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   issue_item_id UUID NOT NULL REFERENCES public.stock_issue_items(id) ON DELETE CASCADE,
-  physical_product_id UUID NOT NULL REFERENCES public.physical_products(id) ON DELETE RESTRICT,
+  physical_product_id UUID REFERENCES public.physical_products(id) ON DELETE SET NULL,
   serial_number VARCHAR(255) NOT NULL,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -385,7 +385,7 @@ COMMENT ON TABLE public.stock_transfer_items IS 'Line items in stock transfers';
 CREATE TABLE IF NOT EXISTS public.stock_transfer_serials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   transfer_item_id UUID NOT NULL REFERENCES public.stock_transfer_items(id) ON DELETE CASCADE,
-  physical_product_id UUID NOT NULL REFERENCES public.physical_products(id) ON DELETE RESTRICT,
+  physical_product_id UUID REFERENCES public.physical_products(id) ON DELETE SET NULL,
   serial_number VARCHAR(255) NOT NULL,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

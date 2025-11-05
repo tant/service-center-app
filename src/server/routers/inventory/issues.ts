@@ -403,6 +403,58 @@ export const issuesRouter = router({
   submitForApproval: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // VALIDATION CHECKPOINT #2: Verify all serials are in source warehouse before submit
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // Get all item IDs for this issue
+      const { data: issueItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      if (issueItems && issueItems.length > 0) {
+        // Get all serials in this issue
+        const issueItemIds = issueItems.map(item => item.id);
+        const { data: issueSerials } = await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            issue_item_id
+          `)
+          .in("issue_item_id", issueItemIds);
+
+      if (issueSerials && issueSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = issueSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== issue.virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể gửi duyệt: Các serial sau không còn trong kho xuất: ${wrongSerials}`);
+          }
+        }
+      }
+      }
+
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_issues")
         .update({ status: "pending_approval" })
@@ -433,6 +485,58 @@ export const issuesRouter = router({
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
         throw new Error("Unauthorized: Only admin and manager can approve issues");
+      }
+
+      // VALIDATION CHECKPOINT #3: Verify all serials are in source warehouse before approve
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // Get all item IDs for this issue
+      const { data: issueItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      if (issueItems && issueItems.length > 0) {
+        // Get all serials in this issue
+        const issueItemIds = issueItems.map(item => item.id);
+        const { data: issueSerials } = await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            issue_item_id
+          `)
+          .in("issue_item_id", issueItemIds);
+
+      if (issueSerials && issueSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = issueSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== issue.virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể duyệt: Các serial sau không còn trong kho xuất: ${wrongSerials}`);
+          }
+        }
+      }
       }
 
       const { data, error } = await ctx.supabaseAdmin
@@ -667,6 +771,22 @@ export const issuesRouter = router({
         throw new Error("Issue item not found");
       }
 
+      // Get issue to verify source warehouse
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", issueItem.issue_id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // CRITICAL: Validate warehouse ID matches issue's source warehouse
+      if (input.virtualWarehouseId !== issue.virtual_warehouse_id) {
+        throw new Error("Kho nguồn không khớp với phiếu xuất. Chỉ có thể chọn serial từ kho xuất.");
+      }
+
       // Find physical products by serial numbers
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
@@ -685,6 +805,24 @@ export const issuesRouter = router({
 
       if (notFound.length > 0) {
         throw new Error(`Serial không tồn tại trong kho: ${notFound.join(", ")}`);
+      }
+
+      // CRITICAL: Ensure we found all physical products and they have valid IDs
+      if (!physicalProducts || physicalProducts.length !== input.serialNumbers.length) {
+        throw new Error(`Không tìm thấy đủ serial trong kho. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`);
+      }
+
+      // Validate all physical products have valid IDs (not NULL)
+      const invalidProducts = physicalProducts.filter(p => !p.id);
+      if (invalidProducts.length > 0) {
+        throw new Error(`Có ${invalidProducts.length} serial không có physical product ID hợp lệ`);
+      }
+
+      // CRITICAL: Double-check all products are actually in the source warehouse (defense in depth)
+      const wrongWarehouse = physicalProducts.filter(p => p.virtual_warehouse_id !== issue.virtual_warehouse_id);
+      if (wrongWarehouse.length > 0) {
+        const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+        throw new Error(`Serial không thuộc kho xuất: ${wrongSerials}`);
       }
 
       // Note: No need to check if already issued - if physical_product exists in DB, it hasn't been issued yet

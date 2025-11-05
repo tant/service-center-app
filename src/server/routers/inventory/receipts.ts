@@ -399,6 +399,38 @@ export const receiptsRouter = router({
   submitForApproval: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // VALIDATION CHECKPOINT #2: Verify all serials don't exist in system before submit
+
+      // Get all item IDs for this receipt
+      const { data: receiptItems } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("id")
+        .eq("receipt_id", input.id);
+
+      if (receiptItems && receiptItems.length > 0) {
+        // Get all serials in this receipt
+        const receiptItemIds = receiptItems.map(item => item.id);
+        const { data: receiptSerials } = await ctx.supabaseAdmin
+          .from("stock_receipt_serials")
+          .select("serial_number")
+          .in("receipt_item_id", receiptItemIds);
+
+        if (receiptSerials && receiptSerials.length > 0) {
+          const serialNumbers = receiptSerials.map(s => s.serial_number);
+
+          // Check if any serial already exists in physical_products
+          const { data: existing } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("serial_number")
+            .in("serial_number", serialNumbers);
+
+          if (existing && existing.length > 0) {
+            const duplicates = existing.map(e => e.serial_number).join(", ");
+            throw new Error(`Không thể gửi duyệt: Các serial sau đã tồn tại trong hệ thống: ${duplicates}`);
+          }
+        }
+      }
+
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_receipts")
         .update({ status: "pending_approval" })
@@ -429,6 +461,38 @@ export const receiptsRouter = router({
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
         throw new Error("Unauthorized: Only admin and manager can approve receipts");
+      }
+
+      // VALIDATION CHECKPOINT #3: Verify all serials don't exist in system before approval
+
+      // Get all item IDs for this receipt
+      const { data: receiptItems } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("id")
+        .eq("receipt_id", input.id);
+
+      if (receiptItems && receiptItems.length > 0) {
+        // Get all serials in this receipt
+        const receiptItemIds = receiptItems.map(item => item.id);
+        const { data: receiptSerials } = await ctx.supabaseAdmin
+          .from("stock_receipt_serials")
+          .select("serial_number")
+          .in("receipt_item_id", receiptItemIds);
+
+        if (receiptSerials && receiptSerials.length > 0) {
+          const serialNumbers = receiptSerials.map(s => s.serial_number);
+
+          // Check if any serial already exists in physical_products
+          const { data: existing } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("serial_number")
+            .in("serial_number", serialNumbers);
+
+          if (existing && existing.length > 0) {
+            const duplicates = existing.map(e => e.serial_number).join(", ");
+            throw new Error(`Không thể duyệt phiếu: Các serial sau đã tồn tại trong hệ thống: ${duplicates}`);
+          }
+        }
       }
 
       const { data, error } = await ctx.supabaseAdmin
@@ -494,24 +558,25 @@ export const receiptsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Validate: Check for duplicates in physical_products
+      // VALIDATION CHECKPOINT #1: Ensure serials don't exist in system yet
       const serialNumbers = input.serials.map((s) => s.serialNumber);
 
+      // Check in physical_products (already created products)
       const { data: existing, error: checkError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("serial_number")
         .in("serial_number", serialNumbers);
 
       if (checkError) {
-        throw new Error(`Failed to validate serials: ${checkError.message}`);
+        throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
       }
 
       if (existing && existing.length > 0) {
         const duplicates = existing.map((e) => e.serial_number).join(", ");
-        throw new Error(`Duplicate serials found: ${duplicates}`);
+        throw new Error(`Serial đã tồn tại trong hệ thống: ${duplicates}`);
       }
 
-      // Also check in stock_receipt_serials
+      // Also check in stock_receipt_serials (serials in other receipts)
       const { data: existingInReceipts } = await ctx.supabaseAdmin
         .from("stock_receipt_serials")
         .select("serial_number")
@@ -519,7 +584,7 @@ export const receiptsRouter = router({
 
       if (existingInReceipts && existingInReceipts.length > 0) {
         const duplicates = existingInReceipts.map((e) => e.serial_number).join(", ");
-        throw new Error(`Serials already in receipts: ${duplicates}`);
+        throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
       }
 
       // Insert serials

@@ -9,8 +9,7 @@ import { StockTransfer } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, ArrowRight, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { Calendar, User, FileText, ArrowRight } from "lucide-react";
 
 interface TransferDetailHeaderProps {
   transfer: any; // StockTransfer with relations
@@ -112,39 +111,6 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
                 <div>
                   <div className="text-sm font-medium">Ghi chú</div>
                   <div className="text-sm text-muted-foreground">{transfer.notes}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Auto-generated documents - only show if approved */}
-            {transfer.generated_issue && (
-              <div className="flex items-start gap-2">
-                <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Phiếu xuất tự động</div>
-                  <Link
-                    href={`/inventory/documents/issues/${transfer.generated_issue.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"
-                  >
-                    {transfer.generated_issue.issue_number}
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {transfer.generated_receipt && (
-              <div className="flex items-start gap-2">
-                <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Phiếu nhập tự động</div>
-                  <Link
-                    href={`/inventory/documents/receipts/${transfer.generated_receipt.id}`}
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"
-                  >
-                    {transfer.generated_receipt.receipt_number}
-                    <ExternalLink className="h-3 w-3" />
-                  </Link>
                 </div>
               </div>
             )}

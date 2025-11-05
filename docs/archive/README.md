@@ -22,6 +22,7 @@ Planning and design documents for completed implementations.
 - `phase-3-service-ticket-workflow.md` - Phase 3 implementation complete
 - `physical-products-schema-migration-2025-10.md` - Virtual warehouse UUID migration complete - Consolidated into ARCHITECTURE-MASTER.md Section 2.2
 - `default-warehouse-system-2025-10.md` - Default warehouse implementation complete - Consolidated into ARCHITECTURE-MASTER.md Section 2.2
+- `serial-entry-workflow-architecture-2025-11.md` - Serial entry task automation implementation complete - Consolidated into INVENTORY-WORKFLOW-V2.md Section: Serial Entry Task Automation
 
 ### Changelogs (`changelogs/`)
 Historical changelogs for past migrations and schema changes.

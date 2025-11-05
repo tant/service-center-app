@@ -78,7 +78,6 @@ export function uploadAttachment(task: UploadTask, onProgress?: (progress: numbe
         .upload(path, task.file, {
           cacheControl: "3600",
           upsert: false,
-          signal: controller.signal,
         });
 
       if (uploadError) {

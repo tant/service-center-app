@@ -186,9 +186,10 @@ CREATE TABLE IF NOT EXISTS public.service_request_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
   serial_number VARCHAR(255) NOT NULL,
-  issue_description TEXT,
+  issue_description TEXT NOT NULL,
   issue_photos JSONB DEFAULT '[]'::jsonb,
-  ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  linked_ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  service_option public.service_type NOT NULL DEFAULT 'warranty',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT service_request_items_serial_format CHECK (length(serial_number) >= 5)
@@ -196,10 +197,11 @@ CREATE TABLE IF NOT EXISTS public.service_request_items (
 
 CREATE INDEX idx_service_request_items_request_id ON public.service_request_items(request_id);
 CREATE INDEX idx_service_request_items_serial_number ON public.service_request_items(serial_number);
-CREATE INDEX idx_service_request_items_ticket_id ON public.service_request_items(ticket_id);
+CREATE INDEX idx_service_request_items_linked_ticket_id ON public.service_request_items(linked_ticket_id);
 
 COMMENT ON TABLE public.service_request_items IS 'Individual products within a service request (1:N relationship)';
-COMMENT ON COLUMN public.service_request_items.ticket_id IS 'Links to the service ticket created for this specific product';
+COMMENT ON COLUMN public.service_request_items.linked_ticket_id IS 'Links to the service ticket created for this specific product';
+COMMENT ON COLUMN public.service_request_items.service_option IS 'Selected service handling option for the specific product';
 
 CREATE TRIGGER trigger_service_request_items_updated_at BEFORE UPDATE ON public.service_request_items FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 

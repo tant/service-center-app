@@ -29,7 +29,7 @@ interface ServiceRequestFormData {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
-  issue_description: string;
+  issue_description: string | null;
   items: ProductItem[];
   receipt_status: "received" | "pending_receipt";
   preferred_delivery_method?: "pickup" | "delivery";
@@ -57,7 +57,9 @@ export function ServiceRequestForm({
   const [customerName, setCustomerName] = useState(initialData?.customer_name || "");
   const [customerEmail, setCustomerEmail] = useState(initialData?.customer_email || "");
   const [customerPhone, setCustomerPhone] = useState(initialData?.customer_phone || "");
-  const [issueDescription, setIssueDescription] = useState(initialData?.issue_description || "");
+  const [issueDescription, setIssueDescription] = useState(
+    initialData?.issue_description ?? ""
+  );
   const [receiptStatus, setReceiptStatus] = useState<"received" | "pending_receipt">(
     initialData?.receipt_status || "received"
   );
@@ -158,10 +160,6 @@ export function ServiceRequestForm({
       toast.error("Số điện thoại phải có ít nhất 10 ký tự");
       return false;
     }
-    if (!issueDescription || issueDescription.trim().length === 0) {
-      toast.error("Mô tả vấn đề không được để trống");
-      return false;
-    }
     if (items.some((item) => !item.serial_number || item.serial_number.length < 5)) {
       toast.error("Tất cả serial number phải có ít nhất 5 ký tự");
       return false;
@@ -178,7 +176,10 @@ export function ServiceRequestForm({
     customer_name: customerName,
     customer_email: customerEmail,
     customer_phone: customerPhone,
-    issue_description: issueDescription,
+    issue_description:
+      issueDescription && issueDescription.trim().length > 0
+        ? issueDescription
+        : null,
     items: items.map((item) => ({
       serial_number: item.serial_number.toUpperCase(),
       issue_description: item.issue_description,

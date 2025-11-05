@@ -76,25 +76,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePendingIncomingRequests } from "@/hooks/use-service-request";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { type ServiceRequestTableRow } from "@/lib/schemas/service-request";
 
-// Schema
-export const serviceRequestSchema = z.object({
-  id: z.string(),
-  tracking_token: z.string(),
-  customer_name: z.string(),
-  customer_email: z.string().nullable(),
-  customer_phone: z.string(),
-  product_brand: z.string().nullable(),
-  product_model: z.string(),
-  serial_number: z.string().nullable(),
-  issue_description: z.string(),
-  status: z.enum(["draft", "submitted", "pickingup", "received", "processing", "completed", "cancelled"]),
-  created_at: z.string(),
-  updated_at: z.string().nullable(),
-  linked_ticket_id: z.string().nullable(),
-});
-
-export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
+export type ServiceRequest = ServiceRequestTableRow;
 
 // Status mapping
 const STATUS_MAP = {
@@ -209,12 +193,11 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     },
     {
       id: "items",
-      accessorFn: (row) => row.item_serial_numbers[0] ?? "",
+      accessorFn: (row) => row.primary_serial ?? "",
       header: "Sản phẩm",
       cell: ({ row }) => {
-        const primarySerial = row.original.primary_item?.serial_number;
-        const totalItems = row.original.items_count;
-        const extraCount = totalItems > 0 ? totalItems - 1 : 0;
+        const primarySerial = row.original.primary_serial;
+        const productInfo = row.original.primary_product;
 
         if (!primarySerial) {
           return (
@@ -224,13 +207,15 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
           );
         }
 
+        const brandModel = [productInfo?.brand, productInfo?.model]
+          .filter(Boolean)
+          .join(" • ");
+
         return (
-          <div className="">
+          <div>
             <p className="font-mono text-xs font-medium">{primarySerial}</p>
-            {extraCount > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                +{extraCount} sản phẩm khác
-              </p>
+            {brandModel ? (
+              <p className="text-xs text-muted-foreground">{brandModel}</p>
             ) : null}
           </div>
         );
@@ -280,18 +265,20 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     },
     {
       id: "linked_ticket",
-      accessorFn: (row) => row.linked_ticket?.ticket_number ?? "",
+      accessorFn: (row) => row.linked_ticket_id ?? "",
       header: "Ticket",
       cell: ({ row }) => {
-        const ticket = row.original.linked_ticket;
-        if (!ticket) {
+        const ticketId = row.original.linked_ticket_id;
+        if (!ticketId) {
           return <span className="text-xs text-muted-foreground">-</span>;
         }
+
+        const shortId = ticketId.slice(0, 8);
+
         return (
-          <div className="space-y-1">
-            <p className="font-medium">#{ticket.ticket_number}</p>
-            <Badge variant="secondary">{ticket.status}</Badge>
-          </div>
+          <span className="text-xs font-mono font-medium text-muted-foreground">
+            #{shortId}
+          </span>
         );
       },
     },

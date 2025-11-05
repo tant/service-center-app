@@ -949,43 +949,34 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          issue_description: string | null
+          issue_description: string
           issue_photos: Json | null
-          product_brand: string | null
-          product_model: string | null
-          purchase_date: string | null
+          linked_ticket_id: string | null
           request_id: string
           serial_number: string
           service_option: Database["public"]["Enums"]["service_type"]
-          ticket_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
-          issue_description?: string | null
+          issue_description: string
           issue_photos?: Json | null
-          product_brand?: string | null
-          product_model?: string | null
-          purchase_date?: string | null
+          linked_ticket_id?: string | null
           request_id: string
           serial_number: string
           service_option?: Database["public"]["Enums"]["service_type"]
-          ticket_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
-          issue_description?: string | null
+          issue_description?: string
           issue_photos?: Json | null
-          product_brand?: string | null
-          product_model?: string | null
-          purchase_date?: string | null
+          linked_ticket_id?: string | null
           request_id?: string
           serial_number?: string
           service_option?: Database["public"]["Enums"]["service_type"]
-          ticket_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -997,22 +988,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "service_request_items_ticket_id_fkey"
-            columns: ["ticket_id"]
+            foreignKeyName: "service_request_items_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
             isOneToOne: false
             referencedRelation: "service_tickets"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "service_request_items_ticket_id_fkey"
-            columns: ["ticket_id"]
+            foreignKeyName: "service_request_items_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
             isOneToOne: false
             referencedRelation: "v_task_progress_summary"
             referencedColumns: ["ticket_id"]
           },
           {
-            foreignKeyName: "service_request_items_ticket_id_fkey"
-            columns: ["ticket_id"]
+            foreignKeyName: "service_request_items_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
             isOneToOne: false
             referencedRelation: "v_warranty_expiring_soon"
             referencedColumns: ["current_ticket_id"]

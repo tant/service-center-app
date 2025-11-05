@@ -196,7 +196,7 @@ const submitRequestSchema = z.object({
   customer_email: z.string().email("Invalid email format").optional().or(z.literal("")),
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
   customer_address: z.string().optional(),
-  issue_overview: z.string().min(1, "Description is required"),,
+  issue_overview: z.string().min(1, "Description is required"),
   items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
   receipt_status: z.enum(["received", "pending_receipt"]).default("received"),
   preferred_delivery_method: z.enum(["pickup", "delivery"]).default("pickup"),
@@ -466,12 +466,22 @@ export const serviceRequestRouter = router({
       }
 
       // Verify all serial numbers exist in the system
-      await Promise.all(
+      const productLookups = await Promise.all(
         input.items.map(async (item) => {
           const { data: physicalProduct } = await ctx.supabaseAdmin
             .from("physical_products")
-            .select("id")
-            .eq("serial_number", item.serial_number)
+            .select(
+              `
+              id,
+              product:products(
+                id,
+                name,
+                sku,
+                brand:brands(name)
+              )
+            `
+            )
+            .eq("serial_number", item.serial_number.toUpperCase())
             .single();
 
           if (!physicalProduct) {
@@ -816,7 +826,7 @@ export const serviceRequestRouter = router({
           customer_name: input.data.customer_name,
           customer_email: input.data.customer_email,
           customer_phone: input.data.customer_phone,
-          issue_description: input.data.issue_description,
+          issue_description: input.data.issue_overview,
           receipt_status: input.data.receipt_status,
           delivery_method: input.data.preferred_delivery_method || null,
           delivery_address:
@@ -1587,7 +1597,7 @@ export const serviceRequestRouter = router({
           customer_name: input.data.customer_name,
           customer_email: input.data.customer_email,
           customer_phone: input.data.customer_phone,
-          issue_description: input.data.issue_description,
+          issue_description: input.data.issue_overview,
           receipt_status: 'pending_receipt',
           delivery_method: input.data.preferred_delivery_method || null,
           delivery_address:

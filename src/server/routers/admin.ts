@@ -1,13 +1,166 @@
 import { TRPCError } from "@trpc/server";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { SYSTEM_USER_EMAIL, SYSTEM_USER_ID } from "@/lib/system-user";
+import { publicProcedure, router } from "../trpc";
 
 // Input validation schema
 const setupInputSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
+
+const SYSTEM_AUTH_EMAIL = "system@service-center.local";
+const SYSTEM_USER_FULL_NAME = "Service Center System";
+
+type EnsureSystemUserParams = {
+  supabaseAdmin: SupabaseClient;
+  existingUsers?: User[];
+};
+
+async function ensureSystemUser({
+  supabaseAdmin,
+  existingUsers = [],
+}: EnsureSystemUserParams) {
+  console.log("🛡️ SYSTEM: Ensuring system user exists...");
+
+  const matchSystemUser = (user?: User | null) => {
+    if (!user) return false;
+    const email = user.email?.toLowerCase();
+    return (
+      user.id === SYSTEM_USER_ID ||
+      email === SYSTEM_AUTH_EMAIL ||
+      email === SYSTEM_USER_EMAIL
+    );
+  };
+
+  const fetchUserById = async () => {
+    const { data, error } =
+      await supabaseAdmin.auth.admin.getUserById(SYSTEM_USER_ID);
+
+    if (error && error.status !== 404) {
+      console.error("❌ SYSTEM: getUserById failed:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to fetch system user: ${error.message}`,
+      });
+    }
+
+    return data?.user ?? null;
+  };
+
+  let systemUser: User | null = existingUsers.find(matchSystemUser) ?? null;
+
+  if (!systemUser) {
+    systemUser = await fetchUserById();
+  }
+
+  if (!systemUser) {
+    console.log("🆕 SYSTEM: Creating system user...");
+    const generatedPassword = randomBytes(24).toString("base64url");
+    const createPayload = {
+      id: SYSTEM_USER_ID,
+      email: SYSTEM_AUTH_EMAIL,
+      email_confirm: true,
+      password: generatedPassword,
+      user_metadata: { full_name: SYSTEM_USER_FULL_NAME },
+      app_metadata: { provider: "system", providers: ["system"] },
+    } as any;
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser(
+      createPayload,
+    );
+
+    if (error) {
+      if (error.message?.toLowerCase().includes("already")) {
+        systemUser = await fetchUserById();
+      } else {
+        console.error("❌ SYSTEM: Failed to create system user:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create system user: ${error.message}`,
+        });
+      }
+    } else {
+      systemUser = data?.user ?? null;
+    }
+  }
+
+  if (!systemUser) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Unable to ensure system user exists.",
+    });
+  }
+
+  if (systemUser.id !== SYSTEM_USER_ID) {
+    console.error("❌ SYSTEM: Unexpected system user ID:", systemUser.id);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "System user exists but has unexpected identifier.",
+    });
+  }
+
+  const desiredAuth = {
+    email: SYSTEM_AUTH_EMAIL,
+    email_confirm: true,
+    app_metadata: { provider: "system", providers: ["system"] },
+    user_metadata: { full_name: SYSTEM_USER_FULL_NAME },
+  };
+
+  const providerList = Array.isArray(systemUser.app_metadata?.providers)
+    ? systemUser.app_metadata.providers
+    : [];
+
+  const needsAuthUpdate =
+    systemUser.email?.toLowerCase() !== SYSTEM_AUTH_EMAIL ||
+    systemUser.app_metadata?.provider !== "system" ||
+    !providerList.includes("system") ||
+    systemUser.user_metadata?.full_name !== SYSTEM_USER_FULL_NAME;
+
+  if (needsAuthUpdate) {
+    const { error: updateError } =
+      await supabaseAdmin.auth.admin.updateUserById(
+        SYSTEM_USER_ID,
+        desiredAuth,
+      );
+
+    if (updateError) {
+      console.error(
+        "❌ SYSTEM: Failed to update system auth metadata:",
+        updateError,
+      );
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to update system user metadata: ${updateError.message}`,
+      });
+    }
+  }
+
+  const desiredProfile = {
+    user_id: SYSTEM_USER_ID,
+    full_name: SYSTEM_USER_FULL_NAME,
+    email: SYSTEM_USER_EMAIL,
+    role: "manager",
+    is_active: true,
+  };
+
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .upsert(desiredProfile, { onConflict: "user_id" });
+
+  if (profileError) {
+    console.error("❌ SYSTEM: Failed to upsert system profile:", profileError);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Failed to upsert system profile: ${profileError.message}`,
+    });
+  }
+
+  console.log("✅ SYSTEM: System user ensured.");
+}
 
 export const adminRouter = router({
   simple: publicProcedure.mutation(async () => {
@@ -230,6 +383,10 @@ export const adminRouter = router({
           }
 
           console.log("✅ SETUP: Admin password reset successfully");
+          await ensureSystemUser({
+            supabaseAdmin,
+            existingUsers: existingAuthUser?.users,
+          });
           return {
             message:
               "Setup already completed. Admin password has been reset to the configured value.",
@@ -284,6 +441,10 @@ export const adminRouter = router({
             console.log("✅ AUTH: Password synchronized");
           }
 
+          await ensureSystemUser({
+            supabaseAdmin,
+            existingUsers: existingAuthUser?.users,
+          });
           return {
             message:
               "Setup repaired. Missing admin profile has been created and password synchronized.",
@@ -404,6 +565,11 @@ export const adminRouter = router({
         }
 
         console.log("✅ DATABASE: Admin profile created successfully");
+
+        await ensureSystemUser({
+          supabaseAdmin,
+          existingUsers: existingAuthUser?.users,
+        });
 
         const mutationDuration = Date.now() - mutationStartTime;
         console.log("🏁 MUTATION: Setup completed successfully");

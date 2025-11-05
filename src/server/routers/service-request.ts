@@ -956,7 +956,7 @@ export const serviceRequestRouter = router({
       z.object({
         status: z.enum(["submitted", "received", "processing"]).optional(),
         search: z.string().optional(),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(100).default(100),
         offset: z.number().min(0).default(0),
       })
     )

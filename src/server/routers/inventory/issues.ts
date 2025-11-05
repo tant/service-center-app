@@ -268,6 +268,136 @@ export const issuesRouter = router({
     }),
 
   /**
+   * Update full issue (only if draft) - for editing all fields
+   */
+  updateFull: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        id: z.string(),
+        issueType: z.enum(["normal", "adjustment"]),
+        virtualWarehouseId: z.string(),
+        issueDate: z.string(),
+        notes: z.string().optional(),
+        items: z.array(
+          z.object({
+            id: z.string().optional(),
+            productId: z.string(),
+            quantity: z.number().int(),
+          })
+        ).min(1),
+      }).refine(
+        (data) => {
+          // Validate: normal issues must have positive quantities
+          if (data.issueType === "normal") {
+            return data.items.every((item) => item.quantity > 0);
+          }
+          // Adjustment issues: allow negative but not zero
+          return data.items.every((item) => item.quantity !== 0);
+        },
+        {
+          message: "Normal issues require positive quantities. Adjustments cannot have zero quantity.",
+        }
+      )
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check status first
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("status, created_by_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      if (issue.status !== "draft") {
+        throw new Error("Cannot edit issue after draft status");
+      }
+
+      // Check permission
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Only creator or admin/manager can edit
+      if (
+        issue.created_by_id !== profile.id &&
+        !["admin", "manager"].includes(profile.role)
+      ) {
+        throw new Error("Unauthorized to edit this issue");
+      }
+
+      // Get existing item IDs first
+      const { data: existingItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      const itemIds = existingItems?.map(item => item.id) || [];
+
+      // Delete existing serials first (if there are items)
+      if (itemIds.length > 0) {
+        await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .delete()
+          .in("issue_item_id", itemIds);
+      }
+
+      // Delete existing items
+      const { error: deleteItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .delete()
+        .eq("issue_id", input.id);
+
+      if (deleteItems) {
+        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
+      }
+
+      // Update issue header
+      const { data: updatedIssue, error: updateError } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .update({
+          issue_type: input.issueType,
+          virtual_warehouse_id: input.virtualWarehouseId,
+          issue_date: input.issueDate,
+          notes: input.notes,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update issue: ${updateError.message}`);
+      }
+
+      // Insert new items
+      if (input.items.length > 0) {
+        const items = input.items.map((item) => ({
+          issue_id: input.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+        }));
+
+        const { error: itemsError } = await ctx.supabaseAdmin
+          .from("stock_issue_items")
+          .insert(items);
+
+        if (itemsError) {
+          throw new Error(`Failed to create issue items: ${itemsError.message}`);
+        }
+      }
+
+      return updatedIssue;
+    }),
+
+  /**
    * Submit for approval
    */
   submitForApproval: publicProcedure.use(requireManagerOrAbove)

@@ -262,6 +262,138 @@ export const receiptsRouter = router({
     }),
 
   /**
+   * Update full receipt (only if draft) - for editing all fields
+   */
+  updateFull: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        id: z.string(),
+        receiptType: z.enum(["normal", "adjustment"]),
+        virtualWarehouseId: z.string(),
+        receiptDate: z.string(),
+        notes: z.string().optional(),
+        referenceDocumentNumber: z.string().optional(),
+        items: z.array(
+          z.object({
+            id: z.string().optional(),
+            productId: z.string(),
+            declaredQuantity: z.number().int(),
+          })
+        ).min(1),
+      }).refine(
+        (data) => {
+          // Validate: normal receipts must have positive quantities
+          if (data.receiptType === "normal") {
+            return data.items.every((item) => item.declaredQuantity > 0);
+          }
+          // Adjustment receipts: allow negative but not zero
+          return data.items.every((item) => item.declaredQuantity !== 0);
+        },
+        {
+          message: "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
+        }
+      )
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check status first
+      const { data: receipt } = await ctx.supabaseAdmin
+        .from("stock_receipts")
+        .select("status, created_by_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!receipt) {
+        throw new Error("Receipt not found");
+      }
+
+      if (receipt.status !== "draft") {
+        throw new Error("Cannot edit receipt after draft status");
+      }
+
+      // Check permission
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Only creator or admin/manager can edit
+      if (
+        receipt.created_by_id !== profile.id &&
+        !["admin", "manager"].includes(profile.role)
+      ) {
+        throw new Error("Unauthorized to edit this receipt");
+      }
+
+      // Get existing item IDs first
+      const { data: existingItems } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .select("id")
+        .eq("receipt_id", input.id);
+
+      const itemIds = existingItems?.map(item => item.id) || [];
+
+      // Delete existing serials first (if there are items)
+      if (itemIds.length > 0) {
+        await ctx.supabaseAdmin
+          .from("stock_receipt_serials")
+          .delete()
+          .in("receipt_item_id", itemIds);
+      }
+
+      // Delete existing items
+      const { error: deleteItems } = await ctx.supabaseAdmin
+        .from("stock_receipt_items")
+        .delete()
+        .eq("receipt_id", input.id);
+
+      if (deleteItems) {
+        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
+      }
+
+      // Update receipt header
+      const { data: updatedReceipt, error: updateError } = await ctx.supabaseAdmin
+        .from("stock_receipts")
+        .update({
+          receipt_type: input.receiptType,
+          virtual_warehouse_id: input.virtualWarehouseId,
+          receipt_date: input.receiptDate,
+          notes: input.notes,
+          reference_document_number: input.referenceDocumentNumber,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update receipt: ${updateError.message}`);
+      }
+
+      // Insert new items
+      if (input.items.length > 0) {
+        const items = input.items.map((item) => ({
+          receipt_id: input.id,
+          product_id: item.productId,
+          declared_quantity: item.declaredQuantity,
+        }));
+
+        const { error: itemsError } = await ctx.supabaseAdmin
+          .from("stock_receipt_items")
+          .insert(items);
+
+        if (itemsError) {
+          throw new Error(`Failed to create receipt items: ${itemsError.message}`);
+        }
+      }
+
+      return updatedReceipt;
+    }),
+
+  /**
    * Submit for approval
    */
   submitForApproval: publicProcedure.use(requireManagerOrAbove)

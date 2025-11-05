@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send, CheckCircle, Trash2, X, ListTodo } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Trash2, X, ListTodo, Edit } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -274,6 +274,18 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
                   <ListTodo className="h-4 w-4" />
                   <span className="hidden lg:inline">Tạo công việc</span>
                 </Button>
+
+                {canDelete && (
+                  <Link href={`/inventory/documents/receipts/${id}/edit`}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="hidden lg:inline">Chỉnh sửa</span>
+                    </Button>
+                  </Link>
+                )}
 
                 {canDelete && (
                   <Button

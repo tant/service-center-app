@@ -260,6 +260,142 @@ export const transfersRouter = router({
     }),
 
   /**
+   * Update full transfer (only if draft) - for editing all fields
+   */
+  updateFull: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        id: z.string(),
+        fromVirtualWarehouseId: z.string(),
+        toVirtualWarehouseId: z.string(),
+        transferDate: z.string(),
+        notes: z.string().optional(),
+        customerId: z.string().uuid().optional(),
+        items: z.array(
+          z.object({
+            id: z.string().optional(), // Existing item ID (not used for now, we recreate)
+            productId: z.string(),
+            quantity: z.number().int().min(1),
+          })
+        ).min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check status first
+      const { data: transfer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("status, created_by_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
+
+      if (transfer.status !== "draft") {
+        throw new Error("Cannot edit transfer after draft status");
+      }
+
+      // Check permission
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Only creator or admin/manager can edit
+      if (
+        transfer.created_by_id !== profile.id &&
+        !["admin", "manager"].includes(profile.role)
+      ) {
+        throw new Error("Unauthorized to edit this transfer");
+      }
+
+      // Validate: Cannot transfer to same warehouse
+      if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
+        throw new Error("Cannot transfer to the same warehouse");
+      }
+
+      // Validate: Check if destination is customer_installed and require customer_id
+      const { data: toWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("warehouse_type")
+        .eq("id", input.toVirtualWarehouseId)
+        .single();
+
+      if (toWarehouse?.warehouse_type === "customer_installed" && !input.customerId) {
+        throw new Error("Customer ID is required when transferring to customer_installed warehouse");
+      }
+
+      // Get existing item IDs first
+      const { data: existingItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("id")
+        .eq("transfer_id", input.id);
+
+      const itemIds = existingItems?.map(item => item.id) || [];
+
+      // Delete existing serials first (if there are items)
+      if (itemIds.length > 0) {
+        await ctx.supabaseAdmin
+          .from("stock_transfer_serials")
+          .delete()
+          .in("transfer_item_id", itemIds);
+      }
+
+      // Delete existing items
+      const { error: deleteItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .delete()
+        .eq("transfer_id", input.id);
+
+      if (deleteItems) {
+        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
+      }
+
+      // Update transfer header
+      const { data: updatedTransfer, error: updateError } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .update({
+          from_virtual_warehouse_id: input.fromVirtualWarehouseId,
+          to_virtual_warehouse_id: input.toVirtualWarehouseId,
+          transfer_date: input.transferDate,
+          notes: input.notes,
+          customer_id: input.customerId,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update transfer: ${updateError.message}`);
+      }
+
+      // Insert new items
+      if (input.items.length > 0) {
+        const items = input.items.map((item) => ({
+          transfer_id: input.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+        }));
+
+        const { error: itemsError } = await ctx.supabaseAdmin
+          .from("stock_transfer_items")
+          .insert(items);
+
+        if (itemsError) {
+          throw new Error(`Failed to create transfer items: ${itemsError.message}`);
+        }
+      }
+
+      return updatedTransfer;
+    }),
+
+  /**
    * Submit for approval
    */
   submitForApproval: publicProcedure.use(requireManagerOrAbove)

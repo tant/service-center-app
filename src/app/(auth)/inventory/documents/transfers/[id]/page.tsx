@@ -16,7 +16,7 @@ import { TaskCard } from "@/components/tasks/task-card";
 import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send, Trash2, CheckCircle, ListTodo } from "lucide-react";
+import { ArrowLeft, Send, Trash2, CheckCircle, ListTodo, Edit } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -231,6 +231,18 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                   <ListTodo className="h-4 w-4" />
                   <span className="hidden lg:inline">Tạo công việc</span>
                 </Button>
+
+                {canDelete && (
+                  <Link href={`/inventory/documents/transfers/${id}/edit`}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="hidden lg:inline">Chỉnh sửa</span>
+                    </Button>
+                  </Link>
+                )}
 
                 {canDelete && (
                   <Button

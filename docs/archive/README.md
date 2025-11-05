@@ -20,6 +20,7 @@ Planning and design documents for completed implementations.
 - `inventory-implementation-plan-2025-01.md` - Inventory system implementation complete
 - `inventory-ui-ux-design-2025-01.md` - Inventory UI design complete
 - `phase-3-service-ticket-workflow.md` - Phase 3 implementation complete
+- `physical-products-schema-migration-2025-10.md` - Virtual warehouse UUID migration complete - Consolidated into ARCHITECTURE-MASTER.md Section 2.2
 
 ### Changelogs (`changelogs/`)
 Historical changelogs for past migrations and schema changes.

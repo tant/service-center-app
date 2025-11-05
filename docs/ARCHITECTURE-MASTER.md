@@ -122,13 +122,92 @@ graph LR
 
 **See:** [TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md](architecture/TERMINOLOGY-REFACTORING-TASKS-WORKFLOWS.md)
 
-### 2.2 Virtual Warehouse Strategy
+### 2.2 Physical Product Management & Virtual Warehouses
 
-**Purpose:** Logical stock categorization separate from physical location.
+**Purpose:** Track individual serialized products with lifecycle status and logical warehouse categorization.
 
-**Architecture (2025-10-30):**
-- **Physical Warehouses:** Actual storage locations (e.g., "Công ty" main office)
-- **Virtual Warehouses:** Logical categories (7 types, system-wide unique)
+#### Physical Product Schema
+
+**Core Design:**
+- Each physical product has a unique serial number
+- Stored in a specific **virtual warehouse instance** (not just warehouse type)
+- Tracks complete lifecycle with `status` field
+- Maintains audit trail of location and customer history
+
+**Database Table:**
+```sql
+CREATE TABLE physical_products (
+  id UUID PRIMARY KEY,
+  product_id UUID NOT NULL,
+  serial_number VARCHAR(255) NOT NULL UNIQUE,
+  condition product_condition NOT NULL DEFAULT 'new',
+
+  -- Virtual warehouse management
+  virtual_warehouse_id UUID NOT NULL
+    REFERENCES virtual_warehouses(id),
+  previous_virtual_warehouse_id UUID
+    REFERENCES virtual_warehouses(id),
+
+  -- Lifecycle status (Added 2025-11-05)
+  status physical_product_status NOT NULL DEFAULT 'draft',
+
+  -- Warranty tracking
+  manufacturer_warranty_end_date DATE,
+  user_warranty_end_date DATE,
+
+  -- Context tracking
+  rma_batch_id UUID REFERENCES rma_batches(id),
+  current_ticket_id UUID REFERENCES service_tickets(id),
+  last_known_customer_id UUID REFERENCES customers(id),
+
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+#### Physical Product Status Lifecycle
+
+**Status ENUM (Added 2025-11-05):**
+```sql
+CREATE TYPE physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary)
+  'active',       -- In stock, available for selection
+  'transferring', -- Locked in draft issue/transfer document
+  'issued',       -- Issued out permanently (not in stock)
+  'disposed'      -- Scrapped/unusable
+);
+```
+
+**Lifecycle Flow:**
+```mermaid
+stateDiagram-v2
+    [*] --> draft: Receipt serial added
+    draft --> active: Receipt approved
+    draft --> [*]: Receipt cancelled (auto-delete)
+
+    active --> transferring: Added to issue/transfer
+    transferring --> issued: Issue approved
+    transferring --> active: Transfer approved (new warehouse)
+    transferring --> active: Document cancelled/removed
+
+    issued --> [*]: Permanent exit
+    active --> disposed: Manual disposal
+    disposed --> [*]: Permanent exit
+```
+
+**Key Rules:**
+- ✅ Only `active` products can be selected for new documents
+- ✅ `draft` products auto-deleted when receipt cancelled (cleanup)
+- ✅ `transferring` status prevents product from being selected twice
+- ✅ Only `active` products count toward available stock
+- ✅ Complete audit trail via database triggers
+
+#### Virtual Warehouse Architecture
+
+**Two-Level System:**
+1. **Physical Warehouses:** Actual storage locations (e.g., "Công ty" main office)
+2. **Virtual Warehouses:** Logical categories within physical locations
 
 **7 Virtual Warehouse Types:**
 
@@ -142,20 +221,48 @@ graph LR
 | **Parts** | `parts` | Kho Linh Kiện | Replacement parts and components |
 | **Customer Installed** | `customer_installed` | Hàng Đã Bán | Products sold and deployed at customer sites |
 
-**Key Design Decision (2025-10-31):**
-- Changed from ENUM `warehouse_type` to UUID `virtual_warehouse_id` references
-- Allows flexibility: multiple instances of same type if needed
-- Currently enforced as single-instance via UNIQUE constraint on `warehouse_type`
-- Each virtual warehouse can have different physical warehouse (via `physical_warehouse_id`)
+**Architecture Benefits:**
+```
+Physical Warehouse: "Công ty"
+  ├── Main Warehouse (UUID: xxx-xxx) [virtual_warehouse_type='main']
+  ├── Warranty Stock (UUID: yyy-yyy) [virtual_warehouse_type='warranty_stock']
+  ├── RMA Staging (UUID: zzz-zzz) [virtual_warehouse_type='rma_staging']
+  └── ... (7 virtual warehouses total)
+
+Physical products reference: virtual_warehouse_id (UUID)
+  → Allows future expansion: multiple instances of same type if needed
+  → Currently: one instance per type (enforced via UNIQUE constraint)
+```
+
+**Design Advantages:**
+- ✅ Foreign key constraints ensure referential integrity
+- ✅ Easy to query with JOINs (virtual → physical warehouse)
+- ✅ Flexible: can add multiple warehouses of same type later
+- ✅ Each virtual warehouse configurable independently
 
 **Customer Tracking:**
-- `customer_installed` warehouse tracks `last_known_customer_id` on physical products
+- `customer_installed` warehouse tracks `last_known_customer_id`
 - Enables warranty claim verification
 - Auto-set when warranty replacement issued via service ticket
+- Retained even if product returned for service
+
+**Querying Physical Products:**
+```sql
+-- Get product with warehouse details
+SELECT
+  pp.*,
+  vw.name as virtual_warehouse_name,
+  vw.warehouse_type,
+  pw.name as physical_warehouse_name
+FROM physical_products pp
+JOIN virtual_warehouses vw ON pp.virtual_warehouse_id = vw.id
+JOIN physical_warehouses pw ON vw.physical_warehouse_id = pw.id
+WHERE pp.status = 'active';
+```
 
 **See:**
 - [DEFAULT-WAREHOUSE-SYSTEM.md](architecture/DEFAULT-WAREHOUSE-SYSTEM.md)
-- [PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md](architecture/PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md)
+- [INVENTORY-WORKFLOW-V2.md](architecture/INVENTORY-WORKFLOW-V2.md)
 
 ### 2.3 Inventory Workflow v2.0 (Non-Blocking)
 
@@ -190,59 +297,7 @@ Create Receipt → Submit (0% serials OK) → Approve → ✅ STOCK AVAILABLE
 
 **See:** [INVENTORY-WORKFLOW-V2.md](architecture/INVENTORY-WORKFLOW-V2.md)
 
-### 2.4 Physical Product Status Lifecycle
-
-**Purpose:** Track product lifecycle to prevent double-selection and ensure data integrity.
-
-**Status ENUM (Added 2025-11-05):**
-```sql
-CREATE TYPE physical_product_status AS ENUM (
-  'draft',        -- From unapproved receipt (temporary)
-  'active',       -- In stock, available for selection
-  'transferring', -- Locked in draft issue/transfer document
-  'issued',       -- Issued out permanently (not in stock)
-  'disposed'      -- Scrapped/unusable
-);
-```
-
-**Lifecycle Flow:**
-
-```mermaid
-stateDiagram-v2
-    [*] --> draft: Receipt serial added
-    draft --> active: Receipt approved
-    draft --> [*]: Receipt cancelled (auto-delete)
-
-    active --> transferring: Added to issue/transfer
-    transferring --> issued: Issue approved
-    transferring --> active: Transfer approved (new warehouse)
-    transferring --> active: Document cancelled/removed
-
-    issued --> [*]: Permanent exit
-    active --> disposed: Manual disposal
-    disposed --> [*]: Permanent exit
-```
-
-**Key Rules:**
-- ✅ Only `active` products can be selected for new documents
-- ✅ `draft` products auto-deleted when receipt cancelled (cleanup)
-- ✅ `transferring` status prevents product from being selected twice
-- ✅ Only `active` products count toward available stock
-- ✅ Complete audit trail via triggers
-
-**Database Triggers (Added 2025-11-05):**
-- `create_physical_product_from_receipt_serial()` - Creates draft product
-- `activate_physical_products_on_receipt_approval()` - draft → active
-- `mark_physical_product_as_transferring_on_issue()` - active → transferring
-- `restore_active_status_on_issue_serial_removal()` - transferring → active
-- `mark_physical_products_as_issued_on_issue_approval()` - transferring → issued
-- `restore_active_status_on_transfer_approval()` - transferring → active (new warehouse)
-
-**See:**
-- [INVENTORY-WORKFLOW-V2.md](architecture/INVENTORY-WORKFLOW-V2.md) (Updated 2025-11-05)
-- [PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md](architecture/PHYSICAL-PRODUCTS-SCHEMA-UPDATE.md)
-
-### 2.5 Service Request Draft Mode
+### 2.4 Service Request Draft Mode
 
 **Purpose:** Allow staff to save incomplete service requests without submission.
 

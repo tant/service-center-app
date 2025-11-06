@@ -1,29 +1,20 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ServiceRequestWizard } from "../components/service-request-wizard";
+import { ServiceRequestTwoStep } from "./service-request-two-step";
 
 export default function ServiceRequestCreatePage() {
   return (
-    <div className="container mx-auto max-w-6xl space-y-8 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Yêu cầu dịch vụ</CardTitle>
-          <CardDescription>
-            Luồng nhiều bước đang được tái cấu trúc theo tài liệu mới. Một số
-            tính năng sẽ được bổ sung ở các bước tiếp theo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ServiceRequestWizard />
-        </CardContent>
-      </Card>
+    <div className="container mx-auto max-w-4xl space-y-8 py-12">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Tạo yêu cầu dịch vụ
+        </h1>
+        <p className="text-muted-foreground">
+          Hoàn tất yêu cầu chỉ trong 2 bước: xác thực serial và gửi thông tin dịch vụ.
+        </p>
+      </div>
+
+      <ServiceRequestTwoStep />
     </div>
   );
 }

@@ -88,7 +88,7 @@ function SuccessContent() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Link href="/service-request">
+              <Link href="/service-request/create">
                 <Button variant="outline" className="w-full">
                   Gửi yêu cầu khác
                 </Button>

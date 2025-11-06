@@ -3,6 +3,16 @@
 
 import type { RequestStatus, ServiceType, DeliveryMethod } from '@/types/enums';
 
+type BadgeVariant =
+  | 'default'
+  | 'secondary'
+  | 'destructive'
+  | 'outline'
+  | 'pending'
+  | 'processing'
+  | 'resolved'
+  | 'closed';
+
 // Request status colors for UI
 export const REQUEST_STATUS_COLORS: Record<RequestStatus, string> = {
   draft: '#9CA3AF', // Light Gray
@@ -36,24 +46,32 @@ export const REQUEST_STATUS_DESCRIPTIONS: Record<RequestStatus, string> = {
   cancelled: 'Request cancelled or rejected',
 };
 
-// Service type options for public portal
-export const PUBLIC_SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string; description: string }[] = [
-  {
-    value: 'warranty',
-    label: 'Warranty Service',
+// Shared service option metadata for internal + public forms
+export const SERVICE_OPTION_META: Record<ServiceType, { label: string; description: string; badgeVariant: BadgeVariant }> = {
+  warranty: {
+    label: 'Bảo hành',
     description: 'Free service for products under warranty',
+    badgeVariant: 'resolved',
   },
-  {
-    value: 'paid',
-    label: 'Paid Repair',
+  paid: {
+    label: 'Thu phí',
     description: 'Paid repair service for out-of-warranty products',
+    badgeVariant: 'secondary',
   },
-  {
-    value: 'replacement',
-    label: 'Warranty Replacement',
+  replacement: {
+    label: 'Đổi sản phẩm',
     description: 'Request replacement under warranty',
+    badgeVariant: 'processing',
   },
-];
+};
+
+// Service type options for public portal
+export const PUBLIC_SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string; description: string }[] =
+  Object.entries(SERVICE_OPTION_META).map(([value, meta]) => ({
+    value: value as ServiceType,
+    label: meta.label,
+    description: meta.description,
+  }));
 
 // Delivery method options
 export const DELIVERY_METHOD_OPTIONS: { value: DeliveryMethod; label: string; description: string }[] = [

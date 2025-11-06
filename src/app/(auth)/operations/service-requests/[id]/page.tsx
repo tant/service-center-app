@@ -32,6 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { WarrantyStatus } from "@/utils/warranty";
 import { trpc } from "@/components/providers/trpc-provider";
+import { SERVICE_OPTION_META } from "@/constants/service-request";
+import type { ServiceType } from "@/types/enums";
 
 // Status mapping
 const STATUS_MAP = {
@@ -47,12 +49,6 @@ const STATUS_MAP = {
 const DELIVERY_METHOD_LABELS: Record<"pickup" | "delivery", string> = {
   pickup: "Khách mang tới",
   delivery: "Giao nhận",
-};
-
-const SERVICE_OPTION_LABELS: Record<string, string> = {
-  warranty: "Bảo hành",
-  paid: "Dịch vụ trả phí",
-  replacement: "Đổi sản phẩm",
 };
 
 type IssuePhotoMetadata = {
@@ -450,9 +446,12 @@ export default function ServiceRequestDetailPage() {
                       >
                         {items.map((item, index) => {
                           const issuePhotos = normalizeIssuePhotos(item.issue_photos);
-                          const serviceOptionLabel = item.service_option
-                            ? SERVICE_OPTION_LABELS[item.service_option] ?? item.service_option
+                          const serviceOptionKey = item.service_option as ServiceType | null | undefined;
+                          const serviceOptionMeta = serviceOptionKey
+                            ? SERVICE_OPTION_META[serviceOptionKey] ?? null
                             : null;
+                          const serviceOptionLabel = serviceOptionMeta?.label ?? serviceOptionKey ?? null;
+                          const serviceOptionBadgeVariant = serviceOptionMeta?.badgeVariant ?? "outline";
                           const purchaseDate = formatDisplayDate(item.purchase_date);
                           const accordionValue = item.id ?? `item-${index}`;
                           const modelLabel = item.product_model || "Không xác định";
@@ -486,7 +485,7 @@ export default function ServiceRequestDetailPage() {
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                       {serviceOptionLabel && (
-                                        <Badge variant="outline" className="text-xs">
+                                        <Badge variant={serviceOptionBadgeVariant} className="text-xs">
                                           {serviceOptionLabel}
                                         </Badge>
                                       )}

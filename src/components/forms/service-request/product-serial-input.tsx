@@ -23,18 +23,24 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { SerialLookupResult } from "./serial-lookup-result";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import { SERVICE_OPTION_META } from "@/constants/service-request";
+import { SERVICE_TYPES, type ServiceType } from "@/types/enums";
 
 type LookupStatus = 'idle' | 'checking' | 'found' | 'not_found' | 'error';
-type ServiceOption = "warranty" | "paid";
 
+const SERVICE_OPTION_DESCRIPTIONS: Record<ServiceType, string> = {
+  warranty: "Áp dụng khi sản phẩm vẫn còn hạn bảo hành hợp lệ.",
+  paid: "Áp dụng khi bảo hành đã hết hạn hoặc không tra cứu được.",
+  replacement: "Áp dụng khi sản phẩm đủ điều kiện đổi mới theo chính sách bảo hành.",
+};
 interface ProductSerialInputProps {
   index: number;
   serial: string;
-  serviceOption: ServiceOption;
+  serviceOption: ServiceType;
   serviceOptionManual: boolean;
   onSerialChange: (serial: string) => void;
-  onServiceOptionAutoSelect: (option: ServiceOption) => void;
-  onServiceOptionManualChange: (option: ServiceOption) => void;
+  onServiceOptionAutoSelect: (option: ServiceType) => void;
+  onServiceOptionManualChange: (option: ServiceType) => void;
   onRemove: () => void;
   canRemove: boolean;
   disabled?: boolean;
@@ -84,7 +90,7 @@ export function ProductSerialInput({
       setLookupStatus(lookupResult.found ? 'found' : 'not_found');
       if (lookupResult.found && lookupResult.product) {
         const status = lookupResult.product.warranty_status;
-        const option: ServiceOption =
+        const option: ServiceType =
           status === 'active' || status === 'expiring_soon' ? 'warranty' : 'paid';
         onServiceOptionAutoSelect(option);
       } else {
@@ -146,48 +152,29 @@ export function ProductSerialInput({
           <span className="font-medium uppercase tracking-wide text-muted-foreground">
             Phương án dịch vụ
           </span>
-          <Badge
-            variant={serviceOptionManual ? "secondary" : serviceOption === "warranty" ? "resolved" : "default"}
-            className="text-[10px]"
-          >
-            {serviceOption === "warranty" ? "Bảo hành" : "Thu phí"}
-          </Badge>
         </div>
         <RadioGroup
           value={serviceOption}
-          onValueChange={(value) => onServiceOptionManualChange(value as ServiceOption)}
+          onValueChange={(value) => onServiceOptionManualChange(value as ServiceType)}
           className="grid gap-3"
         >
-          <div className="flex items-start gap-3 rounded-md border bg-background p-3">
-            <RadioGroupItem
-              id={`service-option-warranty-${index}`}
-              value="warranty"
-              disabled={disabled}
-            />
-            <div className="space-y-1">
-              <Label htmlFor={`service-option-warranty-${index}`} className="font-medium">
-                Bảo hành
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Áp dụng khi sản phẩm vẫn còn hạn bảo hành hợp lệ.
-              </p>
+          {SERVICE_TYPES.map((option) => (
+            <div key={option} className="flex items-start gap-3 rounded-md border bg-background p-3">
+              <RadioGroupItem
+                id={`service-option-${option}-${index}`}
+                value={option}
+                disabled={disabled}
+              />
+              <div className="space-y-1">
+                <Label htmlFor={`service-option-${option}-${index}`} className="font-medium">
+                  {SERVICE_OPTION_META[option].label}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {SERVICE_OPTION_DESCRIPTIONS[option]}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border bg-background p-3">
-            <RadioGroupItem
-              id={`service-option-paid-${index}`}
-              value="paid"
-              disabled={disabled}
-            />
-            <div className="space-y-1">
-              <Label htmlFor={`service-option-paid-${index}`} className="font-medium">
-                Thu phí
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Áp dụng khi bảo hành đã hết hạn hoặc không tra cứu được.
-              </p>
-            </div>
-          </div>
+          ))}
         </RadioGroup>
         {!serviceOptionManual && (
           <p className="text-[11px] text-muted-foreground">

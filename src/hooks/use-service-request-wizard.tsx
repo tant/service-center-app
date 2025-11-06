@@ -162,6 +162,26 @@ const WizardDispatchContext = createContext<
   React.Dispatch<WizardAction> | undefined
 >(undefined);
 
+export type PublicServiceOption = Extract<ServiceType, "warranty" | "paid">;
+
+export const PUBLIC_ALLOWED_SERVICE_OPTIONS: readonly PublicServiceOption[] = [
+  "warranty",
+  "paid",
+];
+
+export function sanitizePublicServiceOption(
+  option?: ServiceType | null,
+): PublicServiceOption | undefined {
+  if (!option) {
+    return undefined;
+  }
+  return (PUBLIC_ALLOWED_SERVICE_OPTIONS as readonly ServiceType[]).includes(
+    option,
+  )
+    ? (option as PublicServiceOption)
+    : undefined;
+}
+
 function wizardReducer(
   state: ServiceRequestWizardState,
   action: WizardAction,
@@ -287,7 +307,7 @@ export function cloneWizardProduct(product: WizardProduct): WizardProduct {
     productModel: product.productModel,
     purchaseDate: product.purchaseDate,
     issueDescription: product.issueDescription,
-    serviceOption: product.serviceOption,
+    serviceOption: sanitizePublicServiceOption(product.serviceOption),
     serviceOptionNotes: product.serviceOptionNotes,
   };
 }
@@ -388,7 +408,8 @@ export function buildWizardPayload(
           product.issueDescription.trim().length > 0
             ? product.issueDescription.trim()
             : undefined,
-        service_option: (product.serviceOption ?? "paid") as ServiceType,
+        service_option:
+          sanitizePublicServiceOption(product.serviceOption) ?? "paid",
         service_option_notes: product.serviceOptionNotes?.trim() || undefined,
         attachments: product.attachments
           .filter(

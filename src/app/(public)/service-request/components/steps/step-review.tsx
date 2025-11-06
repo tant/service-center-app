@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  PUBLIC_ALLOWED_SERVICE_OPTIONS,
+  sanitizePublicServiceOption,
   setActiveStep,
   setWizardConsent,
   setWizardHoneypot,
@@ -15,10 +17,11 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 
-const SERVICE_OPTION_LABELS: Record<string, string> = {
+type PublicServiceOption = (typeof PUBLIC_ALLOWED_SERVICE_OPTIONS)[number];
+
+const SERVICE_OPTION_LABELS: Record<PublicServiceOption, string> = {
   warranty: "Bảo hành",
   paid: "Dịch vụ trả phí",
-  replacement: "Đổi sản phẩm",
 };
 
 const formatWarrantyDate = (iso?: string | null) => {
@@ -95,6 +98,16 @@ function ProductSummary() {
           product.warrantyCheck.status === "success"
             ? formatWarrantyDate(product.warrantyCheck.expiresAt)
             : undefined;
+        const hasServiceOption = Boolean(product.serviceOption);
+        const normalizedServiceOption = hasServiceOption
+          ? (sanitizePublicServiceOption(
+              product.serviceOption,
+            ) as PublicServiceOption)
+          : undefined;
+        const serviceOptionLabel =
+          hasServiceOption && normalizedServiceOption
+            ? SERVICE_OPTION_LABELS[normalizedServiceOption]
+            : "Chưa chọn dịch vụ";
 
         return (
           <Card key={product.id}>
@@ -112,18 +125,20 @@ function ProductSummary() {
               <SummaryRow label="Mô tả vấn đề" value={product.issueDescription} />
               <SummaryRow label="Hạn bảo hành" value={formattedExpiry} />
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">
-                  {SERVICE_OPTION_LABELS[product.serviceOption ?? ""] ?? "Chưa chọn dịch vụ"}
-                </Badge>
-                <Badge
-                  variant={
-                    product.serviceOption === "warranty" ? "default" : "secondary"
-                  }
-                >
-                  {product.serviceOption === "warranty"
-                    ? "Đã chọn xử lý bảo hành"
-                    : "Xử lý theo dịch vụ đã chọn"}
-                </Badge>
+                <Badge variant="outline">{serviceOptionLabel}</Badge>
+                {hasServiceOption && normalizedServiceOption ? (
+                  <Badge
+                    variant={
+                      normalizedServiceOption === "warranty"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {normalizedServiceOption === "warranty"
+                      ? "Đã chọn xử lý bảo hành"
+                      : "Xử lý theo dịch vụ đã chọn"}
+                  </Badge>
+                ) : null}
               </div>
               {product.warrantyCheck.message ? (
                 <Alert variant={product.warrantyCheck.eligible ? "default" : "destructive"}>

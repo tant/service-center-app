@@ -4,16 +4,13 @@ import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SYSTEM_USER_EMAIL, SYSTEM_USER_ID } from "@/lib/system-user";
+import { SYSTEM_USER_EMAIL, SYSTEM_USER_ID, SYSTEM_USER_FULL_NAME } from "@/lib/system-user";
 import { publicProcedure, router } from "../trpc";
 
 // Input validation schema
 const setupInputSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
-
-const SYSTEM_AUTH_EMAIL = "system@service-center.local";
-const SYSTEM_USER_FULL_NAME = "Service Center System";
 
 type EnsureSystemUserParams = {
   supabaseAdmin: SupabaseClient;
@@ -31,7 +28,6 @@ async function ensureSystemUser({
     const email = user.email?.toLowerCase();
     return (
       user.id === SYSTEM_USER_ID ||
-      email === SYSTEM_AUTH_EMAIL ||
       email === SYSTEM_USER_EMAIL
     );
   };
@@ -62,7 +58,7 @@ async function ensureSystemUser({
     const generatedPassword = randomBytes(24).toString("base64url");
     const createPayload = {
       id: SYSTEM_USER_ID,
-      email: SYSTEM_AUTH_EMAIL,
+      email: SYSTEM_USER_EMAIL,
       email_confirm: true,
       password: generatedPassword,
       user_metadata: { full_name: SYSTEM_USER_FULL_NAME },
@@ -104,7 +100,7 @@ async function ensureSystemUser({
   }
 
   const desiredAuth = {
-    email: SYSTEM_AUTH_EMAIL,
+    email: SYSTEM_USER_EMAIL,
     email_confirm: true,
     app_metadata: { provider: "system", providers: ["system"] },
     user_metadata: { full_name: SYSTEM_USER_FULL_NAME },
@@ -115,7 +111,7 @@ async function ensureSystemUser({
     : [];
 
   const needsAuthUpdate =
-    systemUser.email?.toLowerCase() !== SYSTEM_AUTH_EMAIL ||
+    systemUser.email?.toLowerCase() !== SYSTEM_USER_EMAIL ||
     systemUser.app_metadata?.provider !== "system" ||
     !providerList.includes("system") ||
     systemUser.user_metadata?.full_name !== SYSTEM_USER_FULL_NAME;

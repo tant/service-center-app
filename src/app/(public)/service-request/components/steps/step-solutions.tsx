@@ -31,7 +31,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useVerifyWarranty } from "@/hooks/use-service-request";
 import {
+  PUBLIC_ALLOWED_SERVICE_OPTIONS,
   removeWizardProduct,
+  sanitizePublicServiceOption,
   updateWizardProduct,
   useServiceRequestWizardDispatch,
   useServiceRequestWizardState,
@@ -50,11 +52,16 @@ const STATUS_BADGE_VARIANT: Record<
 
 const MIN_SERIAL_LENGTH = 5;
 
-const SERVICE_OPTIONS = [
-  { value: "warranty", label: "Bảo hành" },
-  { value: "paid", label: "Dịch vụ trả phí" },
-  { value: "replacement", label: "Đổi sản phẩm" },
-] as const;
+const SERVICE_OPTION_LABELS: Record<ServiceType, string> = {
+  warranty: "Bảo hành",
+  paid: "Dịch vụ trả phí",
+  replacement: "Đổi sản phẩm",
+};
+
+const SERVICE_OPTIONS = PUBLIC_ALLOWED_SERVICE_OPTIONS.map((option) => ({
+  value: option,
+  label: SERVICE_OPTION_LABELS[option],
+}));
 
 const formatWarrantyDate = (iso?: string | null) => {
   if (!iso) {
@@ -77,9 +84,28 @@ export function StepSolutions() {
   >({});
   const [isBulkVerifying, setIsBulkVerifying] = useState(false);
   const autoVerifiedSerialRef = useRef<Record<string, string>>({});
+  const replacementNotifiedRef = useRef<Record<string, boolean>>({});
+
+  const notifyReplacementFallback = useCallback(
+    (productId: string) => {
+      if (replacementNotifiedRef.current[productId]) {
+        return;
+      }
+      replacementNotifiedRef.current[productId] = true;
+      toast.warning('Tùy chọn "Đổi sản phẩm" chỉ dành cho nhân viên.', {
+        description:
+          'Yêu cầu công khai đã được chuyển sang "Dịch vụ trả phí".',
+      });
+    },
+    [],
+  );
 
   const handleServiceChange = (id: string, value: string) => {
-    updateWizardProduct(dispatch, id, { serviceOption: value as ServiceType });
+    const sanitized = sanitizePublicServiceOption(value as ServiceType);
+    if (sanitized !== value) {
+      notifyReplacementFallback(id);
+    }
+    updateWizardProduct(dispatch, id, { serviceOption: sanitized });
   };
 
   const productsWithSerial = useMemo(
@@ -89,6 +115,17 @@ export function StepSolutions() {
       ),
     [state.products],
   );
+
+  useEffect(() => {
+    state.products.forEach((product) => {
+      if (product.serviceOption === "replacement") {
+        notifyReplacementFallback(product.id);
+        updateWizardProduct(dispatch, product.id, {
+          serviceOption: sanitizePublicServiceOption(product.serviceOption),
+        });
+      }
+    });
+  }, [dispatch, notifyReplacementFallback, state.products]);
 
   const verifyProduct = useCallback(
     async (
@@ -159,6 +196,13 @@ export function StepSolutions() {
           warrantyInfo?.userEndDate ??
           null;
 
+        const previousOption = product.serviceOption ?? undefined;
+        const sanitizedPrevious =
+          sanitizePublicServiceOption(previousOption) ?? "paid";
+        if (!eligible && previousOption === "replacement") {
+          notifyReplacementFallback(productId);
+        }
+
         updateWizardProduct(dispatch, productId, {
           productBrand: result.product?.brand ?? product.productBrand,
           productModel: result.product?.name ?? product.productModel,
@@ -171,7 +215,7 @@ export function StepSolutions() {
           },
           serviceOption: eligible
             ? "warranty"
-            : (product.serviceOption ?? "paid"),
+            : sanitizedPrevious,
         });
 
         return eligible ? "eligible" : "ineligible";
@@ -198,7 +242,12 @@ export function StepSolutions() {
         });
       }
     },
-    [dispatch, state.products, verifyWarrantyAsync],
+    [
+      dispatch,
+      notifyReplacementFallback,
+      state.products,
+      verifyWarrantyAsync,
+    ],
   );
 
   const bulkVerifyProducts = useCallback(
@@ -454,7 +503,15 @@ export function StepSolutions() {
                     Tùy chọn dịch vụ
                   </Label>
                   <Select
-                    value={product.serviceOption}
+                    value={(() => {
+                      const option = sanitizePublicServiceOption(
+                        product.serviceOption,
+                      );
+                      return option &&
+                        PUBLIC_ALLOWED_SERVICE_OPTIONS.includes(option)
+                        ? option
+                        : undefined;
+                    })()}
                     onValueChange={(value) =>
                       handleServiceChange(product.id, value)
                     }

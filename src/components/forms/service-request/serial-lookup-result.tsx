@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { SERVICE_OPTION_META } from "@/constants/service-request";
+import type { ServiceType } from "@/types/enums";
 
 type LookupStatus = 'idle' | 'checking' | 'found' | 'not_found' | 'error';
 
@@ -47,7 +49,7 @@ interface SerialLookupResultProps {
   status: LookupStatus;
   product: ProductLookupResult | null;
   error?: string;
-  serviceOption: "warranty" | "paid";
+  serviceOption: ServiceType;
   serviceOptionManual: boolean;
 }
 
@@ -77,7 +79,7 @@ export function SerialLookupResult({
   if (status === 'not_found') {
     return (
       <div className="flex items-center gap-2 text-sm p-3 bg-destructive/10 border border-destructive/30 rounded-md">
-        <IconCircleX className="h-4 w-4 text-destructive flex-shrink-0" />
+        <IconCircleX className="h-4 w-4 text-destructive shrink-0" />
         <div className="flex-1">
           <p className="font-medium text-destructive">Serial không tìm thấy trong kho hàng đã bán</p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -98,7 +100,7 @@ export function SerialLookupResult({
   if (status === 'error') {
     return (
       <div className="flex items-center gap-2 text-sm p-3 bg-orange-500/10 border border-orange-500/30 rounded-md">
-        <IconAlertCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+        <IconAlertCircle className="h-4 w-4 text-orange-500 shrink-0" />
         <div className="flex-1">
           <p className="font-medium text-orange-700 dark:text-orange-400">Lỗi kết nối</p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -117,15 +119,16 @@ export function SerialLookupResult({
 
   // State 3: Found - Show product info
   if (status === 'found' && product) {
-    const serviceOptionLabel = serviceOption === "warranty" ? "Bảo hành" : "Thu phí";
-    const serviceOptionVariant = serviceOption === "warranty" ? "resolved" : "secondary";
+    const serviceMetadata = SERVICE_OPTION_META[serviceOption];
+    const serviceOptionLabel = serviceMetadata.label;
+    const serviceOptionVariant = serviceMetadata.badgeVariant;
 
     // Determine warranty display
     const getWarrantyDisplay = () => {
       if (product.current_ticket_id) {
         // In Service - Special case
         return {
-          icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
+          icon: <IconAlertCircle className="h-4 w-4 shrink-0" />,
           bgColor: 'bg-yellow-500/10',
           borderColor: 'border-yellow-500/30',
           textColor: 'text-yellow-700 dark:text-yellow-400',
@@ -138,7 +141,7 @@ export function SerialLookupResult({
         case 'active': {
           const months = product.days_remaining ? Math.floor(product.days_remaining / 30) : 0;
           return {
-            icon: <IconCircleCheck className="h-4 w-4 flex-shrink-0" />,
+            icon: <IconCircleCheck className="h-4 w-4 shrink-0" />,
             bgColor: 'bg-green-500/10',
             borderColor: 'border-green-500/30',
             textColor: 'text-green-700 dark:text-green-400',
@@ -150,7 +153,7 @@ export function SerialLookupResult({
         case 'expiring_soon': {
           const days = product.days_remaining || 0;
           return {
-            icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
+            icon: <IconAlertCircle className="h-4 w-4 shrink-0" />,
             bgColor: 'bg-yellow-500/10',
             borderColor: 'border-yellow-500/30',
             textColor: 'text-yellow-700 dark:text-yellow-400',
@@ -164,7 +167,7 @@ export function SerialLookupResult({
             ? format(new Date(product.warranty_end_date), 'dd/MM/yyyy', { locale: vi })
             : '';
           return {
-            icon: <IconCircleX className="h-4 w-4 flex-shrink-0" />,
+            icon: <IconCircleX className="h-4 w-4 shrink-0" />,
             bgColor: 'bg-red-500/10',
             borderColor: 'border-red-500/30',
             textColor: 'text-red-700 dark:text-red-400',
@@ -174,7 +177,7 @@ export function SerialLookupResult({
         }
         default:
           return {
-            icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
+            icon: <IconAlertCircle className="h-4 w-4 shrink-0" />,
             bgColor: 'bg-gray-500/10',
             borderColor: 'border-gray-500/30',
             textColor: 'text-gray-700 dark:text-gray-400',

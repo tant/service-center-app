@@ -20,13 +20,12 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductSerialInput } from "./service-request/product-serial-input";
-
-export type ServiceOption = "warranty" | "paid";
+import type { ServiceType } from "@/types/enums";
 
 export interface ServiceRequestFormItem {
   serial_number: string;
   issue_description?: string;
-  service_option: ServiceOption;
+  service_option: ServiceType;
 }
 
 interface ProductItem extends ServiceRequestFormItem {
@@ -167,7 +166,7 @@ export function ServiceRequestForm({
     }));
   };
 
-  const handleServiceOptionManualChange = (index: number, option: ServiceOption) => {
+  const handleServiceOptionManualChange = (index: number, option: ServiceType) => {
     updateItem(index, (item) => ({
       ...item,
       service_option: option,
@@ -175,7 +174,7 @@ export function ServiceRequestForm({
     }));
   };
 
-  const handleServiceOptionAutoSelect = (index: number, option: ServiceOption) => {
+  const handleServiceOptionAutoSelect = (index: number, option: ServiceType) => {
     updateItem(index, (item) => {
       if (item.service_option_manual) {
         return item;

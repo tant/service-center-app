@@ -12,7 +12,7 @@ import {
   IconChevronsRight,
   IconLayoutColumns,
   IconPlus,
-  IconDatabase,
+  IconDots,
   IconEye,
 } from "@tabler/icons-react";
 import {
@@ -55,11 +55,13 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDeleteTemplate } from "@/hooks/use-workflow";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface Workflow {
   id: string;
@@ -200,41 +202,44 @@ export function TemplateListTable({
       },
       {
         id: "actions",
-        header: () => <div className="text-right">Hành động</div>,
+        header: "Thao tác",
         cell: ({ row }) => (
-          <div className="flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  Hành động
-                  <IconChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onView(row.original.id)}>
-                  <IconEye className="mr-2 h-4 w-4" />
-                  Xem chi tiết
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
-                  <IconEdit className="mr-2 h-4 w-4" />
-                  Sửa
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() =>
-                    deleteTemplate({
-                      template_id: row.original.id,
-                      soft_delete: true,
-                    })
-                  }
-                  disabled={isDeleting}
-                >
-                  <IconTrash className="mr-2 h-4 w-4" />
-                  Xóa
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-label="Mở menu hành động"
+              >
+                <IconDots className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView(row.original.id)}>
+                <IconEye className="mr-2 h-4 w-4" />
+                Xem chi tiết
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
+                <IconEdit className="mr-2 h-4 w-4" />
+                Sửa
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() =>
+                  deleteTemplate({
+                    template_id: row.original.id,
+                    soft_delete: true,
+                  })
+                }
+                disabled={isDeleting}
+              >
+                <IconTrash className="mr-2 h-4 w-4" />
+                Xóa
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -310,10 +315,10 @@ export function TemplateListTable({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <IconLayoutColumns />
+                <IconLayoutColumns className="h-4 w-4" />
                 <span className="hidden lg:inline">Tùy chỉnh cột</span>
                 <span className="lg:hidden">Cột</span>
-                <IconChevronDown />
+                <IconChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -347,7 +352,7 @@ export function TemplateListTable({
           </DropdownMenu>
           <Button onClick={onCreateNew} size="sm" variant="outline">
             <IconPlus />
-            <span className="hidden lg:inline">Tạo mẫu</span>
+            <span className="hidden lg:inline">Tạo quy trình</span>
           </Button>
         </div>
       </div>
@@ -415,83 +420,7 @@ export function TemplateListTable({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4">
-          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Đã chọn {table.getFilteredSelectedRowModel().rows.length} trong{" "}
-            {table.getFilteredRowModel().rows.length} mẫu
-          </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="ml-8 hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Số dòng mỗi trang
-              </Label>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Trang {table.getState().pagination.pageIndex + 1} trên{" "}
-              {table.getPageCount()}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Đến trang đầu</span>
-                <IconChevronsLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Trang trước</span>
-                <IconChevronLeft />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Trang tiếp</span>
-                <IconChevronRight />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Đến trang cuối</span>
-                <IconChevronsRight />
-              </Button>
-            </div>
-          </div>
-        </div>
+        <TablePagination table={table} labelId="rows-per-page-workflows" />
       </TabsContent>
 
       {/* Additional tab contents (can be implemented later) */}

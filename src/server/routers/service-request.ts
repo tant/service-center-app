@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
+import { TaskService } from "../services/task-service";
 
 /**
  * Helper function to get authenticated user with role
@@ -184,6 +185,7 @@ const submitRequestSchema = z.object({
   preferred_delivery_method: z.enum(["pickup", "delivery"]).default("pickup"),
   delivery_address: z.string().optional(),
   honeypot: z.string().optional(), // AC 12: Spam protection
+  workflow_id: z.string().uuid("Workflow ID must be valid UUID").optional(), // Service Request Inspection Workflow
 });
 
 /**
@@ -494,6 +496,7 @@ export const serviceRequestRouter = router({
           status: 'submitted',
           submitted_ip: submittedIp,
           user_agent: userAgent,
+          workflow_id: input.workflow_id || null, // Inspection workflow support
         })
         .select("id, tracking_token, status")
         .single();
@@ -529,8 +532,38 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Create tasks from workflow if workflow_id provided
+      // This must happen BEFORE updating receipt_status to avoid race condition with trigger
+      if (input.workflow_id) {
+        try {
+          const taskService = new TaskService(ctx);
+          const taskCount = await taskService.createTasksFromWorkflow({
+            entityType: 'service_request',
+            entityId: request.id,
+            workflowId: input.workflow_id,
+            createdById: undefined, // Public submission, no user
+          });
+
+          console.log(
+            `[SERVICE REQUEST] Created ${taskCount} tasks from workflow for ${request.tracking_token}`
+          );
+        } catch (workflowError) {
+          // Rollback request and items if workflow task creation fails
+          await ctx.supabaseAdmin
+            .from("service_requests")
+            .delete()
+            .eq("id", request.id);
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : 'Unknown error'}`,
+          });
+        }
+      }
+
       // Now update receipt_status to actual value to trigger ticket creation
       // Items exist now, so trigger can find them
+      // NOTE: If workflow_id exists, trigger will check if tasks are completed before creating tickets
       const { error: updateError } = await ctx.supabaseAdmin
         .from("service_requests")
         .update({
@@ -623,6 +656,7 @@ export const serviceRequestRouter = router({
           reviewed_by_id: profile.id,
           submitted_ip: submittedIp,
           user_agent: userAgent,
+          workflow_id: input.workflow_id || null, // Store workflow for later task creation
         })
         .select("id, tracking_token")
         .single();

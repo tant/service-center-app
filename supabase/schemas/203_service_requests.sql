@@ -56,10 +56,47 @@ DECLARE
   v_product_id UUID;
   v_ticket_id UUID;
   v_item RECORD;
+  v_has_workflow BOOLEAN;
+  v_workflow_completed BOOLEAN;
+  v_task_count INT;
+  v_completed_count INT;
 BEGIN
   -- Trigger when receipt_status changes to 'received' OR status changes to 'received'
   IF (NEW.receipt_status = 'received' AND (OLD.receipt_status IS NULL OR OLD.receipt_status = 'pending_receipt'))
      OR (NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup'))) THEN
+
+    -- ====== WORKFLOW COMPLETION CHECK ======
+    -- Check if service request has a workflow assigned
+    v_has_workflow := (NEW.workflow_id IS NOT NULL);
+
+    IF v_has_workflow THEN
+      -- Count total tasks for this service request
+      SELECT COUNT(*) INTO v_task_count
+      FROM public.entity_tasks
+      WHERE entity_type = 'service_request'
+        AND entity_id = NEW.id;
+
+      -- Count completed tasks
+      SELECT COUNT(*) INTO v_completed_count
+      FROM public.entity_tasks
+      WHERE entity_type = 'service_request'
+        AND entity_id = NEW.id
+        AND status = 'completed';
+
+      -- Check if all tasks are completed
+      v_workflow_completed := (v_task_count > 0 AND v_task_count = v_completed_count);
+
+      -- If workflow exists but not all tasks complete, skip ticket creation
+      IF NOT v_workflow_completed THEN
+        RAISE NOTICE 'Service Request % (%) has workflow - waiting for % tasks to complete (% done)',
+          NEW.id, NEW.tracking_token, v_task_count, v_completed_count;
+        RETURN NEW;
+      END IF;
+
+      RAISE NOTICE 'Service Request % (%) workflow complete, creating tickets',
+        NEW.id, NEW.tracking_token;
+    END IF;
+    -- ====== END WORKFLOW CHECK ======
 
     -- Find or create customer (lookup by phone first, as it's unique)
     SELECT id INTO v_customer_id
@@ -134,6 +171,31 @@ BEGIN
       SET ticket_id = v_ticket_id
       WHERE id = v_item.id;
 
+      -- Copy task attachments from service request to ticket
+      -- This inherits photos and documents from inspection workflow
+      INSERT INTO public.service_ticket_attachments (
+        ticket_id,
+        file_name,
+        file_path,
+        file_type,
+        file_size,
+        description,
+        created_by
+      )
+      SELECT
+        v_ticket_id,
+        ta.file_name,
+        ta.file_path,
+        ta.mime_type,
+        ta.file_size_bytes,
+        'Inherited from service request task: ' || et.name,
+        ta.uploaded_by
+      FROM public.task_attachments ta
+      INNER JOIN public.entity_tasks et ON ta.task_id = et.id
+      WHERE et.entity_type = 'service_request'
+        AND et.entity_id = NEW.id
+        AND ta.file_path IS NOT NULL;
+
       -- Add initial comment
       -- If reviewed_by_id is NULL, it's from customer (public submission)
       INSERT INTO public.service_ticket_comments (
@@ -170,7 +232,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. If workflow_id exists, delays ticket creation until all workflow tasks are completed. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
 
 -- =====================================================
 -- TRIGGERS

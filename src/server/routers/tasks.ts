@@ -612,6 +612,36 @@ export const tasksRouter = router({
     }),
 
   /**
+   * Get task attachments
+   *
+   * @endpoint GET /api/trpc/tasks.getTaskAttachments
+   * @auth Required
+   */
+  getTaskAttachments: publicProcedure
+    .use(requireAnyAuthenticated)
+    .input(
+      z.object({
+        taskId: z.string().uuid(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("task_attachments")
+        .select(`
+          *,
+          uploader:profiles!uploaded_by(id, full_name, avatar_url)
+        `)
+        .eq("task_id", input.taskId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch attachments: ${error.message}`);
+      }
+
+      return data || [];
+    }),
+
+  /**
    * Upload attachment to task
    *
    * @endpoint POST /api/trpc/tasks.uploadAttachment
@@ -652,5 +682,31 @@ export const tasksRouter = router({
       }
 
       return data;
+    }),
+
+  /**
+   * Delete task attachment
+   *
+   * @endpoint DELETE /api/trpc/tasks.deleteAttachment
+   * @auth Required
+   */
+  deleteAttachment: publicProcedure
+    .use(requireAnyAuthenticated)
+    .input(
+      z.object({
+        attachmentId: z.string().uuid(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { error } = await ctx.supabaseAdmin
+        .from("task_attachments")
+        .delete()
+        .eq("id", input.attachmentId);
+
+      if (error) {
+        throw new Error(`Failed to delete attachment: ${error.message}`);
+      }
+
+      return { success: true };
     }),
 });

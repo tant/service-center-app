@@ -21,13 +21,14 @@ interface FormDrawerProps {
   titleElement?: React.ReactNode;
   description?: string;
   isSubmitting: boolean;
-  onSubmit: () => void;
+  onSubmit?: () => void;
   submitLabel: string;
   cancelLabel?: string;
   children: React.ReactNode;
   trigger?: React.ReactNode;
   submitDisabled?: boolean;
   headerClassName?: string;
+  formId?: string; // Optional form ID to submit via form attribute
 }
 
 export function FormDrawer({
@@ -44,6 +45,7 @@ export function FormDrawer({
   trigger,
   submitDisabled = false,
   headerClassName,
+  formId,
 }: FormDrawerProps) {
   const isMobile = useIsMobile();
 
@@ -61,8 +63,9 @@ export function FormDrawer({
 
       <DrawerFooter>
         <Button
-          type="button"
-          onClick={onSubmit}
+          type={formId ? "submit" : "button"}
+          form={formId}
+          onClick={formId ? undefined : onSubmit}
           disabled={isSubmitting || submitDisabled}
         >
           {submitLabel}

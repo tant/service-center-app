@@ -264,18 +264,6 @@
         "description": "Đóng gói và chuẩn bị giao hàng"
       },
       {
-        "name": "Xác nhận nhận hàng",
-        "category": "receiving",
-        "estimatedMinutes": 30,
-        "description": "Xác nhận đã nhận hàng từ khách hàng"
-      },
-      {
-        "name": "Tạo phiếu sửa chữa",
-        "category": "ticketing",
-        "estimatedMinutes": 20,
-        "description": "Tạo phiếu sửa chữa cho yêu cầu dịch vụ"
-      },
-      {
         "name": "Kiểm kê kho",
         "category": "inventory",
         "estimatedMinutes": 60,
@@ -286,6 +274,24 @@
         "category": "inventory",
         "estimatedMinutes": 15,
         "description": "Cập nhật số liệu tồn kho sau nhập/xuất"
+      },
+      {
+        "name": "Kiểm tra điều kiện bảo hành vật lý",
+        "category": "warranty_inspection",
+        "estimatedMinutes": 10,
+        "description": "Kiểm tra niêm phong, tem bảo hành, và điều kiện vật lý của sản phẩm"
+      },
+      {
+        "name": "Chụp ảnh sản phẩm trước sửa chữa",
+        "category": "documentation",
+        "estimatedMinutes": 10,
+        "description": "Chụp ảnh sản phẩm, serial number, và tình trạng bên ngoài"
+      },
+      {
+        "name": "Xác định loại dịch vụ",
+        "category": "classification",
+        "estimatedMinutes": 15,
+        "description": "Xác định bảo hành miễn phí hoặc thu phí dựa trên kết quả kiểm tra"
       }
     ]
   },
@@ -384,30 +390,30 @@
         ]
       },
       {
-        "name": "Quy trình xử lý yêu cầu dịch vụ",
-        "description": "Quy trình từ yêu cầu dịch vụ đến tạo phiếu sửa chữa",
+        "name": "Quy trình kiểm định bảo hành",
+        "description": "Quy trình kiểm tra và phân loại yêu cầu bảo hành từ khách hàng",
         "entityType": "service_request",
         "enforceSequence": true,
         "isActive": true,
-        "notes": "Áp dụng cho yêu cầu dịch vụ từ khách hàng",
+        "notes": "Quy trình bắt buộc cho tất cả yêu cầu dịch vụ. Phiếu sửa chữa chỉ được tạo sau khi hoàn thành 3 bước kiểm tra.",
         "tasks": [
           {
-            "taskName": "Xác nhận nhận hàng",
+            "taskName": "Kiểm tra điều kiện bảo hành vật lý",
             "sequenceOrder": 1,
             "isRequired": true,
-            "customInstructions": "Xác nhận đã nhận sản phẩm từ khách hàng"
+            "customInstructions": "Kiểm tra niêm phong, tem bảo hành, serial number. Ghi nhận tình trạng bên ngoài."
           },
           {
-            "taskName": "Kiểm tra sản phẩm",
+            "taskName": "Chụp ảnh sản phẩm trước sửa chữa",
             "sequenceOrder": 2,
             "isRequired": true,
-            "customInstructions": "Kiểm tra tình trạng sản phẩm khách gửi"
+            "customInstructions": "Chụp ảnh sản phẩm, serial, các vị trí hư hỏng. Upload vào hệ thống."
           },
           {
-            "taskName": "Tạo phiếu sửa chữa",
+            "taskName": "Xác định loại dịch vụ",
             "sequenceOrder": 3,
             "isRequired": true,
-            "customInstructions": "Tạo phiếu sửa chữa cho từng sản phẩm"
+            "customInstructions": "Xác định bảo hành miễn phí (warranty) hoặc thu phí (paid service). Ghi chú lý do."
           }
         ]
       },
@@ -1081,7 +1087,7 @@
           "customerName": "Bùi Thị H",
           "customerEmail": "buithih@gmail.com",
           "status": "received",
-          "workflowName": "Quy trình xử lý yêu cầu dịch vụ",
+          "workflowName": "Quy trình kiểm định bảo hành",
           "products": [
             {
               "productSerial": "ZT4060-W05-001",
@@ -1091,22 +1097,22 @@
           "createdAt": "2025-11-01",
           "tasks": [
             {
-              "taskName": "Xác nhận nhận hàng",
+              "taskName": "Kiểm tra điều kiện bảo hành vật lý",
               "assignedTo": "reception@sstc.vn",
               "status": "completed",
               "startedAt": "2025-11-01T10:00:00Z",
-              "completedAt": "2025-11-01T10:15:00Z",
-              "notes": "Đã nhận hàng từ khách"
+              "completedAt": "2025-11-01T10:10:00Z",
+              "notes": "Serial hợp lệ, tem bảo hành còn nguyên vẹn"
             },
             {
-              "taskName": "Kiểm tra sản phẩm",
+              "taskName": "Chụp ảnh sản phẩm trước sửa chữa",
               "assignedTo": "tech1@sstc.vn",
               "status": "in_progress",
-              "startedAt": "2025-11-01T10:20:00Z"
+              "startedAt": "2025-11-01T10:15:00Z"
             },
             {
-              "taskName": "Tạo phiếu sửa chữa",
-              "assignedTo": "reception@sstc.vn",
+              "taskName": "Xác định loại dịch vụ",
+              "assignedTo": "tech1@sstc.vn",
               "status": "pending"
             }
           ]
@@ -1116,7 +1122,7 @@
           "customerName": "Ngô Văn I",
           "customerEmail": "ngovani@yahoo.com",
           "status": "processing",
-          "workflowName": "Quy trình xử lý yêu cầu dịch vụ",
+          "workflowName": "Quy trình kiểm định bảo hành",
           "products": [
             {
               "productSerial": "RAM16G-W07-001",
@@ -1132,28 +1138,28 @@
           "createdAt": "2025-10-30",
           "tasks": [
             {
-              "taskName": "Xác nhận nhận hàng",
+              "taskName": "Kiểm tra điều kiện bảo hành vật lý",
               "assignedTo": "reception@sstc.vn",
               "status": "completed",
               "startedAt": "2025-10-30T09:00:00Z",
               "completedAt": "2025-10-30T09:10:00Z",
-              "notes": "Đã nhận 2 RAM"
+              "notes": "Serial hợp lệ, tem bảo hành còn nguyên, 2 RAM đủ điều kiện bảo hành"
             },
             {
-              "taskName": "Kiểm tra sản phẩm",
+              "taskName": "Chụp ảnh sản phẩm trước sửa chữa",
               "assignedTo": "tech2@sstc.vn",
               "status": "completed",
               "startedAt": "2025-10-30T09:15:00Z",
-              "completedAt": "2025-10-30T10:00:00Z",
-              "notes": "Cả 2 RAM đều lỗi"
+              "completedAt": "2025-10-30T09:30:00Z",
+              "notes": "Đã chụp ảnh cả 2 RAM và serial"
             },
             {
-              "taskName": "Tạo phiếu sửa chữa",
-              "assignedTo": "reception@sstc.vn",
+              "taskName": "Xác định loại dịch vụ",
+              "assignedTo": "tech2@sstc.vn",
               "status": "completed",
-              "startedAt": "2025-10-30T10:05:00Z",
-              "completedAt": "2025-10-30T10:25:00Z",
-              "notes": "Đã tạo 2 phiếu sửa chữa"
+              "startedAt": "2025-10-30T09:35:00Z",
+              "completedAt": "2025-10-30T10:00:00Z",
+              "notes": "Xác định: Bảo hành miễn phí (warranty). Đã tạo 2 phiếu sửa chữa tự động."
             }
           ]
         }

@@ -115,6 +115,21 @@ CREATE TABLE IF NOT EXISTS public.entity_task_history (
 );
 COMMENT ON TABLE public.entity_task_history IS 'Immutable audit trail of task status changes across all entity types';
 
+-- TASK ATTACHMENTS (Photos and documents for task execution)
+CREATE TABLE IF NOT EXISTS public.task_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES public.entity_tasks(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size_bytes INT NOT NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  uploaded_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT task_attachments_file_size_positive CHECK (file_size_bytes > 0)
+);
+CREATE INDEX idx_task_attachments_task_id ON public.task_attachments(task_id);
+COMMENT ON TABLE public.task_attachments IS 'Photos and documents attached to tasks during execution (e.g., inspection photos, repair evidence)';
+
 -- TICKET WORKFLOW CHANGES
 CREATE TABLE IF NOT EXISTS public.ticket_workflow_changes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

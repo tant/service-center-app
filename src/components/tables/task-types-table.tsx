@@ -16,7 +16,6 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconLayoutColumns,
-  IconDots,
   IconToggleLeft,
   IconToggleRight,
 } from "@tabler/icons-react";
@@ -64,21 +63,9 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useTaskTypes, useToggleTaskType } from "@/hooks/use-workflow";
+import { FormDrawer } from "@/components/ui/form-drawer";
+import { useTaskTypes, useToggleTaskType, useCreateTaskType, useUpdateTaskType } from "@/hooks/use-workflow";
 import type { Task } from "@/types/workflow";
 import { TaskTypeForm } from "@/components/forms/task-type-form";
 
@@ -218,7 +205,7 @@ const columns: ColumnDef<Task>[] = [
   },
   {
     id: "actions",
-    header: "Hành Động",
+    header: () => <div className="text-right">Thao tác</div>,
     cell: ({ row, table }) => {
       const task = row.original;
       const meta = table.options.meta as {
@@ -227,44 +214,30 @@ const columns: ColumnDef<Task>[] = [
       };
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label="Mở menu hành động"
-            >
-              <IconDots className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => meta.onEdit(task)}
-              data-testid={`edit-task-type-${task.id}`}
-            >
-              <IconEdit className="mr-2 h-4 w-4" />
-              Chỉnh sửa
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => meta.onToggle(task)}
-              data-testid={`toggle-task-type-${task.id}`}
-            >
-              {task.is_active ? (
-                <>
-                  <IconToggleLeft className="mr-2 h-4 w-4" />
-                  Vô hiệu hóa
-                </>
-              ) : (
-                <>
-                  <IconToggleRight className="mr-2 h-4 w-4" />
-                  Kích hoạt
-                </>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => meta.onEdit(task)}
+            aria-label="Chỉnh sửa loại công việc"
+            data-testid={`edit-task-type-${task.id}`}
+          >
+            <IconEdit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => meta.onToggle(task)}
+            aria-label={task.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
+            data-testid={`toggle-task-type-${task.id}`}
+          >
+            {task.is_active ? (
+              <IconToggleLeft className="h-4 w-4" />
+            ) : (
+              <IconToggleRight className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       );
     },
     enableHiding: false,
@@ -274,7 +247,6 @@ const columns: ColumnDef<Task>[] = [
 type StatusFilter = "all" | "active" | "inactive";
 
 export function TaskTypesTable() {
-  const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
@@ -294,6 +266,8 @@ export function TaskTypesTable() {
 
   const { taskTypes: tasks, isLoading } = useTaskTypes(filterParam);
   const { toggleTaskType, isToggling } = useToggleTaskType();
+  const { isCreating } = useCreateTaskType();
+  const { isUpdating } = useUpdateTaskType();
 
   // Filter task types based on search query
   const filteredTasks = React.useMemo(() => {
@@ -419,49 +393,31 @@ export function TaskTypesTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Create Button with Drawer */}
-          <Drawer
+          {/* Create Button with FormDrawer */}
+          <FormDrawer
             open={showCreateModal}
             onOpenChange={setShowCreateModal}
-            direction={isMobile ? "bottom" : "right"}
-          >
-            <DrawerTrigger asChild>
+            trigger={
               <Button variant="outline" size="sm">
                 <IconPlus className="h-4 w-4" />
                 <span className="hidden lg:inline ml-2">Thêm Loại Công Việc</span>
               </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>
-                  {editingTask ? "Chỉnh sửa" : "Thêm"} Loại Công Việc
-                </DrawerTitle>
-                <DrawerDescription>
-                  {editingTask
-                    ? "Cập nhật thông tin loại công việc."
-                    : "Tạo loại công việc mới cho hệ thống."}
-                </DrawerDescription>
-              </DrawerHeader>
-
-              <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-                <TaskTypeForm
-                  task={editingTask || undefined}
-                  onSuccess={handleCloseModal}
-                />
-              </div>
-
-              <DrawerFooter>
-                <Button type="submit" form="task-type-form">
-                  {editingTask ? "Cập nhật" : "Tạo mới"}
-                </Button>
-                <DrawerClose asChild>
-                  <Button variant="outline" onClick={handleCloseModal}>
-                    Hủy bỏ
-                  </Button>
-                </DrawerClose>
-              </DrawerFooter>
-            </DrawerContent>
-          </Drawer>
+            }
+            title={editingTask ? "Chỉnh sửa Loại Công Việc" : "Thêm Loại Công Việc"}
+            description={
+              editingTask
+                ? "Cập nhật thông tin loại công việc."
+                : "Tạo loại công việc mới cho hệ thống."
+            }
+            isSubmitting={isCreating || isUpdating}
+            submitLabel={editingTask ? "Cập nhật" : "Tạo mới"}
+            formId="task-type-form"
+          >
+            <TaskTypeForm
+              task={editingTask || undefined}
+              onSuccess={handleCloseModal}
+            />
+          </FormDrawer>
         </div>
       </div>
 

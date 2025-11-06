@@ -127,6 +127,8 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
           id,
           tracking_token,
           status,
+          workflow_id,
+          receipt_status,
           service_request_items(
             id,
             ticket_id,
@@ -140,6 +142,34 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
       if (!request) {
         return;
       }
+
+      // ====== TRIGGER TICKET CREATION AFTER WORKFLOW COMPLETE ======
+      // If workflow exists and status is 'received', trigger auto-create tickets
+      if (request.workflow_id && request.status === 'received') {
+        // Update receipt_status to 'received' to trigger auto_create_tickets_on_received()
+        const { error: updateError } = await ctx.supabaseAdmin
+          .from("service_requests")
+          .update({
+            receipt_status: 'received',
+            // Status will be updated to 'processing' by the trigger
+          })
+          .eq("id", task.entity_id);
+
+        if (updateError) {
+          console.error(
+            `[ServiceRequest] Failed to trigger ticket creation for ${request.tracking_token}:`,
+            updateError
+          );
+        } else {
+          console.log(
+            `[ServiceRequest] Workflow complete for ${request.tracking_token}, triggered ticket creation`
+          );
+        }
+
+        // Don't continue to ticket check logic below (tickets don't exist yet)
+        return;
+      }
+      // ====== END TICKET CREATION TRIGGER ======
 
       // Check if all linked service tickets are completed
       const items = request.service_request_items || [];

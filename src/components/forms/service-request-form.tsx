@@ -74,14 +74,18 @@ export function ServiceRequestForm({
     initialData?.delivery_method || "pickup"
   );
   const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
-  const [items, setItems] = useState<ProductItem[]>(
-    initialData?.items?.map((item) => ({
-      serial_number: item.serial_number,
-      issue_description: item.issue_description,
-      service_option: item.service_option ?? "paid",
-      service_option_manual: false,
-    })) || [{ serial_number: "", service_option: "paid", service_option_manual: false }]
-  );
+  const [items, setItems] = useState<ProductItem[]>(() => {
+    if (initialData?.items?.length) {
+      return initialData.items.map((item) => ({
+        serial_number: item.serial_number,
+        issue_description: item.issue_description,
+        service_option: item.service_option ?? "paid",
+        service_option_manual: true,
+      }));
+    }
+
+    return [{ serial_number: "", service_option: "paid", service_option_manual: false }];
+  });
 
   // Lookup state
   const [lookupPhone, setLookupPhone] = useState("");
@@ -116,7 +120,6 @@ export function ServiceRequestForm({
       setCustomerName(customerLookup.data.name);
       setCustomerEmail(customerLookup.data.email || "");
       setCustomerFound(true);
-      toast.success(`Đã tìm thấy khách hàng: ${customerLookup.data.name}`);
     } else if (customerLookup.isFetched && lookupPhone && !customerLookup.data) {
       setCustomerFound(false);
     }
@@ -161,8 +164,7 @@ export function ServiceRequestForm({
     updateItem(index, (item) => ({
       ...item,
       serial_number: serial,
-      service_option_manual: false,
-      service_option: "paid",
+      service_option: item.service_option_manual ? item.service_option : "paid",
     }));
   };
 

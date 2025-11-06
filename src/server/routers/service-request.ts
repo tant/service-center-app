@@ -11,6 +11,7 @@ import type { WarrantyStatus } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
 import type { ServiceRequest } from "@/types/service-request";
+import { ServiceType } from "@/types/enums";
 
 /**
  * Helper function to get authenticated user with role
@@ -1247,7 +1248,7 @@ export const serviceRequestRouter = router({
               id: string;
               serial_number: string | null;
               issue_description: string | null;
-              service_option: string | null;
+              service_option: ServiceType;
               issue_photos: unknown;
               ticket?:
                 | {
@@ -1281,9 +1282,6 @@ export const serviceRequestRouter = router({
             ? item.ticket[0]
             : item.ticket ?? null;
 
-          const serviceOption: "warranty" | "paid" =
-            item.service_option === "warranty" ? "warranty" : "paid";
-
           const normalizedItem: {
             id: string;
             product_brand: string | null;
@@ -1291,7 +1289,7 @@ export const serviceRequestRouter = router({
             serial_number: string | null;
             purchase_date: string | null;
             issue_description: string | null;
-            service_option: "warranty" | "paid";
+            service_option: ServiceType;
             issue_photos: unknown;
             warranty_status: WarrantyStatus | null;
             warranty_end_date: string | null;
@@ -1310,7 +1308,7 @@ export const serviceRequestRouter = router({
             serial_number: item.serial_number,
             purchase_date: null,
             issue_description: item.issue_description,
-            service_option: serviceOption,
+            service_option: item.service_option,
             issue_photos: item.issue_photos,
             warranty_status: null,
             warranty_end_date: null,

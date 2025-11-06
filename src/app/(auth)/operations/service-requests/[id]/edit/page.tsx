@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { IconLoader2 } from "@tabler/icons-react";
+import { ServiceType } from "@/types/enums";
 
 export default function EditServiceRequestPage() {
   const params = useParams();
@@ -136,7 +137,7 @@ export default function EditServiceRequestPage() {
       request.items?.map((item) => ({
         serial_number: item.serial_number ?? "",
         issue_description: item.issue_description ?? "",
-        service_option: item.service_option,
+        service_option: item.service_option as ServiceType,
       })) ?? [],
     receipt_status: request.receipt_status as "received" | "pending_receipt",
     delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,

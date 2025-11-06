@@ -1,29 +1,13 @@
-"use client";
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ServiceRequestWizard } from "./components/service-request-wizard";
+import { LandingHero } from "./components/landing-hero";
+import { WarrantyPolicyCard } from "./components/warranty-policy-card";
 
 export default function ServiceRequestPage() {
   return (
-    <div className="container mx-auto max-w-6xl space-y-8 py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Yêu cầu dịch vụ</CardTitle>
-          <CardDescription>
-            Luồng nhiều bước đang được tái cấu trúc theo tài liệu mới. Một số
-            tính năng sẽ được bổ sung ở các bước tiếp theo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ServiceRequestWizard />
-        </CardContent>
-      </Card>
+    <div className="bg-muted/40">
+      <div className="container mx-auto max-w-6xl space-y-12 px-4 py-12 sm:px-6 lg:px-8 lg:space-y-16">
+        <LandingHero />
+        <WarrantyPolicyCard />
+      </div>
     </div>
   );
 }

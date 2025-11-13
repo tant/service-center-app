@@ -137,6 +137,17 @@ export class TaskService {
       throw new Error("User not authenticated");
     }
 
+    // Lookup profile ID from auth user ID
+    const { data: profile, error: profileError } = await this.ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error(`Profile not found for user: ${userId}`);
+    }
+
     // Build query
     let query = this.ctx.supabaseAdmin
       .from("entity_tasks")
@@ -158,8 +169,8 @@ export class TaskService {
     if (filters.assignedToId) {
       query = query.eq("assigned_to_id", filters.assignedToId);
     } else {
-      // Default: show user's assigned tasks
-      query = query.eq("assigned_to_id", userId);
+      // Default: show user's assigned tasks (use profile ID, not auth user ID)
+      query = query.eq("assigned_to_id", profile.id);
     }
 
     if (filters.status) {
@@ -338,13 +349,26 @@ export class TaskService {
       }
     }
 
+    // Lookup profile ID from auth user ID
+    // userId is from ctx.user.id which is auth.users.id
+    // We need profiles.id for the foreign key constraint
+    const { data: profile, error: profileError } = await this.ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error(`Profile not found for user: ${userId}`);
+    }
+
     // Update task status
     const { error } = await this.ctx.supabaseAdmin
       .from("entity_tasks")
       .update({
         status: "in_progress",
         started_at: new Date().toISOString(),
-        assigned_to_id: userId, // Ensure user is assigned
+        assigned_to_id: profile.id, // Use profile ID, not auth user ID
       })
       .eq("id", taskId);
 
@@ -383,6 +407,17 @@ export class TaskService {
       throw new Error("Completion notes are required");
     }
 
+    // Lookup profile ID from auth user ID
+    const { data: profile, error: profileError } = await this.ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error(`Profile not found for user: ${userId}`);
+    }
+
     // Update task status
     const { error } = await this.ctx.supabaseAdmin
       .from("entity_tasks")
@@ -390,7 +425,7 @@ export class TaskService {
         status: "completed",
         completed_at: new Date().toISOString(),
         completion_notes: completionNotes,
-        assigned_to_id: userId, // Ensure user is assigned
+        assigned_to_id: profile.id, // Use profile ID, not auth user ID
       })
       .eq("id", taskId);
 
@@ -423,13 +458,24 @@ export class TaskService {
       throw new Error("Blocked reason is required");
     }
 
+    // Lookup profile ID from auth user ID
+    const { data: profile, error: profileError } = await this.ctx.supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error(`Profile not found for user: ${userId}`);
+    }
+
     // Update task status
     const { error } = await this.ctx.supabaseAdmin
       .from("entity_tasks")
       .update({
         status: "blocked",
         blocked_reason: blockedReason,
-        assigned_to_id: userId, // Ensure user is assigned
+        assigned_to_id: profile.id, // Use profile ID, not auth user ID
       })
       .eq("id", taskId);
 

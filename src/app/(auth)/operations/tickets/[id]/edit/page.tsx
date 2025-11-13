@@ -7,7 +7,7 @@ import { IconEye } from "@tabler/icons-react";
 import Link from "next/link";
 
 interface PageProps {
-  params: Promise<{ "ticket-id": string }>;
+  params: Promise<{ id: string }>;
 }
 
 async function getTicketData(ticketId: string) {
@@ -58,7 +58,7 @@ async function getTicketData(ticketId: string) {
 }
 
 export default async function Page({ params }: PageProps) {
-  const { "ticket-id": ticketId } = await params;
+  const { id: ticketId } = await params;
   const ticket = await getTicketData(ticketId);
 
   if (!ticket) {

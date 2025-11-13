@@ -28,7 +28,7 @@ import { TaskListAccordion } from "@/components/shared/task-list-accordion";
 import { TicketActions } from "@/components/ticket-actions";
 
 interface PageProps {
-  params: Promise<{ "ticket-id": string }>;
+  params: Promise<{ id: string }>;
 }
 
 async function getTicketData(ticketId: string) {
@@ -74,34 +74,6 @@ async function getTicketData(ticketId: string) {
       workflows (
         id,
         name
-      ),
-      tasks:service_ticket_tasks (
-        id,
-        name,
-        description,
-        sequence_order,
-        status,
-        is_required,
-        assigned_to_id,
-        started_at,
-        completed_at,
-        completion_notes,
-        blocked_reason,
-        estimated_duration_minutes,
-        created_at,
-        updated_at,
-        task_type:tasks (
-          id,
-          name,
-          category,
-          description
-        ),
-        assigned_to:profiles!assigned_to_id (
-          id,
-          full_name,
-          email,
-          avatar_url
-        )
       ),
       service_ticket_parts (
         id,
@@ -200,20 +172,26 @@ async function getTicketData(ticketId: string) {
   );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
-  // Fetch tasks for this ticket
+  // Fetch tasks for this ticket (using polymorphic entity_tasks table)
   console.log("[TicketDetailPage] Fetching tasks for ticket:", ticketId);
   const { data: tasks } = await supabase
-    .from("service_ticket_tasks")
+    .from("entity_tasks")
     .select(`
       *,
-      task_type:tasks(*),
+      task_type:tasks!task_id(
+        id,
+        name,
+        category,
+        description
+      ),
       assigned_to:profiles!assigned_to_id(
         id,
         full_name,
         role
       )
     `)
-    .eq("ticket_id", ticketId)
+    .eq("entity_type", "service_ticket")
+    .eq("entity_id", ticketId)
     .order("sequence_order", { ascending: true });
 
   console.log("[TicketDetailPage] Tasks fetched:", tasks?.length || 0);
@@ -266,7 +244,7 @@ export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   console.log("[TicketDetailPage] Params resolved:", resolvedParams);
 
-  const ticketId = resolvedParams["ticket-id"];
+  const ticketId = resolvedParams.id;
   console.log("[TicketDetailPage] Extracted ticketId:", ticketId);
   console.log("[TicketDetailPage] ticketId type:", typeof ticketId);
   console.log("[TicketDetailPage] ticketId value:", JSON.stringify(ticketId));

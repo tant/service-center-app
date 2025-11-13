@@ -704,16 +704,16 @@ export function AddTicketForm() {
             <div className="space-y-2">
               <Label>Quy trình xử lý (tùy chọn)</Label>
               <Select
-                value={ticketData.workflow_id}
+                value={ticketData.workflow_id || "none"}
                 onValueChange={(value) =>
-                  setTicketData((prev) => ({ ...prev, workflow_id: value }))
+                  setTicketData((prev) => ({ ...prev, workflow_id: value === "none" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="-- Chọn quy trình --" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Không sử dụng quy trình</SelectItem>
+                  <SelectItem value="none">Không sử dụng quy trình</SelectItem>
                   {workflows
                     ?.filter((wf) => wf.service_type === ticketData.warranty_type || !wf.service_type)
                     ?.map((workflow) => (

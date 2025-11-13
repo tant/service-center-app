@@ -85,6 +85,15 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
       return { canStart: true };
     }
 
+    // Check sequence dependencies (if workflow has strict_sequence = true)
+    const dependenciesMet = await this.areDependenciesMet(ctx, taskId);
+    if (!dependenciesMet) {
+      return {
+        canStart: false,
+        reason: "Phải hoàn thành các công việc trước đó theo thứ tự",
+      };
+    }
+
     return { canStart: true };
   }
 

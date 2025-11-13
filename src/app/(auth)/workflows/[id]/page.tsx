@@ -275,10 +275,10 @@ export default function TemplateDetailPage() {
 
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{task.tasks?.name || "Unknown Task"}</h4>
-                                {task.tasks?.category && (
+                                <h4 className="font-medium">{task.task_type?.name || "Unknown Task"}</h4>
+                                {task.task_type?.category && (
                                   <Badge variant="outline" className="text-xs">
-                                    {task.tasks?.category}
+                                    {task.task_type?.category}
                                   </Badge>
                                 )}
                                 {task.is_required && (

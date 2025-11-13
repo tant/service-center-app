@@ -293,15 +293,15 @@ export function ServiceRequestForm({
         </CardHeader>
         <CardContent className="space-y-2">
           <Select
-            value={workflowId || ""}
-            onValueChange={(value) => setWorkflowId(value || undefined)}
+            value={workflowId || "none"}
+            onValueChange={(value) => setWorkflowId(value === "none" ? undefined : value)}
             disabled={isSubmitting || workflows.isLoading}
           >
             <SelectTrigger>
               <SelectValue placeholder="Không chọn quy trình" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Không chọn quy trình</SelectItem>
+              <SelectItem value="none">Không chọn quy trình</SelectItem>
               {workflows.data?.map((wf) => (
                 <SelectItem key={wf.id} value={wf.id}>
                   {wf.name} ({wf.workflow_tasks?.length || 0} công việc)

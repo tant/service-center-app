@@ -80,7 +80,7 @@ export function TemplateForm({
     if (!initialTasks || initialTasks.length === 0) return [];
     return initialTasks.map((task: any) => ({
       id: task.id || `temp-${Date.now()}-${task.sequence_order}`,
-      task_type_id: task.task_type_id || "",
+      task_type_id: task.task_id || "",
       sequence_order: task.sequence_order || 0,
       is_required: task.is_required ?? true,
       custom_instructions: task.custom_instructions || "",

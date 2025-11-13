@@ -67,7 +67,7 @@ interface Workflow {
   id: string;
   name: string;
   description?: string;
-  service_type: "warranty" | "paid" | "replacement";
+  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
   enforce_sequence: boolean; // API field (mapped from DB's strict_sequence)
   is_active: boolean;
   created_at: string;
@@ -91,16 +91,20 @@ interface TemplateListTableInterface {
   onCreateNew: () => void;
 }
 
-const SERVICE_TYPE_LABELS = {
-  warranty: "Bảo hành",
-  paid: "Trả phí",
-  replacement: "Đổi mới",
+const ENTITY_TYPE_LABELS = {
+  service_ticket: "Phiếu sửa chữa",
+  service_request: "Phiếu yêu cầu dịch vụ",
+  inventory_receipt: "Phiếu nhập kho",
+  inventory_issue: "Phiếu xuất kho",
+  inventory_transfer: "Phiếu chuyển kho",
 };
 
-const SERVICE_TYPE_COLORS = {
-  warranty: "bg-blue-500",
-  paid: "bg-green-500",
-  replacement: "bg-orange-500",
+const ENTITY_TYPE_COLORS = {
+  service_ticket: "bg-blue-500",
+  service_request: "bg-purple-500",
+  inventory_receipt: "bg-green-500",
+  inventory_issue: "bg-orange-500",
+  inventory_transfer: "bg-cyan-500",
 };
 
 export function TemplateListTable({
@@ -164,15 +168,19 @@ export function TemplateListTable({
         enableHiding: false,
       },
       {
-        accessorKey: "service_type",
-        header: "Loại dịch vụ",
-        cell: ({ row }) => (
-          <Badge
-            className={SERVICE_TYPE_COLORS[row.original.service_type]}
-          >
-            {SERVICE_TYPE_LABELS[row.original.service_type]}
-          </Badge>
-        ),
+        accessorKey: "entity_type",
+        header: "Loại tài liệu",
+        cell: ({ row }) => {
+          const entityType = row.original.entity_type;
+          if (!entityType) {
+            return <Badge variant="outline">Chưa xác định</Badge>;
+          }
+          return (
+            <Badge className={ENTITY_TYPE_COLORS[entityType]}>
+              {ENTITY_TYPE_LABELS[entityType] || entityType}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: "tasks",

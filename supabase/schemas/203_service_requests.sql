@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   converted_at TIMESTAMPTZ,
   submitted_ip VARCHAR(45),
   user_agent TEXT,
+  workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL)
@@ -42,6 +43,12 @@ COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue de
 COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products have been received from customer (triggers ticket creation)';
 COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preference for product delivery (pickup or delivery)';
 COMMENT ON COLUMN public.service_requests.delivery_address IS 'Delivery address if delivery_method is delivery';
+COMMENT ON COLUMN public.service_requests.workflow_id IS 'Optional workflow for inspection tasks before ticket creation. When set, tasks are created from workflow and tickets are only created after all workflow tasks are completed. NULL means immediate ticket creation (default behavior).';
+
+-- Create index for workflow_id (only for non-NULL values)
+CREATE INDEX IF NOT EXISTS idx_service_requests_workflow_id
+ON public.service_requests(workflow_id)
+WHERE workflow_id IS NOT NULL;
 
 -- =====================================================
 -- AUTO-CREATE TICKETS FUNCTION

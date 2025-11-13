@@ -271,19 +271,24 @@ export class TaskService {
       throw new Error(`Failed to fetch entity tasks: ${error.message}`);
     }
 
+    // Enrich tasks with entity context
+    const tasksWithContext = await Promise.all(
+      (tasks || []).map((task) => this.enrichTaskWithContext(task))
+    );
+
     // Calculate progress statistics
-    const totalTasks = tasks?.length || 0;
+    const totalTasks = tasksWithContext.length;
     const completedTasks =
-      tasks?.filter((t) => t.status === "completed").length || 0;
+      tasksWithContext.filter((t) => t.status === "completed").length;
     const inProgressTasks =
-      tasks?.filter((t) => t.status === "in_progress").length || 0;
+      tasksWithContext.filter((t) => t.status === "in_progress").length;
     const blockedTasks =
-      tasks?.filter((t) => t.status === "blocked").length || 0;
+      tasksWithContext.filter((t) => t.status === "blocked").length;
     const pendingTasks =
-      tasks?.filter((t) => t.status === "pending").length || 0;
+      tasksWithContext.filter((t) => t.status === "pending").length;
 
     return {
-      tasks: tasks || [],
+      tasks: tasksWithContext,
       progress: {
         total: totalTasks,
         completed: completedTasks,

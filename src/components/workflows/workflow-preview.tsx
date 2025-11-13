@@ -21,17 +21,25 @@ interface WorkflowTask {
 interface WorkflowPreviewProps {
   name: string;
   description?: string;
-  service_type?: string;
+  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
   enforce_sequence: boolean;
   tasks: WorkflowTask[];
   notes?: string;
   className?: string;
 }
 
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  service_ticket: "Phiếu sửa chữa",
+  service_request: "Phiếu yêu cầu dịch vụ",
+  inventory_receipt: "Phiếu nhập kho",
+  inventory_issue: "Phiếu xuất kho",
+  inventory_transfer: "Phiếu chuyển kho",
+};
+
 export function WorkflowPreview({
   name,
   description,
-  service_type,
+  entity_type,
   enforce_sequence,
   tasks,
   notes,
@@ -51,11 +59,9 @@ export function WorkflowPreview({
                 <CardDescription className="text-base">{description}</CardDescription>
               )}
             </div>
-            {service_type && (
-              <Badge variant="outline" className="capitalize">
-                {service_type === 'warranty' && 'Bảo hành'}
-                {service_type === 'paid' && 'Trả phí'}
-                {service_type === 'replacement' && 'Thay thế'}
+            {entity_type && (
+              <Badge variant="outline">
+                {ENTITY_TYPE_LABELS[entity_type] || entity_type}
               </Badge>
             )}
           </div>

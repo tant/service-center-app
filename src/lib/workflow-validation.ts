@@ -33,7 +33,7 @@ export interface WorkflowTask {
 export interface WorkflowData {
   name: string;
   description?: string;
-  service_type?: string;
+  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
   enforce_sequence: boolean;
   tasks: WorkflowTask[];
 }

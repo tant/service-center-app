@@ -92,7 +92,7 @@ export default function EditTemplatePage() {
               initialData={{
                 name: workflow.name || "",
                 description: workflow.description || "",
-                service_type: workflow.service_type || "warranty",
+                entity_type: workflow.entity_type || "service_ticket",
                 enforce_sequence: workflow.enforce_sequence ?? true,
               }}
               initialTasks={workflow.tasks || []}

@@ -43,7 +43,7 @@ import {
 interface TemplateFormData {
   name: string;
   description: string;
-  service_type: "warranty" | "paid" | "replacement";
+  entity_type: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
   enforce_sequence: boolean;
   notes?: string;
 }
@@ -70,7 +70,7 @@ export function TemplateForm({
   const [formData, setFormData] = React.useState<TemplateFormData>({
     name: initialData?.name || "",
     description: initialData?.description || "",
-    service_type: initialData?.service_type || "warranty",
+    entity_type: initialData?.entity_type || "service_ticket",
     enforce_sequence: initialData?.enforce_sequence ?? true,
     notes: initialData?.notes || "",
   });
@@ -101,7 +101,7 @@ export function TemplateForm({
     return validateWorkflow({
       name: formData.name,
       description: formData.description,
-      service_type: formData.service_type,
+      entity_type: formData.entity_type,
       enforce_sequence: formData.enforce_sequence,
       tasks: workflowTasks,
     });
@@ -180,22 +180,27 @@ export function TemplateForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="service_type">Loại dịch vụ *</Label>
+            <Label htmlFor="entity_type">Loại tài liệu áp dụng *</Label>
             <Select
-              value={formData.service_type}
+              value={formData.entity_type}
               onValueChange={(value: any) =>
-                setFormData({ ...formData, service_type: value })
+                setFormData({ ...formData, entity_type: value })
               }
             >
-              <SelectTrigger id="service_type">
+              <SelectTrigger id="entity_type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="warranty">Bảo hành</SelectItem>
-                <SelectItem value="paid">Trả phí</SelectItem>
-                <SelectItem value="replacement">Thay thế</SelectItem>
+                <SelectItem value="service_ticket">Phiếu sửa chữa</SelectItem>
+                <SelectItem value="service_request">Phiếu yêu cầu dịch vụ</SelectItem>
+                <SelectItem value="inventory_receipt">Phiếu nhập kho</SelectItem>
+                <SelectItem value="inventory_issue">Phiếu xuất kho</SelectItem>
+                <SelectItem value="inventory_transfer">Phiếu chuyển kho</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Quy trình này chỉ có thể được sử dụng cho loại tài liệu đã chọn
+            </p>
           </div>
 
           <Separator />
@@ -313,7 +318,7 @@ export function TemplateForm({
             <WorkflowPreview
               name={formData.name}
               description={formData.description}
-              service_type={formData.service_type}
+              entity_type={formData.entity_type}
               enforce_sequence={formData.enforce_sequence}
               notes={formData.notes}
               tasks={workflowTasks.map(t => ({

@@ -193,12 +193,20 @@ BEGIN
 
   END LOOP;
 
-  -- Update request status to processing and set converted_at
-  UPDATE public.service_requests
-  SET
-    status = 'processing',
-    converted_at = NOW()
-  WHERE id = p_request_id;
+  -- =====================================================
+  -- FIX: Removed nested UPDATE to avoid conflict
+  -- =====================================================
+  -- OLD CODE (caused conflict):
+  -- UPDATE public.service_requests
+  -- SET
+  --   status = 'processing',
+  --   converted_at = NOW()
+  -- WHERE id = p_request_id;
+  --
+  -- NEW: Triggers will handle status updates:
+  -- - BEFORE triggers modify NEW.status directly
+  -- - AFTER triggers update separately (no conflict)
+  -- =====================================================
 
   RAISE NOTICE 'Service Request % (%) created % tickets',
     p_request_id, p_tracking_token, v_tickets_created;
@@ -208,7 +216,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.create_tickets_for_service_request(UUID, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR, UUID) IS
-  'Shared function to create service tickets from a service request. Creates customer (or updates if exists), creates tickets for each item, copies attachments, and updates request status to processing. Returns number of tickets created.';
+  'Shared function to create service tickets from a service request. Creates customer (or updates if exists), creates tickets for each item, and copies attachments. Does NOT update request status - triggers handle that to avoid nested UPDATE conflicts. Returns number of tickets created.';
 
 -- =====================================================
 -- AUTO-CREATE TICKETS FUNCTION
@@ -418,6 +426,7 @@ DECLARE
   v_task_count INT;
   v_completed_count INT;
   v_request_status public.request_status;
+  v_receipt_status public.receipt_status;
   v_request RECORD;
   v_tickets_created INT;
 BEGIN
@@ -439,6 +448,18 @@ BEGIN
   WHERE id = v_request_id;
 
   v_request_status := v_request.status;
+  v_receipt_status := v_request.receipt_status;
+
+  -- =====================================================
+  -- FIX: Check if products have been received
+  -- =====================================================
+  -- If workflow completes but products not yet received,
+  -- DO NOT create tickets - wait for receipt confirmation
+  IF v_receipt_status != 'received' THEN
+    RAISE NOTICE 'Service Request % (%) workflow completed but receipt_status = % - waiting for product receipt before creating tickets',
+      v_request_id, v_request.tracking_token, v_receipt_status;
+    RETURN NEW;
+  END IF;
 
   -- Only process if request is waiting for workflow completion
   -- Skip if already processing, completed, or cancelled
@@ -452,9 +473,9 @@ BEGIN
   FROM public.entity_tasks
   WHERE entity_type = 'service_request' AND entity_id = v_request_id;
 
-  -- If all tasks completed, create tickets directly
+  -- If all tasks completed AND products received, create tickets
   IF v_task_count > 0 AND v_task_count = v_completed_count THEN
-    RAISE NOTICE 'Service Request % (%) workflow completed - creating tickets directly',
+    RAISE NOTICE 'Service Request % (%) workflow completed AND products received - creating tickets',
       v_request_id, v_request.tracking_token;
 
     -- Call shared function to create tickets
@@ -468,7 +489,18 @@ BEGIN
       v_request.reviewed_by_id
     );
 
-    RAISE NOTICE 'Service Request % (%) created % tickets',
+    -- =====================================================
+    -- FIX: AFTER trigger must update status separately
+    -- =====================================================
+    -- Since this is an AFTER trigger, we cannot modify NEW
+    -- We must perform a separate UPDATE here
+    UPDATE public.service_requests
+    SET
+      status = 'processing',
+      converted_at = NOW()
+    WHERE id = v_request_id;
+
+    RAISE NOTICE 'Service Request % (%) created % tickets and updated status to processing',
       v_request_id, v_request.tracking_token, v_tickets_created;
   END IF;
 
@@ -477,7 +509,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.auto_update_service_request_on_workflow_complete() IS
-  'Automatically creates tickets when all workflow tasks for a service request are completed. Calls create_tickets_for_service_request() directly instead of relying on trigger chain. Supports requests in submitted, pickingup, or received status.';
+  'Automatically creates tickets when all workflow tasks for a service request are completed AND products have been received (receipt_status = received). Since this is an AFTER trigger, it updates status via separate UPDATE statement. Supports requests in submitted, pickingup, or received status.';
 
 -- =====================================================
 -- TRIGGER: Auto-trigger ticket creation on workflow completion

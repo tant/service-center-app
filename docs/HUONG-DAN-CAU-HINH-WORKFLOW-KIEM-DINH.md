@@ -49,12 +49,22 @@
                         ↓
 ┌────────────────────────────────────────────────────────┐
 │ 3. TỰ ĐỘNG TẠO TICKETS (Hệ thống)                     │
-│    → Khi hoàn tất SR workflow:                         │
+│    → Điều kiện: Workflow hoàn tất + Đã nhận hàng      │
+│       (receipt_status = 'received')                    │
+│                                                         │
+│    → Khi cả 2 điều kiện đều ĐẠT:                      │
 │       - Tự động tạo 1 ticket cho mỗi sản phẩm         │
 │       - Copy inspection notes từ Task 1                │
 │       - Copy ảnh từ Task 2                             │
 │       - Copy service type từ Task 3                    │
 │       - Link ticket → service_request_items            │
+│                                                         │
+│    → Nếu workflow xong NHƯNG chưa nhận hàng:          │
+│       (receipt_status = 'pending_receipt')             │
+│       - KHÔNG tạo ticket                               │
+│       - Chờ staff confirm receipt                      │
+│       - Sau khi receipt_status → 'received'            │
+│         → Tự động tạo tickets                          │
 └────────────────────────────────────────────────────────┘
                         ↓
 ┌────────────────────────────────────────────────────────┐
@@ -307,13 +317,21 @@ Thời gian dự kiến: 3-5 ngày làm việc
 
 ### SAU KHI COMPLETE TASK NÀY
 
-→ Hệ thống TỰ ĐỘNG:
-   1. Tạo Service Ticket cho mỗi sản phẩm
-   2. Copy inspection notes từ Task 1
-   3. Copy ảnh từ Task 2
-   4. Set service type = WARRANTY/PAID
-   5. Link ticket → service_request_items
-   6. Update service_request.status = 'processing'
+→ Hệ thống TỰ ĐỘNG (NẾU đã nhận hàng):
+   1. Kiểm tra receipt_status = 'received'
+   2. Nếu ĐÃ nhận hàng:
+      - Tạo Service Ticket cho mỗi sản phẩm
+      - Copy inspection notes từ Task 1
+      - Copy ảnh từ Task 2
+      - Set service type = WARRANTY/PAID
+      - Link ticket → service_request_items
+      - Update service_request.status = 'processing'
+
+   3. Nếu CHƯA nhận hàng (receipt_status = 'pending_receipt'):
+      - KHÔNG tạo ticket
+      - Chờ staff confirm receipt
+      - Sau khi receipt_status → 'received'
+      - Trigger sẽ tự động tạo tickets
 
 → Reception KHÔNG CẦN tạo ticket thủ công
 → Ticket sẽ tự động gán workflow phù hợp
@@ -741,40 +759,45 @@ Sau khi Dev Team implement → Cách dùng sẽ như này:
 
 ### Lỗi 3: Tickets Không Tự Động Tạo Sau Khi Complete Task 3
 
-**Nguyên nhân:** Logic trigger chưa được implement
+**Nguyên nhân:** Có thể do `receipt_status` không phải `'received'`
 
 **Hiện trạng:**
-- Auto ticket creation hiện chạy NGAY khi submit SR (status = 'received')
-- Chưa có logic check "workflow tasks completed"
+- ✅ **ĐÃ FIX (2025-11-14):** Auto ticket creation chỉ chạy khi:
+  - Workflow tasks đã hoàn tất 100% **VÀ**
+  - `receipt_status = 'received'` (đã nhận hàng)
 
-**Giải pháp tạm thời:**
+**Kiểm tra:**
 1. Hoàn tất Task 3
-2. Vào trang chi tiết Service Request
-3. Nếu KHÔNG thấy tickets tự động tạo → Tạo thủ công:
-   - Click "Tạo Service Ticket"
-   - Copy thông tin từ SR
-   - Copy ảnh từ Task 2
-   - Copy notes từ Task 1, 3
+2. Kiểm tra `receipt_status` của Service Request:
+   ```sql
+   SELECT id, tracking_token, status, receipt_status
+   FROM service_requests
+   WHERE id = '<service-request-id>';
+   ```
 
-**Giải pháp lâu dài:** Yêu cầu Dev Team implement logic:
-```typescript
-// Pseudo-code
-async onTaskComplete(taskId) {
-  const task = await getTask(taskId);
-  const isLastTask = await isLastTaskInWorkflow(taskId);
+**Giải pháp:**
 
-  if (isLastTask) {
-    const sr = await getServiceRequest(task.entity_id);
+**Trường hợp 1: `receipt_status = 'pending_receipt'`**
+- ✅ Đây là hành vi đúng
+- Workflow xong nhưng chưa nhận hàng → KHÔNG tạo ticket
+- Đợi staff xác nhận nhận hàng:
+  - Update `receipt_status` → `'received'`
+  - Trigger sẽ TỰ ĐỘNG tạo tickets
 
-    // Auto-create tickets
-    await createTicketsFromServiceRequest(sr.id, {
-      copyPhotos: true,        // From Task 2
-      copyInspectionNotes: true, // From Task 1
-      serviceTypeNotes: task.completion_notes // From Task 3
-    });
-  }
-}
-```
+**Trường hợp 2: `receipt_status = 'received'` nhưng vẫn không tạo**
+- Kiểm tra logs database:
+  ```sql
+  -- Xem trigger có fire không
+  -- (Nếu có RAISE NOTICE sẽ thấy trong logs)
+  ```
+- Nếu không có logs → Trigger không fire → Liên hệ Dev Team
+
+**Trường hợp 3: Cần tạo ticket thủ công (tạm thời)**
+1. Vào trang chi tiết Service Request
+2. Click "Tạo Service Ticket"
+3. Copy thông tin từ SR
+4. Copy ảnh từ Task 2
+5. Copy notes từ Task 1, 3
 
 ---
 

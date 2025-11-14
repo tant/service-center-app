@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
   reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
-  rejection_reason TEXT,
+  cancellation_reason TEXT,
   converted_at TIMESTAMPTZ,
   submitted_ip VARCHAR(45),
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL)
+  CONSTRAINT service_requests_cancelled_requires_reason CHECK (status != 'cancelled' OR cancellation_reason IS NOT NULL)
 );
 
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
@@ -44,6 +44,7 @@ COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products ha
 COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preference for product delivery (pickup or delivery)';
 COMMENT ON COLUMN public.service_requests.delivery_address IS 'Delivery address if delivery_method is delivery';
 COMMENT ON COLUMN public.service_requests.workflow_id IS 'Optional workflow for inspection tasks before ticket creation. When set, tasks are created from workflow and tickets are only created after all workflow tasks are completed. NULL means immediate ticket creation (default behavior).';
+COMMENT ON COLUMN public.service_requests.cancellation_reason IS 'Reason for cancellation (required when status = cancelled). Can be staff rejection, customer withdrawal, duplicate request, etc.';
 
 -- =====================================================
 -- SHARED FUNCTION: CREATE TICKETS FOR SERVICE REQUEST

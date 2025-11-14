@@ -1200,7 +1200,7 @@ export const serviceRequestRouter = router({
     .input(
       z.object({
         request_id: z.string().uuid(),
-        rejection_reason: z.string().min(10, "Rejection reason must be at least 10 characters"),
+        cancellation_reason: z.string().min(10, "Cancellation reason must be at least 10 characters"),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1217,10 +1217,10 @@ export const serviceRequestRouter = router({
       const { data, error } = await ctx.supabaseAdmin
         .from("service_requests")
         .update({
-          status: "rejected",
-          rejection_reason: input.rejection_reason,
-          rejected_at: new Date().toISOString(),
-          rejected_by_id: profile.id,
+          status: "cancelled",
+          cancellation_reason: input.cancellation_reason,
+          reviewed_by_id: profile.id,
+          reviewed_at: new Date().toISOString(),
         })
         .eq("id", input.request_id)
         .select()
@@ -1244,7 +1244,7 @@ export const serviceRequestRouter = router({
             trackingToken: data.tracking_token,
             productName: data.product_model,
             serialNumber: data.serial_number,
-            rejectionReason: input.rejection_reason,
+            rejectionReason: input.cancellation_reason,
           },
           data.id
         ).catch((err) => {

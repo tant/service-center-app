@@ -111,7 +111,7 @@ export default function ServiceRequestDetailPage() {
     }
 
     rejectRequest(
-      { request_id: requestId, rejection_reason: rejectReason },
+      { request_id: requestId, cancellation_reason: rejectReason },
       {
         onSuccess: () => {
           toast.success("Đã từ chối yêu cầu");

@@ -1239,6 +1239,7 @@ export type Database = {
       }
       service_requests: {
         Row: {
+          cancellation_reason: string | null
           converted_at: string | null
           created_at: string
           customer_address: string | null
@@ -1250,7 +1251,6 @@ export type Database = {
           id: string
           issue_description: string
           receipt_status: Database["public"]["Enums"]["receipt_status"]
-          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by_id: string | null
           status: Database["public"]["Enums"]["request_status"]
@@ -1261,6 +1261,7 @@ export type Database = {
           workflow_id: string | null
         }
         Insert: {
+          cancellation_reason?: string | null
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
@@ -1274,7 +1275,6 @@ export type Database = {
           id?: string
           issue_description: string
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
-          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
@@ -1285,6 +1285,7 @@ export type Database = {
           workflow_id?: string | null
         }
         Update: {
+          cancellation_reason?: string | null
           converted_at?: string | null
           created_at?: string
           customer_address?: string | null
@@ -1298,7 +1299,6 @@ export type Database = {
           id?: string
           issue_description?: string
           receipt_status?: Database["public"]["Enums"]["receipt_status"]
-          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
@@ -3352,6 +3352,18 @@ export type Database = {
       calculate_warranty_end_date: {
         Args: { p_start_date: string; p_warranty_months: number }
         Returns: string
+      }
+      create_tickets_for_service_request: {
+        Args: {
+          p_customer_email: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_issue_description: string
+          p_request_id: string
+          p_reviewed_by_id: string
+          p_tracking_token: string
+        }
+        Returns: number
       }
       decrease_part_stock: {
         Args: { p_part_id: string; p_quantity_to_decrease: number }

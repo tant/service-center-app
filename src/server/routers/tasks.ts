@@ -11,6 +11,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { requireAnyAuthenticated } from "../middleware/requireRole";
 import { TaskService } from "../services/task-service";
+import { getProfileIdFromUserId } from "../utils/profile-helpers";
 
 /**
  * Entity type schema (must match database ENUM)
@@ -374,10 +375,13 @@ export const tasksRouter = router({
         throw new Error("User not authenticated");
       }
 
+      // Get profile ID (created_by_id references profiles.id, not auth.users.id)
+      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, userId);
+
       const taskService = new TaskService(ctx);
       return taskService.createTasksFromWorkflow({
         ...input,
-        createdById: userId,
+        createdById: profileId,
       });
     }),
 

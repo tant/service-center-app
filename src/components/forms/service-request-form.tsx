@@ -13,10 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck, IconChecklist } from "@tabler/icons-react";
+import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { ProductSerialInput } from "./service-request/product-serial-input";
 import { trpc } from "@/components/providers/trpc-provider";
@@ -35,7 +34,6 @@ interface ServiceRequestFormData {
   receipt_status: "received" | "pending_receipt";
   preferred_delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
-  workflow_id?: string;
 }
 
 interface ServiceRequestFormProps {
@@ -70,9 +68,6 @@ export function ServiceRequestForm({
   const [items, setItems] = useState<ProductItem[]>(
     initialData?.items || [{ serial_number: "" }]
   );
-  const [workflowId, setWorkflowId] = useState<string | undefined>(
-    initialData?.workflow_id
-  );
 
   // Lookup state
   const [lookupPhone, setLookupPhone] = useState("");
@@ -86,11 +81,6 @@ export function ServiceRequestForm({
       retry: false,
     }
   );
-
-  // Workflow lookup query for service_request entity type
-  const workflows = trpc.workflow.template.getByEntityType.useQuery({
-    entityType: 'service_request'
-  });
 
   // Debounced phone lookup
   useEffect(() => {
@@ -196,7 +186,6 @@ export function ServiceRequestForm({
     receipt_status: receiptStatus,
     preferred_delivery_method: deliveryMethod,
     delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
-    workflow_id: workflowId,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -277,49 +266,6 @@ export function ServiceRequestForm({
               totalProducts={items.length}
             />
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Workflow Selector */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <IconChecklist className="h-4 w-4" />
-            Quy trình kiểm tra (tùy chọn)
-          </CardTitle>
-          <CardDescription>
-            Chọn quy trình kiểm tra nếu cần thực hiện trước khi tạo phiếu sửa chữa
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Select
-            value={workflowId || "none"}
-            onValueChange={(value) => setWorkflowId(value === "none" ? undefined : value)}
-            disabled={isSubmitting || workflows.isLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Không chọn quy trình" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Không chọn quy trình</SelectItem>
-              {workflows.data?.map((wf) => (
-                <SelectItem key={wf.id} value={wf.id}>
-                  {wf.name} ({wf.workflow_tasks?.length || 0} công việc)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {workflowId && (
-            <p className="text-xs text-muted-foreground">
-              ℹ️ Phiếu sửa chữa sẽ được tạo tự động sau khi hoàn thành quy trình
-            </p>
-          )}
-          {workflows.isLoading && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <IconLoader2 className="h-3 w-3 animate-spin" />
-              Đang tải danh sách quy trình...
-            </p>
-          )}
         </CardContent>
       </Card>
 

@@ -136,7 +136,6 @@ export default function EditServiceRequestPage() {
     receipt_status: request.receipt_status as "received" | "pending_receipt",
     preferred_delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,
     delivery_address: request.delivery_address || "",
-    workflow_id: request.workflow_id,
   };
 
   return (

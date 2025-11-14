@@ -85,13 +85,15 @@ export default function ServiceRequestDetailPage() {
   const handleAccept = () => {
     if (!request) return;
 
-    if (request.status === "submitted") {
-      // Update to received
+    if (request.status === "submitted" || request.status === "pickingup") {
+      // Update to received (works for both submitted and pickingup)
       updateStatus(
         { request_id: requestId, status: "received" },
         {
           onSuccess: () => {
-            toast.success("Đã xác nhận tiếp nhận hàng");
+            toast.success(request.status === "pickingup"
+              ? "Đã xác nhận đã lấy hàng từ khách hàng"
+              : "Đã xác nhận tiếp nhận hàng");
             refetch();
           },
           onError: (error: any) => {
@@ -498,7 +500,7 @@ export default function ServiceRequestDetailPage() {
           </Button>
         </div>
       )}
-      {(request.status === "submitted" || request.status === "received") && (
+      {(request.status === "submitted" || request.status === "received" || request.status === "pickingup") && (
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">
           {!showRejectForm && (
             <>
@@ -510,7 +512,7 @@ export default function ServiceRequestDetailPage() {
                 <IconX className="h-4 w-4 mr-2" />
                 Từ chối
               </Button>
-              {request.status === "submitted" && (
+              {(request.status === "submitted" || request.status === "pickingup") && (
                 <Button
                   onClick={handleAccept}
                   disabled={isUpdating || isRejecting}
@@ -523,7 +525,7 @@ export default function ServiceRequestDetailPage() {
                   ) : (
                     <>
                       <IconCheck className="h-4 w-4 mr-2" />
-                      Xác nhận tiếp nhận
+                      {request.status === "pickingup" ? "Xác nhận đã lấy hàng" : "Xác nhận tiếp nhận"}
                     </>
                   )}
                 </Button>

@@ -172,31 +172,9 @@ async function getTicketData(ticketId: string) {
   );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
-  // Fetch tasks for this ticket (using polymorphic entity_tasks table)
-  console.log("[TicketDetailPage] Fetching tasks for ticket:", ticketId);
-  const { data: tasks } = await supabase
-    .from("entity_tasks")
-    .select(`
-      *,
-      task_type:tasks!task_id(
-        id,
-        name,
-        category,
-        description
-      ),
-      assigned_to:profiles!assigned_to_id(
-        id,
-        full_name,
-        role
-      )
-    `)
-    .eq("entity_type", "service_ticket")
-    .eq("entity_id", ticketId)
-    .order("sequence_order", { ascending: true });
-
-  console.log("[TicketDetailPage] Tasks fetched:", tasks?.length || 0);
-
-  return { ...ticket, tasks: tasks || [] };
+  // Tasks are now fetched client-side by TaskListAccordion component
+  // This provides real-time updates and better separation of concerns
+  return ticket;
 }
 
 function getStatusBadge(status: string) {
@@ -448,7 +426,11 @@ export default async function Page({ params }: PageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TaskListAccordion tasks={ticket.tasks || []} />
+            <TaskListAccordion
+              entityType="service_ticket"
+              entityId={ticketId}
+              allowActions={ticket.status !== 'completed' && ticket.status !== 'cancelled'}
+            />
           </CardContent>
         </Card>
 

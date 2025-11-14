@@ -1391,12 +1391,37 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Create tasks from workflow if workflow_id provided
+      // This must happen BEFORE updating receipt_status to avoid race condition with trigger
+      if (input.data.workflow_id) {
+        try {
+          const taskService = new TaskService(ctx);
+          const taskCount = await taskService.createTasksFromWorkflow({
+            entityType: 'service_request',
+            entityId: input.request_id,
+            workflowId: input.data.workflow_id,
+            createdById: profile.id, // Use user.id (auth.users.id) for FK constraint
+          });
+
+          console.log(
+            `[SUBMIT DRAFT] Created ${taskCount} tasks from workflow for ${request.tracking_token}`
+          );
+        } catch (workflowError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : 'Unknown error'}`,
+          });
+        }
+      }
+
       // Now update to final status to trigger ticket creation
+      // NOTE: If workflow_id exists, trigger will check if tasks are completed before creating tickets
       const { error: finalUpdateError } = await ctx.supabaseAdmin
         .from("service_requests")
         .update({
           receipt_status: input.data.receipt_status,
           status: initialStatus,
+          workflow_id: input.data.workflow_id || null, // Store workflow for task tracking
         })
         .eq("id", input.request_id);
 

@@ -254,7 +254,7 @@ CREATE TABLE "service_ticket_attachments" (
   "file_size" BIGINT NOT NULL,
   "description" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_attachments_pkey" PRIMARY KEY ("id")
 );

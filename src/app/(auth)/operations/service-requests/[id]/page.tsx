@@ -247,12 +247,21 @@ export default function ServiceRequestDetailPage() {
               </CardHeader>
             </Card>
 
-            {/* Workflow Assignment Button */}
-            <div className="flex justify-end">
+            {/* Workflow Assignment */}
+            <div className="flex items-center justify-between">
+              {request.workflow && (request.workflow as any).name && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <ListTodo className="h-3 w-3 mr-1" />
+                    {(request.workflow as any).name}
+                  </Badge>
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsWorkflowDialogOpen(true)}
+                className="ml-auto"
               >
                 <ListTodo className="h-4 w-4 mr-2" />
                 Tạo công việc

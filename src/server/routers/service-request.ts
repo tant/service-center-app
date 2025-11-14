@@ -811,6 +811,7 @@ export const serviceRequestRouter = router({
             input.data.preferred_delivery_method === "delivery"
               ? input.data.delivery_address
               : null,
+          workflow_id: input.data.workflow_id || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", input.request_id);
@@ -1076,6 +1077,12 @@ export const serviceRequestRouter = router({
             issue_description,
             issue_photos,
             ticket:service_tickets(id, ticket_number, status)
+          ),
+          workflow:workflows(
+            id,
+            name,
+            description,
+            entity_type
           )
         `
         )

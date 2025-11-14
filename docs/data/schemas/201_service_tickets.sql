@@ -26,7 +26,7 @@ CREATE TABLE "service_tickets" (
   "status" public.ticket_status NOT NULL DEFAULT 'pending',
   "priority_level" public.priority_level NOT NULL DEFAULT 'normal',
   "warranty_type" public.warranty_type,
-  "assigned_to" UUID REFERENCES "profiles"("user_id"),
+  "assigned_to" UUID REFERENCES "profiles"("id"),
   "service_fee" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (service_fee >= 0),
   "diagnosis_fee" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (diagnosis_fee >= 0),
   "parts_total" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (parts_total >= 0),
@@ -37,8 +37,8 @@ CREATE TABLE "service_tickets" (
   "notes" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   -- Phase 2 columns (FK constraints added in 301_foreign_key_constraints.sql)
   "workflow_id" UUID,
@@ -152,8 +152,8 @@ CREATE TABLE "service_ticket_parts" (
   "notes" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_parts_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_ticket_parts_unique" UNIQUE ("ticket_id", "part_id")
@@ -208,8 +208,8 @@ CREATE TABLE "service_ticket_comments" (
   "is_internal" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_comments_pkey" PRIMARY KEY ("id")
 );

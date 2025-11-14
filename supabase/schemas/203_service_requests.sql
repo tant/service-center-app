@@ -233,6 +233,11 @@ DECLARE
   v_completed_count INT;
   v_tickets_created INT;
 BEGIN
+  -- Skip trigger if status is 'draft' (draft requests should not auto-create tickets)
+  IF NEW.status = 'draft' THEN
+    RETURN NEW;
+  END IF;
+
   -- Trigger when receipt_status changes to 'received' OR status changes to 'received'
   IF (NEW.receipt_status = 'received' AND (OLD.receipt_status IS NULL OR OLD.receipt_status = 'pending_receipt'))
      OR (NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup'))) THEN

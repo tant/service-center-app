@@ -102,6 +102,7 @@ export function AddTicketForm() {
     { enabled: !!ticketData.product_id },
   );
   const { data: workflows } = trpc.workflow.template.list.useQuery({
+    entity_type: 'service_ticket',
     is_active: true,
   });
 

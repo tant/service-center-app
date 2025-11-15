@@ -53,7 +53,7 @@ const baseData = {
       allowedRoles: ["admin", "manager"] as UserRole[],
     },
     {
-      title: "Công việc của tôi",
+      title: "Quản lý công việc",
       url: "/my-tasks",
       icon: IconChecklist,
       allowedRoles: ["admin", "manager", "technician"] as UserRole[],

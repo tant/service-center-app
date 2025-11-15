@@ -15,11 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TaskStatus, EntityType } from "@/server/services/entity-adapters/base-adapter";
 
 export interface TaskFilterValues {
   status: TaskStatus | "all";
   entityType: EntityType | "all";
+  assignedTo: "all" | "me";
   overdue: boolean;
   requiredOnly: boolean;
 }
@@ -47,9 +49,57 @@ const entityTypeOptions: Array<{ value: EntityType | "all"; label: string }> = [
   { value: "service_request", label: "Yêu cầu dịch vụ" },
 ];
 
+const assignedToOptions: Array<{ value: "all" | "me"; label: string }> = [
+  { value: "all", label: "Tất cả công việc" },
+  { value: "me", label: "Được giao cho tôi" },
+];
+
 export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
   return (
     <div className="space-y-4">
+      {/* Assigned To Filter - Tabs (Desktop) / Select (Mobile) */}
+      <div className="space-y-2">
+        {/* Desktop: Tabs */}
+        <div className="hidden sm:block">
+          <Tabs
+            value={filters.assignedTo}
+            onValueChange={(value) =>
+              onChange({ ...filters, assignedTo: value as "all" | "me" })
+            }
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              {assignedToOptions.map((option) => (
+                <TabsTrigger key={option.value} value={option.value}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Mobile: Select */}
+        <div className="sm:hidden">
+          <Label htmlFor="assigned-to-filter">Phạm vi</Label>
+          <Select
+            value={filters.assignedTo}
+            onValueChange={(value) =>
+              onChange({ ...filters, assignedTo: value as "all" | "me" })
+            }
+          >
+            <SelectTrigger id="assigned-to-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {assignedToOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Status Filter */}
         <div className="space-y-2">

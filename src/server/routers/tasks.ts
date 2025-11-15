@@ -39,7 +39,7 @@ const taskStatusSchema = z.enum([
  * Task filters schema
  */
 const taskFiltersSchema = z.object({
-  assignedToId: z.string().uuid().optional(),
+  assignedToId: z.string().uuid().nullable().optional(),
   status: z
     .union([taskStatusSchema, z.array(taskStatusSchema)])
     .optional(),

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ClipboardList, RefreshCw } from "lucide-react";
 import { TaskCard } from "@/components/tasks/task-card";
+import { TasksTable } from "@/components/tasks/tasks-table";
 import { TaskFilters, type TaskFilterValues } from "@/components/tasks/task-filters";
 import {
   CompleteTaskDialog,
@@ -34,6 +35,7 @@ export default function MyTasksPage() {
   const [filters, setFilters] = React.useState<TaskFilterValues>({
     status: "all",
     entityType: "all",
+    assignedTo: "me", // Default: show only tasks assigned to me
     overdue: false,
     requiredOnly: false,
   });
@@ -45,28 +47,37 @@ export default function MyTasksPage() {
 
   // Build query filters
   const queryFilters = React.useMemo(() => {
-    const filters: any = {};
+    const queryFilters: any = {};
+
+    // Handle assignedTo filter
+    if (filters.assignedTo === "me") {
+      // Don't set assignedToId - let backend default to current user
+      // (backend logic at task-service.ts:170-179)
+    } else {
+      // assignedTo === "all" - explicitly pass null to skip filtering
+      queryFilters.assignedToId = null;
+    }
 
     if (filters.status !== "all") {
-      filters.status = filters.status;
+      queryFilters.status = filters.status;
     } else {
       // Default: show active tasks only
-      filters.status = ["pending", "in_progress", "blocked"];
+      queryFilters.status = ["pending", "in_progress", "blocked"];
     }
 
     if (filters.entityType !== "all") {
-      filters.entityType = filters.entityType;
+      queryFilters.entityType = filters.entityType;
     }
 
     if (filters.overdue) {
-      filters.overdue = true;
+      queryFilters.overdue = true;
     }
 
     if (filters.requiredOnly) {
-      filters.requiredOnly = true;
+      queryFilters.requiredOnly = true;
     }
 
-    return filters;
+    return queryFilters;
   }, [filters]);
 
   // Fetch tasks with polling every 30 seconds
@@ -189,7 +200,7 @@ export default function MyTasksPage() {
   if (error) {
     return (
       <>
-        <PageHeader title="Công việc của tôi" />
+        <PageHeader title="Quản lý công việc" />
         <div className="flex flex-1 flex-col items-center justify-center gap-2">
           <p className="text-destructive">Lỗi: {error.message}</p>
           <Button onClick={() => refetch()}>Thử lại</Button>
@@ -200,7 +211,7 @@ export default function MyTasksPage() {
 
   return (
     <>
-      <PageHeader title="Công việc của tôi">
+      <PageHeader title="Quản lý công việc">
         <Button
           variant="outline"
           size="sm"
@@ -214,7 +225,7 @@ export default function MyTasksPage() {
 
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
             {/* Stats Summary */}
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
               <Card>
@@ -294,21 +305,29 @@ export default function MyTasksPage() {
               </Card>
             )}
 
-            {/* Task List */}
+            {/* Task List - Switch between Card and Table UI */}
             {!isLoading && tasks.length > 0 && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onStartTask={handleStartTask}
-                    onCompleteTask={handleCompleteTask}
-                    onBlockTask={handleBlockTask}
-                    onUnblockTask={handleUnblockTask}
-                    isLoading={isActionLoading}
-                  />
-                ))}
-              </div>
+              <>
+                {filters.assignedTo === "me" ? (
+                  // Card UI - For "My Tasks" view
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onStartTask={handleStartTask}
+                        onCompleteTask={handleCompleteTask}
+                        onBlockTask={handleBlockTask}
+                        onUnblockTask={handleUnblockTask}
+                        isLoading={isActionLoading}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  // Table UI - For "All Tasks" view
+                  <TasksTable tasks={tasks} isLoading={false} />
+                )}
+              </>
             )}
           </div>
         </div>

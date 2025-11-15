@@ -65,8 +65,8 @@ export interface TaskWithContext extends TaskData {
  * Filters for querying tasks
  */
 export interface TaskFilters {
-  /** Filter by assigned user */
-  assignedToId?: string;
+  /** Filter by assigned user (null = show all tasks) */
+  assignedToId?: string | null;
   /** Filter by task status */
   status?: TaskStatus | TaskStatus[];
   /** Filter by entity type */
@@ -167,7 +167,11 @@ export class TaskService {
       .order("sequence_order", { ascending: true });
 
     // Apply filters
-    if (filters.assignedToId) {
+    if (filters.assignedToId === null) {
+      // Explicitly null = show all tasks (no filter)
+      // Don't add any assigned_to_id filter
+    } else if (filters.assignedToId) {
+      // Specific user ID provided
       query = query.eq("assigned_to_id", filters.assignedToId);
     } else {
       // Default: show user's assigned tasks (use profile ID, not auth user ID)

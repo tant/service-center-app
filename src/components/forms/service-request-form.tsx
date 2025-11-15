@@ -15,7 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck } from "@tabler/icons-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck, IconList } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { ProductSerialInput } from "./service-request/product-serial-input";
 import { trpc } from "@/components/providers/trpc-provider";
@@ -34,6 +35,7 @@ interface ServiceRequestFormData {
   receipt_status: "received" | "pending_receipt";
   preferred_delivery_method?: "pickup" | "delivery";
   delivery_address?: string;
+  workflow_id?: string;
 }
 
 interface ServiceRequestFormProps {
@@ -68,6 +70,7 @@ export function ServiceRequestForm({
   const [items, setItems] = useState<ProductItem[]>(
     initialData?.items || [{ serial_number: "" }]
   );
+  const [workflowId, setWorkflowId] = useState(initialData?.workflow_id || "");
 
   // Lookup state
   const [lookupPhone, setLookupPhone] = useState("");
@@ -81,6 +84,12 @@ export function ServiceRequestForm({
       retry: false,
     }
   );
+
+  // Workflow query - only fetch service_request workflows
+  const { data: workflows } = trpc.workflow.template.list.useQuery({
+    entity_type: 'service_request',
+    is_active: true,
+  });
 
   // Debounced phone lookup
   useEffect(() => {
@@ -186,6 +195,7 @@ export function ServiceRequestForm({
     receipt_status: receiptStatus,
     preferred_delivery_method: deliveryMethod,
     delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
+    workflow_id: workflowId || undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -217,7 +227,7 @@ export function ServiceRequestForm({
         form.removeEventListener("submit-draft", handleSaveDraft as EventListener);
       };
     }
-  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress, workflowId]);
 
   // Listen for submit-and-send event
   useEffect(() => {
@@ -228,7 +238,7 @@ export function ServiceRequestForm({
         form.removeEventListener("submit-and-send", handleSubmitAndSend as EventListener);
       };
     }
-  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress]);
+  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress, workflowId]);
 
   return (
     <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">
@@ -284,6 +294,57 @@ export function ServiceRequestForm({
             disabled={isSubmitting}
           />
           <p className="text-xs text-muted-foreground">{issueDescription.length} ký tự</p>
+        </CardContent>
+      </Card>
+
+      {/* Workflow Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <IconList className="h-4 w-4" />
+            Quy trình xử lý (tùy chọn)
+          </CardTitle>
+          <CardDescription>
+            Chọn quy trình xử lý để tự động tạo các bước công việc cho phiếu yêu cầu
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Select
+              value={workflowId || "none"}
+              onValueChange={(value) => setWorkflowId(value === "none" ? "" : value)}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="-- Chọn quy trình --" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Không sử dụng quy trình</SelectItem>
+                {workflows?.map((workflow) => (
+                  <SelectItem key={workflow.id} value={workflow.id}>
+                    {workflow.name} ({workflow.tasks?.length || 0} bước)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {workflowId && workflows && (
+            <div className="mt-2 p-3 bg-muted rounded-md">
+              <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
+              <ol className="list-decimal ml-4 space-y-1">
+                {workflows
+                  ?.find((w) => w.id === workflowId)
+                  ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                  ?.map((task: any) => (
+                    <li key={task.id} className="text-sm text-muted-foreground">
+                      {task.task_type?.name || 'Công việc'}
+                      {task.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </li>
+                  ))}
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
 

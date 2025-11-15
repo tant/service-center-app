@@ -66,6 +66,7 @@ graph TB
 
     subgraph "Advanced Feature Routers"
         Workflow[workflow<br/>Task Templates & Execution]
+        Tasks[tasks<br/>Task Notes & Requirements]
         Warehouse[warehouse<br/>Physical/Virtual Warehouses]
         Inventory[inventory<br/>Stock Documents + Serials<br/>6 Sub-Routers]
         PhysicalProducts[physicalProducts<br/>Serialized Products]
@@ -82,6 +83,7 @@ graph TB
     AppRouter --> Brands
     AppRouter --> Revenue
     AppRouter --> Workflow
+    AppRouter --> Tasks
     AppRouter --> Warehouse
     AppRouter --> Inventory
     AppRouter --> PhysicalProducts
@@ -92,6 +94,8 @@ graph TB
     Inventory --> Inv2[transfers<br/>serials<br/>approvals]
 
     Workflow --> W1[createTemplate<br/>updateTemplate<br/>switchTemplate]
+
+    Tasks --> T1[getTaskRequirements<br/>addTaskNotes<br/>completeTask]
 
     ServiceRequest --> SR1[createRequest<br/>trackRequest<br/>convertToTicket]
 
@@ -114,7 +118,8 @@ src/server/routers/
 ├── parts.ts             # Parts inventory
 ├── brands.ts            # Brand management
 ├── revenue.ts           # Revenue analytics
-├── workflow.ts          # Task templates & execution (43KB)
+├── workflow.ts          # Workflow templates & execution (43KB)
+├── tasks.ts             # Polymorphic task management (task notes, attachments, requirements)
 ├── warehouse.ts         # Physical/virtual warehouses (4KB)
 ├── inventory/           # Stock management with 6 sub-routers:
 │   ├── index.ts         #   - Main inventory router
@@ -129,7 +134,7 @@ src/server/routers/
 └── notifications.ts     # Email notification system (11KB)
 ```
 
-**Total Routers:** 14 main routers + 6 inventory sub-routers = 20 total
+**Total Routers:** 15 main routers + 6 inventory sub-routers = 21 total
 
 ---
 

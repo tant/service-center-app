@@ -1,7 +1,7 @@
 # User Guide: Task Management System
 
-**Version:** 1.0
-**Date:** November 3, 2025
+**Version:** 1.1 (Task Notes & Requirements)
+**Date:** November 15, 2025
 **Target Audience:** Technicians, Managers, Administrators
 
 ---
@@ -50,6 +50,9 @@ Each task card displays:
   - Inventory Issue: Document number (e.g., GIN-2025-001)
 - **Priority Badge** (Mức ưu tiên): High, Normal, Low, Urgent
 - **Status Badge** (Trạng thái): Pending, In Progress, Completed, Blocked
+- **Requirement Badges** (Yêu cầu): **(Added 2025-11-15)**
+  - 📝 **Yêu cầu ghi chú** - Task notes required before completion
+  - 📷 **Yêu cầu ảnh** - Photo attachments required before completion
 - **Due Date** (Hạn chót): Deadline with countdown
 - **Assigned To** (Người thực hiện): Current assignee or "Unassigned"
 - **Action Buttons** (Hành động): Start, Complete, Block, Unblock
@@ -81,15 +84,32 @@ Each task card displays:
 
 **Steps:**
 1. Locate the task with **In Progress** status
-2. Click **Complete Task** (Hoàn thành) button
-3. Enter **completion notes** in the dialog:
+2. Click on the task to view **Task Detail Page**
+3. Review task requirements (badges will show if notes or photos are required):
+   - 📝 **Yêu cầu ghi chú** - Task notes required
+   - 📷 **Yêu cầu ảnh** - Photo attachments required
+4. Add **task notes** during execution (if required):
+   - Click **Thêm ghi chú** in the Task Notes section
+   - Enter your work log notes
+   - Click **Lưu ghi chú**
+   - Notes are timestamped with your name automatically
+5. Upload **photos/attachments** (if required):
+   - Use the attachment section to upload images
+   - At least 1 attachment required if task has photo requirement
+6. Click **Complete Task** (Hoàn thành) button
+7. Enter **completion notes** in the dialog:
    - Describe what was done
    - Note any issues encountered
    - Mention parts used or recommendations
-4. Click **Complete** to submit
-5. Task status changes to **Completed** (Hoàn thành)
+8. Click **Complete** to submit
+9. Task status changes to **Completed** (Hoàn thành)
 
-**Note:** Completion notes are **required** and will be saved for audit purposes.
+**Important Notes:**
+- **Completion notes** are **always required** (minimum 5 characters)
+- **Task notes** are required only if badge shows "Yêu cầu ghi chú"
+- **Photo attachments** are required only if badge shows "Yêu cầu ảnh"
+- System will show error message if requirements not met
+- You can add multiple task notes during task execution
 
 ---
 

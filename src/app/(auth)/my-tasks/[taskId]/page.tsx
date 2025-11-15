@@ -183,14 +183,6 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
         </CardContent>
       </Card>
 
-      {/* Task Notes Section */}
-      <TaskNotesSection
-        taskId={taskId}
-        currentNotes={task.task_notes || ""}
-        isRequired={requirements?.requiresNotes}
-        isCompleted={task.status === "completed"}
-      />
-
       {/* Attachment Upload - Only for in_progress or pending tasks */}
       {(task.status === "in_progress" || task.status === "pending") && (
         <TaskAttachmentUpload
@@ -198,6 +190,14 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
           onUploadComplete={() => taskQuery.refetch()}
         />
       )}
+
+      {/* Task Notes Section */}
+      <TaskNotesSection
+        taskId={taskId}
+        currentNotes={task.task_notes || ""}
+        isRequired={requirements?.requiresNotes}
+        isCompleted={task.status === "completed"}
+      /> 
 
       {/* Completed Task - Show attachments read-only */}
       {task.status === "completed" && (

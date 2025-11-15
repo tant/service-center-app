@@ -1,7 +1,7 @@
 # Database Schema Files
 
-**Version:** 4.0 (Schema Refactoring Complete - 100-900 Numbering)
-**Last Updated:** 2025-10-31
+**Version:** 4.1 (Task Notes & Requirements)
+**Last Updated:** 2025-11-15
 
 This directory contains the **source of truth** for the Service Center PostgreSQL database schema.
 
@@ -128,6 +128,7 @@ pnpx supabase db reset  # WARNING: Deletes all data
 
 ## Version History
 
+- **v4.1 (2025-11-15)**: Task notes & requirements system (task_notes field, conditional validation)
 - **v4.0 (2025-10-31)**: Schema refactoring - 100-900 numbering scheme
 - **v3.0 (2025-10-29)**: Inventory workflow v2.0 (non-blocking)
 - **v2.0 (2025-10-27)**: Audit logging and RBAC

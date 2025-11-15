@@ -33,7 +33,7 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
   const completeTaskMutation = trpc.tasks.completeTask.useMutation({
     onSuccess: () => {
       toast.success("Công việc đã hoàn thành!");
-      router.push("/my-tasks");
+      router.back();
     },
     onError: (error) => {
       toast.error(`Lỗi: ${error.message}`);
@@ -82,7 +82,7 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/my-tasks")}
+          onClick={() => router.back()}
         >
           <IconArrowLeft className="h-4 w-4 mr-2" />
           Quay lại

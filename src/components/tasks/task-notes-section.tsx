@@ -79,7 +79,7 @@ export function TaskNotesSection({
       <CardContent className="space-y-4">
         {/* Existing Notes */}
         {currentNotes && (
-          <div className="bg-muted/50 p-4 rounded-md space-y-2.5">
+          <div className="space-y-4">
             {currentNotes.split('\n\n').map((entry, idx) => {
               // Parse format: [timestamp] username: note
               // Use [\s\S]* instead of /s flag for compatibility
@@ -97,9 +97,12 @@ export function TaskNotesSection({
               const [, timestamp, userName, note] = match;
 
               return (
-                <div key={idx}>
+                <div
+                  key={idx}
+                  className="bg-card/50 border border-border/50 rounded-lg p-4 shadow-sm"
+                >
                   {/* Metadata line: timestamp + username badge */}
-                  <div className="flex items-baseline gap-2 mb-1">
+                  <div className="flex items-baseline gap-2 mb-2">
                     <span className="text-xs text-muted-foreground shrink-0">
                       {timestamp}
                     </span>

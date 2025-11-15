@@ -194,14 +194,14 @@ export function RMABatchesTable() {
           <Table>
             <TableHeader className="bg-muted sticky top-0 z-10">
               <TableRow>
-                <TableHead className="w-[120px]">Mã lô</TableHead>
+                <TableHead className="w-[120px] pl-4 lg:pl-6">Mã lô</TableHead>
                 <TableHead>Nhà cung cấp</TableHead>
                 <TableHead className="text-center">Số SP</TableHead>
                 <TableHead>Ngày vận chuyển</TableHead>
                 <TableHead>Mã vận đơn</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Người tạo</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
+                <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -224,7 +224,7 @@ export function RMABatchesTable() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(batch.id)}
                   >
-                    <TableCell className="font-medium text-sm">
+                    <TableCell className="font-medium text-sm pl-4 lg:pl-6">
                       {batch.batch_number || `RMA-${batch.id.slice(0, 8)}`}
                     </TableCell>
                     <TableCell className="text-sm">{batch.supplier_name}</TableCell>
@@ -237,7 +237,7 @@ export function RMABatchesTable() {
                     <TableCell className="text-sm">
                       {batch.created_by?.full_name || "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-4 lg:pr-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

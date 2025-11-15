@@ -114,7 +114,15 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
       .slice(0, 2);
   };
 
-  const handleRowClick = (task: TaskWithContext) => {
+  const handleTaskClick = (taskId: string) => {
+    // Navigate to task detail page
+    router.push(`/my-tasks/${taskId}`);
+  };
+
+  const handleEntityClick = (task: TaskWithContext, e: React.MouseEvent) => {
+    // Stop propagation to prevent row click
+    e.stopPropagation();
+
     // Navigate to entity detail page based on entity type
     const routes = {
       service_ticket: `/operations/tickets/${task.entity_id}`,
@@ -144,13 +152,13 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Công việc</TableHead>
+              <TableHead className="pl-4 lg:pl-6">Công việc</TableHead>
               <TableHead>Liên quan</TableHead>
               <TableHead>Phân công</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thứ tự</TableHead>
               <TableHead>Hạn chót</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -171,13 +179,13 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Công việc</TableHead>
+              <TableHead className="pl-4 lg:pl-6">Công việc</TableHead>
               <TableHead>Liên quan</TableHead>
               <TableHead>Phân công</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thứ tự</TableHead>
               <TableHead>Hạn chót</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -193,17 +201,17 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border bg-card">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Công việc</TableHead>
+            <TableHead className="pl-4 lg:pl-6">Công việc</TableHead>
             <TableHead>Liên quan</TableHead>
             <TableHead>Phân công</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead className="w-[70px]">Thứ tự</TableHead>
             <TableHead className="w-[120px]">Hạn chót</TableHead>
-            <TableHead className="text-right w-[80px]">Thao tác</TableHead>
+            <TableHead className="text-right w-[80px] pr-4 lg:pr-6">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -214,10 +222,10 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
                 "cursor-pointer hover:bg-muted/50",
                 isOverdue(task) && "bg-red-50 dark:bg-red-950/20"
               )}
-              onClick={() => handleRowClick(task)}
+              onClick={() => handleTaskClick(task.id)}
             >
               {/* Task Name */}
-              <TableCell className="font-medium max-w-[300px]">
+              <TableCell className="font-medium max-w-[300px] pl-4 lg:pl-6">
                 <div className="flex flex-col gap-1">
                   <span className="truncate">{task.name}</span>
                   {task.is_required && (
@@ -230,7 +238,10 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
 
               {/* Entity Type + Number */}
               <TableCell>
-                <div className="flex flex-col gap-1">
+                <div
+                  className="flex flex-col gap-1 w-fit cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md hover:-translate-y-0.5 rounded-md p-1 -m-1"
+                  onClick={(e) => handleEntityClick(task, e)}
+                >
                   {getEntityTypeBadge(task.entity_type)}
                   {task.entity_context.subtitle && (
                     <span className="text-xs text-muted-foreground">
@@ -285,13 +296,13 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
               </TableCell>
 
               {/* Actions */}
-              <TableCell className="text-right">
+              <TableCell className="text-right pr-4 lg:pr-6">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleRowClick(task);
+                    handleTaskClick(task.id);
                   }}
                 >
                   <FileText className="h-4 w-4" />

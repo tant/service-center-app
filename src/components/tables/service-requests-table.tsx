@@ -451,8 +451,14 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
               <TableHeader className="bg-muted sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
+                    {headerGroup.headers.map((header, index) => (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          index === 0 && "pl-4 lg:pl-6",
+                          index === headerGroup.headers.length - 1 && "pr-4 lg:pr-6"
+                        )}
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -468,8 +474,14 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                 {table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                      {row.getVisibleCells().map((cell, index) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            index === 0 && "pl-4 lg:pl-6",
+                            index === row.getVisibleCells().length - 1 && "pr-4 lg:pr-6"
+                          )}
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -616,19 +628,19 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                 <Table>
                   <TableHeader className="bg-muted sticky top-0 z-10">
                     <TableRow>
-                      <TableHead>Mã theo dõi</TableHead>
+                      <TableHead className="pl-4 lg:pl-6">Mã theo dõi</TableHead>
                       <TableHead>Khách hàng</TableHead>
                       <TableHead>Sản phẩm</TableHead>
                       <TableHead>Serial</TableHead>
                       <TableHead>Địa chỉ gửi</TableHead>
                       <TableHead>Đã gửi</TableHead>
-                      <TableHead className="text-right">Thao tác</TableHead>
+                      <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {incomingData.requests.map((request: any) => (
                       <TableRow key={request.id}>
-                        <TableCell>
+                        <TableCell className="pl-4 lg:pl-6">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-sm font-medium">{request.tracking_token}</span>
                             <Badge variant="outline">
@@ -688,7 +700,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right pr-4 lg:pr-6">
                           <div className="flex gap-2 justify-end">
                             <Button
                               variant="outline"

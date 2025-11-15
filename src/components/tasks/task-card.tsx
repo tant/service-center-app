@@ -22,6 +22,7 @@ interface TaskCardProps {
   onBlockTask?: (taskId: string) => void;
   onUnblockTask?: (taskId: string) => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 export function TaskCard({
@@ -31,6 +32,7 @@ export function TaskCard({
   onBlockTask,
   onUnblockTask,
   isLoading,
+  disabled = false,
 }: TaskCardProps) {
   const router = useRouter();
   const canStart = task.status === "pending" || task.status === "blocked";
@@ -183,7 +185,7 @@ export function TaskCard({
         {canStart && onStartTask && (
           <Button
             onClick={() => onStartTask(task.id)}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             size="sm"
             className="flex-1"
           >
@@ -194,7 +196,7 @@ export function TaskCard({
         {canComplete && onCompleteTask && (
           <Button
             onClick={() => onCompleteTask(task.id)}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             size="sm"
             className="flex-1"
           >
@@ -205,7 +207,7 @@ export function TaskCard({
         {canBlock && onBlockTask && (
           <Button
             onClick={() => onBlockTask(task.id)}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             variant="destructive"
             size="sm"
             className="flex-1"
@@ -217,7 +219,7 @@ export function TaskCard({
         {canUnblock && onUnblockTask && (
           <Button
             onClick={() => onUnblockTask(task.id)}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             variant="outline"
             size="sm"
             className="flex-1"

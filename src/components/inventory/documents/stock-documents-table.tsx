@@ -207,14 +207,14 @@ export function StockDocumentsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Số chứng từ</TableHead>
+              <TableHead className="pl-4 lg:pl-6">Số chứng từ</TableHead>
               {documentType === "all" && <TableHead>Loại</TableHead>}
               <TableHead>Ngày</TableHead>
               <TableHead>Người tạo</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Serial thiếu</TableHead>
               <TableHead>Ghi chú</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -237,7 +237,7 @@ export function StockDocumentsTable() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleRowClick(doc)}
                 >
-                  <TableCell className="font-medium">{doc.documentNumber}</TableCell>
+                  <TableCell className="font-medium pl-4 lg:pl-6">{doc.documentNumber}</TableCell>
                   {documentType === "all" && <TableCell>{getDocumentTypeBadge(doc.documentType)}</TableCell>}
                   <TableCell className="text-muted-foreground">
                     {doc.date ? format(new Date(doc.date), "dd/MM/yyyy") : "-"}
@@ -266,7 +266,7 @@ export function StockDocumentsTable() {
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {doc.notes || "-"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4 lg:pr-6">
                     <Button
                       variant="ghost"
                       size="sm"

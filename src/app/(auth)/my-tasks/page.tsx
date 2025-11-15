@@ -325,7 +325,7 @@ export default function MyTasksPage() {
                   </div>
                 ) : (
                   // Table UI - For "All Tasks" view
-                  <TasksTable tasks={tasks} isLoading={false} />
+                    <TasksTable tasks={tasks} isLoading={false} />
                 )}
               </>
             )}

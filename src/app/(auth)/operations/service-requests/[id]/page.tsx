@@ -315,6 +315,7 @@ export default function ServiceRequestDetailPage() {
                         blockTaskMutation.isPending ||
                         unblockTaskMutation.isPending
                       }
+                      disabled={request.status === "cancelled"}
                     />
                   ))}
                 </CardContent>

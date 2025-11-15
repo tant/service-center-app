@@ -78,6 +78,14 @@ const completeTaskSchema = z.object({
 });
 
 /**
+ * Add task notes schema
+ */
+const addTaskNotesSchema = z.object({
+  taskId: z.string().uuid("Task ID must be a valid UUID"),
+  notes: z.string().min(1, "Ghi chú không được để trống"),
+});
+
+/**
  * Block task schema
  */
 const blockTaskSchema = z.object({
@@ -228,6 +236,75 @@ export const tasksRouter = router({
       return taskService.startTask({
         taskId: input.taskId,
         userId,
+      });
+    }),
+
+  /**
+   * Get task requirements (requires_notes, requires_photo)
+   *
+   * @endpoint GET /api/trpc/tasks.getTaskRequirements
+   * @auth Required
+   *
+   * Returns the task definition's requirements flags:
+   * - requiresNotes: Whether task_notes is mandatory
+   * - requiresPhoto: Whether attachments are mandatory
+   *
+   * @example
+   * ```typescript
+   * const requirements = await trpc.tasks.getTaskRequirements.useQuery({
+   *   taskId: 'task-uuid'
+   * });
+   * if (requirements.requiresNotes) {
+   *   // Show notes as required
+   * }
+   * ```
+   */
+  getTaskRequirements: publicProcedure
+    .use(requireAnyAuthenticated)
+    .input(taskIdSchema)
+    .query(async ({ input, ctx }) => {
+      const taskService = new TaskService(ctx);
+      return await taskService.getTaskRequirements(input.taskId);
+    }),
+
+  /**
+   * Add timestamped notes to task
+   *
+   * @endpoint POST /api/trpc/tasks.addTaskNotes
+   * @auth Required
+   *
+   * Appends notes with automatic timestamp and user name.
+   * Cannot edit completed or skipped tasks.
+   *
+   * @example
+   * ```typescript
+   * const task = await trpc.tasks.addTaskNotes.useMutation();
+   * task.mutate({
+   *   taskId: 'task-uuid',
+   *   notes: 'Đã kiểm tra nguồn điện - OK'
+   * });
+   * ```
+   */
+  addTaskNotes: publicProcedure
+    .use(requireAnyAuthenticated)
+    .input(addTaskNotesSchema)
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get profile ID (task_notes uses profiles.id, not auth.users.id)
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        userId
+      );
+
+      const taskService = new TaskService(ctx);
+      return await taskService.addTaskNotes({
+        taskId: input.taskId,
+        notes: input.notes,
+        userId: profileId,
       });
     }),
 
@@ -668,6 +745,12 @@ export const tasksRouter = router({
         throw new Error("User not authenticated");
       }
 
+      // Convert auth.users.id to profiles.id (uploaded_by references profiles table)
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id
+      );
+
       const { data, error } = await ctx.supabaseAdmin
         .from("task_attachments")
         .insert({
@@ -676,7 +759,7 @@ export const tasksRouter = router({
           file_path: input.filePath,
           file_size_bytes: input.fileSize,
           mime_type: input.mimeType,
-          uploaded_by: user.id,
+          uploaded_by: profileId, // Use profile.id instead of auth.users.id
         })
         .select()
         .single();

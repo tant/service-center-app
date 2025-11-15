@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { IconArrowLeft, IconClock, IconUser, IconFileText, IconChecklist } from "@tabler/icons-react";
+import { IconArrowLeft, IconClock, IconUser, IconFileText, IconChecklist, IconNotes, IconPhoto } from "@tabler/icons-react";
 import { trpc } from "@/components/providers/trpc-provider";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
+import { TaskNotesSection } from "@/components/tasks/task-notes-section";
 import { toast } from "sonner";
 
 interface TaskDetailPageProps {
@@ -27,6 +28,8 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
   const router = useRouter();
 
   const taskQuery = trpc.tasks.getTask.useQuery({ taskId });
+  const { data: requirements } = trpc.tasks.getTaskRequirements.useQuery({ taskId });
+
   const completeTaskMutation = trpc.tasks.completeTask.useMutation({
     onSuccess: () => {
       toast.success("Công việc đã hoàn thành!");
@@ -85,7 +88,21 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
           Quay lại
         </Button>
         <h1 className="text-3xl font-bold flex-1">{task.name}</h1>
-        {getStatusBadge(task.status)}
+        <div className="flex items-center gap-2">
+          {requirements?.requiresNotes && (
+            <Badge variant="outline">
+              <IconNotes className="h-3 w-3 mr-1" />
+              Yêu cầu ghi chú
+            </Badge>
+          )}
+          {requirements?.requiresPhoto && (
+            <Badge variant="outline">
+              <IconPhoto className="h-3 w-3 mr-1" />
+              Yêu cầu ảnh
+            </Badge>
+          )}
+          {getStatusBadge(task.status)}
+        </div>
       </div>
 
       {/* Task Info */}
@@ -165,6 +182,14 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Task Notes Section */}
+      <TaskNotesSection
+        taskId={taskId}
+        currentNotes={task.task_notes || ""}
+        isRequired={requirements?.requiresNotes}
+        isCompleted={task.status === "completed"}
+      />
 
       {/* Attachment Upload - Only for in_progress or pending tasks */}
       {(task.status === "in_progress" || task.status === "pending") && (

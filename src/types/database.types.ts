@@ -350,6 +350,7 @@ export type Database = {
           started_at: string | null
           status: Database["public"]["Enums"]["task_status"]
           task_id: string
+          task_notes: string | null
           updated_at: string
           workflow_id: string | null
           workflow_task_id: string | null
@@ -374,6 +375,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           task_id: string
+          task_notes?: string | null
           updated_at?: string
           workflow_id?: string | null
           workflow_task_id?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           started_at?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           task_id?: string
+          task_notes?: string | null
           updated_at?: string
           workflow_id?: string | null
           workflow_task_id?: string | null
@@ -1372,7 +1375,7 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_ticket_attachments_ticket_id_fkey"
@@ -1437,7 +1440,7 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_ticket_comments_ticket_id_fkey"
@@ -1465,7 +1468,7 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1515,7 +1518,7 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_ticket_parts_part_id_fkey"
@@ -1550,7 +1553,7 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1646,14 +1649,14 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_tickets_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_tickets_customer_id_fkey"
@@ -1709,7 +1712,7 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_tickets_workflow_id_fkey"
@@ -3054,7 +3057,7 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "service_ticket_comments_ticket_id_fkey"
@@ -3082,7 +3085,7 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }

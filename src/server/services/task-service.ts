@@ -31,6 +31,7 @@ export interface TaskData {
   started_at: string | null;
   completed_at: string | null;
   due_date: string | null;
+  task_notes: string | null;
   completion_notes: string | null;
   blocked_reason: string | null;
   metadata: Record<string, unknown>;
@@ -386,6 +387,116 @@ export class TaskService {
   }
 
   /**
+   * Get task requirements (requires_notes, requires_photo) via JOIN
+   *
+   * @param taskId - Entity task UUID
+   * @returns Object with requiresNotes and requiresPhoto booleans
+   */
+  async getTaskRequirements(taskId: string): Promise<{
+    requiresNotes: boolean;
+    requiresPhoto: boolean;
+  }> {
+    const { data, error } = await this.ctx.supabaseAdmin
+      .from("entity_tasks")
+      .select(
+        `
+        id,
+        task:tasks!inner (
+          requires_notes,
+          requires_photo
+        )
+      `
+      )
+      .eq("id", taskId)
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to get task requirements: ${error.message}`);
+    }
+
+    if (!data?.task) {
+      throw new Error("Task definition not found");
+    }
+
+    // Handle nested task object (Supabase may return array or object)
+    const task = Array.isArray(data.task) ? data.task[0] : data.task;
+
+    return {
+      requiresNotes: task.requires_notes,
+      requiresPhoto: task.requires_photo,
+    };
+  }
+
+  /**
+   * Append timestamped notes to task_notes field
+   *
+   * @param input - Object with taskId and notes
+   * @returns Updated task with entity context
+   * @throws Error if task is completed/skipped or update fails
+   */
+  async addTaskNotes(input: {
+    taskId: string;
+    notes: string;
+    userId: string;
+  }): Promise<TaskWithContext> {
+    const { taskId, notes, userId } = input;
+
+    // Get current task
+    const { data: task, error: fetchError } = await this.ctx.supabaseAdmin
+      .from("entity_tasks")
+      .select("task_notes, status")
+      .eq("id", taskId)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch task: ${fetchError.message}`);
+    }
+
+    // Prevent editing completed/skipped tasks
+    if (task.status === "completed" || task.status === "skipped") {
+      throw new Error(
+        "Không thể thêm ghi chú vào công việc đã hoàn thành hoặc đã bỏ qua"
+      );
+    }
+
+    // Get profile for user name
+    const { data: profile } = await this.ctx.supabaseAdmin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+
+    const userName = profile?.full_name || "Unknown User";
+    // Format timestamp in Vietnamese locale for better readability
+    const timestamp = new Date().toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const newEntry = `[${timestamp}] ${userName}: ${notes}`;
+
+    // Append to existing notes or create new
+    const updatedNotes = task.task_notes
+      ? `${task.task_notes}\n\n${newEntry}`
+      : newEntry;
+
+    // Update task_notes
+    const { error: updateError } = await this.ctx.supabaseAdmin
+      .from("entity_tasks")
+      .update({ task_notes: updatedNotes })
+      .eq("id", taskId);
+
+    if (updateError) {
+      throw new Error(`Failed to add notes: ${updateError.message}`);
+    }
+
+    // Return updated task with context
+    return this.getTask(taskId);
+  }
+
+  /**
    * Complete a task
    *
    * @param input - Complete task input with notes
@@ -402,9 +513,45 @@ export class TaskService {
       return task; // Idempotent
     }
 
-    // Validate completion notes
-    if (!completionNotes || completionNotes.trim().length === 0) {
-      throw new Error("Completion notes are required");
+    // Step 1: Validate completion notes (always required)
+    if (!completionNotes || completionNotes.trim().length < 5) {
+      throw new Error("Ghi chú hoàn thành phải có ít nhất 5 ký tự");
+    }
+
+    // Step 2: Get task requirements
+    const requirements = await this.getTaskRequirements(taskId);
+
+    // Step 3: Validate task_notes if required
+    if (requirements.requiresNotes) {
+      const { data: taskData } = await this.ctx.supabaseAdmin
+        .from("entity_tasks")
+        .select("task_notes")
+        .eq("id", taskId)
+        .single();
+
+      if (!taskData?.task_notes || taskData.task_notes.trim().length === 0) {
+        throw new Error(
+          "Ghi chú công việc là bắt buộc cho loại công việc này"
+        );
+      }
+    }
+
+    // Step 4: Validate attachments if required
+    if (requirements.requiresPhoto) {
+      const { count, error: countError } = await this.ctx.supabaseAdmin
+        .from("task_attachments")
+        .select("*", { count: "exact", head: true })
+        .eq("task_id", taskId);
+
+      if (countError) {
+        throw new Error(`Failed to check attachments: ${countError.message}`);
+      }
+
+      if (!count || count === 0) {
+        throw new Error(
+          "Phải upload ít nhất 1 ảnh/tài liệu cho loại công việc này"
+        );
+      }
     }
 
     // Lookup profile ID from auth user ID

@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS public.entity_tasks (
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   due_date TIMESTAMPTZ,
+  task_notes TEXT,
   completion_notes TEXT,
   blocked_reason TEXT,
   metadata JSONB DEFAULT '{}'::jsonb,
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS public.entity_tasks (
   CONSTRAINT entity_tasks_entity_sequence_unique UNIQUE(entity_type, entity_id, sequence_order)
 );
 COMMENT ON TABLE public.entity_tasks IS 'Polymorphic task instances that can be associated with any entity type';
+COMMENT ON COLUMN public.entity_tasks.task_notes IS 'Runtime work log added during task execution. Can be updated multiple times with timestamps. Required based on tasks.requires_notes flag. Separate from completion_notes which is always required.';
 COMMENT ON COLUMN public.entity_tasks.metadata IS 'Extensible JSON field for entity-specific task data (e.g., serial entry progress)';
 CREATE TRIGGER trigger_entity_tasks_updated_at BEFORE UPDATE ON public.entity_tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 

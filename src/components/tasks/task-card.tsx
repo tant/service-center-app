@@ -6,12 +6,13 @@
 
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TaskStatusBadge } from "./task-status-badge";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Clock, User, Calendar, AlertCircle, ExternalLink } from "lucide-react";
+import { Clock, User, Calendar, AlertCircle, ExternalLink, Eye } from "lucide-react";
 import type { TaskWithContext } from "@/server/services/task-service";
 
 interface TaskCardProps {
@@ -31,6 +32,7 @@ export function TaskCard({
   onUnblockTask,
   isLoading,
 }: TaskCardProps) {
+  const router = useRouter();
   const canStart = task.status === "pending" || task.status === "blocked";
   const canComplete = task.status === "in_progress";
   const canBlock = task.status === "in_progress";
@@ -166,51 +168,64 @@ export function TaskCard({
       </CardContent>
 
       {/* Action Buttons */}
-      {(canStart || canComplete || canBlock || canUnblock) && (
-        <CardFooter className="gap-2">
-          {canStart && onStartTask && (
-            <Button
-              onClick={() => onStartTask(task.id)}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Bắt đầu
-            </Button>
-          )}
+      <CardFooter className="gap-2 flex-wrap">
+        {/* View Details Button - Always visible */}
+        <Button
+          onClick={() => router.push(`/my-tasks/${task.id}`)}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          Xem chi tiết
+        </Button>
 
-          {canComplete && onCompleteTask && (
-            <Button
-              onClick={() => onCompleteTask(task.id)}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Hoàn thành
-            </Button>
-          )}
+        {canStart && onStartTask && (
+          <Button
+            onClick={() => onStartTask(task.id)}
+            disabled={isLoading}
+            size="sm"
+            className="flex-1"
+          >
+            Bắt đầu
+          </Button>
+        )}
 
-          {canBlock && onBlockTask && (
-            <Button
-              onClick={() => onBlockTask(task.id)}
-              disabled={isLoading}
-              variant="destructive"
-              className="flex-1"
-            >
-              Báo chặn
-            </Button>
-          )}
+        {canComplete && onCompleteTask && (
+          <Button
+            onClick={() => onCompleteTask(task.id)}
+            disabled={isLoading}
+            size="sm"
+            className="flex-1"
+          >
+            Hoàn thành
+          </Button>
+        )}
 
-          {canUnblock && onUnblockTask && (
-            <Button
-              onClick={() => onUnblockTask(task.id)}
-              disabled={isLoading}
-              variant="outline"
-              className="flex-1"
-            >
-              Bỏ chặn
-            </Button>
-          )}
-        </CardFooter>
-      )}
+        {canBlock && onBlockTask && (
+          <Button
+            onClick={() => onBlockTask(task.id)}
+            disabled={isLoading}
+            variant="destructive"
+            size="sm"
+            className="flex-1"
+          >
+            Báo chặn
+          </Button>
+        )}
+
+        {canUnblock && onUnblockTask && (
+          <Button
+            onClick={() => onUnblockTask(task.id)}
+            disabled={isLoading}
+            variant="outline"
+            size="sm"
+            className="flex-1"
+          >
+            Bỏ chặn
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   );
 }

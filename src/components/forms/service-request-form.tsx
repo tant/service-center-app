@@ -297,56 +297,58 @@ export function ServiceRequestForm({
         </CardContent>
       </Card>
 
-      {/* Workflow Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <IconList className="h-4 w-4" />
-            Quy trình xử lý (tùy chọn)
-          </CardTitle>
-          <CardDescription>
-            Chọn quy trình xử lý để tự động tạo các bước công việc cho phiếu yêu cầu
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Select
-              value={workflowId || "none"}
-              onValueChange={(value) => setWorkflowId(value === "none" ? "" : value)}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="-- Chọn quy trình --" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Không sử dụng quy trình</SelectItem>
-                {workflows?.map((workflow) => (
-                  <SelectItem key={workflow.id} value={workflow.id}>
-                    {workflow.name} ({workflow.tasks?.length || 0} bước)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {workflowId && workflows && (
-            <div className="mt-2 p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
-              <ol className="list-decimal ml-4 space-y-1">
-                {workflows
-                  ?.find((w) => w.id === workflowId)
-                  ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
-                  ?.map((task: any) => (
-                    <li key={task.id} className="text-sm text-muted-foreground">
-                      {task.task_type?.name || 'Công việc'}
-                      {task.is_required && <span className="text-red-500 ml-1">*</span>}
-                    </li>
+      {/* Workflow Selection - Only show in create mode */}
+      {mode === "create" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <IconList className="h-4 w-4" />
+              Quy trình xử lý (tùy chọn)
+            </CardTitle>
+            <CardDescription>
+              Chọn quy trình xử lý để tự động tạo các bước công việc cho phiếu yêu cầu
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Select
+                value={workflowId || "none"}
+                onValueChange={(value) => setWorkflowId(value === "none" ? "" : value)}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="-- Chọn quy trình --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Không sử dụng quy trình</SelectItem>
+                  {workflows?.map((workflow) => (
+                    <SelectItem key={workflow.id} value={workflow.id}>
+                      {workflow.name} ({workflow.tasks?.length || 0} bước)
+                    </SelectItem>
                   ))}
-              </ol>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {workflowId && workflows && (
+              <div className="mt-2 p-3 bg-muted rounded-md">
+                <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
+                <ol className="list-decimal ml-4 space-y-1">
+                  {workflows
+                    ?.find((w) => w.id === workflowId)
+                    ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                    ?.map((task: any) => (
+                      <li key={task.id} className="text-sm text-muted-foreground">
+                        {task.task_type?.name || 'Công việc'}
+                        {task.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </li>
+                    ))}
+                </ol>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customer Information */}
       <Card>

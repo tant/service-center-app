@@ -769,6 +769,58 @@ export class TaskService {
       );
     }
 
+    // Update workflow_id on the entity (for all entity types that support it)
+    let shouldCreateTasks = true;
+
+    if (entityType === "service_ticket") {
+      await this.ctx.supabaseAdmin
+        .from("service_tickets")
+        .update({ workflow_id: workflowId })
+        .eq("id", entityId);
+    } else if (entityType === "service_request") {
+      // Check if service request is draft BEFORE updating workflow_id
+      const { data: request } = await this.ctx.supabaseAdmin
+        .from("service_requests")
+        .select("id, status, workflow_id")
+        .eq("id", entityId)
+        .single();
+
+      // Only create tasks if NOT draft
+      // NOTE: When called from submitDraft, status is already updated to 'submitted'
+      // But when called from WorkflowSelectionDialog for draft request, status is still 'draft'
+      if (request?.status === "draft") {
+        shouldCreateTasks = false;
+      }
+
+      // Update workflow_id (only if not already set to avoid unnecessary update)
+      if (request?.workflow_id !== workflowId) {
+        await this.ctx.supabaseAdmin
+          .from("service_requests")
+          .update({ workflow_id: workflowId })
+          .eq("id", entityId);
+      }
+    } else if (entityType === "inventory_receipt") {
+      await this.ctx.supabaseAdmin
+        .from("inventory_receipts")
+        .update({ workflow_id: workflowId })
+        .eq("id", entityId);
+    } else if (entityType === "inventory_issue") {
+      await this.ctx.supabaseAdmin
+        .from("inventory_issues")
+        .update({ workflow_id: workflowId })
+        .eq("id", entityId);
+    } else if (entityType === "inventory_transfer") {
+      await this.ctx.supabaseAdmin
+        .from("inventory_transfers")
+        .update({ workflow_id: workflowId })
+        .eq("id", entityId);
+    }
+
+    // Return early if we shouldn't create tasks (draft service request)
+    if (!shouldCreateTasks) {
+      return 0; // 0 tasks created
+    }
+
     // Sort tasks by sequence_order
     const sortedTasks = [...workflow.tasks].sort(
       (a, b) => a.sequence_order - b.sequence_order

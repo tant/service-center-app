@@ -287,7 +287,7 @@ export default function ServiceRequestDetailPage() {
                       </TooltipTrigger>
                       {request.workflow && (request.workflow as any).id && (
                         <TooltipContent>
-                          <p>Phiếu đã có quy trình: {(request.workflow as any).name}</p>
+                          <p>Phiếu đã có quy trình</p>
                         </TooltipContent>
                       )}
                     </Tooltip>

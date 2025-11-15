@@ -73,7 +73,11 @@ export function WorkflowSelectionDialog({
   // Create tasks from workflow mutation
   const createTasksMutation = trpc.tasks.createTasksFromWorkflow.useMutation({
     onSuccess: (taskCount) => {
-      toast.success(`Đã tạo ${taskCount} công việc từ quy trình`);
+      if (taskCount === 0) {
+        toast.success("Đã chọn quy trình. Công việc sẽ được tạo khi gửi yêu cầu.");
+      } else {
+        toast.success(`Đã tạo ${taskCount} công việc từ quy trình`);
+      }
       utils.tasks.getEntityTasks.invalidate({ entityType, entityId });
       onOpenChange(false);
       setSelectedWorkflowId(null);

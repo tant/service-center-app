@@ -129,7 +129,10 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
     if (ticket?.status === "pending") {
       await ctx.supabaseAdmin
         .from("service_tickets")
-        .update({ status: "in_progress" })
+        .update({
+          status: "in_progress",
+          updated_by: task.assigned_to_id // Set updated_by for trigger
+        })
         .eq("id", task.entity_id);
 
       // Log status change in comments
@@ -172,7 +175,10 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
       if (ticket?.status === "in_progress") {
         await ctx.supabaseAdmin
           .from("service_tickets")
-          .update({ status: "completed" })
+          .update({
+            status: "completed",
+            updated_by: task.assigned_to_id // Set updated_by for trigger
+          })
           .eq("id", task.entity_id);
 
         // Log auto-completion in comments

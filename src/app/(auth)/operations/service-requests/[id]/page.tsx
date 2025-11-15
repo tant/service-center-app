@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { IconLoader2, IconCheck, IconX, IconUser, IconPackage, IconFileText, IconTrash, IconTruck, IconEdit } from "@tabler/icons-react";
 import { useRequestDetails, useUpdateRequestStatus, useRejectRequest } from "@/hooks/use-service-request";
 import { formatDistanceToNow } from "date-fns";
@@ -249,36 +250,56 @@ export default function ServiceRequestDetailPage() {
               </CardHeader>
             </Card>
 
-            {/* Workflow Assignment */}
-            <div className="flex items-center justify-between">
-              {request.workflow && (request.workflow as any).name && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    <ListTodo className="h-3 w-3 mr-1" />
-                    {(request.workflow as any).name}
-                  </Badge>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsWorkflowDialogOpen(true)}
-                className="ml-auto"
-              >
-                <ListTodo className="h-4 w-4 mr-2" />
-                Tạo công việc
-              </Button>
-            </div>
-
             {/* Tasks Section */}
-            {tasks.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <ListTodo className="h-4 w-4" />
-                    Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
-                  </CardTitle>
-                </CardHeader>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ListTodo className="h-4 w-4" />
+                      Công việc
+                      {tasks.length > 0 && (
+                        <span className="text-muted-foreground">
+                          ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                        </span>
+                      )}
+                    </CardTitle>
+                    {request.workflow && (request.workflow as any).name && (
+                      <Badge variant="outline" className="text-xs">
+                        {(request.workflow as any).name}
+                      </Badge>
+                    )}
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsWorkflowDialogOpen(true)}
+                            disabled={!!(request.workflow && (request.workflow as any).id)}
+                          >
+                            <ListTodo className="h-4 w-4 mr-2" />
+                            Tạo công việc
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {request.workflow && (request.workflow as any).id && (
+                        <TooltipContent>
+                          <p>Phiếu đã có quy trình: {(request.workflow as any).name}</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                {tasks.length === 0 && !request.workflow && (
+                  <CardDescription>
+                    Chưa có công việc nào. Nhấn "Tạo công việc" để thêm công việc từ quy trình.
+                  </CardDescription>
+                )}
+              </CardHeader>
+              {tasks.length > 0 && (
                 <CardContent className="space-y-3">
                   {tasks.map((task: any) => (
                     <TaskCard
@@ -297,8 +318,8 @@ export default function ServiceRequestDetailPage() {
                     />
                   ))}
                 </CardContent>
-              </Card>
-            )}
+              )}
+            </Card>
 
             {/* Customer Information */}
             <Card>

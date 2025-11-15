@@ -117,10 +117,22 @@ CREATE TRIGGER "service_tickets_set_number_trigger"
 
 CREATE OR REPLACE FUNCTION public.log_status_change()
 RETURNS TRIGGER AS $$
+DECLARE
+  profile_id_var UUID;
 BEGIN
   IF (tg_op = 'UPDATE' AND old.status IS DISTINCT FROM new.status) THEN
+    -- Use updated_by if available, otherwise lookup profile from auth.uid()
+    IF new.updated_by IS NOT NULL THEN
+      profile_id_var := new.updated_by;
+    ELSE
+      -- Lookup profile.id from auth.uid() (auth.users.id)
+      SELECT id INTO profile_id_var
+      FROM public.profiles
+      WHERE user_id = auth.uid();
+    END IF;
+
     INSERT INTO public.service_ticket_comments (ticket_id, comment, comment_type, is_internal, created_by)
-    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, coalesce(new.updated_by, (SELECT auth.uid())));
+    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, profile_id_var);
   END IF;
   RETURN new;
 END;

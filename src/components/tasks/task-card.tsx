@@ -6,14 +6,50 @@
 
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TaskStatusBadge } from "./task-status-badge";
-import { Badge } from "@/components/ui/badge";
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  ChevronDown,
+  Clock,
+  Ellipsis,
+  ExternalLink,
+  Eye,
+  PauseCircle,
+  Play,
+  User,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
-import { Clock, User, Calendar, AlertCircle, ExternalLink, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { Fragment, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { TaskWithContext } from "@/server/services/task-service";
+import { TaskStatusBadge } from "./task-status-badge";
 
 interface TaskCardProps {
   task: TaskWithContext;
@@ -35,6 +71,9 @@ export function TaskCard({
   disabled = false,
 }: TaskCardProps) {
   const router = useRouter();
+  const [detailsOpen, setDetailsOpen] = useState(
+    Boolean(task.blocked_reason || task.completion_notes),
+  );
   const canStart = task.status === "pending" || task.status === "blocked";
   const canComplete = task.status === "in_progress";
   const canBlock = task.status === "in_progress";
@@ -54,7 +93,71 @@ export function TaskCard({
 
   // Check if overdue
   const isOverdue =
-    task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+    task.due_date &&
+    new Date(task.due_date) < new Date() &&
+    task.status !== "completed";
+
+  const hasAdditionalDetails = Boolean(
+    task.assigned_to ||
+      task.estimated_duration_minutes ||
+      task.started_at ||
+      task.completed_at ||
+      task.due_date,
+  );
+
+  const statusChipConfig: Record<
+    TaskWithContext["status"],
+    { label: string; className: string; icon: ReactNode }
+  > = {
+    pending: {
+      label: "Chưa bắt đầu",
+      className: "bg-amber-50 text-amber-700",
+      icon: <Play className="h-3.5 w-3.5" />,
+    },
+    in_progress: {
+      label: "Đang xử lý",
+      className: "bg-blue-50 text-blue-700",
+      icon: <Clock className="h-3.5 w-3.5" />,
+    },
+    completed: {
+      label: "Đã hoàn thành",
+      className: "bg-emerald-50 text-emerald-700",
+      icon: <CheckCircle className="h-3.5 w-3.5" />,
+    },
+    blocked: {
+      label: "Đang bị chặn",
+      className: "bg-red-50 text-red-700",
+      icon: <AlertCircle className="h-3.5 w-3.5" />,
+    },
+    skipped: {
+      label: "Đã bỏ qua",
+      className: "bg-muted text-muted-foreground",
+      icon: <AlertCircle className="h-3.5 w-3.5" />,
+    },
+  };
+
+  const statusChip = statusChipConfig[task.status];
+
+  const timeHint = (() => {
+    if (task.status === "in_progress" && task.estimated_duration_minutes) {
+      return `Ước tính còn ${task.estimated_duration_minutes} phút`;
+    }
+
+    if (task.due_date) {
+      const label = isOverdue ? "Đã quá hạn" : "Hạn";
+      return `${label}: ${formatDate(task.due_date)}`;
+    }
+
+    if (task.completed_at) {
+      return `Hoàn thành: ${formatDate(task.completed_at)}`;
+    }
+
+    if (task.started_at) {
+      return `Bắt đầu: ${formatDate(task.started_at)}`;
+    }
+
+    return "";
+  })();
 
   return (
     <Card className={isOverdue ? "border-destructive" : undefined}>
@@ -90,7 +193,12 @@ export function TaskCard({
               )}
             </div>
             <Link href={task.entity_context.url} target="_blank">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Mở liên kết liên quan"
+              >
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </Link>
@@ -102,50 +210,69 @@ export function TaskCard({
           )}
         </div>
 
-        {/* Task Details */}
-        <div className="space-y-2 text-sm">
-          {task.assigned_to && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-4 w-4" />
-              <span>{task.assigned_to.full_name}</span>
-            </div>
-          )}
+        {hasAdditionalDetails && (
+          <Collapsible
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            className="rounded-lg border bg-muted/40"
+          >
+            <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium">
+              <span>Chi tiết công việc</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  detailsOpen ? "rotate-180" : "rotate-0",
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="border-t px-3 pb-3 pt-2 space-y-2 text-sm text-muted-foreground">
+              {task.assigned_to && (
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>{task.assigned_to.full_name}</span>
+                </div>
+              )}
 
-          {task.estimated_duration_minutes && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Ước tính: {task.estimated_duration_minutes} phút</span>
-            </div>
-          )}
+              {task.estimated_duration_minutes && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Ước tính: {task.estimated_duration_minutes} phút</span>
+                </div>
+              )}
 
-          {task.due_date && (
-            <div
-              className={`flex items-center gap-2 ${
-                isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
-              }`}
-            >
-              <Calendar className="h-4 w-4" />
-              <span>
-                {isOverdue ? "Quá hạn: " : "Hạn: "}
-                {formatDate(task.due_date)}
-              </span>
-            </div>
-          )}
+              {task.due_date && (
+                <div
+                  className={cn(
+                    "flex items-center gap-2",
+                    isOverdue
+                      ? "text-destructive font-medium"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {isOverdue ? "Quá hạn: " : "Hạn: "}
+                    {formatDate(task.due_date)}
+                  </span>
+                </div>
+              )}
 
-          {task.started_at && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Bắt đầu: {formatDate(task.started_at)}</span>
-            </div>
-          )}
+              {task.started_at && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Bắt đầu: {formatDate(task.started_at)}</span>
+                </div>
+              )}
 
-          {task.completed_at && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span>Hoàn thành: {formatDate(task.completed_at)}</span>
-            </div>
-          )}
-        </div>
+              {task.completed_at && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>Hoàn thành: {formatDate(task.completed_at)}</span>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Blocked Reason */}
         {task.status === "blocked" && task.blocked_reason && (
@@ -153,8 +280,12 @@ export function TaskCard({
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="font-medium text-sm text-destructive">Lý do bị chặn:</p>
-                <p className="text-sm text-destructive/90 mt-1">{task.blocked_reason}</p>
+                <p className="font-medium text-sm text-destructive">
+                  Lý do bị chặn:
+                </p>
+                <p className="text-sm text-destructive/90 mt-1">
+                  {task.blocked_reason}
+                </p>
               </div>
             </div>
           </div>
@@ -164,70 +295,259 @@ export function TaskCard({
         {task.status === "completed" && task.completion_notes && (
           <div className="rounded-lg border bg-muted/50 p-3">
             <p className="font-medium text-sm">Ghi chú hoàn thành:</p>
-            <p className="text-sm text-muted-foreground mt-1">{task.completion_notes}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {task.completion_notes}
+            </p>
           </div>
         )}
       </CardContent>
 
       {/* Action Buttons */}
-      <CardFooter className="gap-2 flex-wrap">
-        {/* View Details Button - Always visible */}
-        <Button
-          onClick={() => router.push(`/my-tasks/${task.id}`)}
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Xem chi tiết
-        </Button>
+      <CardFooter className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {statusChip && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium",
+                statusChip.className,
+              )}
+            >
+              {statusChip.icon}
+              {statusChip.label}
+            </span>
+          )}
+          {timeHint && (
+            <span className="text-xs text-muted-foreground">{timeHint}</span>
+          )}
+        </div>
 
-        {canStart && onStartTask && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
-            onClick={() => onStartTask(task.id)}
-            disabled={isLoading || disabled}
-            size="sm"
-            className="flex-1"
-          >
-            Bắt đầu
-          </Button>
-        )}
-
-        {canComplete && onCompleteTask && (
-          <Button
-            onClick={() => onCompleteTask(task.id)}
-            disabled={isLoading || disabled}
-            size="sm"
-            className="flex-1"
-          >
-            Hoàn thành
-          </Button>
-        )}
-
-        {canBlock && onBlockTask && (
-          <Button
-            onClick={() => onBlockTask(task.id)}
-            disabled={isLoading || disabled}
-            variant="destructive"
-            size="sm"
-            className="flex-1"
-          >
-            Báo chặn
-          </Button>
-        )}
-
-        {canUnblock && onUnblockTask && (
-          <Button
-            onClick={() => onUnblockTask(task.id)}
-            disabled={isLoading || disabled}
+            onClick={() => router.push(`/my-tasks/${task.id}`)}
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex items-center gap-2"
           >
-            Bỏ chặn
+            <Eye className="h-4 w-4" />
+            Xem chi tiết
           </Button>
-        )}
+          <ActionButtons
+            task={task}
+            canStart={canStart}
+            canComplete={canComplete}
+            canBlock={canBlock}
+            canUnblock={canUnblock}
+            disabled={disabled}
+            isLoading={isLoading}
+            onStartTask={onStartTask}
+            onCompleteTask={onCompleteTask}
+            onBlockTask={onBlockTask}
+            onUnblockTask={onUnblockTask}
+          />
+        </div>
       </CardFooter>
     </Card>
+  );
+}
+
+interface ActionButtonsProps {
+  task: TaskWithContext;
+  canStart: boolean;
+  canComplete: boolean;
+  canBlock: boolean;
+  canUnblock: boolean;
+  disabled?: boolean;
+  isLoading?: boolean;
+  onStartTask?: (taskId: string) => void;
+  onCompleteTask?: (taskId: string) => void;
+  onBlockTask?: (taskId: string) => void;
+  onUnblockTask?: (taskId: string) => void;
+}
+
+function ActionButtons({
+  task,
+  canStart,
+  canComplete,
+  canBlock,
+  canUnblock,
+  disabled,
+  isLoading,
+  onStartTask,
+  onCompleteTask,
+  onBlockTask,
+  onUnblockTask,
+}: ActionButtonsProps) {
+  const isBusy = disabled || isLoading;
+
+  const handleStart = () => {
+    if (onStartTask) {
+      onStartTask(task.id);
+    }
+  };
+
+  const handleComplete = () => {
+    if (onCompleteTask) {
+      onCompleteTask(task.id);
+    }
+  };
+
+  const handleBlock = () => {
+    if (onBlockTask) {
+      onBlockTask(task.id);
+    }
+  };
+
+  const handleUnblock = () => {
+    if (onUnblockTask) {
+      onUnblockTask(task.id);
+    } else if (onStartTask) {
+      onStartTask(task.id);
+    }
+  };
+
+  type PrimaryActionKey = "start" | "complete" | "unblock" | null;
+  let primaryActionKey: PrimaryActionKey = null;
+
+  const primaryAction = (() => {
+    if (canComplete && onCompleteTask && task.status === "in_progress") {
+      primaryActionKey = "complete";
+      return (
+        <Button onClick={handleComplete} disabled={isBusy} className="flex-1">
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Hoàn thành
+        </Button>
+      );
+    }
+
+    if (canStart && onStartTask && task.status === "pending") {
+      primaryActionKey = "start";
+      return (
+        <Button onClick={handleStart} disabled={isBusy} className="flex-1">
+          <Play className="h-4 w-4 mr-2" />
+          Bắt đầu
+        </Button>
+      );
+    }
+
+    if (
+      canUnblock &&
+      (onUnblockTask || onStartTask) &&
+      task.status === "blocked"
+    ) {
+      primaryActionKey = "unblock";
+      return (
+        <Button
+          onClick={handleUnblock}
+          disabled={isBusy}
+          variant="secondary"
+          size="sm"
+          className="flex-1"
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Tiếp tục
+        </Button>
+      );
+    }
+
+    return null;
+  })();
+
+  type MoreActionItem = {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    onSelect: () => void;
+    variant?: "default" | "destructive";
+  };
+
+  const moreActions: MoreActionItem[] = [];
+
+  if (onStartTask && canStart && primaryActionKey !== "start") {
+    moreActions.push({
+      key: "start",
+      label: task.status === "blocked" ? "Bắt đầu lại" : "Bắt đầu",
+      icon: <Play className="h-4 w-4" />,
+      onSelect: handleStart,
+    });
+  }
+
+  if (onCompleteTask && canComplete && primaryActionKey !== "complete") {
+    moreActions.push({
+      key: "complete",
+      label: "Hoàn thành",
+      icon: <CheckCircle className="h-4 w-4" />,
+      onSelect: handleComplete,
+    });
+  }
+
+  if (onBlockTask && canBlock) {
+    moreActions.push({
+      key: "block",
+      label: "Báo chặn",
+      icon: <PauseCircle className="h-4 w-4" />,
+      onSelect: handleBlock,
+      variant: "destructive",
+    });
+  }
+
+  if (onUnblockTask && canUnblock && primaryActionKey !== "unblock") {
+    moreActions.push({
+      key: "unblock",
+      label: "Bỏ chặn",
+      icon: <XCircle className="h-4 w-4" />,
+      onSelect: handleUnblock,
+    });
+  }
+
+  if (!primaryAction && moreActions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-1 items-center gap-2",
+        !primaryAction ? "justify-end" : "",
+      )}
+    >
+      {primaryAction}
+      {moreActions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              disabled={isBusy}
+              aria-label="Thao tác khác"
+            >
+              <Ellipsis className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Thao tác khác
+            </DropdownMenuLabel>
+            {moreActions.map((action, index) => (
+              <Fragment key={action.key}>
+                <DropdownMenuItem
+                  variant={action.variant}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    if (!isBusy) {
+                      action.onSelect();
+                    }
+                  }}
+                >
+                  {action.icon}
+                  {action.label}
+                </DropdownMenuItem>
+                {index !== moreActions.length - 1 && <DropdownMenuSeparator />}
+              </Fragment>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   );
 }

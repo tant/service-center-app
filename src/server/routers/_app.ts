@@ -16,6 +16,7 @@ import { notificationsRouter } from "./notifications";
 import { tasksRouter } from "./tasks";
 import { analyticsRouter } from "./analytics";
 import { assignmentsRouter } from "./assignments";
+import { appSettingsRouter } from "./app-settings";
 
 export const appRouter = router({
   admin: adminRouter,
@@ -35,6 +36,7 @@ export const appRouter = router({
   tasks: tasksRouter,
   analytics: analyticsRouter,
   assignments: assignmentsRouter,
+  appSettings: appSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -90,6 +90,24 @@ export function ServiceRequestForm({
     entity_type: 'service_request',
     is_active: true,
   });
+  const { data: settings } = trpc.appSettings.getSettings.useQuery(
+    { keys: ["default_workflows"] },
+    { refetchOnWindowFocus: false },
+  );
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (!settings || !workflows) return;
+    if (workflowId) return; // user already chose
+
+    const defaults = settings.default_workflows as Record<string, string> | null;
+    const defaultId = defaults?.service_request;
+    if (!defaultId) return;
+    const exists = workflows.some((wf) => wf.id === defaultId);
+    if (exists) {
+      setWorkflowId(defaultId);
+    }
+  }, [mode, settings, workflows, workflowId]);
 
   // Debounced phone lookup
   useEffect(() => {

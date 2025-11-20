@@ -275,7 +275,7 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
         <div className="container mx-auto flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold">Trạng thái: {task.status === "completed" ? "Đã hoàn thành" : task.status === "in_progress" ? "Đang xử lý" : task.status === "pending" ? "Chờ thực hiện" : task.status}</p>

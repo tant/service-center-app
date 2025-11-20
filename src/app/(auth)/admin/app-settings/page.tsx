@@ -10,10 +10,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+
+type DefaultWorkflowMap = {
+  service_request?: string;
+  service_ticket?: string;
+};
+
+const NONE_OPTION = "__none";
 
 function QuickGenerators() {
   const createRandomIssue = trpc.admin.createRandomIssue.useMutation();
@@ -58,6 +72,64 @@ function QuickGenerators() {
 export default function AdminAppSettingsPage() {
   const [isSeeding, setIsSeeding] = React.useState(false);
   const [seedProgress, setSeedProgress] = React.useState<string[]>([]);
+  const [defaultWorkflows, setDefaultWorkflows] = React.useState<DefaultWorkflowMap>({});
+  const [hasHydratedDefault, setHasHydratedDefault] = React.useState(false);
+
+  const settingsQuery = trpc.appSettings.getSettings.useQuery(
+    { keys: ["default_workflows"] },
+    { refetchOnWindowFocus: false },
+  );
+
+  const serviceRequestWorkflows = trpc.workflow.template.getByEntityType.useQuery({
+    entityType: "service_request",
+  });
+  const serviceTicketWorkflows = trpc.workflow.template.getByEntityType.useQuery({
+    entityType: "service_ticket",
+  });
+
+  React.useEffect(() => {
+    if (settingsQuery.data && !hasHydratedDefault) {
+      const value = settingsQuery.data.default_workflows as DefaultWorkflowMap | null;
+      setDefaultWorkflows(value || {});
+      setHasHydratedDefault(true);
+    }
+  }, [settingsQuery.data, hasHydratedDefault]);
+
+  const upsertSettings = trpc.appSettings.upsertSettings.useMutation({
+    onSuccess: () => {
+      toast.success("Đã lưu workflow mặc định");
+      settingsQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleSaveDefaultWorkflows = async () => {
+    const payload: Record<string, string> = {};
+    if (defaultWorkflows.service_request) {
+      payload.service_request = defaultWorkflows.service_request;
+    }
+    if (defaultWorkflows.service_ticket) {
+      payload.service_ticket = defaultWorkflows.service_ticket;
+    }
+
+    await upsertSettings.mutateAsync({
+      settings: [
+        {
+          key: "default_workflows",
+          value: payload,
+          category: "workflow",
+          description: "Default workflows mapping per ticket type",
+        },
+      ],
+    });
+  };
+
+  const loadingDefaultWorkflows =
+    settingsQuery.isLoading ||
+    serviceRequestWorkflows.isLoading ||
+    serviceTicketWorkflows.isLoading;
 
   const seedMockDataMutation = trpc.admin.seedMockData.useMutation({
     onSuccess: (data) => {
@@ -122,6 +194,90 @@ export default function AdminAppSettingsPage() {
                     <div className="text-sm text-muted-foreground">local</div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Workflow mặc định</CardTitle>
+                <CardDescription>
+                  Chọn workflow mặc định cho từng loại phiếu. Nhân viên vẫn có thể đổi thủ công khi tạo phiếu mới.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loadingDefaultWorkflows ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tải dữ liệu workflow...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Phiếu yêu cầu dịch vụ</div>
+                        <Select
+                          value={defaultWorkflows.service_request ?? NONE_OPTION}
+                          onValueChange={(value) =>
+                            setDefaultWorkflows((prev) => ({
+                              ...prev,
+                              service_request: value === NONE_OPTION ? undefined : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn workflow mặc định" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>(Không chọn mặc định)</SelectItem>
+                            {(serviceRequestWorkflows.data ?? []).map((wf) => (
+                              <SelectItem key={wf.id} value={wf.id}>
+                                {wf.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Phiếu dịch vụ</div>
+                        <Select
+                          value={defaultWorkflows.service_ticket ?? NONE_OPTION}
+                          onValueChange={(value) =>
+                            setDefaultWorkflows((prev) => ({
+                              ...prev,
+                              service_ticket: value === NONE_OPTION ? undefined : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn workflow mặc định" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>(Không chọn mặc định)</SelectItem>
+                            {(serviceTicketWorkflows.data ?? []).map((wf) => (
+                              <SelectItem key={wf.id} value={wf.id}>
+                                {wf.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button onClick={handleSaveDefaultWorkflows} disabled={upsertSettings.isPending}>
+                        {upsertSettings.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Đang lưu...
+                          </>
+                        ) : (
+                          "Lưu workflow mặc định"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

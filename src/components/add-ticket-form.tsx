@@ -105,6 +105,22 @@ export function AddTicketForm() {
     entity_type: 'service_ticket',
     is_active: true,
   });
+  const { data: settings } = trpc.appSettings.getSettings.useQuery(
+    { keys: ["default_workflows"] },
+    { refetchOnWindowFocus: false },
+  );
+
+  React.useEffect(() => {
+    if (!workflows || !settings) return;
+    if (ticketData.workflow_id) return; // user already picked or initial set
+    const defaults = settings.default_workflows as Record<string, string> | null;
+    const defaultId = defaults?.service_ticket;
+    if (!defaultId) return;
+    const exists = workflows.some((wf: any) => wf.id === defaultId);
+    if (exists) {
+      setTicketData((prev) => ({ ...prev, workflow_id: defaultId }));
+    }
+  }, [workflows, settings, ticketData.workflow_id]);
 
   // Prepare products options for searchable select
   const productsOptions: SearchableSelectOption[] = React.useMemo(

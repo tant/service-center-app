@@ -133,7 +133,7 @@ objects_path = "./supabase/storage/service_media"
 
 # Bucket 4: Task videos (private)
 [storage.buckets.service_videos]
-public = false
+public = true
 file_size_limit = "200MiB"
 allowed_mime_types = ["video/mp4", "video/quicktime", "video/webm"]
 objects_path = "./supabase/storage/service_videos"

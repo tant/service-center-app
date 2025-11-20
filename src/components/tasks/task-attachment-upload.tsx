@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IconUpload, IconX, IconPhoto, IconFile, IconTrash, IconLoader2, IconVideo } from "@tabler/icons-react";
+import { IconUpload, IconX, IconPhoto, IconFile, IconTrash, IconLoader2, IconVideo, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 import { createClient } from "@/utils/supabase/client";
@@ -38,7 +38,8 @@ export function TaskAttachmentUpload({
   const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [uploadingVideos, setUploadingVideos] = useState(false);
-  const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
+  const [fileProgress, setFileProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
+  const [videoProgress, setVideoProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
 
   const supabase = useMemo(() => createClient(), []);
   const uploadMutation = trpc.tasks.uploadAttachment.useMutation();
@@ -46,50 +47,19 @@ export function TaskAttachmentUpload({
   const attachmentsQuery = trpc.tasks.getTaskAttachments.useQuery({ taskId });
 
   useEffect(() => {
-    const fetchSignedVideoUrls = async () => {
-      if (!attachmentsQuery.data) {
-        setVideoUrls({});
-        return;
-      }
-
-      const videoAttachments = attachmentsQuery.data.filter(
-        (attachment: any) => attachment.mime_type?.startsWith("video/")
-      );
-
-      if (videoAttachments.length === 0) {
-        setVideoUrls({});
-        return;
-      }
-
-      const results = await Promise.all(
-        videoAttachments.map(async (attachment: any) => {
-          const { data, error } = await supabase.storage
-            .from(TASK_VIDEO_BUCKET)
-            .createSignedUrl(attachment.file_path, 60 * 60);
-
-          if (error || !data?.signedUrl) {
-            console.error("Failed to create signed URL for video", {
-              attachmentId: attachment.id,
-              error,
-            });
-            return null;
-          }
-
-          return { id: attachment.id, url: data.signedUrl };
-        })
-      );
-
-      const nextUrls: Record<string, string> = {};
-      results.forEach((result) => {
-        if (result) {
-          nextUrls[result.id] = result.url;
-        }
-      });
-      setVideoUrls(nextUrls);
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
 
-    fetchSignedVideoUrls();
-  }, [attachmentsQuery.data, supabase]);
+    if (uploadingFiles || uploadingVideos) {
+      window.addEventListener("beforeunload", warnBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+    };
+  }, [uploadingFiles, uploadingVideos]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -145,10 +115,10 @@ export function TaskAttachmentUpload({
     }
 
     setUploadingFiles(true);
+    setFileProgress({ total: selectedFiles.length, done: 0 });
 
     try {
-      // Upload files to Supabase Storage
-      const uploadPromises = selectedFiles.map(async (file) => {
+      for (const file of selectedFiles) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${TASK_ATTACHMENT_IMAGE_PATH_PREFIX}/${taskId}/${fileName}`;
@@ -171,10 +141,8 @@ export function TaskAttachmentUpload({
           storageBucket: TASK_MEDIA_BUCKET,
         });
 
-        return fileName;
-      });
-
-      await Promise.all(uploadPromises);
+        setFileProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+      }
 
       toast.success(`Đã tải lên ${selectedFiles.length} file`);
       setSelectedFiles([]);
@@ -185,6 +153,7 @@ export function TaskAttachmentUpload({
       console.error(error);
     } finally {
       setUploadingFiles(false);
+      setFileProgress({ total: 0, done: 0 });
     }
   };
 
@@ -195,9 +164,10 @@ export function TaskAttachmentUpload({
     }
 
     setUploadingVideos(true);
+    setVideoProgress({ total: selectedVideos.length, done: 0 });
 
     try {
-      const uploadPromises = selectedVideos.map(async (file) => {
+      for (const file of selectedVideos) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${TASK_ATTACHMENT_VIDEO_PATH_PREFIX}/${taskId}/${fileName}`;
@@ -219,10 +189,8 @@ export function TaskAttachmentUpload({
           storageBucket: TASK_VIDEO_BUCKET,
         });
 
-        return fileName;
-      });
-
-      await Promise.all(uploadPromises);
+        setVideoProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+      }
 
       toast.success(`Đã tải lên ${selectedVideos.length} video`);
       setSelectedVideos([]);
@@ -233,6 +201,7 @@ export function TaskAttachmentUpload({
       console.error(error);
     } finally {
       setUploadingVideos(false);
+      setVideoProgress({ total: 0, done: 0 });
     }
   };
 
@@ -261,11 +230,19 @@ export function TaskAttachmentUpload({
     }
   };
 
-  const getPublicUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from(TASK_MEDIA_BUCKET)
-      .getPublicUrl(filePath);
+  const getPublicUrl = (bucket: string, filePath: string) => {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return data.publicUrl;
+  };
+
+  const handleCopyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Đã copy liên kết");
+    } catch (error) {
+      console.error("Copy link failed", error);
+      toast.error("Không copy được liên kết");
+    }
   };
 
   const attachments = attachmentsQuery.data || [];
@@ -345,7 +322,7 @@ export function TaskAttachmentUpload({
               {uploadingFiles ? (
                 <>
                   <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang tải ảnh/tài liệu...
+                  Đang tải ảnh/tài liệu... {fileProgress.done}/{fileProgress.total}
                 </>
               ) : (
                 <>
@@ -411,7 +388,7 @@ export function TaskAttachmentUpload({
               {uploadingVideos ? (
                 <>
                   <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang tải video...
+                  Đang tải video... {videoProgress.done}/{videoProgress.total}
                 </>
               ) : (
                 <>
@@ -439,24 +416,35 @@ export function TaskAttachmentUpload({
                   key={attachment.id}
                   className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50"
                 >
-                  <a
-                    href={getPublicUrl(attachment.file_path)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 flex-1 min-w-0 hover:underline"
-                  >
-                    {attachment.mime_type.startsWith('image/') ? (
-                      <IconPhoto className="h-4 w-4 text-blue-500 shrink-0" />
-                    ) : (
-                      <IconFile className="h-4 w-4 text-gray-500 shrink-0" />
-                    )}
-                    <span className="text-sm truncate">
-                      {attachment.file_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      ({(attachment.file_size_bytes / 1024).toFixed(1)} KB)
-                    </span>
-                  </a>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <a
+                      href={getPublicUrl(TASK_MEDIA_BUCKET, attachment.file_path)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 flex-1 min-w-0 hover:underline"
+                    >
+                      {attachment.mime_type.startsWith('image/') ? (
+                        <IconPhoto className="h-4 w-4 text-blue-500 shrink-0" />
+                      ) : (
+                        <IconFile className="h-4 w-4 text-gray-500 shrink-0" />
+                      )}
+                      <span className="text-sm truncate">
+                        {attachment.file_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        ({(attachment.file_size_bytes / 1024).toFixed(1)} KB)
+                      </span>
+                    </a>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopyLink(getPublicUrl(TASK_MEDIA_BUCKET, attachment.file_path))}
+                      className="shrink-0"
+                    >
+                      <IconCopy className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -477,7 +465,7 @@ export function TaskAttachmentUpload({
             <Label>Video đã tải lên ({videoAttachments.length})</Label>
             <div className="grid grid-cols-1 gap-2">
               {videoAttachments.map((attachment: any) => {
-                const videoUrl = videoUrls[attachment.id];
+                const videoUrl = getPublicUrl(TASK_VIDEO_BUCKET, attachment.file_path);
                 return (
                   <div
                     key={attachment.id}
@@ -493,15 +481,26 @@ export function TaskAttachmentUpload({
                           ({(attachment.file_size_bytes / (1024 * 1024)).toFixed(1)} MB)
                         </span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(attachment.id, attachment.file_path, attachment.mime_type)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <IconTrash className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyLink(videoUrl)}
+                          className="shrink-0"
+                        >
+                          <IconCopy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(attachment.id, attachment.file_path, attachment.mime_type)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <IconTrash className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                     {videoUrl ? (
                       <video

@@ -20,6 +20,7 @@ import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck, Ico
 import { toast } from "sonner";
 import { ProductSerialInput } from "./service-request/product-serial-input";
 import { trpc } from "@/components/providers/trpc-provider";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 interface ProductItem {
   serial_number: string;
@@ -90,18 +91,14 @@ export function ServiceRequestForm({
     entity_type: 'service_request',
     is_active: true,
   });
-  const { data: settings } = trpc.appSettings.getSettings.useQuery(
-    { keys: ["default_workflows"] },
-    { refetchOnWindowFocus: false },
-  );
+  const { defaults } = useDefaultWorkflowsSettings();
   const warnedMissingDefault = useRef(false);
 
   useEffect(() => {
     if (mode !== "create") return;
-    if (!settings || !workflows) return;
+    if (!workflows) return;
     if (workflowId) return; // user already chose
 
-    const defaults = settings.default_workflows as Record<string, string> | null;
     const defaultId = defaults?.service_request;
     if (!defaultId) return;
     const exists = workflows.some((wf) => wf.id === defaultId);
@@ -111,7 +108,7 @@ export function ServiceRequestForm({
       toast.error("Workflow mặc định cho phiếu yêu cầu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
       warnedMissingDefault.current = true;
     }
-  }, [mode, settings, workflows, workflowId]);
+  }, [mode, defaults, workflows, workflowId]);
 
   // Debounced phone lookup
   useEffect(() => {

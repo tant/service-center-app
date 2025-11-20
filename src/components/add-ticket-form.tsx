@@ -36,6 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/components/providers/trpc-provider";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 // Types
 interface SelectedPart {
@@ -105,16 +106,12 @@ export function AddTicketForm() {
     entity_type: 'service_ticket',
     is_active: true,
   });
-  const { data: settings } = trpc.appSettings.getSettings.useQuery(
-    { keys: ["default_workflows"] },
-    { refetchOnWindowFocus: false },
-  );
+  const { defaults } = useDefaultWorkflowsSettings();
   const warnedMissingDefault = React.useRef(false);
 
   React.useEffect(() => {
-    if (!workflows || !settings) return;
+    if (!workflows) return;
     if (ticketData.workflow_id) return; // user already picked or initial set
-    const defaults = settings.default_workflows as Record<string, string> | null;
     const defaultId = defaults?.service_ticket;
     if (!defaultId) return;
     const exists = workflows.some((wf: any) => wf.id === defaultId);
@@ -124,7 +121,7 @@ export function AddTicketForm() {
       toast.error("Workflow mặc định cho phiếu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
       warnedMissingDefault.current = true;
     }
-  }, [workflows, settings, ticketData.workflow_id]);
+  }, [workflows, defaults, ticketData.workflow_id]);
 
   // Prepare products options for searchable select
   const productsOptions: SearchableSelectOption[] = React.useMemo(

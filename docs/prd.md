@@ -946,7 +946,7 @@ Phase 2: Serial Entry Task (parallel) → Technician enters serials → 100% Com
 
 **Security and Audit:**
 - `audit_logs` - Immutable audit trail
-- `system_settings` - Global configuration
+- `system_settings` - Global configuration (JSONB key/value). Admin/manager only; includes `default_workflows` mapping `{ service_request, service_ticket }` để auto-select workflow mặc định trên form tạo phiếu.
 
 ### 4.2 Key Relationships
 

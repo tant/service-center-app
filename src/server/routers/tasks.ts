@@ -12,6 +12,27 @@ import { publicProcedure, router } from "../trpc";
 import { requireAnyAuthenticated } from "../middleware/requireRole";
 import { TaskService } from "../services/task-service";
 import { getProfileIdFromUserId } from "../utils/profile-helpers";
+import {
+  TASK_ATTACHMENT_IMAGE_MIME_TYPES,
+  TASK_ATTACHMENT_MAX_SIZE_BYTES,
+  TASK_ATTACHMENT_VIDEO_MIME_TYPES,
+  TASK_MEDIA_BUCKET,
+  TASK_VIDEO_BUCKET,
+  TASK_VIDEO_MAX_SIZE_BYTES,
+} from "@/constants/task-attachments";
+
+const taskAttachmentMimeTypes = [
+  ...TASK_ATTACHMENT_IMAGE_MIME_TYPES,
+  ...TASK_ATTACHMENT_VIDEO_MIME_TYPES,
+] as const;
+
+const isVideoMimeType = (
+  mime: (typeof taskAttachmentMimeTypes)[number]
+): mime is (typeof TASK_ATTACHMENT_VIDEO_MIME_TYPES)[number] => {
+  return TASK_ATTACHMENT_VIDEO_MIME_TYPES.includes(
+    mime as (typeof TASK_ATTACHMENT_VIDEO_MIME_TYPES)[number]
+  );
+};
 
 /**
  * Entity type schema (must match database ENUM)
@@ -735,14 +756,27 @@ export const tasksRouter = router({
         taskId: z.string().uuid(),
         fileName: z.string(),
         filePath: z.string(), // Path in Supabase Storage
-        fileSize: z.number().int().positive().max(5242880), // Max 5MB
-        mimeType: z.enum(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]),
+        fileSize: z.number().int().positive().max(TASK_VIDEO_MAX_SIZE_BYTES),
+        mimeType: z.enum(taskAttachmentMimeTypes),
+        storageBucket: z.enum([TASK_MEDIA_BUCKET, TASK_VIDEO_BUCKET]),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
       if (!user) {
         throw new Error("User not authenticated");
+      }
+
+      const isVideo = isVideoMimeType(input.mimeType);
+      const expectedBucket = isVideo ? TASK_VIDEO_BUCKET : TASK_MEDIA_BUCKET;
+      const allowedSize = isVideo ? TASK_VIDEO_MAX_SIZE_BYTES : TASK_ATTACHMENT_MAX_SIZE_BYTES;
+
+      if (input.storageBucket !== expectedBucket) {
+        throw new Error("Invalid storage bucket for provided mime type");
+      }
+
+      if (input.fileSize > allowedSize) {
+        throw new Error("File size exceeds allowed limit");
       }
 
       // Convert auth.users.id to profiles.id (uploaded_by references profiles table)

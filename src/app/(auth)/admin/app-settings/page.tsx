@@ -131,6 +131,14 @@ export default function AdminAppSettingsPage() {
     serviceRequestWorkflows.isLoading ||
     serviceTicketWorkflows.isLoading;
 
+  const missingServiceRequestDefault =
+    defaultWorkflows.service_request &&
+    !(serviceRequestWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_request);
+
+  const missingServiceTicketDefault =
+    defaultWorkflows.service_ticket &&
+    !(serviceTicketWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_ticket);
+
   const seedMockDataMutation = trpc.admin.seedMockData.useMutation({
     onSuccess: (data) => {
       toast.success("Tạo dữ liệu test thành công!");
@@ -215,6 +223,11 @@ export default function AdminAppSettingsPage() {
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Phiếu yêu cầu dịch vụ</div>
+                        {missingServiceRequestDefault && (
+                          <div className="text-xs text-amber-600">
+                            Workflow mặc định đã bị xoá/ẩn. Vui lòng chọn lại.
+                          </div>
+                        )}
                         <Select
                           value={defaultWorkflows.service_request ?? NONE_OPTION}
                           onValueChange={(value) =>
@@ -240,6 +253,11 @@ export default function AdminAppSettingsPage() {
 
                       <div className="space-y-2">
                         <div className="text-sm font-medium">Phiếu dịch vụ</div>
+                        {missingServiceTicketDefault && (
+                          <div className="text-xs text-amber-600">
+                            Workflow mặc định đã bị xoá/ẩn. Vui lòng chọn lại.
+                          </div>
+                        )}
                         <Select
                           value={defaultWorkflows.service_ticket ?? NONE_OPTION}
                           onValueChange={(value) =>

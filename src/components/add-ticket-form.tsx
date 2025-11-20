@@ -109,6 +109,7 @@ export function AddTicketForm() {
     { keys: ["default_workflows"] },
     { refetchOnWindowFocus: false },
   );
+  const warnedMissingDefault = React.useRef(false);
 
   React.useEffect(() => {
     if (!workflows || !settings) return;
@@ -119,6 +120,9 @@ export function AddTicketForm() {
     const exists = workflows.some((wf: any) => wf.id === defaultId);
     if (exists) {
       setTicketData((prev) => ({ ...prev, workflow_id: defaultId }));
+    } else if (!warnedMissingDefault.current) {
+      toast.error("Workflow mặc định cho phiếu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
+      warnedMissingDefault.current = true;
     }
   }, [workflows, settings, ticketData.workflow_id]);
 

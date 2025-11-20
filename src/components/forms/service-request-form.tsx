@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +94,7 @@ export function ServiceRequestForm({
     { keys: ["default_workflows"] },
     { refetchOnWindowFocus: false },
   );
+  const warnedMissingDefault = useRef(false);
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -106,6 +107,9 @@ export function ServiceRequestForm({
     const exists = workflows.some((wf) => wf.id === defaultId);
     if (exists) {
       setWorkflowId(defaultId);
+    } else if (!warnedMissingDefault.current) {
+      toast.error("Workflow mặc định cho phiếu yêu cầu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
+      warnedMissingDefault.current = true;
     }
   }, [mode, settings, workflows, workflowId]);
 

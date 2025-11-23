@@ -65,6 +65,7 @@ AS $$
 DECLARE
   v_customer_id UUID;
   v_product_id UUID;
+  v_physical_product_id UUID;
   v_ticket_id UUID;
   v_item RECORD;
   v_tickets_created INT := 0;
@@ -105,10 +106,12 @@ BEGIN
     SELECT * FROM public.service_request_items
     WHERE request_id = p_request_id AND ticket_id IS NULL
   LOOP
-    -- Find product_id from serial_number
+    -- Find product_id and physical_product_id from serial_number
     v_product_id := NULL;
+    v_physical_product_id := NULL;
 
-    SELECT product_id INTO v_product_id
+    SELECT id, product_id
+    INTO v_physical_product_id, v_product_id
     FROM public.physical_products
     WHERE serial_number = v_item.serial_number
     LIMIT 1;
@@ -123,6 +126,8 @@ BEGIN
     INSERT INTO public.service_tickets (
       customer_id,
       product_id,
+      physical_product_id,
+      serial_number,
       issue_description,
       status,
       request_id,
@@ -130,6 +135,8 @@ BEGIN
     ) VALUES (
       v_customer_id,
       v_product_id,
+      v_physical_product_id,
+      v_item.serial_number,
       COALESCE(v_item.issue_description, p_issue_description),
       'pending',
       p_request_id,

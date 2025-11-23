@@ -1574,6 +1574,8 @@ export type Database = {
           parts_total: number
           priority_level: Database["public"]["Enums"]["priority_level"]
           product_id: string
+          physical_product_id: string | null
+          serial_number: string | null
           request_id: string | null
           service_fee: number
           started_at: string | null
@@ -1603,6 +1605,8 @@ export type Database = {
           parts_total?: number
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id: string
+          physical_product_id?: string | null
+          serial_number?: string | null
           request_id?: string | null
           service_fee?: number
           started_at?: string | null
@@ -1632,6 +1636,8 @@ export type Database = {
           parts_total?: number
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id?: string
+          physical_product_id?: string | null
+          serial_number?: string | null
           request_id?: string | null
           service_fee?: number
           started_at?: string | null
@@ -3709,4 +3715,3 @@ export const Constants = {
     },
   },
 } as const
-

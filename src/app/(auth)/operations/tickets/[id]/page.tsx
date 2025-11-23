@@ -392,6 +392,14 @@ export default async function Page({ params }: PageProps) {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">
+                  Serial
+                </p>
+                <p className="font-mono">
+                  {ticket.serial_number || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-medium">
                   Model
                 </p>
                 <p>{ticket.products?.model || "—"}</p>

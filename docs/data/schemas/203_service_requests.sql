@@ -66,10 +66,29 @@ DECLARE
   v_customer_id UUID;
   v_product_id UUID;
   v_physical_product_id UUID;
+  v_default_workflow_id UUID;
   v_ticket_id UUID;
   v_item RECORD;
   v_tickets_created INT := 0;
 BEGIN
+  -- Get default workflow for service tickets (if configured)
+  SELECT (value ->> 'service_ticket')::uuid
+  INTO v_default_workflow_id
+  FROM public.system_settings
+  WHERE key = 'default_workflows';
+
+  -- Validate workflow is active
+  IF v_default_workflow_id IS NOT NULL THEN
+    PERFORM 1
+    FROM public.workflows
+    WHERE id = v_default_workflow_id
+      AND is_active = true;
+
+    IF NOT FOUND THEN
+      v_default_workflow_id := NULL;
+    END IF;
+  END IF;
+
   -- Find or create customer (lookup by phone first, as it's unique)
   SELECT id INTO v_customer_id
   FROM public.customers
@@ -128,6 +147,7 @@ BEGIN
       product_id,
       physical_product_id,
       serial_number,
+      workflow_id,
       issue_description,
       status,
       request_id,
@@ -137,6 +157,7 @@ BEGIN
       v_product_id,
       v_physical_product_id,
       v_item.serial_number,
+      v_default_workflow_id,
       COALESCE(v_item.issue_description, p_issue_description),
       'pending',
       p_request_id,

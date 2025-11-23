@@ -115,28 +115,28 @@ file_size_limit = "200MiB"
 public = true
 file_size_limit = "5MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-objects_path = "./supabase/storage/avatars"
+objects_path = "./storage/avatars"
 
 # Bucket 2: Product catalog images
 [storage.buckets.product_images]
 public = true
 file_size_limit = "5MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-objects_path = "./supabase/storage/product_images"
+objects_path = "./storage/product_images"
 
 # Bucket 3: Service ticket attachments
 [storage.buckets.service_media]
 public = true
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-objects_path = "./supabase/storage/service_media"
+objects_path = "./storage/service_media"
 
 # Bucket 4: Task videos (private)
 [storage.buckets.service_videos]
 public = true
 file_size_limit = "200MiB"
 allowed_mime_types = ["video/mp4", "video/quicktime", "video/webm"]
-objects_path = "./supabase/storage/service_videos"
+objects_path = "./storage/service_videos"
 
 [auth]
 enabled = true

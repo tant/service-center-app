@@ -18,6 +18,7 @@ import {
   IconInbox,
   IconFileText,
   IconAdjustments,
+  IconTruckDelivery,
 } from "@tabler/icons-react";
 import type * as React from "react";
 
@@ -71,6 +72,12 @@ const baseData = {
       title: "Yêu cầu dịch vụ",
       url: "/operations/service-requests",
       icon: IconInbox,
+      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
+    },
+    {
+      title: "Giao hàng",
+      url: "/operations/deliveries",
+      icon: IconTruckDelivery,
       allowedRoles: ["admin", "manager", "reception"] as UserRole[],
     },
   ],

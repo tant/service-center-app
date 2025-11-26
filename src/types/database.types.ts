@@ -1565,6 +1565,8 @@ export type Database = {
           created_by: string | null
           customer_id: string
           delivery_address: string | null
+          delivery_confirmed_at: string | null
+          delivery_confirmed_by_id: string | null
           delivery_method: Database["public"]["Enums"]["delivery_method"] | null
           diagnosis_fee: number
           discount_amount: number
@@ -1572,11 +1574,11 @@ export type Database = {
           issue_description: string
           notes: string | null
           parts_total: number
+          physical_product_id: string | null
           priority_level: Database["public"]["Enums"]["priority_level"]
           product_id: string
-          physical_product_id: string | null
-          serial_number: string | null
           request_id: string | null
+          serial_number: string | null
           service_fee: number
           started_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
@@ -1594,6 +1596,8 @@ export type Database = {
           created_by?: string | null
           customer_id: string
           delivery_address?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_confirmed_by_id?: string | null
           delivery_method?:
             | Database["public"]["Enums"]["delivery_method"]
             | null
@@ -1603,11 +1607,11 @@ export type Database = {
           issue_description: string
           notes?: string | null
           parts_total?: number
+          physical_product_id?: string | null
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id: string
-          physical_product_id?: string | null
-          serial_number?: string | null
           request_id?: string | null
+          serial_number?: string | null
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
@@ -1625,6 +1629,8 @@ export type Database = {
           created_by?: string | null
           customer_id?: string
           delivery_address?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_confirmed_by_id?: string | null
           delivery_method?:
             | Database["public"]["Enums"]["delivery_method"]
             | null
@@ -1634,11 +1640,11 @@ export type Database = {
           issue_description?: string
           notes?: string | null
           parts_total?: number
+          physical_product_id?: string | null
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id?: string
-          physical_product_id?: string | null
-          serial_number?: string | null
           request_id?: string | null
+          serial_number?: string | null
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
@@ -1670,6 +1676,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_delivery_confirmed_by_id_fkey"
+            columns: ["delivery_confirmed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "physical_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_movement_history"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_physical_product_id_fkey"
+            columns: ["physical_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["physical_product_id"]
           },
           {
             foreignKeyName: "service_tickets_product_id_fkey"
@@ -2715,6 +2749,44 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_attachments: {
         Row: {
           created_at: string
@@ -3494,7 +3566,12 @@ export type Database = {
         | "completed"
         | "blocked"
         | "skipped"
-      ticket_status: "pending" | "in_progress" | "completed" | "cancelled"
+      ticket_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "ready_for_pickup"
       transfer_status:
         | "draft"
         | "pending_approval"
@@ -3693,7 +3770,13 @@ export const Constants = {
         "blocked",
         "skipped",
       ],
-      ticket_status: ["pending", "in_progress", "completed", "cancelled"],
+      ticket_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "ready_for_pickup",
+      ],
       transfer_status: [
         "draft",
         "pending_approval",
@@ -3715,3 +3798,4 @@ export const Constants = {
     },
   },
 } as const
+

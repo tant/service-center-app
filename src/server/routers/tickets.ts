@@ -211,7 +211,7 @@ const createTicketSchema = z.object({
 
 const updateTicketStatusSchema = z.object({
   id: z.string().uuid("Ticket ID must be a valid UUID"),
-  status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+  status: z.enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"]),
 });
 
 const updateTicketSchema = z.object({
@@ -223,7 +223,7 @@ const updateTicketSchema = z.object({
   priority_level: z.enum(["low", "normal", "high", "urgent"]).optional(),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).optional(),
   status: z
-    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"])
     .optional(),
   service_fee: z.number().min(0, "Service fee must be non-negative").optional(),
   diagnosis_fee: z
@@ -1553,16 +1553,14 @@ ${changes.join("\n")}
   // ========================================
 
   /**
-   * Story 1.14: Confirm delivery with signature and notes
-   * AC 1, 2, 3: Staff marks ticket as delivered, captures signature and notes
+   * Story 1.14: Confirm delivery
+   * AC 1, 2, 3: Staff marks ticket as delivered
    */
   confirmDelivery: publicProcedure
     .use(requireOperationsStaff)
     .input(
       z.object({
         ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-        signature_url: z.string().url("Signature URL must be valid"),
-        notes: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -1575,7 +1573,7 @@ ${changes.join("\n")}
       // Lookup profile ID from auth user ID
       const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
 
-      // Verify ticket exists and is completed
+      // Verify ticket exists and is ready for pickup
       const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
         .select("id, ticket_number, status")
@@ -1586,22 +1584,21 @@ ${changes.join("\n")}
         throw new Error("Ticket not found");
       }
 
-      if (ticket.status !== "completed") {
+      if (ticket.status !== "ready_for_pickup") {
         throw new Error(
-          "Only completed tickets can be marked as delivered. Current status: " +
+          "Only tickets ready for pickup can be marked as delivered. Current status: " +
             ticket.status,
         );
       }
 
-      // Update ticket with delivery confirmation
+      // Update ticket with delivery confirmation and close status
       const { data: updatedTicket, error: updateError } =
         await ctx.supabaseAdmin
           .from("service_tickets")
           .update({
+            status: "completed",
             delivery_confirmed_at: new Date().toISOString(),
             delivery_confirmed_by_id: profileId,
-            delivery_signature_url: input.signature_url,
-            delivery_notes: input.notes || null,
           })
           .eq("id", input.ticket_id)
           .select()
@@ -1616,9 +1613,7 @@ ${changes.join("\n")}
       // Add comment about delivery confirmation
       await ctx.supabaseAdmin.from("service_ticket_comments").insert({
         ticket_id: input.ticket_id,
-        comment:
-          "Đã xác nhận giao hàng cho khách hàng" +
-          (input.notes ? `\nGhi chú: ${input.notes}` : ""),
+        comment: "Đã xác nhận giao hàng cho khách hàng",
         comment_type: "note",
         is_internal: false,
         created_by: profileId,
@@ -1683,7 +1678,7 @@ ${changes.join("\n")}
         throw new Error("User context not available");
       }
 
-      // Query completed tickets without delivery confirmation
+      // Query tickets ready for pickup/delivery (not yet confirmed)
       const { data: tickets, error: ticketsError, count } = await ctx.supabaseAdmin
         .from("service_tickets")
         .select(
@@ -1695,8 +1690,7 @@ ${changes.join("\n")}
         `,
           { count: "exact" },
         )
-        .eq("status", "completed")
-        .is("delivery_confirmed_at", null)
+        .eq("status", "ready_for_pickup")
         .order("completed_at", { ascending: false })
         .range(input.offset, input.offset + input.limit - 1);
 
@@ -1728,8 +1722,7 @@ ${changes.join("\n")}
     const { count, error } = await ctx.supabaseAdmin
       .from("service_tickets")
       .select("id", { count: "exact", head: true })
-      .eq("status", "completed")
-      .is("delivery_confirmed_at", null);
+      .eq("status", "ready_for_pickup");
 
     if (error) {
       console.error("Failed to get pending deliveries count:", error);

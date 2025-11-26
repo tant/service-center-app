@@ -47,6 +47,8 @@ CREATE TABLE "service_tickets" (
   "request_id" UUID,
   "delivery_method" public.delivery_method,
   "delivery_address" TEXT,
+  "delivery_confirmed_at" TIMESTAMPTZ,
+  "delivery_confirmed_by_id" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_tickets_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_tickets_dates_check" CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
@@ -59,6 +61,8 @@ COMMENT ON COLUMN public.service_tickets.delivery_method IS 'Customer delivery p
 COMMENT ON COLUMN public.service_tickets.delivery_address IS 'Delivery address if delivery_method = delivery (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.physical_product_id IS 'Link to concrete physical product (serial) used for this ticket';
 COMMENT ON COLUMN public.service_tickets.serial_number IS 'Captured serial number for the product at ticket creation time';
+COMMENT ON COLUMN public.service_tickets.delivery_confirmed_at IS 'Timestamp when delivery to customer was confirmed';
+COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.id of staff who confirmed delivery';
 
 -- Indexes
 CREATE INDEX "service_tickets_ticket_number_idx" ON "service_tickets" USING btree ("ticket_number");

@@ -29,6 +29,7 @@ DROP TYPE IF EXISTS public.ticket_status CASCADE;
 CREATE TYPE public.ticket_status AS ENUM (
   'pending',
   'in_progress',
+  'ready_for_pickup',
   'completed',
   'cancelled'
 );

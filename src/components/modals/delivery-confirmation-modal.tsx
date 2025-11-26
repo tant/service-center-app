@@ -3,7 +3,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -13,12 +12,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { SignatureCanvas } from '@/components/signature-canvas';
 import { useConfirmDelivery } from '@/hooks/use-delivery';
-import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import { IconCheck, IconLoader, IconPackage, IconUser, IconPhone } from '@tabler/icons-react';
 
@@ -44,69 +39,13 @@ export function DeliveryConfirmationModal({
   ticket,
 }: DeliveryConfirmationModalProps) {
   const router = useRouter();
-  const [notes, setNotes] = useState('');
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [showSignature, setShowSignature] = useState(false);
 
   const { confirmDeliveryAsync, isConfirming } = useConfirmDelivery();
 
-  const handleSignatureSave = (dataUrl: string) => {
-    setSignatureDataUrl(dataUrl);
-    setShowSignature(false);
-    toast.success('Đã lưu chữ ký');
-  };
-
-  const handleSignatureCancel = () => {
-    setShowSignature(false);
-  };
-
   const handleConfirm = async () => {
-    if (!signatureDataUrl) {
-      toast.error('Vui lòng thu thập chữ ký khách hàng');
-      return;
-    }
-
     try {
-      setIsUploading(true);
-
-      // Convert data URL to Blob
-      const response = await fetch(signatureDataUrl);
-      const blob = await response.blob();
-
-      // Create File from Blob
-      const file = new File([blob], `signature-${ticket.id}.png`, {
-        type: 'image/png',
-      });
-
-      // Upload to Supabase Storage
-      const supabase = createClient();
-      const filePath = `delivery-signatures/${ticket.id}/${Date.now()}.png`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('ticket-attachments')
-        .upload(filePath, file, {
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('ticket-attachments')
-        .getPublicUrl(uploadData.path);
-
-      if (!urlData.publicUrl) {
-        throw new Error('Failed to get public URL');
-      }
-
-      // Confirm delivery via tRPC
       await confirmDeliveryAsync({
         ticket_id: ticket.id,
-        signature_url: urlData.publicUrl,
-        notes: notes || undefined,
       });
 
       toast.success(`Đã xác nhận giao hàng cho phiếu ${ticket.ticket_number}`);
@@ -119,15 +58,10 @@ export function DeliveryConfirmationModal({
           ? error.message
           : 'Có lỗi xảy ra khi xác nhận giao hàng'
       );
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleClose = () => {
-    setNotes('');
-    setSignatureDataUrl(null);
-    setShowSignature(false);
     onOpenChange(false);
   };
 
@@ -165,63 +99,13 @@ export function DeliveryConfirmationModal({
             </CardContent>
           </Card>
 
-          {/* Signature Section */}
-          <div className="space-y-2">
-            <Label>Chữ ký khách hàng *</Label>
-            {showSignature ? (
-              <SignatureCanvas
-                onSave={handleSignatureSave}
-                onCancel={handleSignatureCancel}
-              />
-            ) : (
-              <div className="space-y-2">
-                {signatureDataUrl ? (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2">
-                        <div className="border rounded-md p-4 bg-white">
-                          <img
-                            src={signatureDataUrl}
-                            alt="Customer signature"
-                            className="max-w-full h-auto"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowSignature(true)}
-                        >
-                          Thu thập lại chữ ký
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowSignature(true)}
-                  >
-                    Thu thập chữ ký khách hàng
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Delivery Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú giao hàng</Label>
-            <Textarea
-              id="notes"
-              placeholder="Ghi chú về việc giao hàng (tùy chọn)..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              disabled={isUploading || isConfirming}
-            />
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground">
+                Xác nhận đã bàn giao sản phẩm cho khách hàng. Hành động này sẽ đóng phiếu (chuyển sang trạng thái hoàn thành).
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-4">
@@ -229,16 +113,16 @@ export function DeliveryConfirmationModal({
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={isUploading || isConfirming}
+              disabled={isConfirming}
             >
               Hủy
             </Button>
             <Button
               type="button"
               onClick={handleConfirm}
-              disabled={!signatureDataUrl || isUploading || isConfirming}
+              disabled={isConfirming}
             >
-              {isUploading || isConfirming ? (
+              {isConfirming ? (
                 <>
                   <IconLoader className="h-4 w-4 mr-1 animate-spin" />
                   Đang xác nhận...

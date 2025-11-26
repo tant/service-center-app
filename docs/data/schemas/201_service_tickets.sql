@@ -22,7 +22,7 @@ CREATE TABLE "service_tickets" (
   "ticket_number" TEXT NOT NULL UNIQUE,
   "customer_id" UUID NOT NULL REFERENCES "customers"("id"),
   "product_id" UUID NOT NULL REFERENCES "products"("id"),
-  "physical_product_id" UUID REFERENCES "physical_products"("id"),
+
   "serial_number" TEXT,
   "issue_description" TEXT NOT NULL,
   "status" public.ticket_status NOT NULL DEFAULT 'pending',
@@ -59,7 +59,7 @@ COMMENT ON COLUMN public.service_tickets.workflow_id IS 'Workflow template used 
 COMMENT ON COLUMN public.service_tickets.request_id IS 'Service request that created this ticket (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.delivery_method IS 'Customer delivery preference: pickup or delivery (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.delivery_address IS 'Delivery address if delivery_method = delivery (Phase 2)';
-COMMENT ON COLUMN public.service_tickets.physical_product_id IS 'Link to concrete physical product (serial) used for this ticket';
+
 COMMENT ON COLUMN public.service_tickets.serial_number IS 'Captured serial number for the product at ticket creation time';
 COMMENT ON COLUMN public.service_tickets.delivery_confirmed_at IS 'Timestamp when delivery to customer was confirmed';
 COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.id of staff who confirmed delivery';
@@ -68,7 +68,7 @@ COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.i
 CREATE INDEX "service_tickets_ticket_number_idx" ON "service_tickets" USING btree ("ticket_number");
 CREATE INDEX "service_tickets_customer_id_idx" ON "service_tickets" USING btree ("customer_id");
 CREATE INDEX "service_tickets_product_id_idx" ON "service_tickets" USING btree ("product_id");
-CREATE INDEX IF NOT EXISTS idx_service_tickets_physical_product ON public.service_tickets(physical_product_id) WHERE physical_product_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_service_tickets_serial_number ON public.service_tickets(serial_number) WHERE serial_number IS NOT NULL;
 CREATE INDEX "service_tickets_status_idx" ON "service_tickets" USING btree ("status");
 CREATE INDEX "service_tickets_priority_level_idx" ON "service_tickets" USING btree ("priority_level");

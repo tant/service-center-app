@@ -65,7 +65,6 @@ AS $$
 DECLARE
   v_customer_id UUID;
   v_product_id UUID;
-  v_physical_product_id UUID;
   v_default_workflow_id UUID;
   v_ticket_id UUID;
   v_item RECORD;
@@ -125,12 +124,11 @@ BEGIN
     SELECT * FROM public.service_request_items
     WHERE request_id = p_request_id AND ticket_id IS NULL
   LOOP
-    -- Find product_id and physical_product_id from serial_number
+    -- Find product_id from serial_number
     v_product_id := NULL;
-    v_physical_product_id := NULL;
 
-    SELECT id, product_id
-    INTO v_physical_product_id, v_product_id
+    SELECT product_id
+    INTO v_product_id
     FROM public.physical_products
     WHERE serial_number = v_item.serial_number
     LIMIT 1;
@@ -145,7 +143,6 @@ BEGIN
     INSERT INTO public.service_tickets (
       customer_id,
       product_id,
-      physical_product_id,
       serial_number,
       workflow_id,
       issue_description,
@@ -155,7 +152,6 @@ BEGIN
     ) VALUES (
       v_customer_id,
       v_product_id,
-      v_physical_product_id,
       v_item.serial_number,
       v_default_workflow_id,
       COALESCE(v_item.issue_description, p_issue_description),
@@ -220,21 +216,6 @@ BEGIN
     v_tickets_created := v_tickets_created + 1;
 
   END LOOP;
-
-  -- =====================================================
-  -- FIX: Removed nested UPDATE to avoid conflict
-  -- =====================================================
-  -- OLD CODE (caused conflict):
-  -- UPDATE public.service_requests
-  -- SET
-  --   status = 'processing',
-  --   converted_at = NOW()
-  -- WHERE id = p_request_id;
-  --
-  -- NEW: Triggers will handle status updates:
-  -- - BEFORE triggers modify NEW.status directly
-  -- - AFTER triggers update separately (no conflict)
-  -- =====================================================
 
   RAISE NOTICE 'Service Request % (%) created % tickets',
     p_request_id, p_tracking_token, v_tickets_created;

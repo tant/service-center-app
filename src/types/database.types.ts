@@ -1574,9 +1574,7 @@ export type Database = {
           issue_description: string
           notes: string | null
           parts_total: number
-          physical_product_id: string | null
-          priority_level: Database["public"]["Enums"]["priority_level"]
-          product_id: string
+          product_id: string,
           request_id: string | null
           serial_number: string | null
           service_fee: number
@@ -1607,9 +1605,7 @@ export type Database = {
           issue_description: string
           notes?: string | null
           parts_total?: number
-          physical_product_id?: string | null
-          priority_level?: Database["public"]["Enums"]["priority_level"]
-          product_id: string
+product_id: string,
           request_id?: string | null
           serial_number?: string | null
           service_fee?: number
@@ -1640,7 +1636,6 @@ export type Database = {
           issue_description?: string
           notes?: string | null
           parts_total?: number
-          physical_product_id?: string | null
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id?: string
           request_id?: string | null
@@ -1684,27 +1679,7 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "service_tickets_physical_product_id_fkey"
-            columns: ["physical_product_id"]
-            isOneToOne: false
-            referencedRelation: "physical_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_tickets_physical_product_id_fkey"
-            columns: ["physical_product_id"]
-            isOneToOne: false
-            referencedRelation: "v_stock_movement_history"
-            referencedColumns: ["physical_product_id"]
-          },
-          {
-            foreignKeyName: "service_tickets_physical_product_id_fkey"
-            columns: ["physical_product_id"]
-            isOneToOne: false
-            referencedRelation: "v_warranty_expiring_soon"
-            referencedColumns: ["physical_product_id"]
-          },
+
           {
             foreignKeyName: "service_tickets_product_id_fkey"
             columns: ["product_id"]

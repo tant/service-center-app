@@ -170,13 +170,13 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
         .eq("id", task.entity_id)
         .single();
 
-      // Only auto-complete if ticket is in_progress
+      // Only transition if ticket is in_progress
       // Don't override manual completion or cancellation
       if (ticket?.status === "in_progress") {
         await ctx.supabaseAdmin
           .from("service_tickets")
           .update({
-            status: "completed",
+            status: "ready_for_pickup",
             updated_by: task.assigned_to_id // Set updated_by for trigger
           })
           .eq("id", task.entity_id);
@@ -187,7 +187,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
           .insert({
             ticket_id: task.entity_id,
             comment:
-              "Tất cả công việc đã hoàn thành. Phiếu tự động chuyển sang trạng thái hoàn thành.",
+              "Tất cả công việc đã hoàn thành. Phiếu chuyển sang trạng thái Sẵn sàng bàn giao.",
             comment_type: "system",
             is_internal: true,
             created_by: task.assigned_to_id,

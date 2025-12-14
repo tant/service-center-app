@@ -90,7 +90,7 @@ export default function PendingDeliveriesPage() {
         <CardHeader>
           <CardTitle>Phiếu chờ xác nhận giao hàng</CardTitle>
           <CardDescription>
-            Các phiếu dịch vụ đã hoàn thành nhưng chưa xác nhận giao hàng
+            Các phiếu đã sửa xong, sẵn sàng bàn giao nhưng chưa xác nhận giao hàng
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -119,7 +119,7 @@ export default function PendingDeliveriesPage() {
                         <span className="font-medium">{ticket.ticket_number}</span>
                         <Badge variant="secondary">
                           <IconCheck className="h-3 w-3 mr-1" />
-                          Hoàn thành
+                          Sẵn sàng bàn giao
                         </Badge>
                       </div>
                     </TableCell>

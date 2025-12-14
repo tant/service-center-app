@@ -13,6 +13,10 @@ import { inventoryRouter } from "./inventory";
 import { inventoryRouter as physicalProductsRouter } from "./physical-products";
 import { serviceRequestRouter } from "./service-request";
 import { notificationsRouter } from "./notifications";
+import { tasksRouter } from "./tasks";
+import { analyticsRouter } from "./analytics";
+import { assignmentsRouter } from "./assignments";
+import { appSettingsRouter } from "./app-settings";
 
 export const appRouter = router({
   admin: adminRouter,
@@ -29,6 +33,10 @@ export const appRouter = router({
   physicalProducts: physicalProductsRouter,
   serviceRequest: serviceRequestRouter,
   notifications: notificationsRouter,
+  tasks: tasksRouter,
+  analytics: analyticsRouter,
+  assignments: assignmentsRouter,
+  appSettings: appSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

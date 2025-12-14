@@ -36,9 +36,9 @@ CREATE POLICY "service_tickets_select_policy"
     (
       public.is_technician()
       AND id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -98,8 +98,8 @@ CREATE POLICY "customers_select_policy"
       AND id IN (
         SELECT st.customer_id
         FROM public.service_tickets st
-        INNER JOIN public.service_ticket_tasks stt ON stt.ticket_id = st.id
-        WHERE stt.assigned_to_id = (SELECT auth.uid())
+        INNER JOIN public.entity_tasks et ON et.entity_type = 'service_ticket' AND et.entity_id = st.id
+        WHERE et.assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -154,9 +154,9 @@ CREATE POLICY "service_ticket_parts_select_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -172,9 +172,9 @@ CREATE POLICY "service_ticket_parts_insert_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -190,9 +190,9 @@ CREATE POLICY "service_ticket_parts_update_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -224,9 +224,9 @@ CREATE POLICY "service_ticket_comments_select_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -242,9 +242,9 @@ CREATE POLICY "service_ticket_comments_insert_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -270,9 +270,9 @@ CREATE POLICY "service_ticket_attachments_select_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );
@@ -288,9 +288,9 @@ CREATE POLICY "service_ticket_attachments_insert_policy"
     (
       public.is_technician()
       AND ticket_id IN (
-        SELECT ticket_id
-        FROM public.service_ticket_tasks
-        WHERE assigned_to_id = (SELECT auth.uid())
+        SELECT entity_id
+        FROM public.entity_tasks
+        WHERE entity_type = 'service_ticket' AND assigned_to_id = (SELECT auth.uid())
       )
     )
   );

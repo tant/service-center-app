@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUpdateTaskStatus, useTaskDependencies } from "@/hooks/use-workflow";
 import { TaskStatusBadge } from "./task-status-badge";
 import { TaskCompletionModal } from "@/components/modals/task-completion-modal";
 import { TaskDependencyIndicator } from "./task-dependency-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, Play, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Clock, Play, CheckCircle, XCircle, AlertCircle, ChevronRight } from "lucide-react";
 
 type TaskStatus = "pending" | "in_progress" | "completed" | "blocked" | "skipped";
 
@@ -47,6 +48,7 @@ interface TaskExecutionCardProps {
  * AC: 3, 4, 5 - Integrate dependency checks, lock tasks in strict mode, show warnings in flexible mode
  */
 export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
+  const router = useRouter();
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const { updateStatus, isUpdating } = useUpdateTaskStatus();
 
@@ -99,7 +101,10 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
   return (
     <>
       <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
+        <CardHeader
+          className="pb-3 cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => router.push(`/my-tasks/${task.id}`)}
+        >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1">
               {getStatusIcon()}
@@ -133,7 +138,10 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
                   </p>
                 )}
               </div>
-              <TaskStatusBadge status={task.status} />
+              <div className="flex items-center gap-2">
+                <TaskStatusBadge status={task.status} />
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -177,7 +185,7 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
             {task.status === "pending" && (
               <Button
                 onClick={handleStartTask}

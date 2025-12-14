@@ -238,12 +238,23 @@ export const inventoryRouter = router({
   listProducts: publicProcedure
     .input(listProductsSchema)
     .query(async ({ ctx, input }) => {
+      // If search is provided, first find matching product IDs
+      let matchingProductIds: string[] | null = null;
+      if (input.search) {
+        const { data: matchingProducts } = await ctx.supabaseAdmin
+          .from("products")
+          .select("id")
+          .or(`name.ilike.%${input.search}%,sku.ilike.%${input.search}%`);
+
+        matchingProductIds = matchingProducts?.map(p => p.id) || [];
+      }
+
       let query = ctx.supabaseAdmin
         .from("physical_products")
         .select(
           `
           *,
-          product:products(id, name, sku, brand:brands(name)),
+          product:products!inner(id, name, sku, brand:brands(name)),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
         `
         );
@@ -262,8 +273,13 @@ export const inventoryRouter = router({
       }
 
       if (input.search) {
-        // Search by both serial number and product name
-        query = query.or(`serial_number.ilike.%${input.search}%,product.name.ilike.%${input.search}%`);
+        // Search by serial number OR product_id in matching products
+        if (matchingProductIds && matchingProductIds.length > 0) {
+          query = query.or(`serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(',')})`);
+        } else {
+          // Only search by serial if no products matched
+          query = query.ilike("serial_number", `%${input.search}%`);
+        }
       }
 
       // Get data
@@ -281,7 +297,7 @@ export const inventoryRouter = router({
       // Get count separately (simpler and faster)
       let countQuery = ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, product:products!inner(name)", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true });
 
       if (input.product_id) {
         countQuery = countQuery.eq("product_id", input.product_id);
@@ -293,8 +309,12 @@ export const inventoryRouter = router({
         countQuery = countQuery.eq("condition", input.condition);
       }
       if (input.search) {
-        // Search by both serial number and product name
-        countQuery = countQuery.or(`serial_number.ilike.%${input.search}%,product.name.ilike.%${input.search}%`);
+        // Same search logic for count
+        if (matchingProductIds && matchingProductIds.length > 0) {
+          countQuery = countQuery.or(`serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(',')})`);
+        } else {
+          countQuery = countQuery.ilike("serial_number", `%${input.search}%`);
+        }
       }
 
       const { count } = await countQuery;

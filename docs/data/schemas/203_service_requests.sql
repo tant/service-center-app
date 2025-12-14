@@ -26,15 +26,16 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   receipt_status public.receipt_status NOT NULL DEFAULT 'received',
   delivery_method public.delivery_method,
   delivery_address TEXT,
+  workflow_id UUID REFERENCES public.workflows(id) ON DELETE SET NULL,
   reviewed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
-  rejection_reason TEXT,
+  cancellation_reason TEXT,
   converted_at TIMESTAMPTZ,
   submitted_ip VARCHAR(45),
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT service_requests_rejected_requires_reason CHECK (status != 'cancelled' OR rejection_reason IS NOT NULL)
+  CONSTRAINT service_requests_cancelled_requires_reason CHECK (status != 'cancelled' OR cancellation_reason IS NOT NULL)
 );
 
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
@@ -42,6 +43,189 @@ COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue de
 COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products have been received from customer (triggers ticket creation)';
 COMMENT ON COLUMN public.service_requests.delivery_method IS 'Customer preference for product delivery (pickup or delivery)';
 COMMENT ON COLUMN public.service_requests.delivery_address IS 'Delivery address if delivery_method is delivery';
+COMMENT ON COLUMN public.service_requests.workflow_id IS 'Optional workflow for inspection tasks before ticket creation. When set, tasks are created from workflow and tickets are only created after all workflow tasks are completed. NULL means immediate ticket creation (default behavior).';
+COMMENT ON COLUMN public.service_requests.cancellation_reason IS 'Reason for cancellation (required when status = cancelled). Can be staff rejection, customer withdrawal, duplicate request, etc.';
+
+-- =====================================================
+-- SHARED FUNCTION: CREATE TICKETS FOR SERVICE REQUEST
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.create_tickets_for_service_request(
+  p_request_id UUID,
+  p_customer_name VARCHAR,
+  p_customer_email VARCHAR,
+  p_customer_phone VARCHAR,
+  p_issue_description TEXT,
+  p_tracking_token VARCHAR,
+  p_reviewed_by_id UUID
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_customer_id UUID;
+  v_product_id UUID;
+  v_default_workflow_id UUID;
+  v_ticket_id UUID;
+  v_item RECORD;
+  v_tickets_created INT := 0;
+BEGIN
+  -- Get default workflow for service tickets (if configured)
+  SELECT (value ->> 'service_ticket')::uuid
+  INTO v_default_workflow_id
+  FROM public.system_settings
+  WHERE key = 'default_workflows';
+
+  -- Validate workflow is active
+  IF v_default_workflow_id IS NOT NULL THEN
+    PERFORM 1
+    FROM public.workflows
+    WHERE id = v_default_workflow_id
+      AND is_active = true;
+
+    IF NOT FOUND THEN
+      v_default_workflow_id := NULL;
+    END IF;
+  END IF;
+
+  -- Find or create customer (lookup by phone first, as it's unique)
+  SELECT id INTO v_customer_id
+  FROM public.customers
+  WHERE phone = p_customer_phone
+  LIMIT 1;
+
+  -- If customer exists, update name/email if changed
+  IF v_customer_id IS NOT NULL THEN
+    UPDATE public.customers
+    SET
+      name = p_customer_name,
+      email = COALESCE(p_customer_email, email),
+      updated_at = NOW()
+    WHERE id = v_customer_id
+      AND (name != p_customer_name OR email IS DISTINCT FROM p_customer_email);
+  ELSE
+    -- Customer doesn't exist, create new one
+    INSERT INTO public.customers (
+      name,
+      email,
+      phone,
+      created_by
+    ) VALUES (
+      p_customer_name,
+      p_customer_email,
+      p_customer_phone,
+      p_reviewed_by_id
+    )
+    RETURNING id INTO v_customer_id;
+  END IF;
+
+  -- Create a ticket for each item in the request
+  FOR v_item IN
+    SELECT * FROM public.service_request_items
+    WHERE request_id = p_request_id AND ticket_id IS NULL
+  LOOP
+    -- Find product_id from serial_number
+    v_product_id := NULL;
+
+    SELECT product_id
+    INTO v_product_id
+    FROM public.physical_products
+    WHERE serial_number = v_item.serial_number
+    LIMIT 1;
+
+    -- Skip if product not found
+    IF v_product_id IS NULL THEN
+      RAISE NOTICE 'Product not found for serial number: %', v_item.serial_number;
+      CONTINUE;
+    END IF;
+
+    -- Create service ticket
+    INSERT INTO public.service_tickets (
+      customer_id,
+      product_id,
+      serial_number,
+      workflow_id,
+      issue_description,
+      status,
+      request_id,
+      created_by
+    ) VALUES (
+      v_customer_id,
+      v_product_id,
+      v_item.serial_number,
+      v_default_workflow_id,
+      COALESCE(v_item.issue_description, p_issue_description),
+      'pending',
+      p_request_id,
+      p_reviewed_by_id
+    )
+    RETURNING id INTO v_ticket_id;
+
+    -- Link ticket back to item
+    UPDATE public.service_request_items
+    SET ticket_id = v_ticket_id
+    WHERE id = v_item.id;
+
+    -- Copy task attachments from service request to ticket
+    INSERT INTO public.service_ticket_attachments (
+      ticket_id,
+      file_name,
+      file_path,
+      file_type,
+      file_size,
+      description,
+      created_by
+    )
+    SELECT
+      v_ticket_id,
+      ta.file_name,
+      ta.file_path,
+      ta.mime_type,
+      ta.file_size_bytes,
+      'Inherited from service request task: ' || et.name,
+      ta.uploaded_by
+    FROM public.task_attachments ta
+    INNER JOIN public.entity_tasks et ON ta.task_id = et.id
+    WHERE et.entity_type = 'service_request'
+      AND et.entity_id = p_request_id
+      AND ta.file_path IS NOT NULL;
+
+    -- Add initial comment
+    INSERT INTO public.service_ticket_comments (
+      ticket_id,
+      comment,
+      created_by
+    ) VALUES (
+      v_ticket_id,
+      CASE
+        WHEN p_reviewed_by_id IS NULL THEN
+          format('Yêu cầu từ khách hàng %s - Mã theo dõi: %s - Serial: %s',
+            p_customer_name,
+            p_tracking_token,
+            v_item.serial_number
+          )
+        ELSE
+          format('Auto-created from service request %s - Serial: %s',
+            p_tracking_token,
+            v_item.serial_number
+          )
+      END,
+      p_reviewed_by_id
+    );
+
+    v_tickets_created := v_tickets_created + 1;
+
+  END LOOP;
+
+  RAISE NOTICE 'Service Request % (%) created % tickets',
+    p_request_id, p_tracking_token, v_tickets_created;
+
+  RETURN v_tickets_created;
+END;
+$$;
+
+COMMENT ON FUNCTION public.create_tickets_for_service_request(UUID, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR, UUID) IS
+  'Shared function to create service tickets from a service request. Creates customer (or updates if exists), creates tickets for each item, and copies attachments. Does NOT update request status - triggers handle that to avoid nested UPDATE conflicts. Returns number of tickets created.';
 
 -- =====================================================
 -- AUTO-CREATE TICKETS FUNCTION
@@ -52,115 +236,66 @@ LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 DECLARE
-  v_customer_id UUID;
-  v_product_id UUID;
-  v_ticket_id UUID;
-  v_item RECORD;
+  v_has_workflow BOOLEAN;
+  v_workflow_completed BOOLEAN;
+  v_task_count INT;
+  v_completed_count INT;
+  v_tickets_created INT;
 BEGIN
+  -- Skip trigger if status is 'draft' (draft requests should not auto-create tickets)
+  IF NEW.status = 'draft' THEN
+    RETURN NEW;
+  END IF;
+
   -- Trigger when receipt_status changes to 'received' OR status changes to 'received'
   IF (NEW.receipt_status = 'received' AND (OLD.receipt_status IS NULL OR OLD.receipt_status = 'pending_receipt'))
      OR (NEW.status = 'received' AND (OLD.status IS NULL OR OLD.status IN ('submitted', 'pickingup'))) THEN
 
-    -- Find or create customer (lookup by phone first, as it's unique)
-    SELECT id INTO v_customer_id
-    FROM public.customers
-    WHERE phone = NEW.customer_phone
-    LIMIT 1;
+    -- ====== WORKFLOW COMPLETION CHECK ======
+    -- Check if service request has a workflow assigned
+    v_has_workflow := (NEW.workflow_id IS NOT NULL);
 
-    -- If customer exists, update name/email if changed
-    IF v_customer_id IS NOT NULL THEN
-      UPDATE public.customers
-      SET
-        name = NEW.customer_name,
-        email = COALESCE(NEW.customer_email, email),
-        updated_at = NOW()
-      WHERE id = v_customer_id
-        AND (name != NEW.customer_name OR email IS DISTINCT FROM NEW.customer_email);
-    ELSE
-      -- Customer doesn't exist, create new one
-      INSERT INTO public.customers (
-        name,
-        email,
-        phone,
-        created_by
-      ) VALUES (
-        NEW.customer_name,
-        NEW.customer_email,
-        NEW.customer_phone,
-        NEW.reviewed_by_id
-      )
-      RETURNING id INTO v_customer_id;
-    END IF;
+    IF v_has_workflow THEN
+      -- Count total tasks for this service request
+      SELECT COUNT(*) INTO v_task_count
+      FROM public.entity_tasks
+      WHERE entity_type = 'service_request'
+        AND entity_id = NEW.id;
 
-    -- Create a ticket for each item in the request
-    FOR v_item IN
-      SELECT * FROM public.service_request_items
-      WHERE request_id = NEW.id AND ticket_id IS NULL
-    LOOP
-      -- Find product_id from serial_number
-      v_product_id := NULL;
+      -- Count completed tasks
+      SELECT COUNT(*) INTO v_completed_count
+      FROM public.entity_tasks
+      WHERE entity_type = 'service_request'
+        AND entity_id = NEW.id
+        AND status = 'completed';
 
-      SELECT product_id INTO v_product_id
-      FROM public.physical_products
-      WHERE serial_number = v_item.serial_number
-      LIMIT 1;
+      -- Check if all tasks are completed
+      v_workflow_completed := (v_task_count > 0 AND v_task_count = v_completed_count);
 
-      -- Skip if product not found
-      IF v_product_id IS NULL THEN
-        RAISE NOTICE 'Product not found for serial number: %', v_item.serial_number;
-        CONTINUE;
+      -- If workflow exists but not all tasks complete, skip ticket creation
+      IF NOT v_workflow_completed THEN
+        RAISE NOTICE 'Service Request % (%) has workflow - waiting for % tasks to complete (% done)',
+          NEW.id, NEW.tracking_token, v_task_count, v_completed_count;
+        RETURN NEW;
       END IF;
 
-      -- Create service ticket
-      INSERT INTO public.service_tickets (
-        customer_id,
-        product_id,
-        issue_description,
-        status,
-        request_id,
-        created_by
-      ) VALUES (
-        v_customer_id,
-        v_product_id,
-        COALESCE(v_item.issue_description, NEW.issue_description),
-        'pending',
-        NEW.id,
-        NEW.reviewed_by_id
-      )
-      RETURNING id INTO v_ticket_id;
+      RAISE NOTICE 'Service Request % (%) workflow complete, creating tickets',
+        NEW.id, NEW.tracking_token;
+    END IF;
+    -- ====== END WORKFLOW CHECK ======
 
-      -- Link ticket back to item
-      UPDATE public.service_request_items
-      SET ticket_id = v_ticket_id
-      WHERE id = v_item.id;
+    -- Call shared function to create tickets
+    v_tickets_created := public.create_tickets_for_service_request(
+      NEW.id,
+      NEW.customer_name,
+      NEW.customer_email,
+      NEW.customer_phone,
+      NEW.issue_description,
+      NEW.tracking_token,
+      NEW.reviewed_by_id
+    );
 
-      -- Add initial comment
-      -- If reviewed_by_id is NULL, it's from customer (public submission)
-      INSERT INTO public.service_ticket_comments (
-        ticket_id,
-        comment,
-        created_by
-      ) VALUES (
-        v_ticket_id,
-        CASE
-          WHEN NEW.reviewed_by_id IS NULL THEN
-            format('Yêu cầu từ khách hàng %s - Mã theo dõi: %s - Serial: %s',
-              NEW.customer_name,
-              NEW.tracking_token,
-              v_item.serial_number
-            )
-          ELSE
-            format('Auto-created from service request %s - Serial: %s',
-              NEW.tracking_token,
-              v_item.serial_number
-            )
-        END,
-        NEW.reviewed_by_id
-      );
-
-    END LOOP;
-
-    -- Update request status to processing
+    -- Function already updates status, but we need to update NEW for BEFORE trigger
     NEW.status := 'processing';
     NEW.converted_at := NOW();
 
@@ -170,7 +305,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
+COMMENT ON FUNCTION public.auto_create_tickets_on_received() IS 'Auto-creates service tickets for each item when receipt_status or status changes to received. If workflow_id exists, delays ticket creation until all workflow tasks are completed. Lookups customer by phone (unique) and updates info if needed. Uses customer name in comment when created_by is NULL (public submission).';
 
 -- =====================================================
 -- TRIGGERS
@@ -291,3 +426,112 @@ CREATE TRIGGER trigger_auto_complete_request
   FOR EACH ROW
   WHEN (NEW.status IN ('completed', 'cancelled'))
   EXECUTE FUNCTION public.auto_complete_service_request();
+
+-- =====================================================
+-- FUNCTION: Auto-trigger ticket creation when workflow completes
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.auto_update_service_request_on_workflow_complete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_request_id UUID;
+  v_task_count INT;
+  v_completed_count INT;
+  v_request_status public.request_status;
+  v_receipt_status public.receipt_status;
+  v_request RECORD;
+  v_tickets_created INT;
+BEGIN
+  -- Only process service_request tasks
+  IF NEW.entity_type != 'service_request' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Only process when task is marked as completed
+  IF NEW.status != 'completed' OR OLD.status = 'completed' THEN
+    RETURN NEW;
+  END IF;
+
+  v_request_id := NEW.entity_id;
+
+  -- Get current request data
+  SELECT * INTO v_request
+  FROM public.service_requests
+  WHERE id = v_request_id;
+
+  v_request_status := v_request.status;
+  v_receipt_status := v_request.receipt_status;
+
+  -- =====================================================
+  -- FIX: Check if products have been received
+  -- =====================================================
+  -- If workflow completes but products not yet received,
+  -- DO NOT create tickets - wait for receipt confirmation
+  IF v_receipt_status != 'received' THEN
+    RAISE NOTICE 'Service Request % (%) workflow completed but receipt_status = % - waiting for product receipt before creating tickets',
+      v_request_id, v_request.tracking_token, v_receipt_status;
+    RETURN NEW;
+  END IF;
+
+  -- Only process if request is waiting for workflow completion
+  -- Skip if already processing, completed, or cancelled
+  IF v_request_status NOT IN ('submitted', 'pickingup', 'received') THEN
+    RETURN NEW;
+  END IF;
+
+  -- Count total and completed tasks
+  SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'completed')
+  INTO v_task_count, v_completed_count
+  FROM public.entity_tasks
+  WHERE entity_type = 'service_request' AND entity_id = v_request_id;
+
+  -- If all tasks completed AND products received, create tickets
+  IF v_task_count > 0 AND v_task_count = v_completed_count THEN
+    RAISE NOTICE 'Service Request % (%) workflow completed AND products received - creating tickets',
+      v_request_id, v_request.tracking_token;
+
+    -- Call shared function to create tickets
+    v_tickets_created := public.create_tickets_for_service_request(
+      v_request.id,
+      v_request.customer_name,
+      v_request.customer_email,
+      v_request.customer_phone,
+      v_request.issue_description,
+      v_request.tracking_token,
+      v_request.reviewed_by_id
+    );
+
+    -- =====================================================
+    -- FIX: AFTER trigger must update status separately
+    -- =====================================================
+    -- Since this is an AFTER trigger, we cannot modify NEW
+    -- We must perform a separate UPDATE here
+    UPDATE public.service_requests
+    SET
+      status = 'processing',
+      converted_at = NOW()
+    WHERE id = v_request_id;
+
+    RAISE NOTICE 'Service Request % (%) created % tickets and updated status to processing',
+      v_request_id, v_request.tracking_token, v_tickets_created;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.auto_update_service_request_on_workflow_complete() IS
+  'Automatically creates tickets when all workflow tasks for a service request are completed AND products have been received (receipt_status = received). Since this is an AFTER trigger, it updates status via separate UPDATE statement. Supports requests in submitted, pickingup, or received status.';
+
+-- =====================================================
+-- TRIGGER: Auto-trigger ticket creation on workflow completion
+-- =====================================================
+DROP TRIGGER IF EXISTS trigger_auto_update_request_on_workflow_complete ON public.entity_tasks;
+
+CREATE TRIGGER trigger_auto_update_request_on_workflow_complete
+  AFTER UPDATE OF status ON public.entity_tasks
+  FOR EACH ROW
+  WHEN (NEW.status = 'completed' AND NEW.entity_type = 'service_request')
+  EXECUTE FUNCTION public.auto_update_service_request_on_workflow_complete();

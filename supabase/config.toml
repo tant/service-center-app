@@ -103,7 +103,7 @@ port = 54324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "50MiB"
+file_size_limit = "200MiB"
 
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
@@ -130,6 +130,13 @@ public = true
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
 objects_path = "./storage/service_media"
+
+# Bucket 4: Task videos (private)
+[storage.buckets.service_videos]
+public = true
+file_size_limit = "200MiB"
+allowed_mime_types = ["video/mp4", "video/quicktime", "video/webm"]
+objects_path = "./storage/service_videos"
 
 [auth]
 enabled = true

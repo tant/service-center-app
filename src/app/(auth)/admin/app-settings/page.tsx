@@ -14,10 +14,104 @@ import { RequireRole } from "@/components/auth/RequireRole";
 import { trpc } from "@/components/providers/trpc-provider";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type DefaultWorkflowMap = {
+  service_request?: string;
+  service_ticket?: string;
+};
+
+const NONE_OPTION = "__none";
+
+function QuickGenerators() {
+  const createRandomIssue = trpc.admin.createRandomIssue.useMutation();
+  const createRandomTransfer = trpc.admin.createRandomTransfer.useMutation();
+
+  const handleRandomIssue = async () => {
+    const res = await createRandomIssue.mutateAsync();
+    toast.success(`Đã tạo phiếu xuất ${res.issueNumber} (${res.serials} serial)`);
+  };
+
+  const handleRandomTransfer = async () => {
+    const res = await createRandomTransfer.mutateAsync();
+    toast.success(`Đã tạo phiếu chuyển ${res.transferNumber} (${res.serials} serial)`);
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-2">
+      <Button variant="outline" onClick={handleRandomIssue} disabled={createRandomIssue.isPending}>
+        {createRandomIssue.isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Đang tạo phiếu xuất...
+          </>
+        ) : (
+          "Tạo phiếu xuất ngẫu nhiên"
+        )}
+      </Button>
+      <Button variant="outline" onClick={handleRandomTransfer} disabled={createRandomTransfer.isPending}>
+        {createRandomTransfer.isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Đang tạo phiếu chuyển...
+          </>
+        ) : (
+          "Tạo phiếu chuyển ngẫu nhiên"
+        )}
+      </Button>
+    </div>
+  );
+}
 
 export default function AdminAppSettingsPage() {
   const [isSeeding, setIsSeeding] = React.useState(false);
   const [seedProgress, setSeedProgress] = React.useState<string[]>([]);
+  const {
+    defaults: defaultWorkflows,
+    setDefaults: setDefaultWorkflows,
+    isLoading: settingsLoading,
+    isSaving: settingsSaving,
+    save: saveSettings,
+    refetch: refetchSettings,
+  } = useDefaultWorkflowsSettings();
+
+  const serviceRequestWorkflows = trpc.workflow.template.getByEntityType.useQuery({
+    entityType: "service_request",
+  });
+  const serviceTicketWorkflows = trpc.workflow.template.getByEntityType.useQuery({
+    entityType: "service_ticket",
+  });
+
+  const handleSaveDefaultWorkflows = async () => {
+    try {
+      await saveSettings();
+      toast.success("Đã lưu workflow mặc định");
+    } catch (error: any) {
+      toast.error(error.message || "Không thể lưu workflow mặc định");
+    } finally {
+      refetchSettings();
+    }
+  };
+
+  const loadingDefaultWorkflows =
+    settingsLoading ||
+    serviceRequestWorkflows.isLoading ||
+    serviceTicketWorkflows.isLoading;
+
+  const missingServiceRequestDefault =
+    defaultWorkflows.service_request &&
+    !(serviceRequestWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_request);
+
+  const missingServiceTicketDefault =
+    defaultWorkflows.service_ticket &&
+    !(serviceTicketWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_ticket);
 
   const seedMockDataMutation = trpc.admin.seedMockData.useMutation({
     onSuccess: (data) => {
@@ -87,6 +181,100 @@ export default function AdminAppSettingsPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Workflow mặc định</CardTitle>
+                <CardDescription>
+                  Chọn workflow mặc định cho từng loại phiếu. Nhân viên vẫn có thể đổi thủ công khi tạo phiếu mới.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loadingDefaultWorkflows ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang tải dữ liệu workflow...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Phiếu yêu cầu dịch vụ</div>
+                        {missingServiceRequestDefault && (
+                          <div className="text-xs text-amber-600">
+                            Workflow mặc định đã bị xoá/ẩn. Vui lòng chọn lại.
+                          </div>
+                        )}
+                        <Select
+                          value={defaultWorkflows.service_request ?? NONE_OPTION}
+                          onValueChange={(value) =>
+                            setDefaultWorkflows((prev) => ({
+                              ...prev,
+                              service_request: value === NONE_OPTION ? undefined : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn workflow mặc định" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>(Không chọn mặc định)</SelectItem>
+                            {(serviceRequestWorkflows.data ?? []).map((wf) => (
+                              <SelectItem key={wf.id} value={wf.id}>
+                                {wf.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Phiếu dịch vụ</div>
+                        {missingServiceTicketDefault && (
+                          <div className="text-xs text-amber-600">
+                            Workflow mặc định đã bị xoá/ẩn. Vui lòng chọn lại.
+                          </div>
+                        )}
+                        <Select
+                          value={defaultWorkflows.service_ticket ?? NONE_OPTION}
+                          onValueChange={(value) =>
+                            setDefaultWorkflows((prev) => ({
+                              ...prev,
+                              service_ticket: value === NONE_OPTION ? undefined : value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn workflow mặc định" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION}>(Không chọn mặc định)</SelectItem>
+                            {(serviceTicketWorkflows.data ?? []).map((wf) => (
+                              <SelectItem key={wf.id} value={wf.id}>
+                                {wf.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button onClick={handleSaveDefaultWorkflows} disabled={settingsSaving}>
+                        {settingsSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Đang lưu...
+                          </>
+                        ) : (
+                          "Lưu workflow mặc định"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Dữ liệu Test</CardTitle>
                 <CardDescription>
                   Tạo dữ liệu mẫu từ file mock-data.json để test hệ thống
@@ -96,9 +284,9 @@ export default function AdminAppSettingsPage() {
                 <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
                   <p className="font-medium mb-2">⚠️ Lưu ý quan trọng:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Physical Warehouses → Virtual Warehouses → Brands → Parts → Products → Physical Products → Task Types → Task Templates</li>
-                    <li>Virtual Warehouses giờ là các thực thể riêng biệt với ID duy nhất (không còn nested trong Physical Warehouses)</li>
-                    <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v2.0.0)</li>
+                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Customers → Brands → Products → Task Library → Workflows</li>
+                    <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v4.0.0)</li>
+                    <li>Bao gồm dữ liệu test đầy đủ cho Polymorphic Task Management System (PTMS)</li>
                     <li>Chỉ dùng trong môi trường development để test</li>
                   </ul>
                 </div>

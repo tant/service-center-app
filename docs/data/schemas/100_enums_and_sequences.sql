@@ -29,6 +29,7 @@ DROP TYPE IF EXISTS public.ticket_status CASCADE;
 CREATE TYPE public.ticket_status AS ENUM (
   'pending',
   'in_progress',
+  'ready_for_pickup',
   'completed',
   'cancelled'
 );
@@ -78,6 +79,17 @@ CREATE TYPE public.task_status AS ENUM (
 );
 COMMENT ON TYPE public.task_status IS 'Task execution status within service ticket workflow';
 
+-- Entity Type Enum (for Polymorphic Tasks)
+DROP TYPE IF EXISTS public.entity_type CASCADE;
+CREATE TYPE public.entity_type AS ENUM (
+  'service_ticket',      -- Service repair/warranty tickets
+  'inventory_receipt',   -- Goods receipt notes (GRN)
+  'inventory_issue',     -- Goods issue notes (GIN)
+  'inventory_transfer',  -- Stock transfers between warehouses
+  'service_request'      -- Customer service requests
+);
+COMMENT ON TYPE public.entity_type IS 'Entity types that can have associated tasks in the polymorphic task system';
+
 -- Warehouse Type Enum
 DROP TYPE IF EXISTS public.warehouse_type CASCADE;
 CREATE TYPE public.warehouse_type AS ENUM (
@@ -114,6 +126,17 @@ CREATE TYPE public.product_condition AS ENUM (
   'for_parts'
 );
 COMMENT ON TYPE public.product_condition IS 'Physical condition classification for inventory products';
+
+-- Physical Product Status Enum
+DROP TYPE IF EXISTS public.physical_product_status CASCADE;
+CREATE TYPE public.physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary, can be deleted)
+  'active',       -- In stock, available (receipt approved)
+  'transferring', -- In draft issue/transfer document (locked, cannot be selected by other documents)
+  'issued',       -- Issued out (via approved stock issue document)
+  'disposed'      -- Disposed/scrapped (no longer usable)
+);
+COMMENT ON TYPE public.physical_product_status IS 'Lifecycle status: draft (unapproved receipt) → active (available) → transferring (locked in draft issue/transfer) → issued (out) / disposed';
 
 -- Service Type Enum
 DROP TYPE IF EXISTS public.service_type CASCADE;
@@ -211,6 +234,7 @@ GRANT USAGE ON TYPE public.priority_level TO authenticated;
 GRANT USAGE ON TYPE public.warranty_type TO authenticated;
 GRANT USAGE ON TYPE public.comment_type TO authenticated;
 GRANT USAGE ON TYPE public.task_status TO authenticated;
+GRANT USAGE ON TYPE public.entity_type TO authenticated;
 GRANT USAGE ON TYPE public.warehouse_type TO authenticated;
 GRANT USAGE ON TYPE public.request_status TO authenticated;
 GRANT USAGE ON TYPE public.product_condition TO authenticated;

@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export interface AutoCommentParams {
   ticketId: string;
-  userId: string;
+  profileId: string; // Changed from userId to profileId (profiles.id, not auth.users.id)
   comment: string;
   isInternal?: boolean;
   commentType?: "note" | "status_change" | "assignment" | "system";
@@ -24,7 +24,7 @@ export interface AutoCommentParams {
  */
 export async function createAutoComment({
   ticketId,
-  userId,
+  profileId,
   comment,
   isInternal = true,
   commentType = "system",
@@ -38,13 +38,13 @@ export async function createAutoComment({
         comment: comment,
         comment_type: commentType,
         is_internal: isInternal,
-        created_by: userId,
+        created_by: profileId,
       });
 
     if (error) {
       console.error("[AUTO-COMMENT] Failed to create auto-comment:", {
         ticketId,
-        userId,
+        profileId,
         error: error.message,
         comment: comment.substring(0, 100), // Log first 100 chars
       });
@@ -53,7 +53,7 @@ export async function createAutoComment({
   } catch (error) {
     console.error("[AUTO-COMMENT] Unexpected error creating auto-comment:", {
       ticketId,
-      userId,
+      profileId,
       error: error instanceof Error ? error.message : "Unknown error",
     });
     // Don't throw - auto-comments shouldn't break main operations

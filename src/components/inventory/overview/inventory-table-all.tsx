@@ -68,13 +68,13 @@ export function InventoryTableAll() {
         <Table>
           <TableHeader className="bg-muted sticky top-0 z-10">
             <TableRow>
-              <TableHead>Sản phẩm</TableHead>
+              <TableHead className="pl-4 lg:pl-6">Sản phẩm</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead className="text-right">Đã khai báo</TableHead>
               <TableHead className="text-right">Thực tế</TableHead>
               <TableHead className="text-right">Chênh lệch</TableHead>
               <TableHead>Trạng thái</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -93,7 +93,7 @@ export function InventoryTableAll() {
             ) : (
               stock.map((item) => (
                 <TableRow key={item.product_id}>
-                  <TableCell className="font-medium">{item.product_name}</TableCell>
+                  <TableCell className="font-medium pl-4 lg:pl-6">{item.product_name}</TableCell>
                   <TableCell className="text-muted-foreground">{item.sku || "-"}</TableCell>
                   <TableCell className="text-right">{item.total_declared.toLocaleString()}</TableCell>
                   <TableCell className="text-right">{item.total_actual.toLocaleString()}</TableCell>
@@ -108,7 +108,7 @@ export function InventoryTableAll() {
                   <TableCell>
                     <StockStatusBadge status={item.stock_status} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4 lg:pr-6">
                     <Link href={`/inventory/products/${item.product_id}/stock`}>
                       <Button variant="outline" size="sm">
                         Xem chi tiết

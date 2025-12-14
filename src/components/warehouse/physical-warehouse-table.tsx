@@ -281,8 +281,17 @@ export function PhysicalWarehouseTable() {
                 <TableHeader className="bg-muted sticky top-0 z-10">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
+                      {headerGroup.headers.map((header, index) => (
+                        <TableHead
+                          key={header.id}
+                          className={
+                            index === 0
+                              ? "pl-4 lg:pl-6"
+                              : index === headerGroup.headers.length - 1
+                              ? "pr-4 lg:pr-6"
+                              : ""
+                          }
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -300,8 +309,17 @@ export function PhysicalWarehouseTable() {
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                      {row.getVisibleCells().map((cell, index) => (
+                        <TableCell
+                          key={cell.id}
+                          className={
+                            index === 0
+                              ? "pl-4 lg:pl-6"
+                              : index === row.getVisibleCells().length - 1
+                              ? "pr-4 lg:pr-6"
+                              : ""
+                          }
+                        >
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()

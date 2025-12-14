@@ -36,6 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/components/providers/trpc-provider";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 // Types
 interface SelectedPart {
@@ -102,8 +103,25 @@ export function AddTicketForm() {
     { enabled: !!ticketData.product_id },
   );
   const { data: workflows } = trpc.workflow.template.list.useQuery({
+    entity_type: 'service_ticket',
     is_active: true,
   });
+  const { defaults } = useDefaultWorkflowsSettings();
+  const warnedMissingDefault = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!workflows) return;
+    if (ticketData.workflow_id) return; // user already picked or initial set
+    const defaultId = defaults?.service_ticket;
+    if (!defaultId) return;
+    const exists = workflows.some((wf: any) => wf.id === defaultId);
+    if (exists) {
+      setTicketData((prev) => ({ ...prev, workflow_id: defaultId }));
+    } else if (!warnedMissingDefault.current) {
+      toast.error("Workflow mặc định cho phiếu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
+      warnedMissingDefault.current = true;
+    }
+  }, [workflows, defaults, ticketData.workflow_id]);
 
   // Prepare products options for searchable select
   const productsOptions: SearchableSelectOption[] = React.useMemo(
@@ -704,16 +722,16 @@ export function AddTicketForm() {
             <div className="space-y-2">
               <Label>Quy trình xử lý (tùy chọn)</Label>
               <Select
-                value={ticketData.workflow_id}
+                value={ticketData.workflow_id || "none"}
                 onValueChange={(value) =>
-                  setTicketData((prev) => ({ ...prev, workflow_id: value }))
+                  setTicketData((prev) => ({ ...prev, workflow_id: value === "none" ? "" : value }))
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="-- Chọn quy trình --" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Không sử dụng quy trình</SelectItem>
+                  <SelectItem value="none">Không sử dụng quy trình</SelectItem>
                   {workflows
                     ?.filter((wf) => wf.service_type === ticketData.warranty_type || !wf.service_type)
                     ?.map((workflow) => (

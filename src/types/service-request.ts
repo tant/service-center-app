@@ -49,7 +49,7 @@ export interface ServiceRequestFormData {
 // Form types - Internal review
 export interface ServiceRequestReviewData {
   status: RequestStatus;
-  rejection_reason?: string;
+  cancellation_reason?: string;
 }
 
 // Service request to ticket conversion

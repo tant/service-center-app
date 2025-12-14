@@ -52,8 +52,57 @@ export const issuesRouter = router({
         throw new Error(`Failed to list issues: ${error.message}`);
       }
 
+      // Fetch serial counts for all issues in this page
+      const issueIds = data?.map(i => i.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+
+      if (issueIds.length > 0) {
+        // For issues, count serials directly from stock_issue_serials table
+        // (issue items don't have serial_count column, they use existing physical products)
+        const { data: itemsData } = await ctx.supabaseAdmin
+          .from("stock_issue_items")
+          .select(`
+            issue_id,
+            quantity,
+            id
+          `)
+          .in("issue_id", issueIds);
+
+        if (itemsData) {
+          // Get serial counts for all items
+          const itemIds = itemsData.map(item => item.id);
+          const { data: serialData } = await ctx.supabaseAdmin
+            .from("stock_issue_serials")
+            .select("issue_item_id")
+            .in("issue_item_id", itemIds);
+
+          // Count serials per item
+          const serialCountsByItem: Record<string, number> = {};
+          (serialData || []).forEach(serial => {
+            serialCountsByItem[serial.issue_item_id] = (serialCountsByItem[serial.issue_item_id] || 0) + 1;
+          });
+
+          // Aggregate by issue_id
+          itemsData.forEach(item => {
+            if (!serialCounts[item.issue_id]) {
+              serialCounts[item.issue_id] = { declared: 0, entered: 0 };
+            }
+            serialCounts[item.issue_id].declared += item.quantity;
+            serialCounts[item.issue_id].entered += (serialCountsByItem[item.id] || 0);
+          });
+        }
+      }
+
+      // Merge serial counts with issues
+      const issuesWithSerials = (data || []).map(issue => ({
+        ...issue,
+        totalDeclaredQuantity: serialCounts[issue.id]?.declared || 0,
+        totalSerialsEntered: serialCounts[issue.id]?.entered || 0,
+        missingSerialsCount: (serialCounts[issue.id]?.declared || 0) - (serialCounts[issue.id]?.entered || 0),
+      }));
+
       return {
-        issues: data || [],
+        issues: issuesWithSerials,
         total: count || 0,
         page: input.page,
         pageSize: input.pageSize,
@@ -268,11 +317,193 @@ export const issuesRouter = router({
     }),
 
   /**
+   * Update full issue (only if draft) - for editing all fields
+   */
+  updateFull: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        id: z.string(),
+        issueType: z.enum(["normal", "adjustment"]),
+        virtualWarehouseId: z.string(),
+        issueDate: z.string(),
+        notes: z.string().optional(),
+        items: z.array(
+          z.object({
+            id: z.string().optional(),
+            productId: z.string(),
+            quantity: z.number().int(),
+          })
+        ).min(1),
+      }).refine(
+        (data) => {
+          // Validate: normal issues must have positive quantities
+          if (data.issueType === "normal") {
+            return data.items.every((item) => item.quantity > 0);
+          }
+          // Adjustment issues: allow negative but not zero
+          return data.items.every((item) => item.quantity !== 0);
+        },
+        {
+          message: "Normal issues require positive quantities. Adjustments cannot have zero quantity.",
+        }
+      )
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check status first
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("status, created_by_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      if (issue.status !== "draft") {
+        throw new Error("Cannot edit issue after draft status");
+      }
+
+      // Check permission
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Only creator or admin/manager can edit
+      if (
+        issue.created_by_id !== profile.id &&
+        !["admin", "manager"].includes(profile.role)
+      ) {
+        throw new Error("Unauthorized to edit this issue");
+      }
+
+      // Get existing item IDs first
+      const { data: existingItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      const itemIds = existingItems?.map(item => item.id) || [];
+
+      // Delete existing serials first (if there are items)
+      if (itemIds.length > 0) {
+        await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .delete()
+          .in("issue_item_id", itemIds);
+      }
+
+      // Delete existing items
+      const { error: deleteItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .delete()
+        .eq("issue_id", input.id);
+
+      if (deleteItems) {
+        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
+      }
+
+      // Update issue header
+      const { data: updatedIssue, error: updateError } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .update({
+          issue_type: input.issueType,
+          virtual_warehouse_id: input.virtualWarehouseId,
+          issue_date: input.issueDate,
+          notes: input.notes,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update issue: ${updateError.message}`);
+      }
+
+      // Insert new items
+      if (input.items.length > 0) {
+        const items = input.items.map((item) => ({
+          issue_id: input.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+        }));
+
+        const { error: itemsError } = await ctx.supabaseAdmin
+          .from("stock_issue_items")
+          .insert(items);
+
+        if (itemsError) {
+          throw new Error(`Failed to create issue items: ${itemsError.message}`);
+        }
+      }
+
+      return updatedIssue;
+    }),
+
+  /**
    * Submit for approval
    */
   submitForApproval: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // VALIDATION CHECKPOINT #2: Verify all serials are in source warehouse before submit
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // Get all item IDs for this issue
+      const { data: issueItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      if (issueItems && issueItems.length > 0) {
+        // Get all serials in this issue
+        const issueItemIds = issueItems.map(item => item.id);
+        const { data: issueSerials } = await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            issue_item_id
+          `)
+          .in("issue_item_id", issueItemIds);
+
+      if (issueSerials && issueSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = issueSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== issue.virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể gửi duyệt: Các serial sau không còn trong kho xuất: ${wrongSerials}`);
+          }
+        }
+      }
+      }
+
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_issues")
         .update({ status: "pending_approval" })
@@ -303,6 +534,58 @@ export const issuesRouter = router({
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
         throw new Error("Unauthorized: Only admin and manager can approve issues");
+      }
+
+      // VALIDATION CHECKPOINT #3: Verify all serials are in source warehouse before approve
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // Get all item IDs for this issue
+      const { data: issueItems } = await ctx.supabaseAdmin
+        .from("stock_issue_items")
+        .select("id")
+        .eq("issue_id", input.id);
+
+      if (issueItems && issueItems.length > 0) {
+        // Get all serials in this issue
+        const issueItemIds = issueItems.map(item => item.id);
+        const { data: issueSerials } = await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            issue_item_id
+          `)
+          .in("issue_item_id", issueItemIds);
+
+      if (issueSerials && issueSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = issueSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== issue.virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể duyệt: Các serial sau không còn trong kho xuất: ${wrongSerials}`);
+          }
+        }
+      }
       }
 
       const { data, error } = await ctx.supabaseAdmin
@@ -385,11 +668,12 @@ export const issuesRouter = router({
         throw new Error("Issue not found");
       }
 
-      // Validate physical products exist and belong to correct warehouse/product
+      // Validate physical products exist, are ACTIVE, and belong to correct warehouse/product
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id, virtual_warehouse:virtual_warehouses!virtual_warehouse_id(physical_warehouse_id)")
-        .in("id", input.physicalProductIds);
+        .in("id", input.physicalProductIds)
+        .eq("status", "active");
 
       if (validateError) {
         throw new Error(`Failed to validate physical products: ${validateError.message}`);
@@ -537,12 +821,29 @@ export const issuesRouter = router({
         throw new Error("Issue item not found");
       }
 
-      // Find physical products by serial numbers
+      // Get issue to verify source warehouse
+      const { data: issue } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .select("virtual_warehouse_id")
+        .eq("id", issueItem.issue_id)
+        .single();
+
+      if (!issue) {
+        throw new Error("Issue not found");
+      }
+
+      // CRITICAL: Validate warehouse ID matches issue's source warehouse
+      if (input.virtualWarehouseId !== issue.virtual_warehouse_id) {
+        throw new Error("Kho nguồn không khớp với phiếu xuất. Chỉ có thể chọn serial từ kho xuất.");
+      }
+
+      // Find ACTIVE physical products by serial numbers
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id")
         .eq("product_id", issueItem.product_id)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active")
         .in("serial_number", input.serialNumbers);
 
       if (findError) {
@@ -555,6 +856,24 @@ export const issuesRouter = router({
 
       if (notFound.length > 0) {
         throw new Error(`Serial không tồn tại trong kho: ${notFound.join(", ")}`);
+      }
+
+      // CRITICAL: Ensure we found all physical products and they have valid IDs
+      if (!physicalProducts || physicalProducts.length !== input.serialNumbers.length) {
+        throw new Error(`Không tìm thấy đủ serial trong kho. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`);
+      }
+
+      // Validate all physical products have valid IDs (not NULL)
+      const invalidProducts = physicalProducts.filter(p => !p.id);
+      if (invalidProducts.length > 0) {
+        throw new Error(`Có ${invalidProducts.length} serial không có physical product ID hợp lệ`);
+      }
+
+      // CRITICAL: Double-check all products are actually in the source warehouse (defense in depth)
+      const wrongWarehouse = physicalProducts.filter(p => p.virtual_warehouse_id !== issue.virtual_warehouse_id);
+      if (wrongWarehouse.length > 0) {
+        const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+        throw new Error(`Serial không thuộc kho xuất: ${wrongSerials}`);
       }
 
       // Note: No need to check if already issued - if physical_product exists in DB, it hasn't been issued yet

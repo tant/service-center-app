@@ -44,8 +44,7 @@ const taskTypeToggleSchema = z.object({
 const templateCreateSchema = z.object({
   name: z.string().min(3).max(255),
   description: z.string().optional(),
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   enforce_sequence: z.boolean().default(true), // Story 1.5: Changed from strict_sequence, default true for strict mode
   is_active: z.boolean().default(true),
   tasks: z.array(z.object({
@@ -60,8 +59,7 @@ const templateUpdateSchema = z.object({
   template_id: z.string().uuid(),
   name: z.string().min(3).max(255),
   description: z.string().optional(),
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   enforce_sequence: z.boolean(), // Story 1.5: Changed from strict_sequence
   tasks: z.array(z.object({
     task_type_id: z.string().uuid(),
@@ -72,8 +70,7 @@ const templateUpdateSchema = z.object({
 });
 
 const templateListSchema = z.object({
-  product_type: z.string().uuid().optional(),
-  service_type: z.enum(['warranty', 'paid', 'replacement']).optional(),
+  entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']).optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -334,7 +331,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -346,11 +342,8 @@ export const workflowRouter = router({
           .order('created_at', { ascending: false });
 
         // Apply filters
-        if (input?.product_type) {
-          query = query.eq('product_type', input.product_type);
-        }
-        if (input?.service_type) {
-          query = query.eq('service_type', input.service_type);
+        if (input?.entity_type) {
+          query = query.eq('entity_type', input.entity_type);
         }
         if (input?.is_active !== undefined) {
           query = query.eq('is_active', input.is_active);
@@ -368,6 +361,50 @@ export const workflowRouter = router({
 
         // Map strict_sequence to enforce_sequence for API response
         return mapTemplatesFromDb(data || []);
+      }),
+
+    /**
+     * Get workflows by entity type for polymorphic task system
+     * Returns workflows filtered by entity_type
+     * Requires: Any authenticated user
+     */
+    getByEntityType: publicProcedure
+      .use(requireAnyAuthenticated)
+      .input(z.object({
+        entityType: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']),
+      }))
+      .query(async ({ ctx, input }) => {
+        const { data, error } = await ctx.supabaseAdmin
+          .from('workflows')
+          .select(`
+            *,
+            workflow_tasks(
+              id,
+              sequence_order,
+              is_required,
+              custom_instructions,
+              task:tasks(
+                id,
+                name,
+                description,
+                category,
+                estimated_duration_minutes
+              )
+            )
+          `)
+          .eq('entity_type', input.entityType)
+          .eq('is_active', true)
+          .order('name', { ascending: true });
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to fetch workflows',
+            cause: error,
+          });
+        }
+
+        return data || [];
       }),
 
     /**
@@ -413,7 +450,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -561,7 +597,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -742,14 +777,14 @@ export const workflowRouter = router({
             oldValues: {
               name: oldTemplate.name,
               description: oldTemplate.description,
-              service_type: oldTemplate.service_type,
+              entity_type: oldTemplate.entity_type,
               strict_sequence: oldTemplate.strict_sequence,
               tasks: oldTemplate.tasks,
             },
             newValues: {
               name: updatedTemplate.name,
               description: updatedTemplate.description,
-              service_type: updatedTemplate.service_type,
+              entity_type: updatedTemplate.entity_type,
               strict_sequence: updatedTemplate.strict_sequence,
               tasks: input.tasks,
             },
@@ -768,7 +803,6 @@ export const workflowRouter = router({
           .from('workflows')
           .select(`
             *,
-            product:products(id, name, sku),
             tasks:workflow_tasks(
               id,
               sequence_order,
@@ -912,7 +946,7 @@ export const workflowRouter = router({
         // Fetch template info for audit log
         const { data: template } = await ctx.supabaseAdmin
           .from('workflows')
-          .select('name, service_type, is_active')
+          .select('name, entity_type, is_active')
           .eq('id', input.template_id)
           .single();
 
@@ -1651,6 +1685,245 @@ export const workflowRouter = router({
           tasks_added: tasksToAdd.length,
           total_tasks: preservedTasks.length + tasksToAdd.length,
         },
+      };
+    }),
+
+  /**
+   * Assign workflow to entity (service ticket, inventory receipt, etc.)
+   * Phase 3: Initial workflow assignment
+   */
+  assignWorkflow: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(z.object({
+      entity_id: z.string().uuid(),
+      entity_type: z.enum(['service_ticket', 'inventory_receipt', 'inventory_issue', 'inventory_transfer', 'service_request']),
+      workflow_id: z.string().uuid(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { entity_id, entity_type, workflow_id } = input;
+
+      // Get user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'You must be logged in to assign workflows',
+        });
+      }
+
+      // Get entity adapter to validate
+      const { adapterRegistry } = await import('../services/entity-adapters');
+
+      if (!adapterRegistry.has(entity_type)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Entity type "${entity_type}" not supported`,
+        });
+      }
+
+      const adapter = adapterRegistry.get(entity_type);
+
+      // Validate workflow assignment
+      const canAssign = await adapter.canAssignWorkflow(ctx, entity_id, workflow_id);
+
+      if (!canAssign.canAssign) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: canAssign.reason || 'Cannot assign workflow to this entity',
+        });
+      }
+
+      // Determine table name
+      let tableName: string;
+      switch (entity_type) {
+        case 'service_ticket':
+          tableName = 'service_tickets';
+          break;
+        case 'inventory_receipt':
+          tableName = 'stock_receipts';
+          break;
+        case 'inventory_issue':
+          tableName = 'stock_issues';
+          break;
+        case 'inventory_transfer':
+          tableName = 'stock_transfers';
+          break;
+        case 'service_request':
+          tableName = 'service_requests';
+          break;
+        default:
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid entity type',
+          });
+      }
+
+      // Assign workflow
+      const { error } = await ctx.supabaseAdmin
+        .from(tableName)
+        .update({ workflow_id })
+        .eq('id', entity_id);
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to assign workflow: ${error.message}`,
+        });
+      }
+
+      // Audit log
+      await ctx.supabaseAdmin.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'workflow_assigned',
+        entity_type: tableName,
+        entity_id,
+        details: { workflow_id },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Bulk assign workflow to multiple entities
+   * Phase 3: Bulk workflow assignment
+   */
+  bulkAssignWorkflow: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(z.object({
+      entity_ids: z.array(z.string().uuid()).min(1).max(100),
+      entity_type: z.enum(['service_ticket', 'inventory_receipt']),
+      workflow_id: z.string().uuid(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { entity_ids, entity_type, workflow_id } = input;
+
+      // Get user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'You must be logged in',
+        });
+      }
+
+      const tableName = entity_type === 'service_ticket' ? 'service_tickets' : 'stock_receipts';
+
+      // Bulk update
+      const { error } = await ctx.supabaseAdmin
+        .from(tableName)
+        .update({ workflow_id })
+        .in('id', entity_ids);
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Bulk assign failed: ${error.message}`,
+        });
+      }
+
+      // Audit log
+      await ctx.supabaseAdmin.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'workflow_bulk_assigned',
+        entity_type: tableName,
+        details: {
+          workflow_id,
+          entity_count: entity_ids.length,
+        },
+      });
+
+      return {
+        success: true,
+        total: entity_ids.length,
+      };
+    }),
+
+  /**
+   * Clone an existing workflow
+   * Phase 3: Workflow cloning
+   */
+  cloneWorkflow: publicProcedure
+    .use(requireManagerOrAbove)
+    .input(z.object({
+      workflow_id: z.string().uuid(),
+      new_name: z.string().min(3).max(255).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { workflow_id, new_name } = input;
+
+      // Get user
+      const { data: { user }, error: authError } = await ctx.supabaseClient.auth.getUser();
+      if (authError || !user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'You must be logged in',
+        });
+      }
+
+      // Fetch original workflow
+      const { data: originalWorkflow, error: fetchError } = await ctx.supabaseAdmin
+        .from('workflows')
+        .select('*, workflow_tasks(*)')
+        .eq('id', workflow_id)
+        .single();
+
+      if (fetchError || !originalWorkflow) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Workflow not found',
+        });
+      }
+
+      // Create new workflow
+      const { data: newWorkflow, error: createError } = await ctx.supabaseAdmin
+        .from('workflows')
+        .insert({
+          name: new_name || `Copy of ${originalWorkflow.name}`,
+          description: originalWorkflow.description,
+          entity_type: originalWorkflow.entity_type,
+          strict_sequence: originalWorkflow.strict_sequence,
+          is_active: false, // Clones start as inactive
+          created_by_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (createError || !newWorkflow) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to clone workflow: ${createError?.message}`,
+        });
+      }
+
+      // Clone workflow_tasks
+      if (originalWorkflow.workflow_tasks && originalWorkflow.workflow_tasks.length > 0) {
+        const tasksCopy = originalWorkflow.workflow_tasks.map((wt: any) => ({
+          workflow_id: newWorkflow.id,
+          task_id: wt.task_id,
+          sequence_order: wt.sequence_order,
+          is_required: wt.is_required,
+          custom_instructions: wt.custom_instructions,
+        }));
+
+        const { error: tasksError } = await ctx.supabaseAdmin
+          .from('workflow_tasks')
+          .insert(tasksCopy);
+
+        if (tasksError) {
+          // Rollback: delete the created workflow
+          await ctx.supabaseAdmin.from('workflows').delete().eq('id', newWorkflow.id);
+
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to clone workflow tasks: ${tasksError.message}`,
+          });
+        }
+      }
+
+      return {
+        success: true,
+        workflow_id: newWorkflow.id,
+        name: newWorkflow.name,
       };
     }),
 });

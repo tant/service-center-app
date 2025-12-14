@@ -492,7 +492,7 @@ export const serialsRouter = router({
         search: z.string().min(1),
         virtualWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false), // Only show not-issued serials
-        limit: z.number().int().min(1).max(100).default(50),
+        limit: z.number().int().min(1).max(100).default(100),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -664,7 +664,7 @@ export const serialsRouter = router({
     .input(
       z.object({
         filter: z.enum(["all", "mine", "available", "overdue"]).default("mine"),
-        limit: z.number().int().min(1).max(100).default(50),
+        limit: z.number().int().min(1).max(100).default(100),
       })
     )
     .query(async ({ ctx, input }) => {

@@ -11,6 +11,7 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
     .select(`
       *,
       product_parts(count),
+      physical_products(count),
       brands:brand_id (
         id,
         name
@@ -23,10 +24,11 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
     return [];
   }
 
-  // Transform the data to include parts_count and brand_name
+  // Transform the data to include parts_count, physical_products_count, and brand_name
   const transformedData = (data || []).map((product: any) => ({
     ...product,
     parts_count: product.product_parts?.[0]?.count || 0,
+    physical_products_count: product.physical_products?.[0]?.count || 0,
     brand_name: product.brands?.name || null,
   }));
 

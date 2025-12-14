@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/components/providers/trpc-provider';
-import type { Workflow, ServiceTicketTask, TaskProgressSummary } from '@/types/workflow';
+import type { Workflow, EntityTask, TaskProgressSummary } from '@/types/workflow';
 
 /**
  * Hook for managing task types
@@ -95,11 +95,10 @@ export function useToggleTaskType() {
 
 /**
  * Hook for managing task templates
- * Supports filtering by product type, service type, and active status
+ * Supports filtering by entity type and active status
  */
 export function useTaskTemplates(filters?: {
-  product_type?: string;
-  service_type?: 'warranty' | 'paid' | 'replacement';
+  entity_type?: 'service_ticket' | 'inventory_receipt' | 'inventory_issue' | 'inventory_transfer' | 'service_request';
   is_active?: boolean;
 }) {
   const { data: templates, isLoading, error } = trpc.workflow.template.list.useQuery(filters);
@@ -235,7 +234,7 @@ export function useDeleteTemplate() {
  */
 export function useTicketTasks(ticketId: string | undefined) {
   // TODO: Implement with tRPC in Story 1.3
-  const tasks: ServiceTicketTask[] = [];
+  const tasks: EntityTask[] = [];
   const isLoading = false;
   const error = null;
 

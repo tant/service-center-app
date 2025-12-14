@@ -76,6 +76,16 @@ if [ -z "$DB_URL" ]; then
 fi
 echo -e "${GREEN}   ✓ Connected to: $DB_URL${NC}"
 
+# Check if psql is available
+if ! command -v psql &> /dev/null; then
+    echo -e "${RED}❌ Error: psql (PostgreSQL client) is not installed${NC}"
+    echo -e "${YELLOW}   Install instructions:${NC}"
+    echo -e "${YELLOW}   - macOS (Homebrew): brew install libpq${NC}"
+    echo -e "${YELLOW}   - Ubuntu/Debian: sudo apt-get install postgresql-client${NC}"
+    echo -e "${YELLOW}   - Windows: Install PostgreSQL from https://www.postgresql.org/download/${NC}"
+    exit 1
+fi
+
 # Create storage buckets from seed data
 echo -e "${BLUE}🪣 Creating storage buckets...${NC}"
 if [ -f "docs/data/seeds/storage_buckets.sql" ]; then

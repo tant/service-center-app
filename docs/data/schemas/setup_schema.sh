@@ -62,13 +62,29 @@ fi
 
 # Get database connection URL
 echo -e "${BLUE}🔌 Getting database connection...${NC}"
-DB_URL=$(pnpx supabase status 2>/dev/null | grep "Database URL" | awk '{print $3}')
+STATUS_OUTPUT=$(pnpx supabase status 2>/dev/null)
+# Supabase CLI (v1.200+) prints the DB URL inside a table, so grab the first postgresql:// entry.
+DB_URL=$(echo "$STATUS_OUTPUT" | grep -m 1 -oE 'postgresql://[^[:space:]]+')
+# Fallback for older CLI versions that printed "Database URL ..."
+if [ -z "$DB_URL" ]; then
+    DB_URL=$(echo "$STATUS_OUTPUT" | grep "Database URL" | awk '{print $3}')
+fi
 if [ -z "$DB_URL" ]; then
     echo -e "${RED}❌ Error: Could not get database URL. Is Supabase running?${NC}"
     echo -e "${YELLOW}   Run: pnpx supabase start${NC}"
     exit 1
 fi
 echo -e "${GREEN}   ✓ Connected to: $DB_URL${NC}"
+
+# Check if psql is available
+if ! command -v psql &> /dev/null; then
+    echo -e "${RED}❌ Error: psql (PostgreSQL client) is not installed${NC}"
+    echo -e "${YELLOW}   Install instructions:${NC}"
+    echo -e "${YELLOW}   - macOS (Homebrew): brew install libpq${NC}"
+    echo -e "${YELLOW}   - Ubuntu/Debian: sudo apt-get install postgresql-client${NC}"
+    echo -e "${YELLOW}   - Windows: Install PostgreSQL from https://www.postgresql.org/download/${NC}"
+    exit 1
+fi
 
 # Create storage buckets from seed data
 echo -e "${BLUE}🪣 Creating storage buckets...${NC}"

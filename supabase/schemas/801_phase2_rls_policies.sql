@@ -21,8 +21,8 @@
 ALTER TABLE public.workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workflow_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.service_ticket_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.task_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_task_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ticket_workflow_changes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rma_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.physical_warehouses ENABLE ROW LEVEL SECURITY;
@@ -51,15 +51,15 @@ CREATE POLICY workflow_tasks_insert_policy ON public.workflow_tasks FOR INSERT T
 CREATE POLICY workflow_tasks_update_policy ON public.workflow_tasks FOR UPDATE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager'])) WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']));
 CREATE POLICY workflow_tasks_delete_policy ON public.workflow_tasks FOR DELETE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']));
 
--- Service Ticket Tasks Policies
-CREATE POLICY service_ticket_tasks_select_policy ON public.service_ticket_tasks FOR SELECT TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR public.is_technician() OR public.is_reception());
-CREATE POLICY service_ticket_tasks_insert_policy ON public.service_ticket_tasks FOR INSERT TO authenticated WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']));
-CREATE POLICY service_ticket_tasks_update_policy ON public.service_ticket_tasks FOR UPDATE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR (assigned_to_id = (SELECT auth.uid()) AND public.is_technician())) WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']) OR (assigned_to_id = (SELECT auth.uid()) AND public.is_technician()));
-CREATE POLICY service_ticket_tasks_delete_policy ON public.service_ticket_tasks FOR DELETE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']));
+-- Entity Tasks Policies (Polymorphic)
+CREATE POLICY entity_tasks_select_policy ON public.entity_tasks FOR SELECT TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR public.is_technician() OR public.is_reception());
+CREATE POLICY entity_tasks_insert_policy ON public.entity_tasks FOR INSERT TO authenticated WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']));
+CREATE POLICY entity_tasks_update_policy ON public.entity_tasks FOR UPDATE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR (assigned_to_id = (SELECT auth.uid()) AND public.is_technician())) WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']) OR (assigned_to_id = (SELECT auth.uid()) AND public.is_technician()));
+CREATE POLICY entity_tasks_delete_policy ON public.entity_tasks FOR DELETE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']));
 
--- Task History Policies
-CREATE POLICY task_history_authenticated_read ON public.task_history FOR SELECT TO authenticated USING (true);
-CREATE POLICY task_history_system_insert ON public.task_history FOR INSERT TO authenticated WITH CHECK (public.has_any_role(ARRAY['admin', 'manager', 'technician']));
+-- Entity Task History Policies
+CREATE POLICY entity_task_history_authenticated_read ON public.entity_task_history FOR SELECT TO authenticated USING (true);
+CREATE POLICY entity_task_history_system_insert ON public.entity_task_history FOR INSERT TO authenticated WITH CHECK (public.has_any_role(ARRAY['admin', 'manager', 'technician']));
 
 -- Ticket Workflow Changes Policies
 CREATE POLICY ticket_workflow_changes_authenticated_read ON public.ticket_workflow_changes FOR SELECT TO authenticated USING (true);
@@ -86,7 +86,7 @@ CREATE POLICY virtual_warehouses_delete_policy ON public.virtual_warehouses FOR 
 -- Physical Products Policies
 CREATE POLICY physical_products_select_policy ON public.physical_products FOR SELECT TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR public.is_technician() OR public.is_reception());
 CREATE POLICY physical_products_insert_policy ON public.physical_products FOR INSERT TO authenticated WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']));
-CREATE POLICY physical_products_update_policy ON public.physical_products FOR UPDATE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR (EXISTS (SELECT 1 FROM public.service_ticket_tasks WHERE service_ticket_tasks.assigned_to_id = (SELECT auth.uid()) AND service_ticket_tasks.ticket_id = physical_products.current_ticket_id) AND public.is_technician())) WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']) OR (EXISTS (SELECT 1 FROM public.service_ticket_tasks WHERE service_ticket_tasks.assigned_to_id = (SELECT auth.uid()) AND service_ticket_tasks.ticket_id = physical_products.current_ticket_id) AND public.is_technician()));
+CREATE POLICY physical_products_update_policy ON public.physical_products FOR UPDATE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']) OR (EXISTS (SELECT 1 FROM public.entity_tasks WHERE entity_tasks.entity_type = 'service_ticket' AND entity_tasks.assigned_to_id = (SELECT auth.uid()) AND entity_tasks.entity_id = physical_products.current_ticket_id) AND public.is_technician())) WITH CHECK (public.has_any_role(ARRAY['admin', 'manager']) OR (EXISTS (SELECT 1 FROM public.entity_tasks WHERE entity_tasks.entity_type = 'service_ticket' AND entity_tasks.assigned_to_id = (SELECT auth.uid()) AND entity_tasks.entity_id = physical_products.current_ticket_id) AND public.is_technician()));
 CREATE POLICY physical_products_delete_policy ON public.physical_products FOR DELETE TO authenticated USING (public.has_any_role(ARRAY['admin', 'manager']));
 
 -- Stock Movements Policies

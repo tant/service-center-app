@@ -59,15 +59,17 @@ export async function createTasksFromWorkflow(
     (a, b) => a.sequence_order - b.sequence_order
   );
 
-  // 3. Prepare ticket tasks for insertion
-  const ticketTasks = sortedTasks.map((wt) => {
+  // 3. Prepare entity tasks for insertion (using polymorphic entity_tasks table)
+  const entityTasks = sortedTasks.map((wt) => {
     // Handle nested task object (Supabase returns array or object)
     const task = Array.isArray(wt.task) ? wt.task[0] : wt.task;
 
     return {
-      ticket_id: ticketId,
+      entity_type: 'service_ticket',
+      entity_id: ticketId,
       task_id: wt.task_id,
       workflow_task_id: wt.id,
+      workflow_id: workflowId,
       name: task.name,
       description: wt.custom_instructions || task.description,
       sequence_order: wt.sequence_order,
@@ -77,16 +79,16 @@ export async function createTasksFromWorkflow(
     };
   });
 
-  // 4. Insert tasks into service_ticket_tasks table
+  // 4. Insert tasks into entity_tasks table
   const { error: insertError } = await ctx.supabaseAdmin
-    .from('service_ticket_tasks')
-    .insert(ticketTasks);
+    .from('entity_tasks')
+    .insert(entityTasks);
 
   if (insertError) {
     throw new Error(`Failed to create ticket tasks: ${insertError.message}`);
   }
 
-  return ticketTasks.length;
+  return entityTasks.length;
 }
 
 /**
@@ -101,13 +103,14 @@ export async function getTicketTasksWithProgress(
   ticketId: string
 ) {
   const { data: tasks, error } = await ctx.supabaseAdmin
-    .from('service_ticket_tasks')
+    .from('entity_tasks')
     .select(`
       *,
-      task:tasks(*),
-      assigned_to:profiles(id, full_name, email, avatar_url)
+      task:tasks!task_id(*),
+      assigned_to:profiles!assigned_to_id(id, full_name, email, avatar_url)
     `)
-    .eq('ticket_id', ticketId)
+    .eq('entity_type', 'service_ticket')
+    .eq('entity_id', ticketId)
     .order('sequence_order', { ascending: true });
 
   if (error) {
@@ -147,12 +150,13 @@ export async function canStartTask(
 ): Promise<{ canStart: boolean; reason?: string }> {
   // 1. Get task details
   const { data: task, error: taskError } = await ctx.supabaseAdmin
-    .from('service_ticket_tasks')
+    .from('entity_tasks')
     .select(`
       id,
-      ticket_id,
+      entity_id,
       sequence_order,
-      status
+      status,
+      workflow_id
     `)
     .eq('id', taskId)
     .single();
@@ -171,16 +175,16 @@ export async function canStartTask(
   }
 
   // 3. Get workflow to check if sequence is enforced
-  const { data: ticket } = await ctx.supabaseAdmin
-    .from('service_tickets')
-    .select('workflow_id, workflows(strict_sequence)')
-    .eq('id', task.ticket_id)
-    .single();
+  if (!task.workflow_id) {
+    // No workflow, can start anytime
+    return { canStart: true };
+  }
 
-  // Handle workflows being array or object (Supabase type inference)
-  const workflow = Array.isArray(ticket?.workflows)
-    ? ticket?.workflows[0]
-    : ticket?.workflows;
+  const { data: workflow } = await ctx.supabaseAdmin
+    .from('workflows')
+    .select('strict_sequence')
+    .eq('id', task.workflow_id)
+    .single();
 
   const enforceSequence = workflow?.strict_sequence ?? false;
 
@@ -191,9 +195,10 @@ export async function canStartTask(
 
   // 5. Check if all previous tasks are completed
   const { data: previousTasks } = await ctx.supabaseAdmin
-    .from('service_ticket_tasks')
+    .from('entity_tasks')
     .select('id, name, status, is_required')
-    .eq('ticket_id', task.ticket_id)
+    .eq('entity_type', 'service_ticket')
+    .eq('entity_id', task.entity_id)
     .lt('sequence_order', task.sequence_order)
     .neq('status', 'skipped');
 

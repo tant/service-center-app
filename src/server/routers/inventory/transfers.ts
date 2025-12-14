@@ -46,8 +46,57 @@ export const transfersRouter = router({
         throw new Error(`Failed to list transfers: ${error.message}`);
       }
 
+      // Fetch serial counts for all transfers in this page
+      const transferIds = data?.map(t => t.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+
+      if (transferIds.length > 0) {
+        // For transfers, count serials directly from stock_transfer_serials table
+        // (transfer items don't have serial_count column, they use existing physical products)
+        const { data: itemsData } = await ctx.supabaseAdmin
+          .from("stock_transfer_items")
+          .select(`
+            transfer_id,
+            quantity,
+            id
+          `)
+          .in("transfer_id", transferIds);
+
+        if (itemsData) {
+          // Get serial counts for all items
+          const itemIds = itemsData.map(item => item.id);
+          const { data: serialData } = await ctx.supabaseAdmin
+            .from("stock_transfer_serials")
+            .select("transfer_item_id")
+            .in("transfer_item_id", itemIds);
+
+          // Count serials per item
+          const serialCountsByItem: Record<string, number> = {};
+          (serialData || []).forEach(serial => {
+            serialCountsByItem[serial.transfer_item_id] = (serialCountsByItem[serial.transfer_item_id] || 0) + 1;
+          });
+
+          // Aggregate by transfer_id
+          itemsData.forEach(item => {
+            if (!serialCounts[item.transfer_id]) {
+              serialCounts[item.transfer_id] = { declared: 0, entered: 0 };
+            }
+            serialCounts[item.transfer_id].declared += item.quantity;
+            serialCounts[item.transfer_id].entered += (serialCountsByItem[item.id] || 0);
+          });
+        }
+      }
+
+      // Merge serial counts with transfers
+      const transfersWithSerials = (data || []).map(transfer => ({
+        ...transfer,
+        totalDeclaredQuantity: serialCounts[transfer.id]?.declared || 0,
+        totalSerialsEntered: serialCounts[transfer.id]?.entered || 0,
+        missingSerialsCount: (serialCounts[transfer.id]?.declared || 0) - (serialCounts[transfer.id]?.entered || 0),
+      }));
+
       return {
-        transfers: data || [],
+        transfers: transfersWithSerials,
         total: count || 0,
         page: input.page,
         pageSize: input.pageSize,
@@ -76,8 +125,6 @@ export const transfersRouter = router({
           ),
           from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name),
           to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
-          generated_issue:stock_issues!generated_issue_id(id, issue_number),
-          generated_receipt:stock_receipts!generated_receipt_id(id, receipt_number),
           created_by:profiles!created_by_id(id, full_name),
           approved_by:profiles!approved_by_id(id, full_name),
           received_by:profiles!received_by_id(id, full_name)
@@ -260,11 +307,199 @@ export const transfersRouter = router({
     }),
 
   /**
+   * Update full transfer (only if draft) - for editing all fields
+   */
+  updateFull: publicProcedure.use(requireManagerOrAbove)
+    .input(
+      z.object({
+        id: z.string(),
+        fromVirtualWarehouseId: z.string(),
+        toVirtualWarehouseId: z.string(),
+        transferDate: z.string(),
+        notes: z.string().optional(),
+        customerId: z.string().uuid().optional(),
+        items: z.array(
+          z.object({
+            id: z.string().optional(), // Existing item ID (not used for now, we recreate)
+            productId: z.string(),
+            quantity: z.number().int().min(1),
+          })
+        ).min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check status first
+      const { data: transfer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("status, created_by_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
+
+      if (transfer.status !== "draft") {
+        throw new Error("Cannot edit transfer after draft status");
+      }
+
+      // Check permission
+      const { data: profile } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", ctx.user!.id)
+        .single();
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Only creator or admin/manager can edit
+      if (
+        transfer.created_by_id !== profile.id &&
+        !["admin", "manager"].includes(profile.role)
+      ) {
+        throw new Error("Unauthorized to edit this transfer");
+      }
+
+      // Validate: Cannot transfer to same warehouse
+      if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
+        throw new Error("Cannot transfer to the same warehouse");
+      }
+
+      // Validate: Check if destination is customer_installed and require customer_id
+      const { data: toWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("warehouse_type")
+        .eq("id", input.toVirtualWarehouseId)
+        .single();
+
+      if (toWarehouse?.warehouse_type === "customer_installed" && !input.customerId) {
+        throw new Error("Customer ID is required when transferring to customer_installed warehouse");
+      }
+
+      // Get existing item IDs first
+      const { data: existingItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("id")
+        .eq("transfer_id", input.id);
+
+      const itemIds = existingItems?.map(item => item.id) || [];
+
+      // Delete existing serials first (if there are items)
+      if (itemIds.length > 0) {
+        await ctx.supabaseAdmin
+          .from("stock_transfer_serials")
+          .delete()
+          .in("transfer_item_id", itemIds);
+      }
+
+      // Delete existing items
+      const { error: deleteItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .delete()
+        .eq("transfer_id", input.id);
+
+      if (deleteItems) {
+        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
+      }
+
+      // Update transfer header
+      const { data: updatedTransfer, error: updateError } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .update({
+          from_virtual_warehouse_id: input.fromVirtualWarehouseId,
+          to_virtual_warehouse_id: input.toVirtualWarehouseId,
+          transfer_date: input.transferDate,
+          notes: input.notes,
+          customer_id: input.customerId,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update transfer: ${updateError.message}`);
+      }
+
+      // Insert new items
+      if (input.items.length > 0) {
+        const items = input.items.map((item) => ({
+          transfer_id: input.id,
+          product_id: item.productId,
+          quantity: item.quantity,
+        }));
+
+        const { error: itemsError } = await ctx.supabaseAdmin
+          .from("stock_transfer_items")
+          .insert(items);
+
+        if (itemsError) {
+          throw new Error(`Failed to create transfer items: ${itemsError.message}`);
+        }
+      }
+
+      return updatedTransfer;
+    }),
+
+  /**
    * Submit for approval
    */
   submitForApproval: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // VALIDATION CHECKPOINT #2: Verify all serials are in source warehouse before submit
+      const { data: transfer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("from_virtual_warehouse_id, to_virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
+
+      // Get all item IDs for this transfer
+      const { data: transferItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("id")
+        .eq("transfer_id", input.id);
+
+      if (transferItems && transferItems.length > 0) {
+        // Get all serials in this transfer
+        const transferItemIds = transferItems.map(item => item.id);
+        const { data: transferSerials } = await ctx.supabaseAdmin
+          .from("stock_transfer_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            transfer_item_id
+          `)
+          .in("transfer_item_id", transferItemIds);
+
+      if (transferSerials && transferSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = transferSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể gửi duyệt: Các serial sau không còn trong kho nguồn: ${wrongSerials}`);
+          }
+        }
+      }
+      }
+
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .update({ status: "pending_approval" })
@@ -296,6 +531,58 @@ export const transfersRouter = router({
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
         throw new Error("Unauthorized: Only admin and manager can approve transfers");
+      }
+
+      // VALIDATION CHECKPOINT #3: Verify all serials are in source warehouse before approve
+      const { data: transfer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("from_virtual_warehouse_id, to_virtual_warehouse_id")
+        .eq("id", input.id)
+        .single();
+
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
+
+      // Get all item IDs for this transfer
+      const { data: transferItems } = await ctx.supabaseAdmin
+        .from("stock_transfer_items")
+        .select("id")
+        .eq("transfer_id", input.id);
+
+      if (transferItems && transferItems.length > 0) {
+        // Get all serials in this transfer
+        const transferItemIds = transferItems.map(item => item.id);
+        const { data: transferSerials } = await ctx.supabaseAdmin
+          .from("stock_transfer_serials")
+          .select(`
+            serial_number,
+            physical_product_id,
+            transfer_item_id
+          `)
+          .in("transfer_item_id", transferItemIds);
+
+      if (transferSerials && transferSerials.length > 0) {
+        // Check each serial's current warehouse location
+        const physicalProductIds = transferSerials.map(s => s.physical_product_id).filter(Boolean);
+
+        if (physicalProductIds.length > 0) {
+          const { data: physicalProducts } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, virtual_warehouse_id")
+            .in("id", physicalProductIds);
+
+          // Find serials that are not in source warehouse
+          const wrongWarehouse = physicalProducts?.filter(
+            p => p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id
+          ) || [];
+
+          if (wrongWarehouse.length > 0) {
+            const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+            throw new Error(`Không thể duyệt: Các serial sau không còn trong kho nguồn: ${wrongSerials}`);
+          }
+        }
+      }
       }
 
       const { data, error } = await ctx.supabaseAdmin
@@ -391,11 +678,12 @@ export const transfersRouter = router({
         throw new Error("Transfer not found");
       }
 
-      // Validate physical products exist and belong to source warehouse
+      // Validate physical products exist, are ACTIVE, and belong to source warehouse
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
-        .in("id", input.physicalProductIds);
+        .in("id", input.physicalProductIds)
+        .eq("status", "active");
 
       if (validateError) {
         throw new Error(`Failed to validate physical products: ${validateError.message}`);
@@ -564,12 +852,29 @@ export const transfersRouter = router({
         throw new Error("Transfer item not found");
       }
 
-      // Find physical products by serial numbers in source warehouse
+      // Get transfer to verify source warehouse
+      const { data: transfer } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .select("from_virtual_warehouse_id, to_virtual_warehouse_id")
+        .eq("id", transferItem.transfer_id)
+        .single();
+
+      if (!transfer) {
+        throw new Error("Transfer not found");
+      }
+
+      // CRITICAL: Validate warehouse ID matches transfer's source warehouse
+      if (input.virtualWarehouseId !== transfer.from_virtual_warehouse_id) {
+        throw new Error("Kho nguồn không khớp với phiếu chuyển. Chỉ có thể chọn serial từ kho nguồn.");
+      }
+
+      // Find ACTIVE physical products by serial numbers in source warehouse
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id")
         .eq("product_id", transferItem.product_id)
         .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active")
         .in("serial_number", input.serialNumbers);
 
       if (findError) {
@@ -582,6 +887,24 @@ export const transfersRouter = router({
 
       if (notFound.length > 0) {
         throw new Error(`Serial không tồn tại trong kho nguồn: ${notFound.join(", ")}`);
+      }
+
+      // CRITICAL: Ensure we found all physical products and they have valid IDs
+      if (!physicalProducts || physicalProducts.length !== input.serialNumbers.length) {
+        throw new Error(`Không tìm thấy đủ serial trong kho nguồn. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`);
+      }
+
+      // Validate all physical products have valid IDs (not NULL)
+      const invalidProducts = physicalProducts.filter(p => !p.id);
+      if (invalidProducts.length > 0) {
+        throw new Error(`Có ${invalidProducts.length} serial không có physical product ID hợp lệ`);
+      }
+
+      // CRITICAL: Double-check all products are actually in the source warehouse (defense in depth)
+      const wrongWarehouse = physicalProducts.filter(p => p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id);
+      if (wrongWarehouse.length > 0) {
+        const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+        throw new Error(`Serial không thuộc kho nguồn: ${wrongSerials}`);
       }
 
       // Note: No need to check if already issued - if physical_product exists in DB, it's available

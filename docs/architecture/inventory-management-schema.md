@@ -82,6 +82,30 @@ CREATE TYPE public.warehouse_type AS ENUM (
 ```
 **⚠️ IMPORTANT**: This is for UI display and reporting ONLY. Foreign keys use `virtual_warehouse_id` UUID.
 
+### 3.1b Physical Product Status (Added 2025-11-05)
+```sql
+CREATE TYPE public.physical_product_status AS ENUM (
+  'draft',        -- From unapproved receipt (temporary, can be deleted)
+  'active',       -- In stock, available (receipt approved)
+  'transferring', -- In draft issue/transfer document (locked, cannot be selected by other documents)
+  'issued',       -- Issued out (via approved stock issue document)
+  'disposed'      -- Disposed/scrapped (no longer usable)
+);
+```
+
+**Lifecycle Flow:**
+```
+draft → active → transferring → issued (OR disposed)
+                      ↓
+                   active (on cancel/remove)
+```
+
+**Key Features:**
+- ✅ Prevents double-selection: Only 'active' products can be selected for new documents
+- ✅ Auto cleanup: 'draft' products deleted when receipt cancelled
+- ✅ Accurate stock: Only 'active' products count toward available stock
+- ✅ Full audit: Complete lifecycle tracking
+
 ### 3.2 Stock Document Status (SIMPLIFIED)
 ```sql
 CREATE TYPE public.stock_document_status AS ENUM (
@@ -167,6 +191,9 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   previous_virtual_warehouse_id UUID
     REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
 
+  -- ✅ NEW (2025-11-05): Lifecycle status tracking
+  status public.physical_product_status NOT NULL DEFAULT 'draft',
+
   -- Warranty (managed separately at /inventory/products)
   manufacturer_warranty_end_date DATE,
   user_warranty_end_date DATE,
@@ -198,13 +225,17 @@ CREATE INDEX idx_physical_products_previous_virtual_warehouse
 CREATE INDEX idx_physical_products_last_customer
   ON public.physical_products(last_known_customer_id)
   WHERE last_known_customer_id IS NOT NULL;
+CREATE INDEX idx_physical_products_status
+  ON public.physical_products(status);
 
 COMMENT ON TABLE public.physical_products IS
-  'Serialized product instances with warranty and location tracking (REDESIGNED 2025-10-31)';
+  'Serialized product instances with warranty and location tracking (REDESIGNED 2025-10-31, STATUS added 2025-11-05)';
 COMMENT ON COLUMN public.physical_products.virtual_warehouse_id IS
   'Virtual warehouse instance where this product is currently located (required - UUID not ENUM)';
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_id IS
   'Previous virtual warehouse before RMA - used to restore product location when removed from RMA batch';
+COMMENT ON COLUMN public.physical_products.status IS
+  'Lifecycle status: draft → active → transferring → issued/disposed. Prevents double-selection and enables cleanup.';
 COMMENT ON COLUMN public.physical_products.last_known_customer_id IS
   'Last known customer who owns/received this product. Updated when product moves to customer_installed warehouse.';
 ```
@@ -614,4 +645,15 @@ virtual_warehouse_id UUID NOT NULL REFERENCES virtual_warehouses(id)
 
 ---
 
+## 9. Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2025-10-31 | Initial redesign - Virtual warehouse UUID migration |
+| 1.1 | 2025-11-05 | Added `physical_product_status` ENUM and lifecycle tracking system |
+
+---
+
 **End of Schema Design Document**
+**Version:** 1.1
+**Last Updated:** 2025-11-05

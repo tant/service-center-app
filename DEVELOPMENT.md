@@ -88,7 +88,7 @@ docker ps
 Before starting Supabase, ensure the necessary directories are created and `supabase/config.toml` is updated:
 
 ```bash
-mkdir -p supabase/migrations supabase/schemas supabase/storage/product_images supabase/storage/service_media supabase/storage/avatars
+mkdir -p supabase/migrations supabase/schemas supabase/storage/product_images supabase/storage/service_media supabase/storage/avatars supabase/storage/service_videos
 ```
 
 Update `supabase/config.toml` to set the `objects_path` for the `avatars` bucket to the correct local storage location. This ensures that avatar images are stored in the designated directory.

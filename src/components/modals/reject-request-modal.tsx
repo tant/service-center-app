@@ -60,7 +60,7 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
     rejectRequest(
       {
         request_id: requestId,
-        rejection_reason: rejectionText,
+        cancellation_reason: rejectionText,
       },
       {
         onSuccess: () => {

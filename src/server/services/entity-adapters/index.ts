@@ -1,0 +1,24 @@
+/**
+ * Entity Adapters - Main Export
+ *
+ * Exports all entity adapters and the adapter registry.
+ * This is the main entry point for the entity adapter pattern.
+ *
+ * @module entity-adapters
+ */
+
+// Core interfaces and types
+export * from "./base-adapter";
+
+// Adapter registry
+export * from "./registry";
+
+// Concrete adapters
+export * from "./service-ticket-adapter";
+export * from "./inventory-receipt-adapter";
+export * from "./inventory-issue-adapter";
+export * from "./inventory-transfer-adapter";
+export * from "./service-request-adapter";
+
+// Re-export singleton registry instance for convenience
+export { adapterRegistry } from "./registry";

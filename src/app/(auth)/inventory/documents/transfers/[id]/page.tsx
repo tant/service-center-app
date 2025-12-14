@@ -5,14 +5,18 @@
  * Allows viewing and editing stock transfer details
  */
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/components/providers/trpc-provider";
 import { PageHeader } from "@/components/page-header";
 import { TransferDetailHeader } from "@/components/inventory/documents/transfer-detail-header";
 import { TransferItemsTable } from "@/components/inventory/documents/transfer-items-table";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
+import { TaskCard } from "@/components/tasks/task-card";
+import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Send, Trash2, CheckCircle } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Send, Trash2, CheckCircle, ListTodo, Edit } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -23,11 +27,36 @@ interface TransferDetailPageProps {
 export default function TransferDetailPage({ params }: TransferDetailPageProps) {
   const router = useRouter();
   const { id } = use(params);
+  const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
+
+  // Task action dialog state
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+    open: false,
+    taskId: null,
+    taskName: "",
+  });
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+    open: false,
+    taskId: null,
+    taskName: "",
+  });
 
   const { data: transfer, isLoading, refetch } = trpc.inventory.transfers.getById.useQuery({ id });
+  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
+    { entityType: "inventory_transfer", entityId: id },
+    { refetchInterval: 30000 }
+  );
+  const tasks = taskData?.tasks || [];
   const submitForApproval = trpc.inventory.transfers.submitForApproval.useMutation();
+  const approveTransfer = trpc.inventory.transfers.approve.useMutation();
   const confirmReceived = trpc.inventory.transfers.confirmReceived.useMutation();
   const deleteTransfer = trpc.inventory.transfers.delete.useMutation();
+
+  // Task mutations
+  const startTaskMutation = trpc.tasks.startTask.useMutation();
+  const completeTaskMutation = trpc.tasks.completeTask.useMutation();
+  const blockTaskMutation = trpc.tasks.blockTask.useMutation();
+  const unblockTaskMutation = trpc.tasks.unblockTask.useMutation();
 
   const handleSubmitForApproval = async () => {
     try {
@@ -36,6 +65,20 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
       refetch();
     } catch (error: any) {
       toast.error(error.message || "Không thể gửi phiếu chuyển");
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!confirm("Bạn có chắc chắn muốn duyệt phiếu chuyển này?")) {
+      return;
+    }
+
+    try {
+      await approveTransfer.mutateAsync({ id });
+      toast.success("Đã duyệt phiếu chuyển");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể duyệt phiếu chuyển");
     }
   };
 
@@ -64,6 +107,71 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
       router.push("/inventory/documents");
     } catch (error: any) {
       toast.error(error.message || "Không thể xóa phiếu chuyển");
+    }
+  };
+
+  // Task action handlers
+  const handleStartTask = async (taskId: string) => {
+    try {
+      await startTaskMutation.mutateAsync({ taskId });
+      toast.success("Đã bắt đầu công việc");
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể bắt đầu công việc");
+    }
+  };
+
+  const handleCompleteTask = (taskId: string, taskName: string) => {
+    setCompleteTaskDialog({ open: true, taskId, taskName });
+  };
+
+  const handleCompleteTaskConfirm = async (notes: string) => {
+    if (!completeTaskDialog.taskId) return;
+
+    try {
+      await completeTaskMutation.mutateAsync({
+        taskId: completeTaskDialog.taskId,
+        completionNotes: notes,
+      });
+      toast.success("Đã hoàn thành công việc");
+      setCompleteTaskDialog({ open: false, taskId: null, taskName: "" });
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể hoàn thành công việc");
+    }
+  };
+
+  const handleBlockTask = (taskId: string, taskName: string) => {
+    setBlockTaskDialog({ open: true, taskId, taskName });
+  };
+
+  const handleBlockTaskConfirm = async (reason: string) => {
+    if (!blockTaskDialog.taskId) return;
+
+    try {
+      await blockTaskMutation.mutateAsync({
+        taskId: blockTaskDialog.taskId,
+        blockedReason: reason,
+      });
+      toast.success("Đã báo chặn công việc");
+      setBlockTaskDialog({ open: false, taskId: null, taskName: "" });
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể báo chặn công việc");
+    }
+  };
+
+  const handleUnblockTask = async (taskId: string) => {
+    try {
+      await unblockTaskMutation.mutateAsync({ taskId });
+      toast.success("Đã bỏ chặn công việc");
+      refetchTasks();
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Không thể bỏ chặn công việc");
     }
   };
 
@@ -111,6 +219,7 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
   );
 
   const canSubmitForApproval = transfer.status === "draft" && allItemsComplete;
+  const canApprove = transfer.status === "pending_approval";
   const canConfirmReceived = transfer.status === "in_transit" && allItemsComplete;
   const canDelete = transfer.status === "draft";
 
@@ -130,6 +239,27 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
               </Link>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsWorkflowDialogOpen(true)}
+                >
+                  <ListTodo className="h-4 w-4" />
+                  <span className="hidden lg:inline">Tạo công việc</span>
+                </Button>
+
+                {canDelete && (
+                  <Link href={`/inventory/documents/transfers/${id}/edit`}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="hidden lg:inline">Chỉnh sửa</span>
+                    </Button>
+                  </Link>
+                )}
+
                 {canDelete && (
                   <Button
                     variant="destructive"
@@ -154,6 +284,18 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                   </Button>
                 )}
 
+                {canApprove && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApprove}
+                    disabled={approveTransfer.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="hidden lg:inline">Duyệt phiếu</span>
+                  </Button>
+                )}
+
                 {canConfirmReceived && (
                   <Button
                     variant="default"
@@ -171,6 +313,37 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
             {/* Content */}
             <div className="px-4 lg:px-6 space-y-4">
               <TransferDetailHeader transfer={transfer} />
+
+              {/* Tasks Section */}
+              {tasks.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ListTodo className="h-4 w-4" />
+                      Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {tasks.map((task: any) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onStartTask={handleStartTask}
+                        onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
+                        onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                        onUnblockTask={handleUnblockTask}
+                        isLoading={
+                          startTaskMutation.isPending ||
+                          completeTaskMutation.isPending ||
+                          blockTaskMutation.isPending ||
+                          unblockTaskMutation.isPending
+                        }
+                      />
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               <TransferItemsTable transfer={transfer} onSerialsSelected={() => refetch()} />
 
               {!allItemsComplete && (transfer.status === "draft" || transfer.status === "in_transit") && (
@@ -186,6 +359,39 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
           </div>
         </div>
       </div>
+
+      {/* Workflow Selection Dialog */}
+      <WorkflowSelectionDialog
+        open={isWorkflowDialogOpen}
+        onOpenChange={setIsWorkflowDialogOpen}
+        entityType="inventory_transfer"
+        entityId={id}
+        onSuccess={() => {
+          refetchTasks();
+          refetch();
+        }}
+      />
+
+      {/* Task Action Dialogs */}
+      <CompleteTaskDialog
+        open={completeTaskDialog.open}
+        onOpenChange={(open) =>
+          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+        }
+        onConfirm={handleCompleteTaskConfirm}
+        taskName={completeTaskDialog.taskName}
+        isLoading={completeTaskMutation.isPending}
+      />
+
+      <BlockTaskDialog
+        open={blockTaskDialog.open}
+        onOpenChange={(open) =>
+          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+        }
+        onConfirm={handleBlockTaskConfirm}
+        taskName={blockTaskDialog.taskName}
+        isLoading={blockTaskMutation.isPending}
+      />
     </>
   );
 }

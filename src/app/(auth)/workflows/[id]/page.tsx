@@ -28,10 +28,12 @@ export default function TemplateDetailPage() {
   const { deleteTemplate, isDeleting } = useDeleteTemplate();
   const { toggleTemplate, isToggling } = useToggleTemplate();
 
-  const serviceTypeLabels: Record<string, string> = {
-    warranty: "Bảo hành",
-    paid: "Trả phí",
-    replacement: "Thay thế",
+  const entityTypeLabels: Record<string, string> = {
+    service_ticket: "Phiếu sửa chữa",
+    service_request: "Phiếu yêu cầu dịch vụ",
+    inventory_receipt: "Phiếu nhập kho",
+    inventory_issue: "Phiếu xuất kho",
+    inventory_transfer: "Phiếu chuyển kho",
   };
 
   const handleEdit = () => {
@@ -119,9 +121,11 @@ export default function TemplateDetailPage() {
                   <Badge variant={workflow.is_active ? "default" : "secondary"}>
                     {workflow.is_active ? "Đang hoạt động" : "Không hoạt động"}
                   </Badge>
-                  <Badge variant="outline">
-                    {serviceTypeLabels[workflow.service_type] || workflow.service_type}
-                  </Badge>
+                  {workflow.entity_type && (
+                    <Badge variant="outline">
+                      {entityTypeLabels[workflow.entity_type] || workflow.entity_type}
+                    </Badge>
+                  )}
                   {workflow.enforce_sequence && (
                     <Badge variant="outline">
                       Thứ tự bắt buộc
@@ -188,10 +192,12 @@ export default function TemplateDetailPage() {
 
                     <div>
                       <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                        Loại dịch vụ
+                        Loại tài liệu áp dụng
                       </h3>
                       <Badge variant="outline">
-                        {serviceTypeLabels[workflow.service_type] || workflow.service_type}
+                        {workflow.entity_type
+                          ? (entityTypeLabels[workflow.entity_type] || workflow.entity_type)
+                          : "Chưa xác định"}
                       </Badge>
                     </div>
                   </div>
@@ -275,10 +281,10 @@ export default function TemplateDetailPage() {
 
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{task.tasks?.name || "Unknown Task"}</h4>
-                                {task.tasks?.category && (
+                                <h4 className="font-medium">{task.task_type?.name || "Unknown Task"}</h4>
+                                {task.task_type?.category && (
                                   <Badge variant="outline" className="text-xs">
-                                    {task.tasks?.category}
+                                    {task.task_type?.category}
                                   </Badge>
                                 )}
                                 {task.is_required && (

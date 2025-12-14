@@ -17,15 +17,16 @@ export type WorkflowTask = Database['public']['Tables']['workflow_tasks']['Row']
 export type WorkflowTaskInsert = Database['public']['Tables']['workflow_tasks']['Insert'];
 export type WorkflowTaskUpdate = Database['public']['Tables']['workflow_tasks']['Update'];
 
-export type ServiceTicketTask = Database['public']['Tables']['service_ticket_tasks']['Row'];
-export type ServiceTicketTaskInsert = Database['public']['Tables']['service_ticket_tasks']['Insert'];
-export type ServiceTicketTaskUpdate = Database['public']['Tables']['service_ticket_tasks']['Update'];
+export type EntityTask = Database['public']['Tables']['entity_tasks']['Row'];
+export type EntityTaskInsert = Database['public']['Tables']['entity_tasks']['Insert'];
+export type EntityTaskUpdate = Database['public']['Tables']['entity_tasks']['Update'];
 
-export type TaskHistory = Database['public']['Tables']['task_history']['Row'];
-export type TaskHistoryInsert = Database['public']['Tables']['task_history']['Insert'];
-
-export type TicketWorkflowChange = Database['public']['Tables']['ticket_workflow_changes']['Row'];
-export type TicketWorkflowChangeInsert = Database['public']['Tables']['ticket_workflow_changes']['Insert'];
+// Note: task_history and ticket_workflow_changes tables removed in polymorphic refactor
+// History is now tracked in audit_logs table
+// export type TaskHistory = Database['public']['Tables']['task_history']['Row'];
+// export type TaskHistoryInsert = Database['public']['Tables']['task_history']['Insert'];
+// export type TicketWorkflowChange = Database['public']['Tables']['ticket_workflow_changes']['Row'];
+// export type TicketWorkflowChangeInsert = Database['public']['Tables']['ticket_workflow_changes']['Insert'];
 
 // View types
 export type TaskProgressSummary = Database['public']['Views']['v_task_progress_summary']['Row'];
@@ -37,7 +38,7 @@ export interface WorkflowWithTasks extends Workflow {
   })[];
 }
 
-export interface ServiceTicketTaskWithDetails extends ServiceTicketTask {
+export interface EntityTaskWithDetails extends EntityTask {
   task: Task;
   assigned_to?: {
     id: string;
@@ -46,12 +47,13 @@ export interface ServiceTicketTaskWithDetails extends ServiceTicketTask {
   };
 }
 
-export interface TaskHistoryWithDetails extends TaskHistory {
-  changed_by?: {
-    id: string;
-    full_name: string;
-  };
-}
+// Note: TaskHistory removed in polymorphic refactor - history now in audit_logs
+// export interface TaskHistoryWithDetails extends TaskHistory {
+//   changed_by?: {
+//     id: string;
+//     full_name: string;
+//   };
+// }
 
 // Form types
 export interface WorkflowFormData {

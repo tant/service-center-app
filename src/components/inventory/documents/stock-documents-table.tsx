@@ -207,25 +207,26 @@ export function StockDocumentsTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Số chứng từ</TableHead>
+              <TableHead className="pl-4 lg:pl-6">Số chứng từ</TableHead>
               {documentType === "all" && <TableHead>Loại</TableHead>}
               <TableHead>Ngày</TableHead>
               <TableHead>Người tạo</TableHead>
               <TableHead>Trạng thái</TableHead>
+              <TableHead>Serial thiếu</TableHead>
               <TableHead>Ghi chú</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   Đang tải...
                 </TableCell>
               </TableRow>
             ) : allDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
                   Không tìm thấy chứng từ nào.
                 </TableCell>
               </TableRow>
@@ -236,7 +237,7 @@ export function StockDocumentsTable() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleRowClick(doc)}
                 >
-                  <TableCell className="font-medium">{doc.documentNumber}</TableCell>
+                  <TableCell className="font-medium pl-4 lg:pl-6">{doc.documentNumber}</TableCell>
                   {documentType === "all" && <TableCell>{getDocumentTypeBadge(doc.documentType)}</TableCell>}
                   <TableCell className="text-muted-foreground">
                     {doc.date ? format(new Date(doc.date), "dd/MM/yyyy") : "-"}
@@ -247,10 +248,25 @@ export function StockDocumentsTable() {
                   <TableCell>
                     <DocumentStatusBadge status={doc.status} />
                   </TableCell>
+                  <TableCell>
+                    {doc.status === "approved" || doc.status === "completed" ? (
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
+                          doc.missingSerialsCount > 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
+                        {doc.missingSerialsCount > 0 ? `${doc.missingSerialsCount} serial` : "Hoàn thành"}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {doc.notes || "-"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4 lg:pr-6">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -310,6 +326,10 @@ export function StockDocumentsTable() {
             <Layers className="h-4 w-4" />
             <span className="hidden sm:inline">Tất cả</span>
           </TabsTrigger>
+          <TabsTrigger value="transfer" className="flex items-center gap-2">
+            <ArrowLeftRight className="h-4 w-4" />
+            <span className="hidden sm:inline">Phiếu chuyển</span>
+          </TabsTrigger>
           <TabsTrigger value="receipt" className="flex items-center gap-2">
             <PackagePlus className="h-4 w-4" />
             <span className="hidden sm:inline">Phiếu nhập</span>
@@ -318,14 +338,16 @@ export function StockDocumentsTable() {
             <PackageMinus className="h-4 w-4" />
             <span className="hidden sm:inline">Phiếu xuất</span>
           </TabsTrigger>
-          <TabsTrigger value="transfer" className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            <span className="hidden sm:inline">Phiếu chuyển</span>
-          </TabsTrigger>
         </TabsList>
 
         <div className="flex items-center gap-2">
           {/* Action Buttons */}
+          <Link href="/inventory/documents/transfers/new">
+            <Button variant="outline" size="sm">
+              <ArrowLeftRight className="h-4 w-4" />
+              <span className="hidden lg:inline">Tạo phiếu chuyển</span>
+            </Button>
+          </Link>
           <Link href="/inventory/documents/receipts/new">
             <Button variant="outline" size="sm">
               <PackagePlus className="h-4 w-4" />
@@ -336,12 +358,6 @@ export function StockDocumentsTable() {
             <Button variant="outline" size="sm">
               <PackageMinus className="h-4 w-4" />
               <span className="hidden lg:inline">Tạo phiếu xuất</span>
-            </Button>
-          </Link>
-          <Link href="/inventory/documents/transfers/new">
-            <Button variant="outline" size="sm">
-              <ArrowLeftRight className="h-4 w-4" />
-              <span className="hidden lg:inline">Tạo phiếu chuyển</span>
             </Button>
           </Link>
         </div>

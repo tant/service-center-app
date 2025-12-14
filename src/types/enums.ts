@@ -21,7 +21,7 @@ export type MovementType = Database['public']['Enums']['movement_type'];
 
 // ENUM value constants for use in forms and filters
 export const USER_ROLES: UserRole[] = ['admin', 'manager', 'technician', 'reception'];
-export const TICKET_STATUSES: TicketStatus[] = ['pending', 'in_progress', 'completed', 'cancelled'];
+export const TICKET_STATUSES: TicketStatus[] = ['pending', 'in_progress', 'ready_for_pickup', 'completed', 'cancelled'];
 export const PRIORITY_LEVELS: PriorityLevel[] = ['low', 'normal', 'high', 'urgent'];
 export const WARRANTY_TYPES: WarrantyType[] = ['warranty', 'paid', 'goodwill'];
 export const COMMENT_TYPES: CommentType[] = ['note', 'status_change', 'assignment', 'system'];
@@ -49,6 +49,7 @@ export const getTicketStatusLabel = (status: TicketStatus): string => {
   const labels: Record<TicketStatus, string> = {
     pending: 'Pending',
     in_progress: 'In Progress',
+    ready_for_pickup: 'Ready for Pickup',
     completed: 'Completed',
     cancelled: 'Cancelled',
   };

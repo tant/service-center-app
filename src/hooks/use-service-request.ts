@@ -174,7 +174,7 @@ export function useUpdateRequestStatus() {
 // }
 
 /**
- * Story 1.13: Reject service request
+ * Story 1.13: Reject/Cancel service request
  * Staff mutation to reject request with reason
  */
 export function useRejectRequest() {

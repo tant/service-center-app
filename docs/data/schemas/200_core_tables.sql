@@ -65,8 +65,8 @@ CREATE TABLE "customers" (
   "is_active" BOOLEAN NOT NULL DEFAULT true,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "customers_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "customers_phone_unique" UNIQUE ("phone")

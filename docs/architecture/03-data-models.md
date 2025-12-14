@@ -704,7 +704,7 @@ $$ language sql security definer;
 
 **Security & System:**
 - `audit_logs` - Immutable audit trail for all permission-sensitive operations
-- `system_settings` - Global application configuration
+- `system_settings` - Global application configuration (key/value JSONB).
 
 ---
 

@@ -70,6 +70,10 @@ supabase/storage/*
 .claude
 .vscode
 .gemini
+.codex
+GEMINI.md
+CLAUDE.md
+AGENTS.md
 
 # Playwright
 node_modules/

@@ -1774,9 +1774,10 @@ WHERE id = (
 5. Nhấp "Xác Nhận Từ Chối"
 
 **Then:**
-- status = 'rejected'
-- `rejection_reason` được lưu
-- `rejected_at` = now()
+- status = 'cancelled'
+- `cancellation_reason` được lưu
+- `reviewed_by_id` = current user ID
+- `reviewed_at` = now()
 - Email thông báo gửi cho customer với lý do từ chối
 
 ---

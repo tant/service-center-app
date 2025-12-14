@@ -22,11 +22,13 @@ CREATE TABLE "service_tickets" (
   "ticket_number" TEXT NOT NULL UNIQUE,
   "customer_id" UUID NOT NULL REFERENCES "customers"("id"),
   "product_id" UUID NOT NULL REFERENCES "products"("id"),
+
+  "serial_number" TEXT,
   "issue_description" TEXT NOT NULL,
   "status" public.ticket_status NOT NULL DEFAULT 'pending',
   "priority_level" public.priority_level NOT NULL DEFAULT 'normal',
   "warranty_type" public.warranty_type,
-  "assigned_to" UUID REFERENCES "profiles"("user_id"),
+  "assigned_to" UUID REFERENCES "profiles"("id"),
   "service_fee" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (service_fee >= 0),
   "diagnosis_fee" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (diagnosis_fee >= 0),
   "parts_total" DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (parts_total >= 0),
@@ -37,14 +39,16 @@ CREATE TABLE "service_tickets" (
   "notes" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   -- Phase 2 columns (FK constraints added in 301_foreign_key_constraints.sql)
   "workflow_id" UUID,
   "request_id" UUID,
   "delivery_method" public.delivery_method,
   "delivery_address" TEXT,
+  "delivery_confirmed_at" TIMESTAMPTZ,
+  "delivery_confirmed_by_id" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_tickets_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_tickets_dates_check" CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
@@ -56,10 +60,16 @@ COMMENT ON COLUMN public.service_tickets.request_id IS 'Service request that cre
 COMMENT ON COLUMN public.service_tickets.delivery_method IS 'Customer delivery preference: pickup or delivery (Phase 2)';
 COMMENT ON COLUMN public.service_tickets.delivery_address IS 'Delivery address if delivery_method = delivery (Phase 2)';
 
+COMMENT ON COLUMN public.service_tickets.serial_number IS 'Captured serial number for the product at ticket creation time';
+COMMENT ON COLUMN public.service_tickets.delivery_confirmed_at IS 'Timestamp when delivery to customer was confirmed';
+COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.id of staff who confirmed delivery';
+
 -- Indexes
 CREATE INDEX "service_tickets_ticket_number_idx" ON "service_tickets" USING btree ("ticket_number");
 CREATE INDEX "service_tickets_customer_id_idx" ON "service_tickets" USING btree ("customer_id");
 CREATE INDEX "service_tickets_product_id_idx" ON "service_tickets" USING btree ("product_id");
+
+CREATE INDEX IF NOT EXISTS idx_service_tickets_serial_number ON public.service_tickets(serial_number) WHERE serial_number IS NOT NULL;
 CREATE INDEX "service_tickets_status_idx" ON "service_tickets" USING btree ("status");
 CREATE INDEX "service_tickets_priority_level_idx" ON "service_tickets" USING btree ("priority_level");
 CREATE INDEX "service_tickets_assigned_to_idx" ON "service_tickets" USING btree ("assigned_to");
@@ -117,10 +127,22 @@ CREATE TRIGGER "service_tickets_set_number_trigger"
 
 CREATE OR REPLACE FUNCTION public.log_status_change()
 RETURNS TRIGGER AS $$
+DECLARE
+  profile_id_var UUID;
 BEGIN
   IF (tg_op = 'UPDATE' AND old.status IS DISTINCT FROM new.status) THEN
+    -- Use updated_by if available, otherwise lookup profile from auth.uid()
+    IF new.updated_by IS NOT NULL THEN
+      profile_id_var := new.updated_by;
+    ELSE
+      -- Lookup profile.id from auth.uid() (auth.users.id)
+      SELECT id INTO profile_id_var
+      FROM public.profiles
+      WHERE user_id = auth.uid();
+    END IF;
+
     INSERT INTO public.service_ticket_comments (ticket_id, comment, comment_type, is_internal, created_by)
-    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, coalesce(new.updated_by, (SELECT auth.uid())));
+    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, profile_id_var);
   END IF;
   RETURN new;
 END;
@@ -139,6 +161,81 @@ CREATE POLICY "service_tickets_update_policy" ON "service_tickets" FOR UPDATE US
 CREATE POLICY "service_tickets_delete_policy" ON "service_tickets" FOR DELETE USING (public.is_admin_or_manager());
 
 -- =====================================================
+-- AUTO-CREATE TASKS WHEN TICKET HAS WORKFLOW (AUTO-GENERATED TICKETS)
+-- Only runs for tickets linked to a service request (request_id IS NOT NULL)
+-- to avoid duplicating tasks for manual ticket creation (handled in app layer).
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.auto_create_service_ticket_tasks()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_existing INT;
+BEGIN
+  -- Only handle tickets created from service requests to avoid duplicating
+  -- tasks for manual ticket creation where tasks are created in app layer.
+  IF NEW.request_id IS NULL OR NEW.workflow_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT COUNT(*) INTO v_existing
+  FROM public.entity_tasks
+  WHERE entity_type = 'service_ticket'
+    AND entity_id = NEW.id;
+
+  IF v_existing > 0 THEN
+    RETURN NEW;
+  END IF;
+
+  INSERT INTO public.entity_tasks (
+    entity_type,
+    entity_id,
+    task_id,
+    workflow_task_id,
+    workflow_id,
+    name,
+    description,
+    sequence_order,
+    status,
+    is_required,
+    estimated_duration_minutes,
+    created_by_id
+  )
+  SELECT
+    'service_ticket',
+    NEW.id,
+    wt.task_id,
+    wt.id,
+    wt.workflow_id,
+    t.name,
+    COALESCE(wt.custom_instructions, t.description),
+    wt.sequence_order,
+    'pending',
+    wt.is_required,
+    t.estimated_duration_minutes,
+    NEW.created_by
+  FROM public.workflow_tasks wt
+  INNER JOIN public.tasks t ON t.id = wt.task_id
+  WHERE wt.workflow_id = NEW.workflow_id
+  ORDER BY wt.sequence_order;
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'auto_create_service_ticket_tasks failed for ticket %: %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_auto_create_service_ticket_tasks ON public.service_tickets;
+CREATE TRIGGER trigger_auto_create_service_ticket_tasks
+AFTER INSERT ON public.service_tickets
+FOR EACH ROW
+WHEN (NEW.workflow_id IS NOT NULL AND NEW.request_id IS NOT NULL)
+EXECUTE FUNCTION public.auto_create_service_ticket_tasks();
+
+-- =====================================================
 -- SERVICE_TICKET_PARTS TABLE
 -- =====================================================
 
@@ -152,8 +249,8 @@ CREATE TABLE "service_ticket_parts" (
   "notes" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_parts_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_ticket_parts_unique" UNIQUE ("ticket_id", "part_id")
@@ -208,8 +305,8 @@ CREATE TABLE "service_ticket_comments" (
   "is_internal" BOOLEAN NOT NULL DEFAULT false,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
-  "updated_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
+  "updated_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_comments_pkey" PRIMARY KEY ("id")
 );
@@ -254,7 +351,7 @@ CREATE TABLE "service_ticket_attachments" (
   "file_size" BIGINT NOT NULL,
   "description" TEXT,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "created_by" UUID REFERENCES "profiles"("user_id"),
+  "created_by" UUID REFERENCES "profiles"("id"),
 
   CONSTRAINT "service_ticket_attachments_pkey" PRIMARY KEY ("id")
 );

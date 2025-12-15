@@ -16,6 +16,7 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
 import { TaskNotesSection } from "@/components/tasks/task-notes-section";
 import { toast } from "sonner";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ interface TaskDetailPageProps {
 export default function TaskDetailPage({ params }: TaskDetailPageProps) {
   const { taskId } = use(params);
   const router = useRouter();
+  const { state: sidebarState, isMobile } = useSidebar();
 
   const taskQuery = trpc.tasks.getTask.useQuery({ taskId });
   const { data: requirements } = trpc.tasks.getTaskRequirements.useQuery({ taskId });
@@ -275,7 +277,10 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+      <div
+        className="fixed bottom-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 transition-[left] duration-200 ease-linear"
+        style={{ left: !isMobile && sidebarState === "expanded" ? "var(--sidebar-width)" : 0 }}
+      >
         <div className="container mx-auto flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold">Trạng thái: {task.status === "completed" ? "Đã hoàn thành" : task.status === "in_progress" ? "Đang xử lý" : task.status === "pending" ? "Chờ thực hiện" : task.status}</p>

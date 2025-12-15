@@ -68,7 +68,7 @@ import { QuickCommentModal } from "@/components/quick-comment-modal";
 import { QuickUploadImagesModal } from "@/components/quick-upload-images-modal";
 import Link from "next/link";
 
-const ticketStatusEnum = z.enum(["open", "in_progress", "resolved", "closed"]);
+const ticketStatusEnum = z.enum(["open", "in_progress", "ready", "resolved", "closed"]);
 const ticketPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
 
 export const ticketSchema = z.object({
@@ -96,6 +96,7 @@ export type Ticket = z.infer<typeof ticketSchema>;
 const STATUS_MAP = {
   open: { label: "Mới", variant: "pending" as const },
   in_progress: { label: "Đang xử lý", variant: "processing" as const },
+  ready: { label: "Sẵn sàng bàn giao", variant: "ready" as const },
   resolved: { label: "Đã giải quyết", variant: "resolved" as const },
   closed: { label: "Đã đóng", variant: "closed" as const },
 };
@@ -110,6 +111,7 @@ const PRIORITY_MAP = {
 const STATUS_ICONS = {
   pending: IconClock,
   in_progress: IconRefresh,
+  ready_for_pickup: IconCheck,
   completed: IconCheck,
   cancelled: IconX,
 };
@@ -117,6 +119,7 @@ const STATUS_ICONS = {
 const STATUS_OPTIONS = [
   { value: "pending" as const, icon: "pending", label: "Chờ xử lý" },
   { value: "in_progress" as const, icon: "in_progress", label: "Đang xử lý" },
+  { value: "ready_for_pickup" as const, icon: "ready_for_pickup", label: "Sẵn sàng bàn giao" },
   { value: "completed" as const, icon: "completed", label: "Hoàn thành" },
   { value: "cancelled" as const, icon: "cancelled", label: "Đã hủy" },
 ];
@@ -125,6 +128,7 @@ const STATUS_OPTIONS = [
 const STATUS_DB_TO_UI: Record<string, Ticket["status"]> = {
   pending: "open",
   in_progress: "in_progress",
+  ready_for_pickup: "ready" as Ticket["status"],
   completed: "resolved",
   cancelled: "closed",
 };
@@ -132,6 +136,7 @@ const STATUS_DB_TO_UI: Record<string, Ticket["status"]> = {
 const STATUS_UI_TO_DB: Record<string, string> = {
   open: "pending",
   in_progress: "in_progress",
+  ready: "ready_for_pickup",
   resolved: "completed",
   closed: "cancelled",
 };
@@ -253,17 +258,18 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   // Helper to map database status back to UI status
   const mapDatabaseStatusToUI = (
     dbStatus: string,
-  ): "open" | "in_progress" | "resolved" | "closed" => {
-    return STATUS_DB_TO_UI[dbStatus] || "open";
+  ): "open" | "in_progress" | "ready" | "resolved" | "closed" => {
+    return (STATUS_DB_TO_UI[dbStatus] || "open") as "open" | "in_progress" | "ready" | "resolved" | "closed";
   };
 
   // Helper to map UI status to database status
   const mapUIStatusToDatabase = (
     uiStatus: string,
-  ): "pending" | "in_progress" | "completed" | "cancelled" => {
+  ): "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled" => {
     return (STATUS_UI_TO_DB[uiStatus] || "pending") as
       | "pending"
       | "in_progress"
+      | "ready_for_pickup"
       | "completed"
       | "cancelled";
   };
@@ -271,11 +277,11 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   // Get valid next statuses for a ticket
   const getValidNextStatuses = (
     currentStatus: string,
-  ): Array<"pending" | "in_progress" | "completed" | "cancelled"> => {
+  ): Array<"pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled"> => {
     const dbStatus = mapUIStatusToDatabase(currentStatus);
     const statusFlow = STATUS_FLOW[dbStatus as keyof typeof STATUS_FLOW];
     return [...(statusFlow?.next || [])] as Array<
-      "pending" | "in_progress" | "completed" | "cancelled"
+      "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled"
     >;
   };
 
@@ -292,7 +298,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     ticketId: string,
     onStatusChange: (
       id: string,
-      status: "pending" | "in_progress" | "completed" | "cancelled",
+      status: "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled",
     ) => void,
     getIcon: (status: string) => React.ReactNode,
   ) => {
@@ -385,7 +391,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   const handleStatusChange = (
     ticketId: string,
-    newStatus: "pending" | "in_progress" | "completed" | "cancelled",
+    newStatus: "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled",
   ) => {
     updateStatusMutation.mutate({
       id: ticketId,

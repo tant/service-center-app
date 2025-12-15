@@ -6,12 +6,14 @@ import { createClient } from "@/utils/supabase/server";
 // Map database status to UI status
 function mapStatus(
   dbStatus: string,
-): "open" | "in_progress" | "resolved" | "closed" {
+): "open" | "in_progress" | "ready" | "resolved" | "closed" {
   switch (dbStatus) {
     case "pending":
       return "open";
     case "in_progress":
       return "in_progress";
+    case "ready_for_pickup":
+      return "ready";
     case "completed":
       return "resolved";
     case "cancelled":

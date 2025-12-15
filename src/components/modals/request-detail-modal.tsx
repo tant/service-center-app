@@ -15,6 +15,7 @@ import { IconPackage, IconUser, IconMapPin, IconFileText, IconTicket, IconLoader
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 
 interface RequestDetailModalProps {
   requestId: string | null;
@@ -192,7 +193,7 @@ export function RequestDetailModal({
                     Mã phiếu: <span className="font-mono font-bold">{request.linked_ticket.ticket_number}</span>
                   </p>
                   <p className="text-muted-foreground mt-1">
-                    Trạng thái: {request.linked_ticket.status}
+                    Trạng thái: {STATUS_FLOW[request.linked_ticket.status as keyof typeof STATUS_FLOW]?.label || request.linked_ticket.status}
                   </p>
                 </CardContent>
               </Card>

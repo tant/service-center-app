@@ -185,9 +185,16 @@ async function getTicketData(ticketId: string) {
   );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
+  // Check if ticket has any tasks
+  const { count: taskCount } = await supabase
+    .from("entity_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("entity_type", "service_ticket")
+    .eq("entity_id", ticketId);
+
   // Tasks are now fetched client-side by TaskListAccordion component
   // This provides real-time updates and better separation of concerns
-  return ticket;
+  return { ...ticket, _taskCount: taskCount || 0 };
 }
 
 function getStatusBadge(status: string) {
@@ -314,6 +321,9 @@ export default async function Page({ params }: PageProps) {
               ? ticket.workflows[0]?.name
               : ticket.workflows?.name
           }
+          tasksCompletedAt={ticket.tasks_completed_at}
+          outcome={ticket.outcome}
+          hasTasks={ticket._taskCount > 0}
         />
       </PageHeader>
 
@@ -454,7 +464,9 @@ export default async function Page({ params }: PageProps) {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tình trạng:</span>
+                        <span className="text-muted-foreground">
+                          Tình trạng:
+                        </span>
                         <Badge variant="outline">
                           {ticket.replacement_product.condition}
                         </Badge>
@@ -498,9 +510,7 @@ export default async function Page({ params }: PageProps) {
                 <p className="text-sm text-muted-foreground font-medium">
                   Serial
                 </p>
-                <p className="font-mono">
-                  {ticket.serial_number || "—"}
-                </p>
+                <p className="font-mono">{ticket.serial_number || "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">
@@ -541,7 +551,9 @@ export default async function Page({ params }: PageProps) {
             <TaskListAccordion
               entityType="service_ticket"
               entityId={ticketId}
-              allowActions={ticket.status !== 'completed' && ticket.status !== 'cancelled'}
+              allowActions={
+                ticket.status !== "completed" && ticket.status !== "cancelled"
+              }
             />
           </CardContent>
         </Card>

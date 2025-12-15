@@ -1,6 +1,6 @@
 /**
- * Story 01.22: Ticket Completion with Replacement Product
- * Modal for completing a service ticket with outcome selection
+ * Outcome Selection Modal
+ * Modal for selecting outcome and transitioning to ready_for_pickup
  * Supports warranty replacement flow with product selection
  */
 
@@ -96,10 +96,10 @@ export function CompleteTicketModal({
       },
     );
 
-  // Complete ticket mutation
-  const completeTicket = trpc.tickets.completeTicket.useMutation({
+  // Set outcome mutation - transitions to ready_for_pickup
+  const setOutcomeMutation = trpc.tickets.setOutcome.useMutation({
     onSuccess: () => {
-      toast.success(`Phiếu ${ticketNumber} đã hoàn thành!`);
+      toast.success(`Phiếu ${ticketNumber} sẵn sàng bàn giao!`);
       onClose();
       router.refresh();
     },
@@ -132,7 +132,7 @@ export function CompleteTicketModal({
 
     setValidationError("");
 
-    completeTicket.mutate({
+    setOutcomeMutation.mutate({
       ticket_id: ticketId,
       outcome,
       replacement_product_id:
@@ -155,9 +155,10 @@ export function CompleteTicketModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Hoàn thành phiếu dịch vụ</DialogTitle>
+          <DialogTitle>Chọn kết quả xử lý</DialogTitle>
           <DialogDescription>
-            Chọn kết quả xử lý cho phiếu {ticketNumber}
+            Chọn kết quả xử lý cho phiếu {ticketNumber}. Sau khi xác nhận, phiếu
+            sẽ chuyển sang trạng thái sẵn sàng bàn giao.
           </DialogDescription>
         </DialogHeader>
 
@@ -233,7 +234,7 @@ export function CompleteTicketModal({
                     setReplacementProductId(value);
                     if (validationError) setValidationError("");
                   }}
-                  disabled={loadingReplacements || completeTicket.isPending}
+                  disabled={loadingReplacements || setOutcomeMutation.isPending}
                 >
                   <SelectTrigger id="replacement-select">
                     <SelectValue
@@ -286,7 +287,7 @@ export function CompleteTicketModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              disabled={completeTicket.isPending}
+              disabled={setOutcomeMutation.isPending}
             />
           </div>
 
@@ -303,7 +304,7 @@ export function CompleteTicketModal({
             type="button"
             variant="outline"
             onClick={handleCancel}
-            disabled={completeTicket.isPending}
+            disabled={setOutcomeMutation.isPending}
           >
             Hủy
           </Button>
@@ -311,12 +312,14 @@ export function CompleteTicketModal({
             type="button"
             onClick={handleSubmit}
             disabled={
-              completeTicket.isPending ||
+              setOutcomeMutation.isPending ||
               !outcome ||
               (outcome === "warranty_replacement" && !replacementProductId)
             }
           >
-            {completeTicket.isPending ? "Đang xử lý..." : "Hoàn thành phiếu"}
+            {setOutcomeMutation.isPending
+              ? "Đang xử lý..."
+              : "Xác nhận kết quả"}
           </Button>
         </DialogFooter>
       </DialogContent>

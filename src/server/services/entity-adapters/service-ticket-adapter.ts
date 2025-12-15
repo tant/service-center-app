@@ -41,7 +41,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
    */
   async canStartTask(
     ctx: TRPCContext,
-    taskId: string
+    taskId: string,
   ): Promise<CanStartResult> {
     const task = await this.getTask(ctx, taskId);
 
@@ -95,9 +95,8 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
       .neq("status", "skipped");
 
     const incompleteTasks =
-      previousTasks?.filter(
-        (t) => t.status !== "completed" && t.is_required
-      ) || [];
+      previousTasks?.filter((t) => t.status !== "completed" && t.is_required) ||
+      [];
 
     if (incompleteTasks.length > 0) {
       return {
@@ -131,27 +130,26 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
         .from("service_tickets")
         .update({
           status: "in_progress",
-          updated_by: task.assigned_to_id // Set updated_by for trigger
+          updated_by: task.assigned_to_id, // Set updated_by for trigger
         })
         .eq("id", task.entity_id);
 
       // Log status change in comments
-      await ctx.supabaseAdmin
-        .from("service_ticket_comments")
-        .insert({
-          ticket_id: task.entity_id,
-          comment: `Bắt đầu thực hiện: ${task.name}`,
-          comment_type: "status_change",
-          is_internal: true,
-          created_by: task.assigned_to_id,
-        });
+      await ctx.supabaseAdmin.from("service_ticket_comments").insert({
+        ticket_id: task.entity_id,
+        comment: `Bắt đầu thực hiện: ${task.name}`,
+        comment_type: "status_change",
+        is_internal: true,
+        created_by: task.assigned_to_id,
+      });
     }
   }
 
   /**
    * Called when a task is completed
    *
-   * Auto-progresses ticket status to 'completed' when all required tasks done.
+   * Sets tasks_completed_at when all required tasks done.
+   * Does NOT auto-transition status - user must select outcome first.
    */
   async onTaskComplete(ctx: TRPCContext, taskId: string): Promise<void> {
     const task = await this.getTask(ctx, taskId);
@@ -159,39 +157,36 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
     // Check if all required tasks are complete
     const allComplete = await this.areAllRequiredTasksComplete(
       ctx,
-      task.entity_id
+      task.entity_id,
     );
 
     if (allComplete) {
-      // Get ticket to check current status
+      // Get ticket to check current status and tasks_completed_at
       const { data: ticket } = await ctx.supabaseAdmin
         .from("service_tickets")
-        .select("id, status")
+        .select("id, status, tasks_completed_at")
         .eq("id", task.entity_id)
         .single();
 
-      // Only transition if ticket is in_progress
-      // Don't override manual completion or cancellation
-      if (ticket?.status === "in_progress") {
+      // Only mark tasks complete if ticket is in_progress and not already marked
+      if (ticket?.status === "in_progress" && !ticket.tasks_completed_at) {
         await ctx.supabaseAdmin
           .from("service_tickets")
           .update({
-            status: "ready_for_pickup",
-            updated_by: task.assigned_to_id // Set updated_by for trigger
+            tasks_completed_at: new Date().toISOString(),
+            updated_by: task.assigned_to_id,
           })
           .eq("id", task.entity_id);
 
-        // Log auto-completion in comments
-        await ctx.supabaseAdmin
-          .from("service_ticket_comments")
-          .insert({
-            ticket_id: task.entity_id,
-            comment:
-              "Tất cả công việc đã hoàn thành. Phiếu chuyển sang trạng thái Sẵn sàng bàn giao.",
-            comment_type: "system",
-            is_internal: true,
-            created_by: task.assigned_to_id,
-          });
+        // Log completion notice in comments
+        await ctx.supabaseAdmin.from("service_ticket_comments").insert({
+          ticket_id: task.entity_id,
+          comment:
+            "Tất cả công việc đã hoàn thành. Vui lòng chọn kết quả xử lý để tiếp tục.",
+          comment_type: "system",
+          is_internal: true,
+          created_by: task.assigned_to_id,
+        });
       }
     }
   }
@@ -204,20 +199,18 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
   async onTaskBlock(
     ctx: TRPCContext,
     taskId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const task = await this.getTask(ctx, taskId);
 
     // Log blocking in ticket comments
-    await ctx.supabaseAdmin
-      .from("service_ticket_comments")
-      .insert({
-        ticket_id: task.entity_id,
-        comment: `Công việc bị chặn: ${task.name}\nLý do: ${reason}`,
-        comment_type: "system",
-        is_internal: true,
-        created_by: task.assigned_to_id,
-      });
+    await ctx.supabaseAdmin.from("service_ticket_comments").insert({
+      ticket_id: task.entity_id,
+      comment: `Công việc bị chặn: ${task.name}\nLý do: ${reason}`,
+      comment_type: "system",
+      is_internal: true,
+      created_by: task.assigned_to_id,
+    });
   }
 
   /**
@@ -227,7 +220,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
    */
   async getEntityContext(
     ctx: TRPCContext,
-    entityId: string
+    entityId: string,
   ): Promise<TaskContext> {
     const { data: ticket, error } = await ctx.supabaseAdmin
       .from("service_tickets")
@@ -247,7 +240,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
           id,
           name
         )
-      `
+      `,
       )
       .eq("id", entityId)
       .single();
@@ -289,7 +282,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
   async canAssignWorkflow(
     ctx: TRPCContext,
     entityId: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<CanAssignWorkflowResult> {
     const { data: ticket } = await ctx.supabaseAdmin
       .from("service_tickets")
@@ -328,10 +321,7 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
     }
 
     // Check entity_type matches (must be service_ticket or null for legacy)
-    if (
-      workflow.entity_type &&
-      workflow.entity_type !== "service_ticket"
-    ) {
+    if (workflow.entity_type && workflow.entity_type !== "service_ticket") {
       return {
         canAssign: false,
         reason: `Quy trình này dành cho ${workflow.entity_type}, không phù hợp với phiếu sửa chữa`,
@@ -339,7 +329,10 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
     }
 
     // Check service_type compatibility (if workflow specifies)
-    if (workflow.service_type && workflow.service_type !== ticket.warranty_type) {
+    if (
+      workflow.service_type &&
+      workflow.service_type !== ticket.warranty_type
+    ) {
       return {
         canAssign: false,
         reason: `Quy trình "${workflow.name}" chỉ áp dụng cho loại dịch vụ ${workflow.service_type}`,

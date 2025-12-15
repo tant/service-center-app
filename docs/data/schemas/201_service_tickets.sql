@@ -54,6 +54,9 @@ CREATE TABLE "service_tickets" (
   "outcome" public.ticket_outcome,
   "replacement_product_id" UUID REFERENCES "physical_products"("id"),
 
+  -- Task completion tracking (Outcome Checkpoint feature)
+  "tasks_completed_at" TIMESTAMPTZ,
+
   CONSTRAINT "service_tickets_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_tickets_dates_check" CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
   CONSTRAINT "service_tickets_delivery_requires_address" CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL),
@@ -74,6 +77,7 @@ COMMENT ON COLUMN public.service_tickets.delivery_confirmed_at IS 'Timestamp whe
 COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.id of staff who confirmed delivery';
 COMMENT ON COLUMN public.service_tickets.outcome IS 'Final result: repaired (fixed original), warranty_replacement (issued new product), unrepairable (could not fix)';
 COMMENT ON COLUMN public.service_tickets.replacement_product_id IS 'ID of replacement product from physical_products. Only set when outcome = warranty_replacement';
+COMMENT ON COLUMN public.service_tickets.tasks_completed_at IS 'Timestamp when all required tasks were completed. NULL means tasks not done yet or ticket has no tasks. Used to show outcome selection form.';
 
 -- Indexes
 CREATE INDEX "service_tickets_ticket_number_idx" ON "service_tickets" USING btree ("ticket_number");

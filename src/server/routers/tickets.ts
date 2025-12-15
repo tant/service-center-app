@@ -17,7 +17,10 @@ import {
   requireAdmin,
 } from "../middleware/requireRole";
 import { logAudit } from "../utils/auditLog";
-import { createTasksFromWorkflow, getTicketTasksWithProgress } from "../utils/workflow-tasks";
+import {
+  createTasksFromWorkflow,
+  getTicketTasksWithProgress,
+} from "../utils/workflow-tasks";
 
 /**
  * Helper function to send email notifications (Story 1.15)
@@ -38,27 +41,27 @@ async function sendEmailNotification(
     deliveryDate?: string;
   },
   serviceRequestId?: string,
-  serviceTicketId?: string
+  serviceTicketId?: string,
 ) {
   try {
     // Check rate limiting (100 emails/day per customer)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count } = await ctx.supabaseAdmin
-      .from('email_notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_email', recipientEmail)
-      .gte('created_at', oneDayAgo);
+      .from("email_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_email", recipientEmail)
+      .gte("created_at", oneDayAgo);
 
     if (count && count >= 100) {
       console.log(`[EMAIL SKIPPED] Rate limit exceeded for ${recipientEmail}`);
-      return { success: false, reason: 'rate_limit' };
+      return { success: false, reason: "rate_limit" };
     }
 
     // Check email preferences
     const { data: customer } = await ctx.supabaseAdmin
-      .from('customers')
-      .select('email_preferences')
-      .eq('email', recipientEmail)
+      .from("customers")
+      .select("email_preferences")
+      .eq("email", recipientEmail)
       .single();
 
     if (customer?.email_preferences) {
@@ -70,7 +73,7 @@ async function sendEmailNotification(
     }
 
     // Generate unsubscribe URL
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3025"}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
 
     // Generate email content
     const { html, text, subject } = getEmailTemplate(emailType, {
@@ -81,7 +84,7 @@ async function sendEmailNotification(
 
     // Log email to database
     const { data: emailLog, error: logError } = await ctx.supabaseAdmin
-      .from('email_notifications')
+      .from("email_notifications")
       .insert({
         email_type: emailType,
         recipient_email: recipientEmail,
@@ -90,7 +93,7 @@ async function sendEmailNotification(
         html_body: html,
         text_body: text,
         context,
-        status: 'pending',
+        status: "pending",
         service_request_id: serviceRequestId,
         service_ticket_id: serviceTicketId,
       })
@@ -98,7 +101,7 @@ async function sendEmailNotification(
       .single();
 
     if (logError) {
-      console.error('[EMAIL ERROR] Failed to log email:', logError);
+      console.error("[EMAIL ERROR] Failed to log email:", logError);
       return { success: false, error: logError.message };
     }
 
@@ -106,33 +109,39 @@ async function sendEmailNotification(
     try {
       // Simulate sending
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'sent',
+          status: "sent",
           sent_at: new Date().toISOString(),
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
-      console.log(`[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`);
+      console.log(
+        `[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`,
+      );
       return { success: true, emailId: emailLog.id };
     } catch (error) {
       // Mark as failed
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'failed',
+          status: "failed",
           failed_at: new Date().toISOString(),
-          error_message: error instanceof Error ? error.message : 'Unknown error',
+          error_message:
+            error instanceof Error ? error.message : "Unknown error",
           retry_count: 1,
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
       console.error(`[EMAIL FAILED] ${emailType}:`, error);
       return { success: false, willRetry: true };
     }
   } catch (error) {
-    console.error('[EMAIL ERROR] Unexpected error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error("[EMAIL ERROR] Unexpected error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -211,7 +220,13 @@ const createTicketSchema = z.object({
 
 const updateTicketStatusSchema = z.object({
   id: z.string().uuid("Ticket ID must be a valid UUID"),
-  status: z.enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"]),
+  status: z.enum([
+    "pending",
+    "in_progress",
+    "ready_for_pickup",
+    "completed",
+    "cancelled",
+  ]),
 });
 
 const updateTicketSchema = z.object({
@@ -223,7 +238,13 @@ const updateTicketSchema = z.object({
   priority_level: z.enum(["low", "normal", "high", "urgent"]).optional(),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).optional(),
   status: z
-    .enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"])
+    .enum([
+      "pending",
+      "in_progress",
+      "ready_for_pickup",
+      "completed",
+      "cancelled",
+    ])
     .optional(),
   service_fee: z.number().min(0, "Service fee must be non-negative").optional(),
   diagnosis_fee: z
@@ -239,24 +260,29 @@ const updateTicketSchema = z.object({
 });
 
 // Story 01.22: Complete ticket with outcome
-const completeTicketSchema = z.object({
-  ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-  outcome: z.enum(["repaired", "warranty_replacement", "unrepairable"]),
-  replacement_product_id: z.string().uuid("Replacement product ID must be a valid UUID").optional(),
-  notes: z.string().optional(),
-}).refine(
-  (data) => {
-    // If outcome = warranty_replacement, replacement_product_id is required
-    if (data.outcome === "warranty_replacement") {
-      return !!data.replacement_product_id;
-    }
-    return true;
-  },
-  {
-    message: "Phải chọn sản phẩm thay thế khi đổi bảo hành",
-    path: ["replacement_product_id"],
-  }
-);
+const completeTicketSchema = z
+  .object({
+    ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+    outcome: z.enum(["repaired", "warranty_replacement", "unrepairable"]),
+    replacement_product_id: z
+      .string()
+      .uuid("Replacement product ID must be a valid UUID")
+      .optional(),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // If outcome = warranty_replacement, replacement_product_id is required
+      if (data.outcome === "warranty_replacement") {
+        return !!data.replacement_product_id;
+      }
+      return true;
+    },
+    {
+      message: "Phải chọn sản phẩm thay thế khi đổi bảo hành",
+      path: ["replacement_product_id"],
+    },
+  );
 
 export const ticketsRouter = router({
   getPendingCount: publicProcedure
@@ -279,30 +305,30 @@ export const ticketsRouter = router({
   getDailyRevenue: publicProcedure
     .use(requireManagerOrAbove)
     .query(async ({ ctx }) => {
-    const { data: tickets, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select("created_at, total_cost")
-      .eq("status", "completed")
-      .order("created_at", { ascending: true });
+      const { data: tickets, error } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("created_at, total_cost")
+        .eq("status", "completed")
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch tickets revenue: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch tickets revenue: ${error.message}`);
+      }
 
-    // Group by date and calculate total revenue
-    const dailyRevenue =
-      tickets?.reduce((acc: Record<string, number>, ticket) => {
-        const date = new Date(ticket.created_at).toISOString().split("T")[0];
-        acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
-        return acc;
-      }, {}) || {};
+      // Group by date and calculate total revenue
+      const dailyRevenue =
+        tickets?.reduce((acc: Record<string, number>, ticket) => {
+          const date = new Date(ticket.created_at).toISOString().split("T")[0];
+          acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
+          return acc;
+        }, {}) || {};
 
-    // Convert to array format for chart
-    return Object.entries(dailyRevenue).map(([date, revenue]) => ({
-      date,
-      revenue,
-    }));
-  }),
+      // Convert to array format for chart
+      return Object.entries(dailyRevenue).map(([date, revenue]) => ({
+        date,
+        revenue,
+      }));
+    }),
 
   createTicket: publicProcedure
     .use(requireOperationsStaff)
@@ -315,7 +341,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Note: Ticket number is now auto-generated by database trigger
       // No need to manually generate it here
@@ -395,7 +424,7 @@ export const ticketsRouter = router({
           tasksCount = await createTasksFromWorkflow(
             ctx,
             ticketData.id,
-            input.workflow_id
+            input.workflow_id,
           );
         } catch (error) {
           console.error(`Failed to create tasks from workflow: ${error}`);
@@ -526,8 +555,8 @@ export const ticketsRouter = router({
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
       const { data: tickets, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select(`
+        .from("service_tickets")
+        .select(`
         *,
         customers (
           id,
@@ -545,14 +574,14 @@ export const ticketsRouter = router({
           )
         )
       `)
-      .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch tickets: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch tickets: ${error.message}`);
+      }
 
-    return tickets || [];
-  }),
+      return tickets || [];
+    }),
 
   getTicket: publicProcedure
     .use(requireAnyAuthenticated)
@@ -638,7 +667,9 @@ export const ticketsRouter = router({
 
   getTasks: publicProcedure
     .use(requireAnyAuthenticated)
-    .input(z.object({ ticketId: z.string().uuid("Ticket ID must be a valid UUID") }))
+    .input(
+      z.object({ ticketId: z.string().uuid("Ticket ID must be a valid UUID") }),
+    )
     .query(async ({ input, ctx }) => {
       const result = await getTicketTasksWithProgress(ctx, input.ticketId);
       return result;
@@ -671,7 +702,10 @@ export const ticketsRouter = router({
       validateStatusTransition(oldStatus, input.status);
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -703,10 +737,10 @@ export const ticketsRouter = router({
       // No need to create manual comment here
 
       // Story 1.15: Send email notification when service is completed
-      if (input.status === 'completed') {
+      if (input.status === "completed") {
         // Fetch customer and product info for email
         const { data: fullTicket } = await ctx.supabaseAdmin
-          .from('service_tickets')
+          .from("service_tickets")
           .select(`
             ticket_number,
             serial_number,
@@ -714,28 +748,33 @@ export const ticketsRouter = router({
             customer:customers(email, name),
             product:products(name)
           `)
-          .eq('id', input.id)
+          .eq("id", input.id)
           .single();
 
         if (fullTicket && fullTicket.customer && fullTicket.product) {
-          const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
-          const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
+          const customer = Array.isArray(fullTicket.customer)
+            ? fullTicket.customer[0]
+            : fullTicket.customer;
+          const product = Array.isArray(fullTicket.product)
+            ? fullTicket.product[0]
+            : fullTicket.product;
 
           sendEmailNotification(
             ctx,
-            'service_completed',
+            "service_completed",
             customer.email,
             customer.name,
             {
               ticketNumber: fullTicket.ticket_number,
               productName: product.name,
               serialNumber: fullTicket.serial_number,
-              completedDate: fullTicket.completed_at || new Date().toISOString(),
+              completedDate:
+                fullTicket.completed_at || new Date().toISOString(),
             },
             undefined,
-            input.id
+            input.id,
           ).catch((err) => {
-            console.error('[EMAIL ERROR] service_completed failed:', err);
+            console.error("[EMAIL ERROR] service_completed failed:", err);
           });
         }
       }
@@ -799,7 +838,10 @@ export const ticketsRouter = router({
       }
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Build update object with only provided fields
       const updateObject: any = {
@@ -1052,7 +1094,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get part information for the comment
       const { data: partInfo, error: partInfoError } = await ctx.supabaseAdmin
@@ -1167,7 +1212,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get current part data for comparison
       const { data: currentPart, error: currentPartError } =
@@ -1337,7 +1385,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get part data before deletion for the auto-comment
       const { data: partData, error: fetchError } = await ctx.supabaseAdmin
@@ -1444,7 +1495,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: commentData, error: commentError } = await ctx.supabaseAdmin
         .from("service_ticket_comments")
@@ -1495,7 +1549,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: attachmentData, error: attachmentError } =
         await ctx.supabaseAdmin
@@ -1591,7 +1648,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Verify ticket exists and is ready for pickup
       const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
@@ -1625,9 +1685,7 @@ ${changes.join("\n")}
           .single();
 
       if (updateError) {
-        throw new Error(
-          `Failed to confirm delivery: ${updateError.message}`,
-        );
+        throw new Error(`Failed to confirm delivery: ${updateError.message}`);
       }
 
       // Add comment about delivery confirmation
@@ -1641,7 +1699,7 @@ ${changes.join("\n")}
 
       // Story 1.15: Send delivery confirmation email
       const { data: fullTicket } = await ctx.supabaseAdmin
-        .from('service_tickets')
+        .from("service_tickets")
         .select(`
           ticket_number,
           serial_number,
@@ -1649,28 +1707,33 @@ ${changes.join("\n")}
           customer:customers(email, name),
           product:products(name)
         `)
-        .eq('id', input.ticket_id)
+        .eq("id", input.ticket_id)
         .single();
 
       if (fullTicket && fullTicket.customer && fullTicket.product) {
-        const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
-        const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
+        const customer = Array.isArray(fullTicket.customer)
+          ? fullTicket.customer[0]
+          : fullTicket.customer;
+        const product = Array.isArray(fullTicket.product)
+          ? fullTicket.product[0]
+          : fullTicket.product;
 
         sendEmailNotification(
           ctx,
-          'delivery_confirmed',
+          "delivery_confirmed",
           customer.email,
           customer.name,
           {
             ticketNumber: fullTicket.ticket_number,
             productName: product.name,
             serialNumber: fullTicket.serial_number,
-            deliveryDate: fullTicket.delivery_confirmed_at || new Date().toISOString(),
+            deliveryDate:
+              fullTicket.delivery_confirmed_at || new Date().toISOString(),
           },
           undefined,
-          input.ticket_id
+          input.ticket_id,
         ).catch((err) => {
-          console.error('[EMAIL ERROR] delivery_confirmed failed:', err);
+          console.error("[EMAIL ERROR] delivery_confirmed failed:", err);
         });
       }
 
@@ -1699,7 +1762,11 @@ ${changes.join("\n")}
       }
 
       // Query tickets ready for pickup/delivery (not yet confirmed)
-      const { data: tickets, error: ticketsError, count } = await ctx.supabaseAdmin
+      const {
+        data: tickets,
+        error: ticketsError,
+        count,
+      } = await ctx.supabaseAdmin
         .from("service_tickets")
         .select(
           `
@@ -1739,18 +1806,18 @@ ${changes.join("\n")}
         return 0;
       }
 
-    const { count, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "ready_for_pickup");
+      const { count, error } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "ready_for_pickup");
 
-    if (error) {
-      console.error("Failed to get pending deliveries count:", error);
-      return 0;
-    }
+      if (error) {
+        console.error("Failed to get pending deliveries count:", error);
+        return 0;
+      }
 
-    return count || 0;
-  }),
+      return count || 0;
+    }),
 
   /**
    * Story 01.22: Get available replacement products for warranty ticket
@@ -1758,9 +1825,11 @@ ${changes.join("\n")}
    */
   getAvailableReplacements: publicProcedure
     .use(requireOperationsStaff)
-    .input(z.object({
-      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-    }))
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+      }),
+    )
     .query(async ({ input, ctx }) => {
       // Get ticket's product_id
       const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
@@ -1779,12 +1848,13 @@ ${changes.join("\n")}
       }
 
       // Get warranty_stock virtual warehouse
-      const { data: warrantyWarehouse, error: warehouseError } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("id")
-        .eq("warehouse_type", "warranty_stock")
-        .limit(1)
-        .single();
+      const { data: warrantyWarehouse, error: warehouseError } =
+        await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id")
+          .eq("warehouse_type", "warranty_stock")
+          .limit(1)
+          .single();
 
       if (warehouseError || !warrantyWarehouse) {
         console.error("No warranty_stock warehouse found");
@@ -1823,10 +1893,11 @@ ${changes.join("\n")}
     }),
 
   /**
-   * Story 01.22: Complete ticket with outcome and optional replacement product
+   * Set outcome for ticket and transition to ready_for_pickup
+   * Requires all tasks to be completed (if ticket has tasks)
    * Handles inventory movements for warranty_replacement outcome
    */
-  completeTicket: publicProcedure
+  setOutcome: publicProcedure
     .use(requireOperationsStaff)
     .input(completeTicketSchema)
     .mutation(async ({ input, ctx }) => {
@@ -1848,6 +1919,7 @@ ${changes.join("\n")}
           product_id,
           ticket_number,
           serial_number,
+          tasks_completed_at,
           customer:customers (
             email,
             name
@@ -1863,9 +1935,24 @@ ${changes.join("\n")}
         throw new Error("Phiếu không tồn tại");
       }
 
-      // Only allow completion from in_progress or ready_for_pickup
-      if (!["in_progress", "ready_for_pickup"].includes(ticket.status)) {
-        throw new Error(`Không thể hoàn thành phiếu ở trạng thái ${ticket.status}`);
+      // Only allow from in_progress status
+      if (ticket.status !== "in_progress") {
+        throw new Error(
+          `Chỉ có thể chọn kết quả cho phiếu đang xử lý. Trạng thái hiện tại: ${ticket.status}`,
+        );
+      }
+
+      // Check if ticket has tasks - if so, they must be completed
+      const { count: taskCount } = await ctx.supabaseAdmin
+        .from("entity_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("entity_type", "service_ticket")
+        .eq("entity_id", ticket_id);
+
+      if (taskCount && taskCount > 0 && !ticket.tasks_completed_at) {
+        throw new Error(
+          "Phải hoàn thành tất cả công việc trước khi chọn kết quả xử lý",
+        );
       }
 
       // 2. If warranty_replacement, validate replacement product
@@ -1894,17 +1981,22 @@ ${changes.join("\n")}
           .single();
 
         if (!warrantyWarehouse || !customerWarehouse) {
-          throw new Error("Không tìm thấy kho warranty_stock hoặc customer_installed");
+          throw new Error(
+            "Không tìm thấy kho warranty_stock hoặc customer_installed",
+          );
         }
 
         customerInstalledWarehouseId = customerWarehouse.id;
 
         // Validate replacement product
-        const { data: replacementProduct, error: rpError } = await ctx.supabaseAdmin
-          .from("physical_products")
-          .select("id, serial_number, product_id, virtual_warehouse_id, status")
-          .eq("id", replacement_product_id)
-          .single();
+        const { data: replacementProduct, error: rpError } =
+          await ctx.supabaseAdmin
+            .from("physical_products")
+            .select(
+              "id, serial_number, product_id, virtual_warehouse_id, status",
+            )
+            .eq("id", replacement_product_id)
+            .single();
 
         if (rpError || !replacementProduct) {
           throw new Error("Sản phẩm thay thế không tồn tại");
@@ -1915,39 +2007,53 @@ ${changes.join("\n")}
         }
 
         if (replacementProduct.status !== "active") {
-          throw new Error(`Sản phẩm không khả dụng. Trạng thái: ${replacementProduct.status}`);
+          throw new Error(
+            `Sản phẩm không khả dụng. Trạng thái: ${replacementProduct.status}`,
+          );
         }
 
         // Check same product type
         if (replacementProduct.product_id !== ticket.product_id) {
-          throw new Error("Sản phẩm thay thế phải cùng loại với sản phẩm trong phiếu");
+          throw new Error(
+            "Sản phẩm thay thế phải cùng loại với sản phẩm trong phiếu",
+          );
         }
       }
 
       // 3. Get profile ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, ctx.user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        ctx.user.id,
+      );
 
-      // 4. Update ticket
-      const { data: updatedTicket, error: updateError } = await ctx.supabaseAdmin
-        .from("service_tickets")
-        .update({
-          status: "completed",
-          outcome,
-          replacement_product_id: outcome === "warranty_replacement" ? replacement_product_id : null,
-          completed_at: new Date().toISOString(),
-          updated_by: profileId,
-          ...(notes && { notes }),
-        })
-        .eq("id", ticket_id)
-        .select()
-        .single();
+      // 4. Update ticket - transition to ready_for_pickup (NOT completed)
+      const { data: updatedTicket, error: updateError } =
+        await ctx.supabaseAdmin
+          .from("service_tickets")
+          .update({
+            status: "ready_for_pickup",
+            outcome,
+            replacement_product_id:
+              outcome === "warranty_replacement"
+                ? replacement_product_id
+                : null,
+            updated_by: profileId,
+            ...(notes && { notes }),
+          })
+          .eq("id", ticket_id)
+          .select()
+          .single();
 
       if (updateError) {
         throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
       }
 
       // 5. If warranty_replacement, move product to customer_installed
-      if (outcome === "warranty_replacement" && replacement_product_id && customerInstalledWarehouseId) {
+      if (
+        outcome === "warranty_replacement" &&
+        replacement_product_id &&
+        customerInstalledWarehouseId
+      ) {
         // Update replacement product location
         const { error: moveError } = await ctx.supabaseAdmin
           .from("physical_products")
@@ -1989,7 +2095,7 @@ ${changes.join("\n")}
         unrepairable: "Không thể sửa chữa",
       };
 
-      let commentText = `Hoàn thành phiếu: ${outcomeLabels[outcome]}`;
+      let commentText = `Kết quả xử lý: ${outcomeLabels[outcome]}. Sẵn sàng bàn giao cho khách.`;
 
       if (outcome === "warranty_replacement" && replacement_product_id) {
         // Get replacement product serial
@@ -2018,8 +2124,12 @@ ${changes.join("\n")}
 
       // 7. Send email notification
       if (ticket.customer && ticket.product) {
-        const customer = Array.isArray(ticket.customer) ? ticket.customer[0] : ticket.customer;
-        const product = Array.isArray(ticket.product) ? ticket.product[0] : ticket.product;
+        const customer = Array.isArray(ticket.customer)
+          ? ticket.customer[0]
+          : ticket.customer;
+        const product = Array.isArray(ticket.product)
+          ? ticket.product[0]
+          : ticket.product;
 
         if (customer?.email && customer?.name) {
           sendEmailNotification(
@@ -2034,7 +2144,7 @@ ${changes.join("\n")}
               completedDate: new Date().toISOString(),
             },
             undefined,
-            ticket_id
+            ticket_id,
           ).catch((err) => {
             console.error("[EMAIL ERROR] service_completed failed:", err);
           });
@@ -2047,8 +2157,107 @@ ${changes.join("\n")}
         resourceType: "ticket",
         resourceId: ticket_id,
         oldValues: { status: ticket.status },
-        newValues: { status: "completed", outcome, replacement_product_id },
-        metadata: { operation: "complete_ticket" },
+        newValues: {
+          status: "ready_for_pickup",
+          outcome,
+          replacement_product_id,
+        },
+        metadata: { operation: "set_outcome" },
+      });
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+      };
+    }),
+
+  /**
+   * Confirm delivery to customer - transitions ticket from ready_for_pickup to completed
+   * This is the final step in the ticket lifecycle
+   */
+  confirmDelivery: publicProcedure
+    .use(requireOperationsStaff)
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        delivery_notes: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { ticket_id, delivery_notes } = input;
+
+      if (!ctx.user) {
+        throw new Error("User context not available");
+      }
+
+      // 1. Validate ticket
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("id, status, outcome, ticket_number")
+        .eq("id", ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Phiếu không tồn tại");
+      }
+
+      if (ticket.status !== "ready_for_pickup") {
+        throw new Error(
+          `Chỉ có thể xác nhận bàn giao cho phiếu sẵn sàng bàn giao. Trạng thái hiện tại: ${ticket.status}`,
+        );
+      }
+
+      if (!ticket.outcome) {
+        throw new Error("Phiếu chưa có kết quả xử lý");
+      }
+
+      // 2. Get profile ID
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        ctx.user.id,
+      );
+
+      // 3. Update ticket to completed
+      const { data: updatedTicket, error: updateError } =
+        await ctx.supabaseAdmin
+          .from("service_tickets")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            delivery_confirmed_at: new Date().toISOString(),
+            delivery_confirmed_by_id: profileId,
+            updated_by: profileId,
+          })
+          .eq("id", ticket_id)
+          .select()
+          .single();
+
+      if (updateError) {
+        throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
+      }
+
+      // 4. Create auto-comment
+      let commentText = "Khách hàng đã nhận sản phẩm. Phiếu hoàn thành.";
+      if (delivery_notes) {
+        commentText += `\nGhi chú bàn giao: ${delivery_notes}`;
+      }
+
+      await createAutoComment({
+        ticketId: ticket_id,
+        profileId,
+        comment: commentText,
+        isInternal: false,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
+
+      // 5. Audit log
+      await logAudit(ctx.supabaseAdmin, ctx.user.id, {
+        action: "status_change",
+        resourceType: "ticket",
+        resourceId: ticket_id,
+        oldValues: { status: "ready_for_pickup" },
+        newValues: { status: "completed" },
+        metadata: { operation: "confirm_delivery", delivery_notes },
       });
 
       return {

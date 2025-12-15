@@ -38,12 +38,20 @@ export function TicketActions({
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
 
-  // Only show actions if ticket is not completed/cancelled
-  const canModify = !["completed", "cancelled"].includes(ticketStatus);
+  // Ticket is already completed or cancelled
+  const isFinished = ["completed", "cancelled"].includes(ticketStatus);
+  // Only show modify actions if ticket is not completed/cancelled
+  const canModify = !isFinished;
   // Can complete if ticket is in_progress or ready_for_pickup
-  const canComplete = ["in_progress", "ready_for_pickup"].includes(
-    ticketStatus,
-  );
+  const canComplete = ["in_progress", "ready_for_pickup"].includes(ticketStatus);
+
+  // Get disabled reason for complete button
+  const getCompleteDisabledReason = () => {
+    if (ticketStatus === "completed") return "Phiếu đã hoàn thành";
+    if (ticketStatus === "cancelled") return "Phiếu đã hủy";
+    if (ticketStatus === "pending") return "Phiếu chưa được xử lý";
+    return "";
+  };
 
   return (
     <div className="flex items-center gap-2">
@@ -67,9 +75,14 @@ export function TicketActions({
         </Button>
       )}
 
-      {/* Complete Ticket Button */}
-      {canComplete && (
-        <Button size="sm" onClick={() => setCompleteModalOpen(true)}>
+      {/* Complete Ticket Button - Always show, disable when not allowed */}
+      {!isFinished && (
+        <Button
+          size="sm"
+          onClick={() => setCompleteModalOpen(true)}
+          disabled={!canComplete}
+          title={!canComplete ? getCompleteDisabledReason() : ""}
+        >
           <IconCircleCheck className="h-4 w-4" />
           Hoàn thành phiếu
         </Button>

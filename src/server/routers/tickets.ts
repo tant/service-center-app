@@ -2043,11 +2043,12 @@ ${changes.join("\n")}
 
       // 8. Audit log
       await logAudit(ctx.supabaseAdmin, ctx.user.id, {
-        action: "complete_ticket",
-        resourceType: "service_ticket",
+        action: "status_change",
+        resourceType: "ticket",
         resourceId: ticket_id,
         oldValues: { status: ticket.status },
         newValues: { status: "completed", outcome, replacement_product_id },
+        metadata: { operation: "complete_ticket" },
       });
 
       return {

@@ -258,7 +258,7 @@ export function CompleteTicketModal({
                               {product.serial_number}
                             </span>
                             <Badge variant="outline" className="text-xs">
-                              {product.product_condition}
+                              {product.condition}
                             </Badge>
                           </div>
                         </SelectItem>

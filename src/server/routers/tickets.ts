@@ -1747,13 +1747,13 @@ ${changes.join("\n")}
         return [];
       }
 
-      // Get available products from warranty_stock with same product_id
+      // Get available products from warranty_stock (any product type)
       const { data: products, error: productsError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select(`
           id,
           serial_number,
-          product_condition,
+          condition,
           manufacturer_warranty_end_date,
           user_warranty_end_date,
           product:products (
@@ -1765,7 +1765,6 @@ ${changes.join("\n")}
             )
           )
         `)
-        .eq("product_id", ticket.product_id)
         .eq("virtual_warehouse_id", warrantyWarehouse.id)
         .eq("status", "active")
         .order("created_at", { ascending: true });

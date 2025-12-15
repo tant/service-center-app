@@ -1,23 +1,35 @@
 # Tự Động Tạo Phiếu Chuyển Kho Trong Quy Trình Bảo Hành
 
-**Trạng thái:** Implementation Plan Ready
+**Trạng thái:** Luồng 2 ✅ Completed | Luồng 1 🔲 Pending
 **Ngày:** 2025-11-06
 **Cập nhật:** 2025-12-15
 **Owner:** Ops/Inventory + Service Ticket
 
-> **📋 Implementation Plan:** [`docs/plans/TICKET-COMPLETION-WITH-REPLACEMENT.md`](../plans/TICKET-COMPLETION-WITH-REPLACEMENT.md)
+> **📋 Implementation Status:**
 >
-> Kế hoạch triển khai chi tiết cho **Luồng 2 (Outbound)** đã sẵn sàng, bao gồm:
-> - Database migration (ENUM `ticket_outcome`, columns `outcome`, `replacement_product_id`)
-> - API mutation `completeTicket` với validation
-> - UI components: Card sản phẩm đổi trả, Modal hoàn thành phiếu
-> - Checklist triển khai theo phases
+> | Luồng | Trạng thái | Commit |
+> |-------|------------|--------|
+> | **Luồng 2 (Outbound)** | ✅ Completed | `2311198` - fix: create stock transfers for warranty replacement |
+> | **Luồng 1 (Inbound)** | 🔲 Pending | Chưa triển khai |
+>
+> **Luồng 2 đã triển khai:**
+> - Tự động tạo 2 phiếu chuyển kho khi `setOutcome` với `warranty_replacement`
+> - Sản phẩm thay thế: `warranty_stock` → `customer_installed`
+> - Sản phẩm cũ: `customer_installed` → `in_service`
+> - Auto-approve triggers cập nhật tồn kho và tạo Issue/Receipt
 
 ## 1. Bối Cảnh
 
-- Hiện tại hoàn tất ticket bảo hành (warranty replacement) chỉ tự đổi `virtual_warehouse_type` → `customer_installed` và ghi `stock_movement` dạng assignment (không có phiếu chuyển kho).
-- Khi nhận sản phẩm từ khách để bảo hành, chưa có cơ chế tự động chuyển từ `customer_installed` → `in_service`.
-- Kho/đối soát kế toán thiếu chứng từ chuyển kho, dễ lệch tồn giữa các kho, và phụ thuộc thao tác thủ công.
+**Trước khi triển khai (đã fix):**
+- ~~Hoàn tất ticket bảo hành chỉ tự đổi `virtual_warehouse_type` → `customer_installed` và ghi `stock_movement` (không có phiếu chuyển kho)~~
+- ~~Kho/đối soát kế toán thiếu chứng từ chuyển kho~~
+
+**Sau khi triển khai Luồng 2:**
+- ✅ Tự động tạo phiếu chuyển kho khi hoàn tất warranty replacement
+- ✅ Có đầy đủ chứng từ (stock_transfer, stock_issue, stock_receipt)
+
+**Còn lại (Luồng 1):**
+- Khi nhận sản phẩm từ khách để bảo hành, chưa có cơ chế tự động chuyển từ `customer_installed` → `in_service`
 
 ## 2. Mục Tiêu
 
@@ -476,3 +488,4 @@ Tận dụng trigger có sẵn:
 |------|-----------|----------|
 | 2025-11-06 | 1.0 | Khởi tạo - chỉ luồng outbound (warranty replacement) |
 | 2025-12-15 | 2.0 | Bổ sung luồng inbound (nhận sản phẩm bảo hành), cập nhật diagram, thêm DB functions |
+| 2025-12-15 | 2.1 | **Implemented Luồng 2**: Tạo 2 stock_transfer khi setOutcome với warranty_replacement. Commit: `2311198` |

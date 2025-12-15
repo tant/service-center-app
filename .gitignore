@@ -71,6 +71,7 @@ supabase/storage/*
 .vscode
 .gemini
 .codex
+.bmad
 GEMINI.md
 CLAUDE.md
 AGENTS.md

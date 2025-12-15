@@ -10,9 +10,9 @@
 - Integrate with existing tRPC architecture, Supabase RLS, Next.js App Router
 - Extend (not replace) existing audit trail and comment system
 
-**Total Stories**: 21 (Story 01.00 Foundation + Stories 01.01-01.20)
-**Implementation Status**: 18/21 Complete (86%) - As of October 2025
-**Note**: All feature development (Stories 01.00-01.17) COMPLETE. Only QA phase (01.18-01.20) remains.
+**Total Stories**: 23 (Story 01.00 Foundation + Stories 01.01-01.22)
+**Implementation Status**: 18/23 Complete (78%) - As of December 2025
+**Note**: All feature development (Stories 01.00-01.17) COMPLETE. QA phase (01.18-01.20) and Enhancements (01.21-01.22) remain.
 
 ---
 
@@ -211,8 +211,36 @@ This story provides the security foundation that all other Phase 2 stories depen
 
 ---
 
-**Total Stories:** 20
-**Estimated Total Effort:** 324-404 hours (includes frontend architecture setup in Story 1.1)
+---
+
+### Story 1.22: Ticket Completion with Outcome & Replacement Product 🔲 PENDING
+
+**Status**: 🔲 Pending
+**Requirements**: FR32, FR33
+**Plan**: `docs/plans/TICKET-COMPLETION-WITH-REPLACEMENT.md`
+
+**As a** technician or manager,
+**I want** to complete service tickets with a specific outcome (repaired, warranty replacement, unrepairable),
+**So that** the system can track the result and automatically handle inventory movements for warranty replacements.
+
+**Key Deliverables:**
+1. **Database**: ENUM `ticket_outcome`, columns `outcome` and `replacement_product_id` on service_tickets
+2. **Backend**: `completeTicket` mutation with validation, `getAvailableReplacements` query
+3. **Frontend**: "Sản phẩm đổi trả" card, "Hoàn thành phiếu" modal
+
+**Acceptance Criteria:**
+- AC1: Create ENUM `ticket_outcome` with values: repaired, warranty_replacement, unrepairable
+- AC2: Add `outcome` and `replacement_product_id` columns to service_tickets
+- AC3: Validate replacement product is in warranty_stock before completing
+- AC4: Move replacement product to customer_installed on warranty_replacement completion
+- AC5: Display replacement product info on ticket detail page
+
+**Estimated Effort**: 6-10 hours
+
+---
+
+**Total Stories:** 22
+**Estimated Total Effort:** 338-426 hours (includes frontend architecture setup in Story 1.1)
 **Dependencies:** Sequential execution required for stories 1-8, parallel execution possible for stories 9-17
 **Risk Mitigation:** Story 1.18 (Integration Testing) serves as quality gate before production deployment
 **Rollback Strategy:** Database migrations reversible, feature flags can disable new UI if critical issues arise

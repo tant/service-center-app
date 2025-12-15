@@ -216,6 +216,15 @@ CREATE TYPE public.transfer_status AS ENUM (
 );
 COMMENT ON TYPE public.transfer_status IS 'Simplified workflow status for stock transfers (removed in_transit)';
 
+-- Ticket Outcome Enum (Added 2025-12-15 - Story 01.22)
+DROP TYPE IF EXISTS public.ticket_outcome CASCADE;
+CREATE TYPE public.ticket_outcome AS ENUM (
+  'repaired',              -- Successfully repaired, return original product
+  'warranty_replacement',  -- Replace with new product from warranty_stock
+  'unrepairable'           -- Cannot be repaired or replaced
+);
+COMMENT ON TYPE public.ticket_outcome IS 'Final outcome of service ticket completion';
+
 -- =====================================================
 -- SEQUENCES FOR AUTO-NUMBERING
 -- =====================================================
@@ -246,3 +255,4 @@ GRANT USAGE ON TYPE public.stock_document_status TO authenticated;
 GRANT USAGE ON TYPE public.stock_receipt_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_issue_type TO authenticated;
 GRANT USAGE ON TYPE public.transfer_status TO authenticated;
+GRANT USAGE ON TYPE public.ticket_outcome TO authenticated;

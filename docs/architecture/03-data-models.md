@@ -133,6 +133,14 @@ create type public.warehouse_type as enum (
   'parts',
   'customer_installed' -- Hàng đã bán (Products sold and installed at customer sites)
 );
+
+-- Ticket outcome enum (added Dec 15, 2025)
+-- Tracks the result of service ticket completion
+create type public.ticket_outcome as enum (
+  'repaired',              -- Sửa chữa thành công, trả máy cũ
+  'warranty_replacement',  -- Đổi sản phẩm mới từ kho bảo hành
+  'unrepairable'           -- Không sửa được, không đổi được
+);
 ```
 
 ### 3.2.2 Service Tickets Table (Core)
@@ -168,9 +176,19 @@ create table "service_tickets" (
   "updated_by" uuid references "profiles"("user_id"),
   "notes" text,
 
+  -- Ticket completion outcome (added Dec 15, 2025)
+  "outcome" public.ticket_outcome,  -- Result: repaired, warranty_replacement, unrepairable
+  "replacement_product_id" uuid references "physical_products"("id"),  -- For warranty_replacement
+
   constraint "service_tickets_pkey" primary key ("id"),
   constraint "service_tickets_dates_check" check (
     completed_at is null or started_at is null or completed_at >= started_at
+  ),
+  -- Ensure replacement_product_id only set when outcome = warranty_replacement
+  constraint "chk_replacement_requires_outcome" check (
+    (outcome = 'warranty_replacement' AND replacement_product_id IS NOT NULL) OR
+    (outcome != 'warranty_replacement' AND replacement_product_id IS NULL) OR
+    (outcome IS NULL)
   )
 );
 ```
@@ -446,6 +464,8 @@ erDiagram
         timestamptz updated_at
         uuid created_by FK
         uuid updated_by FK
+        ticket_outcome outcome "repaired, warranty_replacement, unrepairable"
+        uuid replacement_product_id FK "For warranty_replacement"
     }
 
     service_ticket_parts {
@@ -570,6 +590,14 @@ create type public.warehouse_type as enum (
 
 -- Migrations applied: 202510260014, 202510260015, 202510260016 (added 'main', removed `display_name` and `color_code` from virtual_warehouses)
 -- Migration pending: Add 'customer_installed' enum value and seed default physical warehouse "Công ty"
+
+-- Ticket completion outcome (added Dec 15, 2025)
+-- Tracks the final result of ticket processing
+create type public.ticket_outcome as enum (
+  'repaired',              -- Successfully repaired, return original product
+  'warranty_replacement',  -- Replace with new product from warranty_stock
+  'unrepairable'           -- Cannot be repaired or replaced
+);
 
 create type public.product_condition as enum (
   'new', 'refurbished', 'defective', 'parts_only'

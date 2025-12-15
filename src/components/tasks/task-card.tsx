@@ -111,27 +111,27 @@ export function TaskCard({
   > = {
     pending: {
       label: "Chưa bắt đầu",
-      className: "bg-amber-50 text-amber-700",
+      className: "bg-[#F9BE6F]/10 text-[#F9BE6F]",
       icon: <Play className="h-3.5 w-3.5" />,
     },
     in_progress: {
       label: "Đang xử lý",
-      className: "bg-blue-50 text-blue-700",
+      className: "bg-[#3B82F6]/10 text-[#3B82F6]",
       icon: <Clock className="h-3.5 w-3.5" />,
     },
     completed: {
       label: "Đã hoàn thành",
-      className: "bg-emerald-50 text-emerald-700",
+      className: "bg-[#4AD08C]/10 text-[#4AD08C]",
       icon: <CheckCircle className="h-3.5 w-3.5" />,
     },
     blocked: {
       label: "Đang bị chặn",
-      className: "bg-red-50 text-red-700",
+      className: "bg-[#EB002B]/10 text-[#EB002B]",
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
     skipped: {
       label: "Đã bỏ qua",
-      className: "bg-muted text-muted-foreground",
+      className: "bg-[#6F787F]/10 text-[#6F787F]",
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
   };

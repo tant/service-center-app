@@ -14,27 +14,30 @@ interface TaskStatusBadgeProps {
 
 const statusConfig: Record<
   TaskStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "pending" | "processing" | "ready" | "resolved" | "closed";
+  }
 > = {
   pending: {
     label: "Chờ xử lý",
-    variant: "secondary",
+    variant: "processing",
   },
   in_progress: {
     label: "Đang xử lý",
-    variant: "default",
+    variant: "ready",
   },
   completed: {
     label: "Hoàn thành",
-    variant: "outline",
+    variant: "resolved",
   },
   blocked: {
     label: "Bị chặn",
-    variant: "destructive",
+    variant: "pending",
   },
   skipped: {
     label: "Bỏ qua",
-    variant: "outline",
+    variant: "closed",
   },
 };
 

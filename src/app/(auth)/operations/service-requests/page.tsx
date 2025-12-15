@@ -4,17 +4,25 @@
  * Updated 2025-10-29: Add create request button for staff
  */
 
-import type { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { ServiceRequestsTable, type serviceRequestSchema } from "@/components/tables/service-requests-table";
+import { ServiceRequestsTable } from "@/components/tables/service-requests-table";
 import { createClient } from "@/utils/supabase/server";
 
-async function getServiceRequestsData(): Promise<z.infer<typeof serviceRequestSchema>[]> {
+async function getServiceRequestsData() {
   const supabase = await createClient();
 
+  // Query service requests with items and product info
   const { data, error } = await supabase
     .from("service_requests")
-    .select("*")
+    .select(`
+      *,
+      items:service_request_items(
+        id,
+        serial_number,
+        issue_description,
+        ticket_id
+      )
+    `)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -22,7 +30,48 @@ async function getServiceRequestsData(): Promise<z.infer<typeof serviceRequestSc
     return [];
   }
 
-  return data || [];
+  if (!data) return [];
+
+  // Collect all serial numbers to lookup product info
+  const allSerials = data.flatMap(req =>
+    (req.items || []).map((item: any) => item.serial_number)
+  ).filter(Boolean);
+
+  // Lookup product info for all serials in one query
+  let productMap: Record<string, { product_name: string; brand_name: string | null }> = {};
+
+  if (allSerials.length > 0) {
+    const { data: physicalProducts } = await supabase
+      .from("physical_products")
+      .select(`
+        serial_number,
+        product:products(
+          name,
+          brand:brands(name)
+        )
+      `)
+      .in("serial_number", allSerials);
+
+    if (physicalProducts) {
+      for (const pp of physicalProducts) {
+        const product = pp.product as any;
+        productMap[pp.serial_number] = {
+          product_name: product?.name || "Không xác định",
+          brand_name: product?.brand?.name || null,
+        };
+      }
+    }
+  }
+
+  // Enrich items with product info
+  return data.map(req => ({
+    ...req,
+    items: (req.items || []).map((item: any) => ({
+      ...item,
+      product_name: productMap[item.serial_number]?.product_name || null,
+      brand_name: productMap[item.serial_number]?.brand_name || null,
+    })),
+  }));
 }
 
 export default async function Page() {

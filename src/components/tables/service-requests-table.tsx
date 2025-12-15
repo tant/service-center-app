@@ -71,24 +71,32 @@ import { usePendingIncomingRequests } from "@/hooks/use-service-request";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+// Schema for service request item with product info
+export const serviceRequestItemSchema = z.object({
+  id: z.string(),
+  serial_number: z.string(),
+  issue_description: z.string().nullable(),
+  ticket_id: z.string().nullable(),
+  product_name: z.string().nullable(),
+  brand_name: z.string().nullable(),
+});
+
 // Schema
 export const serviceRequestSchema = z.object({
   id: z.string(),
   tracking_token: z.string(),
   customer_name: z.string(),
   customer_email: z.string().nullable(),
-  customer_phone: z.string(),
-  product_brand: z.string().nullable(),
-  product_model: z.string(),
-  serial_number: z.string().nullable(),
+  customer_phone: z.string().nullable(),
   issue_description: z.string(),
   status: z.enum(["draft", "submitted", "pickingup", "received", "processing", "completed", "cancelled"]),
   created_at: z.string(),
   updated_at: z.string().nullable(),
-  linked_ticket_id: z.string().nullable(),
+  items: z.array(serviceRequestItemSchema).optional(),
 });
 
 export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
+export type ServiceRequestItem = z.infer<typeof serviceRequestItemSchema>;
 
 // Status mapping
 const STATUS_MAP = {
@@ -105,8 +113,7 @@ const STATUS_MAP = {
 const COLUMN_LABELS: Record<string, string> = {
   tracking_token: "Mã theo dõi",
   customer_name: "Khách hàng",
-  product_model: "Sản phẩm",
-  serial_number: "Serial",
+  serial: "Serial",
   status: "Trạng thái",
   created_at: "Đã gửi",
 };
@@ -158,27 +165,28 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
       ),
     },
     {
-      accessorKey: "product_model",
-      header: "Sản phẩm",
-      cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.getValue("product_model")}</p>
-          {row.original.product_brand && (
-            <p className="text-xs text-muted-foreground">{row.original.product_brand}</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "serial_number",
+      id: "serial",
       header: "Serial",
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.getValue("serial_number") || "-"}</span>
-      ),
+      cell: ({ row }) => {
+        const items = row.original.items || [];
+        if (items.length === 0) {
+          return <span className="text-muted-foreground">-</span>;
+        }
+        const firstItem = items[0];
+        return (
+          <div>
+            <p className="font-mono text-xs">{firstItem.serial_number}</p>
+            {items.length > 1 && (
+              <p className="text-xs text-muted-foreground">+{items.length - 1} serial khác</p>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "status",
       header: "Trạng thái",
+      size: 160,
       cell: ({ row }) => {
         const status = row.getValue("status") as keyof typeof STATUS_MAP;
         const config = STATUS_MAP[status];
@@ -188,8 +196,9 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     {
       accessorKey: "created_at",
       header: "Đã gửi",
+      size: 150,
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
           {formatDistanceToNow(new Date(row.getValue("created_at")), {
             addSuffix: true,
             locale: vi,
@@ -200,6 +209,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
     {
       id: "actions",
       header: () => <div className="text-right">Hành động</div>,
+      size: 80,
       cell: ({ row }) => {
         const request = row.original;
         return (
@@ -454,6 +464,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                     {headerGroup.headers.map((header, index) => (
                       <TableHead
                         key={header.id}
+                        style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                         className={cn(
                           index === 0 && "pl-4 lg:pl-6",
                           index === headerGroup.headers.length - 1 && "pr-4 lg:pr-6"
@@ -477,6 +488,7 @@ export function ServiceRequestsTable({ data }: ServiceRequestsTableProps) {
                       {row.getVisibleCells().map((cell, index) => (
                         <TableCell
                           key={cell.id}
+                          style={{ width: cell.column.getSize() !== 150 ? cell.column.getSize() : undefined }}
                           className={cn(
                             index === 0 && "pl-4 lg:pl-6",
                             index === row.getVisibleCells().length - 1 && "pr-4 lg:pr-6"

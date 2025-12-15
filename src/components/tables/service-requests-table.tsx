@@ -98,14 +98,14 @@ export const serviceRequestSchema = z.object({
 export type ServiceRequest = z.infer<typeof serviceRequestSchema>;
 export type ServiceRequestItem = z.infer<typeof serviceRequestItemSchema>;
 
-// Status mapping
+// Status mapping using existing Badge variants
 const STATUS_MAP = {
   draft: { label: "Nháp", variant: "outline" as const },
   submitted: { label: "Đã gửi", variant: "secondary" as const },
-  pickingup: { label: "Chờ lấy hàng", variant: "secondary" as const },
-  received: { label: "Đã tiếp nhận", variant: "default" as const },
-  processing: { label: "Đang xử lý", variant: "default" as const },
-  completed: { label: "Hoàn thành", variant: "default" as const },
+  pickingup: { label: "Chờ lấy hàng", variant: "processing" as const },
+  received: { label: "Đã tiếp nhận", variant: "ready" as const },
+  processing: { label: "Đang xử lý", variant: "processing" as const },
+  completed: { label: "Hoàn thành", variant: "resolved" as const },
   cancelled: { label: "Đã hủy", variant: "destructive" as const },
 };
 

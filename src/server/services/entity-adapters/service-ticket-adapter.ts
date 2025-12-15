@@ -229,11 +229,11 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
         id,
         ticket_number,
         status,
-        priority,
+        priority_level,
         created_at,
         customer:customers(
           id,
-          full_name,
+          name,
           phone
         ),
         product:products(
@@ -261,10 +261,10 @@ export class ServiceTicketAdapter extends BaseEntityAdapter {
       entityType: "service_ticket",
       title: `Phiếu sửa chữa ${ticket.ticket_number}`,
       subtitle: customer
-        ? `${customer.full_name} - ${product?.name || "N/A"}`
+        ? `${customer.name} - ${product?.name || "N/A"}`
         : undefined,
       status: ticket.status,
-      priority: ticket.priority,
+      priority: ticket.priority_level,
       url: `/operations/tickets/${ticket.id}`,
       metadata: {
         ticketNumber: ticket.ticket_number,

@@ -25,6 +25,8 @@ const badgeVariants = cva(
           "border-transparent bg-[#4AD08C] text-white [a&]:hover:bg-[#4AD08C]/90",
         closed:
           "border-transparent bg-[#6F787F] text-white [a&]:hover:bg-[#6F787F]/90",
+        ready:
+          "border-transparent bg-[#3B82F6] text-white [a&]:hover:bg-[#3B82F6]/90",
       },
     },
     defaultVariants: {

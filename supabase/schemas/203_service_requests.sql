@@ -148,7 +148,8 @@ BEGIN
       issue_description,
       status,
       request_id,
-      created_by
+      created_by,
+      warranty_type
     ) VALUES (
       v_customer_id,
       v_product_id,
@@ -157,7 +158,8 @@ BEGIN
       COALESCE(v_item.issue_description, p_issue_description),
       'pending',
       p_request_id,
-      p_reviewed_by_id
+      p_reviewed_by_id,
+      'warranty'
     )
     RETURNING id INTO v_ticket_id;
 

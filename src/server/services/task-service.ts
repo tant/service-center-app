@@ -517,6 +517,16 @@ export class TaskService {
       return task; // Idempotent
     }
 
+    // Step 0: Check sequence dependencies (strict_sequence validation)
+    if (task.workflow_id) {
+      const dependenciesMet = await this.areDependenciesMet(taskId);
+      if (!dependenciesMet) {
+        throw new Error(
+          "Không thể hoàn thành công việc này. Vui lòng hoàn thành các công việc trước đó theo đúng thứ tự."
+        );
+      }
+    }
+
     // Step 1: Validate completion notes (always required)
     if (!completionNotes || completionNotes.trim().length < 5) {
       throw new Error("Ghi chú hoàn thành phải có ít nhất 5 ký tự");
@@ -863,6 +873,57 @@ export class TaskService {
     }
 
     return entityTasks.length;
+  }
+
+  /**
+   * Helper: Check if task dependencies are met (for strict sequence workflows)
+   *
+   * @param taskId - UUID of task to check
+   * @returns True if all previous tasks in sequence are complete
+   */
+  private async areDependenciesMet(taskId: string): Promise<boolean> {
+    // Get task details
+    const { data: task, error: taskError } = await this.ctx.supabaseAdmin
+      .from("entity_tasks")
+      .select("entity_type, entity_id, workflow_id, sequence_order")
+      .eq("id", taskId)
+      .single();
+
+    if (taskError || !task || !task.workflow_id) {
+      // No workflow, dependencies always met
+      return true;
+    }
+
+    // Check if workflow is strict sequence
+    const { data: workflow, error: workflowError } = await this.ctx.supabaseAdmin
+      .from("workflows")
+      .select("strict_sequence")
+      .eq("id", task.workflow_id)
+      .single();
+
+    if (workflowError || !workflow?.strict_sequence) {
+      // Not a strict sequence workflow, dependencies always met
+      return true;
+    }
+
+    // Check if all previous tasks (lower sequence_order) are completed
+    const { data: previousTasks, error } = await this.ctx.supabaseAdmin
+      .from("entity_tasks")
+      .select("id, status")
+      .eq("entity_type", task.entity_type)
+      .eq("entity_id", task.entity_id)
+      .eq("workflow_id", task.workflow_id)
+      .lt("sequence_order", task.sequence_order)
+      .eq("is_required", true);
+
+    if (error) {
+      throw new Error(`Failed to check dependencies: ${error.message}`);
+    }
+
+    // All previous required tasks must be completed or skipped
+    return previousTasks.every((t) =>
+      t.status === "completed" || t.status === "skipped"
+    );
   }
 
   /**

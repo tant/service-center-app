@@ -194,6 +194,7 @@ function getStatusBadge(status: string) {
   const statusMap = {
     pending: { label: "Chờ xử lý", variant: "pending" as const },
     in_progress: { label: "Đang xử lý", variant: "processing" as const },
+    ready_for_pickup: { label: "Sẵn sàng bàn giao", variant: "ready" as const },
     completed: { label: "Hoàn thành", variant: "resolved" as const },
     cancelled: { label: "Đã hủy", variant: "closed" as const },
   };

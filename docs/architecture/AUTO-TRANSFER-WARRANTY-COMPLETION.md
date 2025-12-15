@@ -489,3 +489,102 @@ Tận dụng trigger có sẵn:
 | 2025-11-06 | 1.0 | Khởi tạo - chỉ luồng outbound (warranty replacement) |
 | 2025-12-15 | 2.0 | Bổ sung luồng inbound (nhận sản phẩm bảo hành), cập nhật diagram, thêm DB functions |
 | 2025-12-15 | 2.1 | **Implemented Luồng 2**: Tạo 2 stock_transfer khi setOutcome với warranty_replacement. Commit: `2311198` |
+
+## 10. Lưu Ý Quan Trọng Khi Implement Luồng 1
+
+> ⚠️ **CRITICAL**: Khi implement Luồng 1 (Inbound), cần điều chỉnh logic `setOutcome` hiện tại để tránh conflict.
+
+### 10.1 Conflict với logic `warranty_replacement` hiện tại
+
+**Implementation hiện tại (Luồng 2 - commit `2311198`):**
+```
+setOutcome(warranty_replacement):
+  - Transfer 1: SP thay thế warranty_stock → customer_installed
+  - Transfer 2: SP cũ customer_installed → in_service
+    ↑ Chỉ chạy nếu SP cũ đang ở customer_installed
+```
+
+**Sau khi có Luồng 1:**
+```
+Tạo ticket (Luồng 1):
+  - SP cũ customer_installed → in_service ← Đã chuyển!
+
+setOutcome(warranty_replacement):
+  - Transfer 1: OK ✅
+  - Transfer 2: KHÔNG CHẠY vì SP cũ đã ở in_service ← Thiếu transfer!
+```
+
+**→ Cần sửa code `setOutcome`:**
+- Kiểm tra SP cũ đang ở đâu (customer_installed hay in_service)
+- Nếu ở `in_service`: Tạo transfer `in_service` → `rma_staging` (thay vì `customer_installed` → `in_service`)
+
+### 10.2 Xử lý SP cũ theo từng outcome
+
+Khi Luồng 1 được implement, SP cũ sẽ ở `in_service` khi `setOutcome`. Cần xử lý:
+
+| Outcome | SP cũ ở | Cần chuyển đến | Lý do |
+|---------|---------|----------------|-------|
+| `repaired` | in_service | `customer_installed` | Trả lại khách (đã sửa xong) |
+| `warranty_replacement` | in_service | `rma_staging` | SP hỏng chờ trả NCC |
+| `unrepairable` | in_service | **Cần hỏi user** | Nhiều option (xem bên dưới) |
+
+### 10.3 Các option cho outcome `unrepairable`
+
+| Destination | Mô tả | Khi nào dùng |
+|-------------|-------|--------------|
+| `customer_installed` | Trả SP hỏng về cho khách | Khách muốn giữ, hết bảo hành |
+| `rma_staging` | Chờ trả NCC để claim warranty | Còn bảo hành NCC, cần gửi NCC |
+| `dead_stock` | Thanh lý | Không còn giá trị, không claim được |
+
+**Đề xuất implementation:**
+```typescript
+// Option A: Thêm field vào input
+setOutcome({
+  ticket_id,
+  outcome: 'unrepairable',
+  old_product_destination?: 'customer' | 'rma' | 'dead_stock', // Bắt buộc khi unrepairable
+})
+
+// Option B: Default behavior + config
+// Default: trả lại khách (customer_installed)
+// Config: có thể override ở level tenant/product
+```
+
+### 10.4 Checklist Implementation Luồng 1
+
+```
+□ Database
+  □ Thêm transfer_type 'service_inbound' vào ENUM (nếu cần)
+  □ Thêm column old_product_destination vào service_tickets (optional)
+
+□ API - Tạo ticket
+  □ Tạo transfer Inbound khi tạo ticket có serial ở customer_installed
+  □ Link transfer với ticket (reference_type, reference_id)
+
+□ API - setOutcome (SỬA CODE HIỆN TẠI)
+  □ warranty_replacement:
+    □ Bỏ logic tạo Transfer 2 hiện tại
+    □ Thêm: SP cũ in_service → rma_staging
+  □ repaired:
+    □ Thêm: SP cũ in_service → customer_installed
+  □ unrepairable:
+    □ Thêm input old_product_destination
+    □ Tạo Transfer theo destination đã chọn
+
+□ UI
+  □ Modal setOutcome: Thêm selector destination cho unrepairable
+  □ Ticket detail: Hiển thị thông tin SP cũ và destination
+
+□ Testing
+  □ Test tạo ticket → Luồng 1 tạo transfer
+  □ Test setOutcome mỗi outcome → đúng destination
+  □ Test edge case: ticket không có serial (không có Luồng 1)
+```
+
+### 10.5 Migration cho tickets đã có
+
+Khi deploy Luồng 1, các tickets đang `in_progress` sẽ không có transfer Inbound:
+- **Option A**: Không tạo retroactively, chỉ áp dụng cho tickets mới
+- **Option B**: Chạy migration script tạo transfer cho tickets đang xử lý
+
+**Đề xuất**: Option A (đơn giản hơn, ít risk)

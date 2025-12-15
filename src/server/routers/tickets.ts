@@ -238,6 +238,26 @@ const updateTicketSchema = z.object({
   assigned_to: z.string().uuid().nullable().optional(),
 });
 
+// Story 01.22: Complete ticket with outcome
+const completeTicketSchema = z.object({
+  ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+  outcome: z.enum(["repaired", "warranty_replacement", "unrepairable"]),
+  replacement_product_id: z.string().uuid("Replacement product ID must be a valid UUID").optional(),
+  notes: z.string().optional(),
+}).refine(
+  (data) => {
+    // If outcome = warranty_replacement, replacement_product_id is required
+    if (data.outcome === "warranty_replacement") {
+      return !!data.replacement_product_id;
+    }
+    return true;
+  },
+  {
+    message: "Phải chọn sản phẩm thay thế khi đổi bảo hành",
+    path: ["replacement_product_id"],
+  }
+);
+
 export const ticketsRouter = router({
   getPendingCount: publicProcedure
     .use(requireAnyAuthenticated)
@@ -1731,6 +1751,310 @@ ${changes.join("\n")}
 
     return count || 0;
   }),
+
+  /**
+   * Story 01.22: Get available replacement products for warranty ticket
+   * Returns physical products from warranty_stock that match the ticket's product_id
+   */
+  getAvailableReplacements: publicProcedure
+    .use(requireOperationsStaff)
+    .input(z.object({
+      ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+    }))
+    .query(async ({ input, ctx }) => {
+      // Get ticket's product_id
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("product_id, warranty_type")
+        .eq("id", input.ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Ticket not found");
+      }
+
+      // Only warranty tickets can have replacements
+      if (ticket.warranty_type !== "warranty") {
+        return [];
+      }
+
+      // Get warranty_stock virtual warehouse
+      const { data: warrantyWarehouse, error: warehouseError } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("id")
+        .eq("warehouse_type", "warranty_stock")
+        .limit(1)
+        .single();
+
+      if (warehouseError || !warrantyWarehouse) {
+        console.error("No warranty_stock warehouse found");
+        return [];
+      }
+
+      // Get available products from warranty_stock with same product_id
+      const { data: products, error: productsError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(`
+          id,
+          serial_number,
+          product_condition,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
+          product:products (
+            id,
+            name,
+            model,
+            brand:brands (
+              name
+            )
+          )
+        `)
+        .eq("product_id", ticket.product_id)
+        .eq("virtual_warehouse_id", warrantyWarehouse.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: true });
+
+      if (productsError) {
+        console.error("Failed to get replacement products:", productsError);
+        throw new Error("Không thể lấy danh sách sản phẩm thay thế");
+      }
+
+      return products || [];
+    }),
+
+  /**
+   * Story 01.22: Complete ticket with outcome and optional replacement product
+   * Handles inventory movements for warranty_replacement outcome
+   */
+  completeTicket: publicProcedure
+    .use(requireOperationsStaff)
+    .input(completeTicketSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { ticket_id, outcome, replacement_product_id, notes } = input;
+
+      // User is guaranteed by middleware
+      if (!ctx.user) {
+        throw new Error("User context not available");
+      }
+
+      // 1. Validate ticket exists and check current status
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(`
+          id,
+          status,
+          warranty_type,
+          customer_id,
+          product_id,
+          ticket_number,
+          serial_number,
+          customer:customers (
+            email,
+            name
+          ),
+          product:products (
+            name
+          )
+        `)
+        .eq("id", ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Phiếu không tồn tại");
+      }
+
+      // Only allow completion from in_progress or ready_for_pickup
+      if (!["in_progress", "ready_for_pickup"].includes(ticket.status)) {
+        throw new Error(`Không thể hoàn thành phiếu ở trạng thái ${ticket.status}`);
+      }
+
+      // 2. If warranty_replacement, validate replacement product
+      let customerInstalledWarehouseId: string | null = null;
+
+      if (outcome === "warranty_replacement") {
+        // Only warranty tickets can have warranty_replacement outcome
+        if (ticket.warranty_type !== "warranty") {
+          throw new Error("Chỉ phiếu bảo hành mới được đổi sản phẩm");
+        }
+
+        // Get warranty_stock warehouse for validation
+        const { data: warrantyWarehouse } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id")
+          .eq("warehouse_type", "warranty_stock")
+          .limit(1)
+          .single();
+
+        // Get customer_installed warehouse for moving product
+        const { data: customerWarehouse } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id")
+          .eq("warehouse_type", "customer_installed")
+          .limit(1)
+          .single();
+
+        if (!warrantyWarehouse || !customerWarehouse) {
+          throw new Error("Không tìm thấy kho warranty_stock hoặc customer_installed");
+        }
+
+        customerInstalledWarehouseId = customerWarehouse.id;
+
+        // Validate replacement product
+        const { data: replacementProduct, error: rpError } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("id, serial_number, product_id, virtual_warehouse_id, status")
+          .eq("id", replacement_product_id)
+          .single();
+
+        if (rpError || !replacementProduct) {
+          throw new Error("Sản phẩm thay thế không tồn tại");
+        }
+
+        if (replacementProduct.virtual_warehouse_id !== warrantyWarehouse.id) {
+          throw new Error("Sản phẩm phải ở kho bảo hành (warranty_stock)");
+        }
+
+        if (replacementProduct.status !== "active") {
+          throw new Error(`Sản phẩm không khả dụng. Trạng thái: ${replacementProduct.status}`);
+        }
+
+        // Check same product type
+        if (replacementProduct.product_id !== ticket.product_id) {
+          throw new Error("Sản phẩm thay thế phải cùng loại với sản phẩm trong phiếu");
+        }
+      }
+
+      // 3. Get profile ID
+      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, ctx.user.id);
+
+      // 4. Update ticket
+      const { data: updatedTicket, error: updateError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .update({
+          status: "completed",
+          outcome,
+          replacement_product_id: outcome === "warranty_replacement" ? replacement_product_id : null,
+          completed_at: new Date().toISOString(),
+          updated_by: profileId,
+          ...(notes && { notes }),
+        })
+        .eq("id", ticket_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
+      }
+
+      // 5. If warranty_replacement, move product to customer_installed
+      if (outcome === "warranty_replacement" && replacement_product_id && customerInstalledWarehouseId) {
+        // Update replacement product location
+        const { error: moveError } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .update({
+            virtual_warehouse_id: customerInstalledWarehouseId,
+            last_known_customer_id: ticket.customer_id,
+            status: "issued",
+          })
+          .eq("id", replacement_product_id);
+
+        if (moveError) {
+          console.error("Failed to move replacement product:", moveError);
+          // Don't throw - ticket is already completed
+        }
+
+        // Create stock_movement record
+        const { error: movementError } = await ctx.supabaseAdmin
+          .from("stock_movements")
+          .insert({
+            physical_product_id: replacement_product_id,
+            movement_type: "assignment",
+            from_warehouse_type: "warranty_stock",
+            to_warehouse_type: "customer_installed",
+            reference_type: "service_ticket",
+            reference_id: ticket_id,
+            notes: `Đổi bảo hành cho phiếu ${ticket.ticket_number}`,
+            created_by_id: profileId,
+          });
+
+        if (movementError) {
+          console.error("Failed to create stock_movement:", movementError);
+        }
+      }
+
+      // 6. Create auto-comment with outcome details
+      const outcomeLabels: Record<string, string> = {
+        repaired: "Sửa chữa thành công",
+        warranty_replacement: "Đổi sản phẩm bảo hành",
+        unrepairable: "Không thể sửa chữa",
+      };
+
+      let commentText = `Hoàn thành phiếu: ${outcomeLabels[outcome]}`;
+
+      if (outcome === "warranty_replacement" && replacement_product_id) {
+        // Get replacement product serial
+        const { data: rp } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("serial_number")
+          .eq("id", replacement_product_id)
+          .single();
+
+        if (rp) {
+          commentText += `\nSerial mới: ${rp.serial_number}`;
+        }
+      }
+
+      if (notes) {
+        commentText += `\nGhi chú: ${notes}`;
+      }
+
+      await createAutoComment({
+        ticketId: ticket_id,
+        profileId,
+        comment: commentText,
+        isInternal: false,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
+
+      // 7. Send email notification
+      if (ticket.customer && ticket.product) {
+        const customer = Array.isArray(ticket.customer) ? ticket.customer[0] : ticket.customer;
+        const product = Array.isArray(ticket.product) ? ticket.product[0] : ticket.product;
+
+        if (customer?.email && customer?.name) {
+          sendEmailNotification(
+            ctx,
+            "service_completed",
+            customer.email,
+            customer.name,
+            {
+              ticketNumber: ticket.ticket_number,
+              productName: product?.name,
+              serialNumber: ticket.serial_number || undefined,
+              completedDate: new Date().toISOString(),
+            },
+            undefined,
+            ticket_id
+          ).catch((err) => {
+            console.error("[EMAIL ERROR] service_completed failed:", err);
+          });
+        }
+      }
+
+      // 8. Audit log
+      await logAudit(ctx.supabaseAdmin, ctx.user.id, {
+        action: "complete_ticket",
+        resourceType: "service_ticket",
+        resourceId: ticket_id,
+        oldValues: { status: ticket.status },
+        newValues: { status: "completed", outcome, replacement_product_id },
+      });
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+      };
+    }),
 });
 
 export type TicketsRouter = typeof ticketsRouter;

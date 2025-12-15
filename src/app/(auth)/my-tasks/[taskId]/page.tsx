@@ -5,18 +5,28 @@
 
 "use client";
 
-import { use, useState } from "react";
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconChecklist,
+  IconClock,
+  IconFileText,
+  IconNotes,
+  IconPhoto,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconUser,
+} from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { IconArrowLeft, IconClock, IconUser, IconFileText, IconChecklist, IconNotes, IconPhoto, IconCheck } from "@tabler/icons-react";
+import { use, useState } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
 import { TaskNotesSection } from "@/components/tasks/task-notes-section";
-import { toast } from "sonner";
-import { useSidebar } from "@/components/ui/sidebar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +35,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { useSidebar } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  useBlockTask,
+  useStartTask,
+  useUnblockTask,
+} from "@/hooks/use-entity-tasks";
 
 interface TaskDetailPageProps {
   params: Promise<{
@@ -40,16 +56,31 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
   const { state: sidebarState, isMobile } = useSidebar();
 
   const taskQuery = trpc.tasks.getTask.useQuery({ taskId });
-  const { data: requirements } = trpc.tasks.getTaskRequirements.useQuery({ taskId });
-  const { data: attachments } = trpc.tasks.getTaskAttachments.useQuery({ taskId });
+  const { data: requirements } = trpc.tasks.getTaskRequirements.useQuery({
+    taskId,
+  });
+  const { data: attachments } = trpc.tasks.getTaskAttachments.useQuery({
+    taskId,
+  });
 
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionNotes, setCompletionNotes] = useState("");
   const [completionErrors, setCompletionErrors] = useState<string[]>([]);
 
+  // Block dialog state
+  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
+  const [blockErrors, setBlockErrors] = useState<string[]>([]);
+
+  // Task action hooks
+  const { startTask, isStarting } = useStartTask();
+  const { blockTask, isBlocking } = useBlockTask();
+  const { unblockTask, isUnblocking } = useUnblockTask();
+
   const completeTaskMutation = trpc.tasks.completeTask.useMutation({
     onSuccess: () => {
       toast.success("Công việc đã hoàn thành!");
+      router.refresh();
       router.back();
     },
     onError: (error) => {
@@ -80,11 +111,17 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       errors.push("Ghi chú hoàn thành phải có ít nhất 5 ký tự");
     }
 
-    if (requirements?.requiresNotes && (!task?.task_notes || task.task_notes.trim().length === 0)) {
+    if (
+      requirements?.requiresNotes &&
+      (!task?.task_notes || task.task_notes.trim().length === 0)
+    ) {
       errors.push("Vui lòng bổ sung ghi chú công việc trước khi hoàn thành");
     }
 
-    if (requirements?.requiresPhoto && (!attachments || attachments.length === 0)) {
+    if (
+      requirements?.requiresPhoto &&
+      (!attachments || attachments.length === 0)
+    ) {
       errors.push("Phải upload ít nhất 1 ảnh/tài liệu cho loại công việc này");
     }
 
@@ -101,9 +138,67 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       },
       {
         onSuccess: () => handleCompletionDialogChange(false),
-      }
+      },
     );
   };
+
+  // Handle start task
+  const handleStartTask = () => {
+    startTask(
+      { taskId },
+      {
+        onSuccess: () => {
+          router.refresh();
+          taskQuery.refetch();
+        },
+      },
+    );
+  };
+
+  // Handle block dialog
+  const handleBlockDialogChange = (open: boolean) => {
+    setIsBlockDialogOpen(open);
+    if (!open) {
+      setBlockReason("");
+      setBlockErrors([]);
+    }
+  };
+
+  const handleSubmitBlock = () => {
+    const trimmedReason = blockReason.trim();
+    if (trimmedReason.length < 5) {
+      setBlockErrors(["Lý do chặn phải có ít nhất 5 ký tự"]);
+      return;
+    }
+    setBlockErrors([]);
+    blockTask(
+      { taskId, blockedReason: trimmedReason },
+      {
+        onSuccess: () => {
+          handleBlockDialogChange(false);
+          router.refresh();
+          taskQuery.refetch();
+        },
+      },
+    );
+  };
+
+  // Handle unblock task
+  const handleUnblockTask = () => {
+    unblockTask(
+      { taskId },
+      {
+        onSuccess: () => {
+          router.refresh();
+          taskQuery.refetch();
+        },
+      },
+    );
+  };
+
+  // Combined loading state for action buttons
+  const isActionLoading =
+    isStarting || isBlocking || isUnblocking || completeTaskMutation.isPending;
 
   if (taskQuery.isLoading) {
     return (
@@ -144,11 +239,7 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
     <div className="container mx-auto space-y-6 pb-32 pt-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-        >
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <IconArrowLeft className="h-4 w-4 mr-2" />
           Quay lại
         </Button>
@@ -192,9 +283,13 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
             <div className="flex items-center gap-2">
               <IconClock className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-muted-foreground">Thời gian ước tính</p>
+                <p className="text-xs text-muted-foreground">
+                  Thời gian ước tính
+                </p>
                 <p className="text-sm font-medium">
-                  {task.estimated_duration_minutes ? `${task.estimated_duration_minutes} phút` : "Chưa xác định"}
+                  {task.estimated_duration_minutes
+                    ? `${task.estimated_duration_minutes} phút`
+                    : "Chưa xác định"}
                 </p>
               </div>
             </div>
@@ -203,8 +298,12 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
               <div className="flex items-center gap-2">
                 <IconUser className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Người thực hiện</p>
-                  <p className="text-sm font-medium">{task.assigned_to.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Người thực hiện
+                  </p>
+                  <p className="text-sm font-medium">
+                    {task.assigned_to.full_name}
+                  </p>
                 </div>
               </div>
             )}
@@ -213,7 +312,9 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
               <IconChecklist className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Bắt buộc</p>
-                <p className="text-sm font-medium">{task.is_required ? "Có" : "Không"}</p>
+                <p className="text-sm font-medium">
+                  {task.is_required ? "Có" : "Không"}
+                </p>
               </div>
             </div>
 
@@ -221,7 +322,9 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
               <IconFileText className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Thứ tự</p>
-                <p className="text-sm font-medium">Công việc #{task.sequence_order}</p>
+                <p className="text-sm font-medium">
+                  Công việc #{task.sequence_order}
+                </p>
               </div>
             </div>
           </div>
@@ -230,8 +333,12 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
             <>
               <Separator />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Ghi chú hoàn thành</p>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{task.completion_notes}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ghi chú hoàn thành
+                </p>
+                <p className="text-sm mt-1 whitespace-pre-wrap">
+                  {task.completion_notes}
+                </p>
               </div>
             </>
           )}
@@ -240,7 +347,9 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
             <>
               <Separator />
               <div className="border-l-4 border-destructive pl-4">
-                <p className="text-sm font-medium text-destructive">Lý do bị chặn</p>
+                <p className="text-sm font-medium text-destructive">
+                  Lý do bị chặn
+                </p>
                 <p className="text-sm mt-1">{task.blocked_reason}</p>
               </div>
             </>
@@ -279,13 +388,29 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       {/* Sticky action bar */}
       <div
         className="fixed bottom-0 right-0 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 transition-[left] duration-200 ease-linear"
-        style={{ left: !isMobile && sidebarState === "expanded" ? "var(--sidebar-width)" : 0 }}
+        style={{
+          left:
+            !isMobile && sidebarState === "expanded"
+              ? "var(--sidebar-width)"
+              : 0,
+        }}
       >
         <div className="container mx-auto flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold">Trạng thái: {task.status === "completed" ? "Đã hoàn thành" : task.status === "in_progress" ? "Đang xử lý" : task.status === "pending" ? "Chờ thực hiện" : task.status}</p>
+            <p className="text-sm font-semibold">
+              Trạng thái:{" "}
+              {task.status === "completed"
+                ? "Đã hoàn thành"
+                : task.status === "in_progress"
+                  ? "Đang xử lý"
+                  : task.status === "pending"
+                    ? "Chờ thực hiện"
+                    : task.status}
+            </p>
             <p className="text-xs text-muted-foreground">
-              {requirements?.requiresNotes ? "Bắt buộc ghi chú" : "Ghi chú không bắt buộc"}
+              {requirements?.requiresNotes
+                ? "Bắt buộc ghi chú"
+                : "Ghi chú không bắt buộc"}
               {requirements?.requiresPhoto ? " • Bắt buộc ảnh/tài liệu" : ""}
             </p>
           </div>
@@ -306,27 +431,85 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
               <IconPhoto className="h-4 w-4 mr-1" />
               Ảnh/Tài liệu
             </Button>
-            <Button
-              size="sm"
-              disabled={task.status === "completed" || task.status === "skipped" || completeTaskMutation.isPending}
-              onClick={() => handleCompletionDialogChange(true)}
-            >
-              {completeTaskMutation.isPending ? "Đang hoàn thành..." : (
-                <>
-                  <IconCheck className="h-4 w-4 mr-1" />
-                  Hoàn thành
-                </>
-              )}
-            </Button>
+
+            {/* Pending: Show Start button */}
+            {task.status === "pending" && (
+              <Button
+                size="sm"
+                disabled={isActionLoading}
+                onClick={handleStartTask}
+              >
+                {isStarting ? (
+                  "Đang bắt đầu..."
+                ) : (
+                  <>
+                    <IconPlayerPlay className="h-4 w-4 mr-1" />
+                    Bắt đầu
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* In Progress: Show Block + Complete buttons */}
+            {task.status === "in_progress" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isActionLoading}
+                  onClick={() => handleBlockDialogChange(true)}
+                >
+                  <IconPlayerPause className="h-4 w-4 mr-1" />
+                  Báo chặn
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={isActionLoading}
+                  onClick={() => handleCompletionDialogChange(true)}
+                >
+                  {completeTaskMutation.isPending ? (
+                    "Đang hoàn thành..."
+                  ) : (
+                    <>
+                      <IconCheck className="h-4 w-4 mr-1" />
+                      Hoàn thành
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {/* Blocked: Show Continue button */}
+            {task.status === "blocked" && (
+              <Button
+                size="sm"
+                disabled={isActionLoading}
+                onClick={handleUnblockTask}
+              >
+                {isUnblocking ? (
+                  "Đang tiếp tục..."
+                ) : (
+                  <>
+                    <IconPlayerPlay className="h-4 w-4 mr-1" />
+                    Tiếp tục
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <Dialog open={isCompletionDialogOpen} onOpenChange={handleCompletionDialogChange}>
+      <Dialog
+        open={isCompletionDialogOpen}
+        onOpenChange={handleCompletionDialogChange}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hoàn thành công việc</DialogTitle>
-            <DialogDescription>Nhập ghi chú hoàn thành để đóng công việc này.</DialogDescription>
+            <DialogDescription>
+              Nhập ghi chú hoàn thành để đóng công việc này.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {completionErrors.length > 0 && (
@@ -362,6 +545,55 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
               onClick={handleSubmitCompletion}
             >
               Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Block Task Dialog */}
+      <Dialog open={isBlockDialogOpen} onOpenChange={handleBlockDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Báo chặn công việc</DialogTitle>
+            <DialogDescription>
+              Nhập lý do chặn để tạm dừng công việc này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {blockErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <ul className="list-disc list-inside space-y-1">
+                    {blockErrors.map((error, idx) => (
+                      <li key={idx}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+            <Textarea
+              value={blockReason}
+              onChange={(event) => setBlockReason(event.target.value)}
+              placeholder="Mô tả lý do chặn công việc (ít nhất 5 ký tự)"
+              minLength={5}
+              rows={4}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleBlockDialogChange(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isBlocking}
+              onClick={handleSubmitBlock}
+            >
+              {isBlocking ? "Đang xử lý..." : "Xác nhận chặn"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1630,120 +1630,6 @@ ${changes.join("\n")}
   // ========================================
 
   /**
-   * Story 1.14: Confirm delivery
-   * AC 1, 2, 3: Staff marks ticket as delivered
-   */
-  confirmDelivery: publicProcedure
-    .use(requireOperationsStaff)
-    .input(
-      z.object({
-        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      // User is guaranteed by middleware
-      if (!ctx.user) {
-        throw new Error("User context not available");
-      }
-      const user = ctx.user;
-
-      // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(
-        ctx.supabaseAdmin,
-        user.id,
-      );
-
-      // Verify ticket exists and is ready for pickup
-      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
-        .from("service_tickets")
-        .select("id, ticket_number, status")
-        .eq("id", input.ticket_id)
-        .single();
-
-      if (ticketError || !ticket) {
-        throw new Error("Ticket not found");
-      }
-
-      if (ticket.status !== "ready_for_pickup") {
-        throw new Error(
-          "Only tickets ready for pickup can be marked as delivered. Current status: " +
-            ticket.status,
-        );
-      }
-
-      // Update ticket with delivery confirmation and close status
-      const { data: updatedTicket, error: updateError } =
-        await ctx.supabaseAdmin
-          .from("service_tickets")
-          .update({
-            status: "completed",
-            delivery_confirmed_at: new Date().toISOString(),
-            delivery_confirmed_by_id: profileId,
-          })
-          .eq("id", input.ticket_id)
-          .select()
-          .single();
-
-      if (updateError) {
-        throw new Error(`Failed to confirm delivery: ${updateError.message}`);
-      }
-
-      // Add comment about delivery confirmation
-      await ctx.supabaseAdmin.from("service_ticket_comments").insert({
-        ticket_id: input.ticket_id,
-        comment: "Đã xác nhận giao hàng cho khách hàng",
-        comment_type: "note",
-        is_internal: false,
-        created_by: profileId,
-      });
-
-      // Story 1.15: Send delivery confirmation email
-      const { data: fullTicket } = await ctx.supabaseAdmin
-        .from("service_tickets")
-        .select(`
-          ticket_number,
-          serial_number,
-          delivery_confirmed_at,
-          customer:customers(email, name),
-          product:products(name)
-        `)
-        .eq("id", input.ticket_id)
-        .single();
-
-      if (fullTicket && fullTicket.customer && fullTicket.product) {
-        const customer = Array.isArray(fullTicket.customer)
-          ? fullTicket.customer[0]
-          : fullTicket.customer;
-        const product = Array.isArray(fullTicket.product)
-          ? fullTicket.product[0]
-          : fullTicket.product;
-
-        sendEmailNotification(
-          ctx,
-          "delivery_confirmed",
-          customer.email,
-          customer.name,
-          {
-            ticketNumber: fullTicket.ticket_number,
-            productName: product.name,
-            serialNumber: fullTicket.serial_number,
-            deliveryDate:
-              fullTicket.delivery_confirmed_at || new Date().toISOString(),
-          },
-          undefined,
-          input.ticket_id,
-        ).catch((err) => {
-          console.error("[EMAIL ERROR] delivery_confirmed failed:", err);
-        });
-      }
-
-      return {
-        success: true,
-        ticket: updatedTicket,
-      };
-    }),
-
-  /**
    * Story 1.14: Get list of completed tickets pending delivery confirmation
    * AC 4, 5: List view of tickets awaiting delivery confirmation
    */
@@ -2259,6 +2145,46 @@ ${changes.join("\n")}
         newValues: { status: "completed" },
         metadata: { operation: "confirm_delivery", delivery_notes },
       });
+
+      // 6. Send delivery confirmation email (Story 1.15)
+      const { data: fullTicket } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(`
+          ticket_number,
+          serial_number,
+          delivery_confirmed_at,
+          customer:customers(email, name),
+          product:products(name)
+        `)
+        .eq("id", ticket_id)
+        .single();
+
+      if (fullTicket?.customer && fullTicket?.product) {
+        const customer = Array.isArray(fullTicket.customer)
+          ? fullTicket.customer[0]
+          : fullTicket.customer;
+        const product = Array.isArray(fullTicket.product)
+          ? fullTicket.product[0]
+          : fullTicket.product;
+
+        sendEmailNotification(
+          ctx,
+          "delivery_confirmed",
+          customer.email,
+          customer.name,
+          {
+            ticketNumber: fullTicket.ticket_number,
+            productName: product.name,
+            serialNumber: fullTicket.serial_number,
+            deliveryDate:
+              fullTicket.delivery_confirmed_at || new Date().toISOString(),
+          },
+          undefined,
+          ticket_id,
+        ).catch((err) => {
+          console.error("[EMAIL ERROR] delivery_confirmed failed:", err);
+        });
+      }
 
       return {
         success: true,

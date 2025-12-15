@@ -5,11 +5,12 @@
  * Provides hooks for fetching tasks and performing task actions.
  */
 
-'use client';
+"use client";
 
-import { toast } from 'sonner';
-import { trpc } from '@/components/providers/trpc-provider';
-import type { EntityType } from '@/server/services/entity-adapters/base-adapter';
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import type { EntityType } from "@/server/services/entity-adapters/base-adapter";
 
 /**
  * Hook for fetching tasks of a specific entity
@@ -20,13 +21,14 @@ import type { EntityType } from '@/server/services/entity-adapters/base-adapter'
  * @returns Tasks, progress, loading state, and refetch function
  */
 export function useEntityTasks(entityType: EntityType, entityId: string) {
-  const { data, isLoading, error, refetch } = trpc.tasks.getEntityTasks.useQuery(
-    { entityType, entityId },
-    {
-      refetchInterval: 30000, // Auto-refresh every 30 seconds
-      refetchOnWindowFocus: true, // Refresh when user returns to tab
-    }
-  );
+  const { data, isLoading, error, refetch } =
+    trpc.tasks.getEntityTasks.useQuery(
+      { entityType, entityId },
+      {
+        refetchInterval: 30000, // Auto-refresh every 30 seconds
+        refetchOnWindowFocus: true, // Refresh when user returns to tab
+      },
+    );
 
   return {
     tasks: data?.tasks ?? [],
@@ -49,10 +51,10 @@ export function useStartTask() {
     onSuccess: () => {
       // Invalidate task queries to trigger refresh
       utils.tasks.getEntityTasks.invalidate();
-      toast.success('Đã bắt đầu công việc');
+      toast.success("Đã bắt đầu công việc");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể bắt đầu công việc');
+      toast.error(error.message || "Không thể bắt đầu công việc");
     },
   });
 
@@ -71,13 +73,15 @@ export function useStartTask() {
  */
 export function useCompleteTask() {
   const utils = trpc.useUtils();
+  const router = useRouter();
   const mutation = trpc.tasks.completeTask.useMutation({
     onSuccess: () => {
       utils.tasks.getEntityTasks.invalidate();
-      toast.success('Công việc đã hoàn thành');
+      router.refresh(); // Refresh Server Component to update tasksCompletedAt
+      toast.success("Công việc đã hoàn thành");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể hoàn thành công việc');
+      toast.error(error.message || "Không thể hoàn thành công việc");
     },
   });
 
@@ -99,10 +103,10 @@ export function useBlockTask() {
   const mutation = trpc.tasks.blockTask.useMutation({
     onSuccess: () => {
       utils.tasks.getEntityTasks.invalidate();
-      toast.success('Công việc đã được đánh dấu chặn');
+      toast.success("Công việc đã được đánh dấu chặn");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể chặn công việc');
+      toast.error(error.message || "Không thể chặn công việc");
     },
   });
 
@@ -123,10 +127,10 @@ export function useUnblockTask() {
   const mutation = trpc.tasks.unblockTask.useMutation({
     onSuccess: () => {
       utils.tasks.getEntityTasks.invalidate();
-      toast.success('Công việc đã được bỏ chặn');
+      toast.success("Công việc đã được bỏ chặn");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể bỏ chặn công việc');
+      toast.error(error.message || "Không thể bỏ chặn công việc");
     },
   });
 

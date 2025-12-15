@@ -145,6 +145,104 @@ async function sendEmailNotification(
   }
 }
 
+/**
+ * Helper function to create and auto-approve a stock transfer
+ * Used for warranty replacement flow to create proper transfer documents
+ */
+async function createAutoTransfer(
+  supabaseAdmin: TRPCContext["supabaseAdmin"],
+  params: {
+    fromWarehouseId: string;
+    toWarehouseId: string;
+    customerId: string;
+    physicalProductId: string;
+    serialNumber: string;
+    productId: string;
+    notes: string;
+    createdById: string;
+  },
+): Promise<{ transferId: string; transferNumber: string }> {
+  const {
+    fromWarehouseId,
+    toWarehouseId,
+    customerId,
+    physicalProductId,
+    serialNumber,
+    productId,
+    notes,
+    createdById,
+  } = params;
+
+  // 1. Create transfer
+  const { data: transfer, error: transferError } = await supabaseAdmin
+    .from("stock_transfers")
+    .insert({
+      from_virtual_warehouse_id: fromWarehouseId,
+      to_virtual_warehouse_id: toWarehouseId,
+      customer_id: customerId,
+      status: "draft",
+      notes,
+      created_by_id: createdById,
+    })
+    .select("id, transfer_number")
+    .single();
+
+  if (transferError || !transfer) {
+    throw new Error(`Lỗi tạo phiếu chuyển kho: ${transferError?.message}`);
+  }
+
+  // 2. Create transfer item
+  const { data: transferItem, error: itemError } = await supabaseAdmin
+    .from("stock_transfer_items")
+    .insert({
+      transfer_id: transfer.id,
+      product_id: productId,
+      quantity: 1,
+    })
+    .select("id")
+    .single();
+
+  if (itemError || !transferItem) {
+    throw new Error(`Lỗi tạo item chuyển kho: ${itemError?.message}`);
+  }
+
+  // 3. Add serial to transfer
+  const { error: serialError } = await supabaseAdmin
+    .from("stock_transfer_serials")
+    .insert({
+      transfer_item_id: transferItem.id,
+      physical_product_id: physicalProductId,
+      serial_number: serialNumber,
+    });
+
+  if (serialError) {
+    throw new Error(
+      `Lỗi thêm serial vào phiếu chuyển kho: ${serialError.message}`,
+    );
+  }
+
+  // 4. Approve transfer - triggers will handle:
+  //    - Update physical_product location
+  //    - Generate stock_issue + stock_receipt
+  const { error: approveError } = await supabaseAdmin
+    .from("stock_transfers")
+    .update({
+      status: "approved",
+      approved_by_id: createdById,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", transfer.id);
+
+  if (approveError) {
+    throw new Error(`Lỗi duyệt phiếu chuyển kho: ${approveError.message}`);
+  }
+
+  return {
+    transferId: transfer.id,
+    transferNumber: transfer.transfer_number,
+  };
+}
+
 function validateStatusTransition(
   currentStatus: string,
   newStatus: string,
@@ -1841,7 +1939,14 @@ ${changes.join("\n")}
       }
 
       // 2. If warranty_replacement, validate replacement product
+      let warrantyWarehouseId: string | null = null;
       let customerInstalledWarehouseId: string | null = null;
+      let inServiceWarehouseId: string | null = null;
+      let replacementProductInfo: {
+        id: string;
+        serial_number: string;
+        product_id: string;
+      } | null = null;
 
       if (outcome === "warranty_replacement") {
         // Only warranty tickets can have warranty_replacement outcome
@@ -1849,29 +1954,35 @@ ${changes.join("\n")}
           throw new Error("Chỉ phiếu bảo hành mới được đổi sản phẩm");
         }
 
-        // Get warranty_stock warehouse for validation
-        const { data: warrantyWarehouse } = await ctx.supabaseAdmin
+        // Get all required warehouses
+        const { data: warehouses } = await ctx.supabaseAdmin
           .from("virtual_warehouses")
-          .select("id")
-          .eq("warehouse_type", "warranty_stock")
-          .limit(1)
-          .single();
+          .select("id, warehouse_type")
+          .in("warehouse_type", [
+            "warranty_stock",
+            "customer_installed",
+            "in_service",
+          ]);
 
-        // Get customer_installed warehouse for moving product
-        const { data: customerWarehouse } = await ctx.supabaseAdmin
-          .from("virtual_warehouses")
-          .select("id")
-          .eq("warehouse_type", "customer_installed")
-          .limit(1)
-          .single();
+        const warrantyWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "warranty_stock",
+        );
+        const customerWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "customer_installed",
+        );
+        const inServiceWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "in_service",
+        );
 
-        if (!warrantyWarehouse || !customerWarehouse) {
+        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse) {
           throw new Error(
-            "Không tìm thấy kho warranty_stock hoặc customer_installed",
+            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service)",
           );
         }
 
+        warrantyWarehouseId = warrantyWarehouse.id;
         customerInstalledWarehouseId = customerWarehouse.id;
+        inServiceWarehouseId = inServiceWarehouse.id;
 
         // Validate replacement product
         const { data: replacementProduct, error: rpError } =
@@ -1903,6 +2014,13 @@ ${changes.join("\n")}
             "Sản phẩm thay thế phải cùng loại với sản phẩm trong phiếu",
           );
         }
+
+        // Store for later use
+        replacementProductInfo = {
+          id: replacementProduct.id,
+          serial_number: replacementProduct.serial_number,
+          product_id: replacementProduct.product_id,
+        };
       }
 
       // 3. Get profile ID
@@ -1933,43 +2051,72 @@ ${changes.join("\n")}
         throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
       }
 
-      // 5. If warranty_replacement, move product to customer_installed
+      // 5. If warranty_replacement, create stock transfers
       if (
         outcome === "warranty_replacement" &&
         replacement_product_id &&
-        customerInstalledWarehouseId
+        replacementProductInfo &&
+        warrantyWarehouseId &&
+        customerInstalledWarehouseId &&
+        inServiceWarehouseId
       ) {
-        // Update replacement product location
-        const { error: moveError } = await ctx.supabaseAdmin
+        // [TRANSFER 1] Xuất sản phẩm thay thế: warranty_stock → customer_installed
+        const outboundTransfer = await createAutoTransfer(ctx.supabaseAdmin, {
+          fromWarehouseId: warrantyWarehouseId,
+          toWarehouseId: customerInstalledWarehouseId,
+          customerId: ticket.customer_id,
+          physicalProductId: replacementProductInfo.id,
+          serialNumber: replacementProductInfo.serial_number,
+          productId: replacementProductInfo.product_id,
+          notes: `Auto: Xuất sản phẩm đổi bảo hành - Phiếu ${ticket.ticket_number}`,
+          createdById: profileId,
+        });
+
+        console.log(
+          `[WARRANTY] Created outbound transfer: ${outboundTransfer.transferNumber}`,
+        );
+
+        // Update replacement product's customer reference and status
+        // Status = 'issued' means product has been delivered to customer
+        await ctx.supabaseAdmin
           .from("physical_products")
           .update({
-            virtual_warehouse_id: customerInstalledWarehouseId,
             last_known_customer_id: ticket.customer_id,
             status: "issued",
           })
           .eq("id", replacement_product_id);
 
-        if (moveError) {
-          console.error("Failed to move replacement product:", moveError);
-          // Don't throw - ticket is already completed
-        }
+        // [TRANSFER 2] Nhận sản phẩm cũ: customer_installed → in_service
+        // Only if ticket has serial_number (old product from customer)
+        if (ticket.serial_number) {
+          const { data: oldProduct } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, product_id, virtual_warehouse_id")
+            .eq("serial_number", ticket.serial_number)
+            .single();
 
-        // Create stock_movement record
-        const { error: movementError } = await ctx.supabaseAdmin
-          .from("stock_movements")
-          .insert({
-            physical_product_id: replacement_product_id,
-            movement_type: "assignment",
-            from_warehouse_type: "warranty_stock",
-            to_warehouse_type: "customer_installed",
-            reference_type: "service_ticket",
-            reference_id: ticket_id,
-            notes: `Đổi bảo hành cho phiếu ${ticket.ticket_number}`,
-            created_by_id: profileId,
-          });
+          if (
+            oldProduct &&
+            oldProduct.virtual_warehouse_id === customerInstalledWarehouseId
+          ) {
+            const inboundTransfer = await createAutoTransfer(
+              ctx.supabaseAdmin,
+              {
+                fromWarehouseId: customerInstalledWarehouseId,
+                toWarehouseId: inServiceWarehouseId,
+                customerId: ticket.customer_id,
+                physicalProductId: oldProduct.id,
+                serialNumber: oldProduct.serial_number,
+                productId: oldProduct.product_id,
+                notes: `Auto: Nhận sản phẩm bảo hành - Phiếu ${ticket.ticket_number}`,
+                createdById: profileId,
+              },
+            );
 
-        if (movementError) {
-          console.error("Failed to create stock_movement:", movementError);
+            console.log(
+              `[WARRANTY] Created inbound transfer: ${inboundTransfer.transferNumber}`,
+            );
+          }
         }
       }
 

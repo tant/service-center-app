@@ -125,10 +125,42 @@ CREATE TRIGGER "service_tickets_set_number_trigger"
 -- STATUS CHANGE LOGGING
 -- =====================================================
 
+-- Helper function to get Vietnamese status label
+CREATE OR REPLACE FUNCTION public.get_ticket_status_label_vi(status public.ticket_status)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN CASE status
+    WHEN 'pending' THEN 'Chờ xử lý'
+    WHEN 'in_progress' THEN 'Đang sửa chữa'
+    WHEN 'ready_for_pickup' THEN 'Sẵn sàng bàn giao'
+    WHEN 'completed' THEN 'Hoàn thành'
+    WHEN 'cancelled' THEN 'Hủy bỏ'
+    ELSE status::TEXT
+  END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Helper function to get Vietnamese status change message for customers
+CREATE OR REPLACE FUNCTION public.get_ticket_status_message_vi(old_status public.ticket_status, new_status public.ticket_status)
+RETURNS TEXT AS $$
+BEGIN
+  -- Generate customer-friendly Vietnamese message based on the new status
+  RETURN CASE new_status
+    WHEN 'pending' THEN 'Phiếu dịch vụ đang chờ xử lý.'
+    WHEN 'in_progress' THEN 'Kỹ thuật viên đang tiến hành sửa chữa thiết bị của bạn.'
+    WHEN 'ready_for_pickup' THEN 'Tất cả công việc đã hoàn thành. Phiếu chuyển sang trạng thái Sẵn sàng bàn giao.'
+    WHEN 'completed' THEN 'Phiếu dịch vụ đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.'
+    WHEN 'cancelled' THEN 'Phiếu dịch vụ đã bị hủy bỏ.'
+    ELSE 'Trạng thái phiếu đã thay đổi từ "' || public.get_ticket_status_label_vi(old_status) || '" sang "' || public.get_ticket_status_label_vi(new_status) || '".'
+  END;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
 CREATE OR REPLACE FUNCTION public.log_status_change()
 RETURNS TRIGGER AS $$
 DECLARE
   profile_id_var UUID;
+  customer_message TEXT;
 BEGIN
   IF (tg_op = 'UPDATE' AND old.status IS DISTINCT FROM new.status) THEN
     -- Use updated_by if available, otherwise lookup profile from auth.uid()
@@ -141,8 +173,12 @@ BEGIN
       WHERE user_id = auth.uid();
     END IF;
 
+    -- Generate Vietnamese customer-friendly message
+    customer_message := public.get_ticket_status_message_vi(old.status, new.status);
+
+    -- Insert customer-visible comment (Vietnamese)
     INSERT INTO public.service_ticket_comments (ticket_id, comment, comment_type, is_internal, created_by)
-    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, profile_id_var);
+    VALUES (new.id, customer_message, 'status_change', false, profile_id_var);
   END IF;
   RETURN new;
 END;

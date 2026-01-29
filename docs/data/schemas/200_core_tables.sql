@@ -32,10 +32,13 @@ CREATE TABLE "profiles" (
   CONSTRAINT "profiles_pkey" PRIMARY KEY ("id")
 );
 
+-- Ensure columns added after initial table creation exist
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "role" public.user_role NOT NULL DEFAULT 'technician';
+
 -- Indexes
+CREATE INDEX IF NOT EXISTS "profiles_role_idx" ON "profiles" USING btree ("role");
 CREATE INDEX "profiles_user_id_idx" ON "profiles" USING btree ("user_id");
 CREATE INDEX "profiles_email_idx" ON "profiles" USING btree ("email");
-CREATE INDEX "profiles_role_idx" ON "profiles" USING btree ("role");
 CREATE INDEX "profiles_is_active_idx" ON "profiles" USING btree ("is_active") WHERE is_active = true;
 
 -- Triggers

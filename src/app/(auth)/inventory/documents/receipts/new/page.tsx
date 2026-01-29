@@ -227,7 +227,7 @@ export default function CreateReceiptPage() {
                               type="number"
                               min={receiptType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
                               value={item.declaredQuantity}
-                              onChange={(e) => handleItemChange(index, "declaredQuantity", Number.parseInt(e.target.value))}
+                              onChange={(e) => handleItemChange(index, "declaredQuantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
                               className={item.declaredQuantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>

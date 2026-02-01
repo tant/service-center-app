@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   previous_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
   manufacturer_warranty_end_date DATE,
   user_warranty_end_date DATE,
-  current_ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  current_ticket_id UUID,
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   rma_reason TEXT,
   rma_date DATE,

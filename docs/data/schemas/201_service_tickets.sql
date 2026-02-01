@@ -52,7 +52,7 @@ CREATE TABLE "service_tickets" (
 
   -- Ticket completion outcome (Story 01.22 - 2025-12-15)
   "outcome" public.ticket_outcome,
-  "replacement_product_id" UUID REFERENCES "physical_products"("id"),
+  "replacement_product_id" UUID,
 
   -- Task completion tracking (Outcome Checkpoint feature)
   "tasks_completed_at" TIMESTAMPTZ,

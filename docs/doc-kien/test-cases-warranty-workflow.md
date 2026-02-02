@@ -99,9 +99,9 @@
 | TC09 | Sau khi hoàn thành phiếu, sản phẩm thay mới ra khỏi kho bán | Tồn kho bán giảm (40 → 39) |
 | TC10 | Xuất trả khi tồn kho = 0 (negative) | Hệ thống từ chối hoặc cảnh báo hết hàng |
 
-> **🔴 Trang chi tiết phiếu sửa chữa không hiển thị thông tin sản phẩm trả:**
-> - Sau khi duyệt phiếu và chọn sản phẩm thay thế, trang chi tiết phiếu sửa chữa (service ticket) không hiển thị thông tin sản phẩm trả cho khách
-> - Cần bổ sung hiển thị sản phẩm thay thế (serial, tên sản phẩm) trên trang chi tiết phiếu
+> **✅ ~~Trang chi tiết phiếu sửa chữa không hiển thị thông tin sản phẩm trả~~ (FIXED 2026-02-02):**
+> - ~~Sau khi duyệt phiếu và chọn sản phẩm thay thế, trang chi tiết phiếu sửa chữa (service ticket) không hiển thị thông tin sản phẩm trả cho khách~~
+> - **Fix:** Thêm default outcome khi tạo ticket và cho phép chỉnh sửa outcome trên edit form, đảm bảo trang chi tiết hiển thị đúng thông tin sản phẩm trả
 
 ### Bước 6: Xuất kho RMA
 

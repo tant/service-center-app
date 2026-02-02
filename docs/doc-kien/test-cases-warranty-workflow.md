@@ -55,6 +55,7 @@
 > **🔴 Vô hiệu hóa kho ảo:**
 > - Trang quản lý kho chưa có tính năng xóa hay vô hiệu hóa kho ảo, trong khi database đã có cột `is_active` trong bảng `virtual_warehouses`
 > - Dropdown chọn kho chưa filter theo `is_active`, kho không còn sử dụng vẫn hiển thị
+>
 
 ### Test Cases: Xuất kho chuyển kho đích (IMPLEMENTED 2026-02-02)
 
@@ -84,6 +85,10 @@
 | TC05 | Kiểm tra sản phẩm hư có được nhập vào kho bảo hành không | Sản phẩm hư nằm trong kho bảo hành |
 | TC06 | Kiểm tra phiếu bảo hành có đầy đủ thông tin (khách, serial, lỗi) | Thông tin hiển thị đúng và đầy đủ |
 | TC07 | Kiểm tra trạng thái phiếu bảo hành chuyển đúng (pending → in_progress) | Trạng thái cập nhật chính xác |
+
+> **🔴 Không có phím tắt mở chi tiết sản phẩm vật lý:**
+> - Trong phiếu yêu cầu dịch vụ (service request) và phiếu sửa chữa (service ticket), không có cách nhanh để mở thông tin chi tiết sản phẩm vật lý (ví dụ: click vào serial để xem trang chi tiết)
+> - Cần bổ sung link/phím tắt trên serial number để điều hướng đến trang chi tiết sản phẩm vật lý
 
 ### Bước 5: Duyệt phiếu & Xuất trả sản phẩm thay
 

@@ -109,3 +109,11 @@
 | TC11 | Tạo phiếu xuất kho RMA cho sản phẩm hư | Phiếu RMA được tạo thành công |
 | TC12 | Sau khi xuất kho RMA, sản phẩm ra khỏi kho bảo hành | Sản phẩm không còn trong kho bảo hành |
 | TC13 | Kiểm tra sản phẩm hư chuyển sang trạng thái RMA | Trạng thái sản phẩm = RMA (không bị mất khỏi hệ thống) |
+
+> **~~Chưa thể chuyển trạng thái lô RMA từ "Đã gửi" sang "Đã vận chuyển"~~ (FIXED 2026-02-02):**
+> - ~~Sau khi finalize lô RMA (draft → submitted), không có API/UI để chuyển sang trạng thái `shipped`~~
+> - **Fix:** Thêm tRPC procedure `shipRMABatch` và nút "Đánh dấu đã vận chuyển" trên trang chi tiết lô RMA (kèm cập nhật tracking number, ngày gửi)
+>
+> **~~Chưa thể chuyển trạng thái lô RMA từ "Đã vận chuyển" sang "Hoàn thành"~~ (FIXED 2026-02-02):**
+> - ~~Không có API/UI để chuyển từ `shipped` → `completed`~~
+> - **Fix:** Thêm tRPC procedure `completeRMABatch` và nút "Đánh dấu hoàn thành" trên trang chi tiết lô RMA

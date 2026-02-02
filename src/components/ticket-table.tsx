@@ -355,14 +355,14 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
     updateTicketMutation.mutate({
       id: ticket.id,
-      assigned_to: currentUser.user_id,
+      assigned_to: currentUser.id,
     });
   };
 
-  const handleAssignTo = (ticket: Ticket, userId: string) => {
+  const handleAssignTo = (ticket: Ticket, profileId: string) => {
     updateTicketMutation.mutate({
       id: ticket.id,
-      assigned_to: userId,
+      assigned_to: profileId,
     });
   };
 
@@ -568,7 +568,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                     onClick={() => handleAssignToMe(ticket)}
                     disabled={
                       !currentUser ||
-                      ticket.assigned_to === currentUser?.user_id
+                      ticket.assigned_to === currentUser?.id
                     }
                     data-testid={`assign-to-me-${ticket.id}`}
                   >
@@ -585,15 +585,15 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                         <>
                           {allUsers.map((user) => (
                             <DropdownMenuItem
-                              key={user.user_id}
+                              key={user.id}
                               onClick={() =>
-                                handleAssignTo(ticket, user.user_id)
+                                handleAssignTo(ticket, user.id)
                               }
-                              disabled={ticket.assigned_to === user.user_id}
-                              data-testid={`assign-to-${user.user_id}`}
+                              disabled={ticket.assigned_to === user.id}
+                              data-testid={`assign-to-${user.id}`}
                             >
                               {user.full_name}
-                              {ticket.assigned_to === user.user_id && " ✓"}
+                              {ticket.assigned_to === user.id && " ✓"}
                             </DropdownMenuItem>
                           ))}
                           <DropdownMenuSeparator />
@@ -640,7 +640,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
       // Nếu có assigned_to nhưng chưa có assigned_to_name, tìm tên từ allUsers
       if (item.assigned_to && !assignedUserName && allUsers) {
         const assignedUser = allUsers.find(
-          (user) => user.user_id === item.assigned_to,
+          (user) => user.id === item.assigned_to,
         );
         assignedUserName = assignedUser?.full_name || null;
       }

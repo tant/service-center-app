@@ -1110,10 +1110,10 @@ export const ticketsRouter = router({
           // New assignment
           const { data: newTechnician } = await ctx.supabaseAdmin
             .from("profiles")
-            .select("name")
-            .eq("user_id", updateData.assigned_to)
+            .select("full_name")
+            .eq("id", updateData.assigned_to)
             .single();
-          assignmentComment = `👤 Đã phân công cho: ${newTechnician?.name || "Kỹ thuật viên"}`;
+          assignmentComment = `👤 Đã phân công cho: ${newTechnician?.full_name || "Kỹ thuật viên"}`;
         } else if (
           updateData.assigned_to === null &&
           currentTicket.assigned_to !== null
@@ -1124,10 +1124,10 @@ export const ticketsRouter = router({
           // Change assignment
           const { data: newTechnician } = await ctx.supabaseAdmin
             .from("profiles")
-            .select("name")
-            .eq("user_id", updateData.assigned_to)
+            .select("full_name")
+            .eq("id", updateData.assigned_to)
             .single();
-          assignmentComment = `👤 Chuyển giao từ ${assignedTechnicianName || "Kỹ thuật viên"} sang ${newTechnician?.name || "Kỹ thuật viên"}`;
+          assignmentComment = `👤 Chuyển giao từ ${assignedTechnicianName || "Kỹ thuật viên"} sang ${newTechnician?.full_name || "Kỹ thuật viên"}`;
         }
 
         await createAutoComment({

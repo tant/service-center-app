@@ -86,9 +86,10 @@
 | TC06 | Kiểm tra phiếu bảo hành có đầy đủ thông tin (khách, serial, lỗi) | Thông tin hiển thị đúng và đầy đủ |
 | TC07 | Kiểm tra trạng thái phiếu bảo hành chuyển đúng (pending → in_progress) | Trạng thái cập nhật chính xác |
 
-> **🔴 Không có phím tắt mở chi tiết sản phẩm vật lý:**
-> - Trong phiếu yêu cầu dịch vụ (service request) và phiếu sửa chữa (service ticket), không có cách nhanh để mở thông tin chi tiết sản phẩm vật lý (ví dụ: click vào serial để xem trang chi tiết)
-> - Cần bổ sung link/phím tắt trên serial number để điều hướng đến trang chi tiết sản phẩm vật lý
+> **✅ ~~Không có phím tắt mở chi tiết sản phẩm vật lý~~ (ĐÃ FIX)**
+> - Đã tạo trang chi tiết sản phẩm vật lý tại `/inventory/products/[id]`
+> - Serial number đã là link clickable tại: service ticket detail, service request detail, serial list trong stock detail
+> - Xem chi tiết fix: `docs/doc-kien/fix/fix-physical-product-detail-page.md`
 
 ### Bước 5: Duyệt phiếu & Xuất trả sản phẩm thay
 

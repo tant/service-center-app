@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { trpc } from "@/components/providers/trpc-provider";
 import { IconClock, IconTicket, IconArrowLeft } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as React from "react";
 
@@ -12,9 +13,12 @@ interface PageHeaderProps {
   title: string;
   children?: React.ReactNode;
   backHref?: string;
+  /** Use browser history back instead of backHref */
+  useBackNavigation?: boolean;
 }
 
-export function PageHeader({ title, children, backHref }: PageHeaderProps) {
+export function PageHeader({ title, children, backHref, useBackNavigation }: PageHeaderProps) {
+  const router = useRouter();
   const [currentTime, setCurrentTime] = React.useState(new Date());
   const { data: pendingCount } = trpc.tickets.getPendingCount.useQuery(
     undefined,
@@ -55,13 +59,19 @@ export function PageHeader({ title, children, backHref }: PageHeaderProps) {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        {backHref && (
+        {(backHref || useBackNavigation) && (
           <>
-            <Button variant="ghost" size="sm" asChild className="-ml-1">
-              <Link href={backHref}>
+            {useBackNavigation ? (
+              <Button variant="ghost" size="sm" className="-ml-1" onClick={() => router.back()}>
                 <IconArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" asChild className="-ml-1">
+                <Link href={backHref!}>
+                  <IconArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
             <Separator
               orientation="vertical"
               className="mx-2 data-[orientation=vertical]:h-4"

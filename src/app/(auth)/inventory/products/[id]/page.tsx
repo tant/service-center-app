@@ -17,7 +17,7 @@ export default async function PhysicalProductDetailPage({ params }: Props) {
     <>
       <PageHeader
         title="Chi Tiết Sản Phẩm Vật Lý"
-        backHref="/inventory/overview"
+        useBackNavigation
       />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

@@ -135,7 +135,7 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => meta.onEdit(row.original)}
+              onClick={(e) => { e.stopPropagation(); meta.onEdit(row.original); }}
             >
               <IconEdit className="h-4 w-4" />
             </Button>

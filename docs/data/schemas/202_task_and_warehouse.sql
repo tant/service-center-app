@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.rma_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   batch_number VARCHAR(20) NOT NULL UNIQUE,
   supplier_id UUID,
+  supplier_name VARCHAR(255),
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
   shipping_date DATE,
   tracking_number VARCHAR(255),

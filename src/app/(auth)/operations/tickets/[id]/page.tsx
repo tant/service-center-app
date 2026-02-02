@@ -447,9 +447,12 @@ export default async function Page({ params }: PageProps) {
                         <span className="text-muted-foreground">
                           Serial Number:
                         </span>
-                        <span className="font-mono font-medium">
+                        <Link
+                          href={`/inventory/products/${ticket.replacement_product.serial_number}`}
+                          className="font-mono font-medium text-blue-600 hover:underline"
+                        >
                           {ticket.replacement_product.serial_number}
-                        </span>
+                        </Link>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Sản phẩm:</span>
@@ -510,7 +513,16 @@ export default async function Page({ params }: PageProps) {
                 <p className="text-sm text-muted-foreground font-medium">
                   Serial
                 </p>
-                <p className="font-mono">{ticket.serial_number || "—"}</p>
+                {ticket.serial_number ? (
+                  <Link
+                    href={`/inventory/products/${ticket.serial_number}`}
+                    className="font-mono text-blue-600 hover:underline"
+                  >
+                    {ticket.serial_number}
+                  </Link>
+                ) : (
+                  <p className="font-mono">—</p>
+                )}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">

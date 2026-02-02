@@ -345,7 +345,7 @@ export const inventoryRouter = router({
           id,
           name,
           sku,
-          warranty_months,
+          warranty_period_months,
           brand:brands(name)
         ),
         virtual_warehouse:virtual_warehouses!virtual_warehouse_id(
@@ -359,7 +359,7 @@ export const inventoryRouter = router({
             location
           )
         ),
-        current_ticket:service_tickets(
+        current_ticket:service_tickets!current_ticket_id(
           id,
           ticket_number,
           status
@@ -501,7 +501,7 @@ export const inventoryRouter = router({
           *,
           product:products(*),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*, physical_warehouse:physical_warehouses(*)),
-          current_ticket:service_tickets(id, ticket_number, status)
+          current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
         `
         )
         .eq("serial_number", input.serial_number.toUpperCase())
@@ -572,7 +572,7 @@ export const inventoryRouter = router({
         .select(
           `
           *,
-          current_ticket:service_tickets(id, ticket_number, status)
+          current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
         `
         )
         .eq("id", input.product_id)

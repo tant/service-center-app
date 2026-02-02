@@ -7,6 +7,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -383,7 +384,16 @@ export default function ServiceRequestDetailPage() {
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Serial Number</p>
-                          <p className="font-mono text-sm font-medium">{item.serial_number}</p>
+                          {item.serial_number ? (
+                            <Link
+                              href={`/inventory/products/${item.serial_number}`}
+                              className="font-mono text-sm font-medium text-blue-600 hover:underline"
+                            >
+                              {item.serial_number}
+                            </Link>
+                          ) : (
+                            <p className="font-mono text-sm font-medium">—</p>
+                          )}
                         </div>
                         {item.issue_description && (
                           <div>

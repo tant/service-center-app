@@ -29,6 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Hash, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { getWarrantyStatus } from "@/utils/warranty";
+import Link from "next/link";
 
 interface SerialListSectionProps {
   productId: string;
@@ -136,7 +137,12 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
                   return (
                     <TableRow key={product.id}>
                       <TableCell className="font-mono font-medium">
-                        {product.serial_number}
+                        <Link
+                          href={`/inventory/products/${product.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {product.serial_number}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">

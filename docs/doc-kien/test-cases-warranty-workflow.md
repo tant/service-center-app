@@ -19,12 +19,12 @@
 |----|--------|-------------------|
 | TC01 | Nhập kho 100 sản phẩm | Tồn kho = 100 |
 
-> **🔴 Issues phát hiện - TC01:**
+> **✅ Issues đã fix - TC01:**
 >
-> **Status không đồng nhất:**
-> - Sản phẩm vật lý sẽ có status **In stock** nếu được điền vào phiếu nhập **trước khi duyệt**
-> - Sản phẩm vật lý sẽ có status **Draft** nếu được điền vào phiếu nhập **sau khi duyệt**
->   - Những sản phẩm này sẽ **không thể xuất kho**
+> **~~Status không đồng nhất~~ (FIXED 2026-02-02):**
+> - ~~Sản phẩm vật lý sẽ có status **Draft** nếu được điền vào phiếu nhập **sau khi duyệt**~~
+> - **Fix:** Trigger `create_physical_product_from_receipt_serial` đã sửa — serial thêm sau duyệt sẽ tự động có status `active`
+> - Xem chi tiết: `docs/doc-kien/fix/fix-lock-document-after-approval.md`
 >
 > **Hiển thị status không chính xác:**
 > - Trang danh sách sản phẩm vật lý hiển thị status **"Mới"** cho cả 3 status: **Draft**, **In stock** và **Issued**

@@ -84,7 +84,20 @@ INSERT INTO public.physical_products (
 RETURNING id INTO v_physical_product_id;
 ```
 
-Chỉ cần thay `'draft'` thành biểu thức `CASE WHEN`. Không cần sửa gì thêm — block `IF v_receipt_status = 'approved'` ở dòng 194-200 đã handle stock count đúng.
+**Lưu ý:** Phải cast explicit về enum type, không dùng text thuần:
+
+```sql
+-- ❌ SAI — PostgreSQL không tự cast text → enum trong CASE WHEN
+CASE WHEN ... THEN 'active' ELSE 'draft' END
+
+-- ✅ ĐÚNG — cast explicit
+CASE
+  WHEN v_receipt_status IN ('approved', 'completed') THEN 'active'::public.physical_product_status
+  ELSE 'draft'::public.physical_product_status
+END
+```
+
+Không cần sửa gì thêm — block `IF v_receipt_status = 'approved'` ở dòng 194-200 đã handle stock count đúng.
 
 ---
 
@@ -132,3 +145,12 @@ WHERE srs.physical_product_id = pp.id
 - **Stories**: không ảnh hưởng
 - **Frontend**: không cần sửa UI
 - **Backend routers**: không cần sửa validation
+
+---
+
+## 7. Trạng thái
+
+- **Status:** ✅ DONE
+- **Ngày fix:** 2026-02-02
+- **File đã sửa:** `docs/data/schemas/600_stock_triggers.sql` (line 183-186)
+- **Lỗi phát sinh khi implement:** `CASE WHEN` trả về `text`, cột `status` yêu cầu enum `public.physical_product_status` → đã fix bằng explicit cast `::public.physical_product_status`

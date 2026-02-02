@@ -180,7 +180,10 @@ BEGIN
     NEW.serial_number,
     v_virtual_warehouse_id,
     'new',
-    'draft',  -- Always start as draft
+    CASE
+      WHEN v_receipt_status IN ('approved', 'completed') THEN 'active'::public.physical_product_status
+      ELSE 'draft'::public.physical_product_status
+    END,
     NEW.manufacturer_warranty_end_date,
     NEW.user_warranty_end_date
   )

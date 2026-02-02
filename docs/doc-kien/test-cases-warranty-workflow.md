@@ -50,6 +50,20 @@
 > - Trang quản lý kho chưa có tính năng xóa hay vô hiệu hóa kho ảo, trong khi database đã có cột `is_active` trong bảng `virtual_warehouses`
 > - Dropdown chọn kho chưa filter theo `is_active`, kho không còn sử dụng vẫn hiển thị
 
+### Test Cases: Xuất kho chuyển kho đích
+
+> Liên quan: `docs/doc-kien/fix/fix-issue-destination-warehouse.md`
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC14 | Dropdown kho đích chỉ hiển thị kho archive | Chỉ hiện `rma_staging`, `dead_stock`, `customer_installed` |
+| TC15 | Dropdown kho nguồn không hiển thị kho archive | Chỉ hiện các kho có `is_archive = FALSE` |
+| TC16 | Tạo phiếu xuất không chọn kho đích | Validation lỗi, không cho submit |
+| TC17 | Tạo phiếu xuất với kho đích hợp lệ | Phiếu tạo thành công, `to_virtual_warehouse_id` lưu đúng |
+| TC18 | Duyệt phiếu xuất — sản phẩm chuyển kho đích | `physical_products.virtual_warehouse_id` = kho đích, `status = 'issued'`, stock kho nguồn bị trừ |
+| TC19 | Sau duyệt, sản phẩm không còn hiển thị ở kho nguồn | Danh sách sản phẩm kho nguồn không chứa sản phẩm đã xuất |
+| TC20 | Kho đích mặc định: xuất bán → `customer_installed`, xuất RMA → `rma_staging`, xuất hủy → `dead_stock` | Dropdown kho đích tự động chọn đúng theo ngữ cảnh |
+
 ### Bước 3: Tạo phiếu bảo hành
 
 | TC | Mô tả | Kết quả mong đợi |

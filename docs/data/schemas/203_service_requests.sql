@@ -154,7 +154,8 @@ BEGIN
       status,
       request_id,
       created_by,
-      warranty_type
+      warranty_type,
+      outcome
     ) VALUES (
       v_customer_id,
       v_product_id,
@@ -164,7 +165,8 @@ BEGIN
       'pending',
       p_request_id,
       p_reviewed_by_id,
-      'warranty'
+      'warranty',
+      'warranty_replacement'
     )
     RETURNING id INTO v_ticket_id;
 

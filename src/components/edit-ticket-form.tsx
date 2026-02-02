@@ -58,6 +58,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     issue_description: ticket.issue_description || "",
     priority_level: ticket.priority_level || "normal",
     warranty_type: ticket.warranty_type || "paid",
+    outcome: ticket.outcome || "warranty_replacement",
     status: ticket.status || "pending",
     service_fee: ticket.service_fee || 0,
     diagnosis_fee: ticket.diagnosis_fee || 0,
@@ -359,6 +360,10 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
         | "in_progress"
         | "completed"
         | "cancelled",
+      outcome: formData.outcome as
+        | "repaired"
+        | "warranty_replacement"
+        | "unrepairable",
       notes: formData.notes || null,
     });
   };
@@ -759,7 +764,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Status and Priority */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Trạng thái</Label>
                 <Select
@@ -827,6 +832,25 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                     <SelectItem value="warranty">Bảo hành</SelectItem>
                     <SelectItem value="paid">Trả phí</SelectItem>
                     <SelectItem value="goodwill">Thiện chí</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="outcome">Kết quả xử lý</Label>
+                <Select
+                  value={formData.outcome}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, outcome: value })
+                  }
+                >
+                  <SelectTrigger id="outcome">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="warranty_replacement">Đổi bảo hành</SelectItem>
+                    <SelectItem value="repaired">Đã sửa</SelectItem>
+                    <SelectItem value="unrepairable">Không sửa được</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

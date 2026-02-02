@@ -61,9 +61,7 @@ CREATE TABLE "service_tickets" (
   CONSTRAINT "service_tickets_dates_check" CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
   CONSTRAINT "service_tickets_delivery_requires_address" CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL),
   CONSTRAINT "chk_replacement_requires_outcome" CHECK (
-    (outcome = 'warranty_replacement' AND replacement_product_id IS NOT NULL) OR
-    (outcome != 'warranty_replacement' AND replacement_product_id IS NULL) OR
-    (outcome IS NULL)
+    replacement_product_id IS NULL OR outcome = 'warranty_replacement'
   )
 );
 

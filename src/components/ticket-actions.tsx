@@ -12,14 +12,18 @@ import {
   IconCircleCheck,
   IconEdit,
   IconPackage,
+  IconPlayerPlay,
   IconTarget,
 } from "@tabler/icons-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CompleteTicketModal } from "@/components/modals/complete-ticket-modal";
 import { ConfirmDeliveryModal } from "@/components/modals/confirm-delivery-modal";
 import { SwitchTemplateModal } from "@/components/modals/switch-template-modal";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/components/providers/trpc-provider";
+import { toast } from "sonner";
 
 interface TicketActionsProps {
   ticketId: string;
@@ -44,9 +48,20 @@ export function TicketActions({
   outcome,
   hasTasks = false,
 }: TicketActionsProps) {
+  const router = useRouter();
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [outcomeModalOpen, setOutcomeModalOpen] = useState(false);
   const [deliveryModalOpen, setDeliveryModalOpen] = useState(false);
+
+  const startTicketMutation = trpc.tickets.updateTicket.useMutation({
+    onSuccess: () => {
+      toast.success("Đã bắt đầu xử lý phiếu");
+      router.refresh();
+    },
+    onError: (error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
 
   // Ticket is already completed or cancelled
   const isFinished = ["completed", "cancelled"].includes(ticketStatus);
@@ -55,12 +70,11 @@ export function TicketActions({
 
   // Can select outcome if:
   // - Status is in_progress AND
-  // - (Tasks completed OR no tasks) AND
-  // - No outcome yet
+  // - (Tasks completed OR no tasks)
+  // Note: outcome may already be pre-set (default warranty_replacement), so we don't check !outcome
   const canSelectOutcome =
     ticketStatus === "in_progress" &&
-    (!hasTasks || tasksCompletedAt) &&
-    !outcome;
+    (!hasTasks || tasksCompletedAt);
 
   // Can confirm delivery if status is ready_for_pickup
   const canConfirmDelivery = ticketStatus === "ready_for_pickup";
@@ -71,7 +85,6 @@ export function TicketActions({
       return "Phiếu không ở trạng thái đang xử lý";
     if (hasTasks && !tasksCompletedAt)
       return "Phải hoàn thành tất cả công việc trước";
-    if (outcome) return "Đã có kết quả xử lý";
     return "";
   };
 
@@ -84,6 +97,18 @@ export function TicketActions({
           Chỉnh sửa
         </Button>
       </Link>
+
+      {/* Start Processing Button - Show when pending */}
+      {ticketStatus === "pending" && (
+        <Button
+          size="sm"
+          onClick={() => startTicketMutation.mutate({ id: ticketId, status: "in_progress" })}
+          disabled={startTicketMutation.isPending}
+        >
+          <IconPlayerPlay className="h-4 w-4" />
+          {startTicketMutation.isPending ? "Đang xử lý..." : "Bắt đầu xử lý"}
+        </Button>
+      )}
 
       {/* Switch Template Button */}
       {canModify && currentTemplateId && (
@@ -106,7 +131,7 @@ export function TicketActions({
       )}
 
       {/* Show disabled button with reason when in_progress but can't select outcome */}
-      {ticketStatus === "in_progress" && !canSelectOutcome && !outcome && (
+      {ticketStatus === "in_progress" && !canSelectOutcome && (
         <Button size="sm" disabled title={getOutcomeDisabledReason()}>
           <IconTarget className="h-4 w-4" />
           Chọn kết quả
@@ -139,6 +164,7 @@ export function TicketActions({
         ticketId={ticketId}
         ticketNumber={ticketNumber}
         warrantyType={warrantyType}
+        currentOutcome={outcome}
       />
 
       {/* Confirm Delivery Modal */}

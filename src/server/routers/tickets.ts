@@ -296,6 +296,9 @@ const createTicketSchema = z.object({
   description: z.string().min(1, "Issue description is required"),
   priority_level: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).default("paid"),
+  outcome: z
+    .enum(["repaired", "warranty_replacement", "unrepairable"])
+    .default("warranty_replacement"),
   service_fee: z.number().min(0, "Service fee must be non-negative"),
   diagnosis_fee: z
     .number()
@@ -355,6 +358,9 @@ const updateTicketSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   assigned_to: z.string().uuid().nullable().optional(),
+  outcome: z
+    .enum(["repaired", "warranty_replacement", "unrepairable"])
+    .optional(),
 });
 
 // Story 01.22: Complete ticket with outcome
@@ -505,6 +511,7 @@ export const ticketsRouter = router({
           service_fee: input.service_fee,
           diagnosis_fee: input.diagnosis_fee,
           discount_amount: input.discount_amount,
+          outcome: input.outcome,
           parts_total: partsTotal,
           // total_cost will be calculated automatically by generated column
         })
@@ -908,7 +915,8 @@ export const ticketsRouter = router({
           assigned_to,
           total_cost,
           issue_description,
-          notes
+          notes,
+          outcome
         `)
         .eq("id", id)
         .single();
@@ -968,6 +976,13 @@ export const ticketsRouter = router({
       if (updateData.notes !== undefined) updateObject.notes = updateData.notes;
       if (updateData.assigned_to !== undefined)
         updateObject.assigned_to = updateData.assigned_to;
+      if (updateData.outcome !== undefined) {
+        updateObject.outcome = updateData.outcome;
+        // Clear replacement_product_id if outcome changes away from warranty_replacement
+        if (updateData.outcome !== "warranty_replacement") {
+          updateObject.replacement_product_id = null;
+        }
+      }
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")

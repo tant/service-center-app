@@ -47,6 +47,7 @@ interface CompleteTicketModalProps {
   ticketId: string;
   ticketNumber: string;
   warrantyType: string;
+  currentOutcome?: string | null;
 }
 
 const OUTCOME_CONFIG: Record<
@@ -79,8 +80,11 @@ export function CompleteTicketModal({
   ticketId,
   ticketNumber,
   warrantyType,
+  currentOutcome,
 }: CompleteTicketModalProps) {
-  const [outcome, setOutcome] = useState<TicketOutcome | "">("");
+  const [outcome, setOutcome] = useState<TicketOutcome | "">(
+    (currentOutcome as TicketOutcome) || "",
+  );
   const [replacementProductId, setReplacementProductId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [validationError, setValidationError] = useState("");
@@ -108,15 +112,15 @@ export function CompleteTicketModal({
     },
   });
 
-  // Reset form when modal closes
+  // Reset form when modal opens/closes
   useEffect(() => {
-    if (!open) {
-      setOutcome("");
+    if (open) {
+      setOutcome((currentOutcome as TicketOutcome) || "");
       setReplacementProductId("");
       setNotes("");
       setValidationError("");
     }
-  }, [open]);
+  }, [open, currentOutcome]);
 
   const handleSubmit = () => {
     // Validation

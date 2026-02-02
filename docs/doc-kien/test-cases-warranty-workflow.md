@@ -1,0 +1,74 @@
+# Test Cases - Quy trình bảo hành
+
+## Quy trình tổng quan
+
+1. Nhập kho hàng mới (100 cái)
+2. Xuất bán cho khách (60 cái)
+3. Lấy serial đã bán để tạo phiếu bảo hành
+4. Kiểm tra các mục trong phiếu bảo hành
+5. Duyệt phiếu và xuất trả bằng sản phẩm khác (từ 40 cái còn lại)
+6. Tạo phiếu xuất kho RMA gửi sản phẩm hư về nhà máy
+
+---
+
+## Test Cases
+
+### Bước 1: Nhập kho
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC01 | Nhập kho 100 sản phẩm | Tồn kho = 100 |
+
+> **🔴 Issues phát hiện - TC01:**
+>
+> **Status không đồng nhất:**
+> - Sản phẩm vật lý sẽ có status **In stock** nếu được điền vào phiếu nhập **trước khi duyệt**
+> - Sản phẩm vật lý sẽ có status **Draft** nếu được điền vào phiếu nhập **sau khi duyệt**
+>   - Những sản phẩm này sẽ **không thể xuất kho**
+
+### Bước 2: Xuất bán
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC02 | Xuất bán 60 sản phẩm cho khách | Tồn kho giảm còn 40 |
+
+> **🔴 Issues phát hiện - TC02:**
+>
+> **Yêu cầu:** Sản phẩm phải có status **In stock** thì mới được xuất.
+>
+> **Kho đích sau khi xuất:**
+> - Sản phẩm vẫn ở trong kho cũ sau khi xuất kho (không chuyển sang kho đích)
+>
+> **Xóa phiếu nhập xuất:**
+> - Phiếu có được phép xóa sau khi hủy phiếu không? (cần xác định business rule)
+
+### Bước 3: Tạo phiếu bảo hành
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC03 | Tìm serial đã bán để tạo phiếu bảo hành | Serial được tìm thấy, liên kết đúng khách hàng |
+| TC04 | Tạo phiếu bảo hành với serial chưa bán (negative) | Hệ thống từ chối hoặc cảnh báo |
+
+### Bước 4: Kiểm tra phiếu bảo hành
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC05 | Kiểm tra sản phẩm hư có được nhập vào kho bảo hành không | Sản phẩm hư nằm trong kho bảo hành |
+| TC06 | Kiểm tra phiếu bảo hành có đầy đủ thông tin (khách, serial, lỗi) | Thông tin hiển thị đúng và đầy đủ |
+| TC07 | Kiểm tra trạng thái phiếu bảo hành chuyển đúng (pending → in_progress) | Trạng thái cập nhật chính xác |
+
+### Bước 5: Duyệt phiếu & Xuất trả sản phẩm thay
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC08 | Duyệt phiếu và chọn sản phẩm thay mới (serial khác) | Phiếu có thông tin sản phẩm thay mới |
+| TC09 | Sau khi hoàn thành phiếu, sản phẩm thay mới ra khỏi kho bán | Tồn kho bán giảm (40 → 39) |
+| TC10 | Xuất trả khi tồn kho = 0 (negative) | Hệ thống từ chối hoặc cảnh báo hết hàng |
+
+### Bước 6: Xuất kho RMA
+
+| TC | Mô tả | Kết quả mong đợi |
+|----|--------|-------------------|
+| TC11 | Tạo phiếu xuất kho RMA cho sản phẩm hư | Phiếu RMA được tạo thành công |
+| TC12 | Sau khi xuất kho RMA, sản phẩm ra khỏi kho bảo hành | Sản phẩm không còn trong kho bảo hành |
+| TC13 | Kiểm tra sản phẩm hư chuyển sang trạng thái RMA | Trạng thái sản phẩm = RMA (không bị mất khỏi hệ thống) |

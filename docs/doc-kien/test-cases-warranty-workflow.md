@@ -29,6 +29,10 @@
 > **~~Hiển thị status không chính xác~~ (FIXED 2026-02-02):**
 > - ~~Trang danh sách sản phẩm vật lý hiển thị status **"Mới"** cho cả 3 status: **Draft**, **In stock** và **Issued**~~
 > - **Fix:** Cột "Tình Trạng" hiển thị `condition` (tình trạng vật lý), đã thêm cột "Trạng Thái" riêng hiển thị `status` (vòng đời: Nháp/Sẵn sàng/Đang chuyển/Đã xuất/Đã hủy)
+>
+> **🔴 Edit product panel không thể thay đổi Tình trạng:**
+> - Panel chỉnh sửa sản phẩm vật lý không cho phép thay đổi `condition` (Tình trạng: Mới/Tân trang/Đã dùng/Lỗi/Lấy linh kiện) trên UI
+> - `status` (Trạng thái vòng đời) được hệ thống quản lý tự động qua chứng từ kho nên không cần cho chỉnh trên UI
 
 ### Bước 2: Xuất bán
 

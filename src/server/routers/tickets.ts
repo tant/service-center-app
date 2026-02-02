@@ -149,7 +149,7 @@ async function sendEmailNotification(
  * Helper function to create and auto-approve a stock transfer
  * Used for warranty replacement flow to create proper transfer documents
  */
-async function createAutoTransfer(
+export async function createAutoTransfer(
   supabaseAdmin: TRPCContext["supabaseAdmin"],
   params: {
     fromWarehouseId: string;
@@ -1957,6 +1957,7 @@ ${changes.join("\n")}
       let warrantyWarehouseId: string | null = null;
       let customerInstalledWarehouseId: string | null = null;
       let inServiceWarehouseId: string | null = null;
+      let rmaStagingWarehouseId: string | null = null;
       let replacementProductInfo: {
         id: string;
         serial_number: string;
@@ -1977,6 +1978,7 @@ ${changes.join("\n")}
             "warranty_stock",
             "customer_installed",
             "in_service",
+            "rma_staging",
           ]);
 
         const warrantyWarehouse = warehouses?.find(
@@ -1988,16 +1990,20 @@ ${changes.join("\n")}
         const inServiceWarehouse = warehouses?.find(
           (w) => w.warehouse_type === "in_service",
         );
+        const rmaStagingWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "rma_staging",
+        );
 
-        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse) {
+        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !rmaStagingWarehouse) {
           throw new Error(
-            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service)",
+            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, rma_staging)",
           );
         }
 
         warrantyWarehouseId = warrantyWarehouse.id;
         customerInstalledWarehouseId = customerWarehouse.id;
         inServiceWarehouseId = inServiceWarehouse.id;
+        rmaStagingWarehouseId = rmaStagingWarehouse.id;
 
         // Validate replacement product
         const { data: replacementProduct, error: rpError } =
@@ -2101,9 +2107,9 @@ ${changes.join("\n")}
           })
           .eq("id", replacement_product_id);
 
-        // [TRANSFER 2] Nhận sản phẩm cũ: customer_installed → in_service
+        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → rma_staging
         // Only if ticket has serial_number (old product from customer)
-        if (ticket.serial_number) {
+        if (ticket.serial_number && rmaStagingWarehouseId) {
           const { data: oldProduct } = await ctx.supabaseAdmin
             .from("physical_products")
             .select("id, serial_number, product_id, virtual_warehouse_id")
@@ -2112,24 +2118,67 @@ ${changes.join("\n")}
 
           if (
             oldProduct &&
-            oldProduct.virtual_warehouse_id === customerInstalledWarehouseId
+            oldProduct.virtual_warehouse_id === inServiceWarehouseId
           ) {
             const inboundTransfer = await createAutoTransfer(
               ctx.supabaseAdmin,
               {
-                fromWarehouseId: customerInstalledWarehouseId,
-                toWarehouseId: inServiceWarehouseId,
+                fromWarehouseId: inServiceWarehouseId,
+                toWarehouseId: rmaStagingWarehouseId,
                 customerId: ticket.customer_id,
                 physicalProductId: oldProduct.id,
                 serialNumber: oldProduct.serial_number,
                 productId: oldProduct.product_id,
-                notes: `Auto: Nhận sản phẩm bảo hành - Phiếu ${ticket.ticket_number}`,
+                notes: `Auto: Chuyển sản phẩm hỏng sang kho RMA - Phiếu ${ticket.ticket_number}`,
                 createdById: profileId,
               },
             );
 
             console.log(
-              `[WARRANTY] Created inbound transfer: ${inboundTransfer.transferNumber}`,
+              `[WARRANTY] Created RMA transfer: ${inboundTransfer.transferNumber}`,
+            );
+          }
+        }
+      }
+
+      // 5b. If repaired or unrepairable, return product to customer: in_service → customer_installed
+      if (
+        (outcome === "repaired" || outcome === "unrepairable") &&
+        ticket.serial_number
+      ) {
+        const { data: warehouses } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id, warehouse_type")
+          .in("warehouse_type", ["in_service", "customer_installed"]);
+
+        const inServiceWh = warehouses?.find(
+          (w) => w.warehouse_type === "in_service",
+        );
+        const customerInstalledWh = warehouses?.find(
+          (w) => w.warehouse_type === "customer_installed",
+        );
+
+        if (inServiceWh && customerInstalledWh) {
+          const { data: product } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, product_id, virtual_warehouse_id")
+            .eq("serial_number", ticket.serial_number)
+            .single();
+
+          if (product && product.virtual_warehouse_id === inServiceWh.id) {
+            const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
+              fromWarehouseId: inServiceWh.id,
+              toWarehouseId: customerInstalledWh.id,
+              customerId: ticket.customer_id,
+              physicalProductId: product.id,
+              serialNumber: product.serial_number,
+              productId: product.product_id,
+              notes: `Auto: Trả sản phẩm cho khách (${outcome}) - Phiếu ${ticket.ticket_number}`,
+              createdById: profileId,
+            });
+
+            console.log(
+              `[${outcome.toUpperCase()}] Created return transfer: ${transfer.transferNumber}`,
             );
           }
         }

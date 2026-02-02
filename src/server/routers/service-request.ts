@@ -10,6 +10,7 @@ import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
 import { TaskService } from "../services/task-service";
+import { createAutoTransfer } from "./tickets";
 
 /**
  * Helper function to get authenticated user with role
@@ -602,6 +603,68 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Auto-transfer products to in_service warehouse when received
+      // Tickets are auto-created by DB trigger above; now move products to in_service
+      if (input.receipt_status === "received") {
+        try {
+          const { data: warehouses } = await ctx.supabaseAdmin
+            .from("virtual_warehouses")
+            .select("id, warehouse_type")
+            .in("warehouse_type", ["customer_installed", "in_service"]);
+
+          const customerInstalledWh = warehouses?.find(
+            (w) => w.warehouse_type === "customer_installed",
+          );
+          const inServiceWh = warehouses?.find(
+            (w) => w.warehouse_type === "in_service",
+          );
+
+          if (customerInstalledWh && inServiceWh && reviewedById) {
+            for (const item of input.items) {
+              const { data: product } = await ctx.supabaseAdmin
+                .from("physical_products")
+                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .eq("serial_number", item.serial_number)
+                .single();
+
+              if (
+                product &&
+                product.virtual_warehouse_id === customerInstalledWh.id
+              ) {
+                // Find customer_id from the created ticket
+                const { data: ticket } = await ctx.supabaseAdmin
+                  .from("service_tickets")
+                  .select("id, customer_id")
+                  .eq("request_id", request.id)
+                  .eq("serial_number", item.serial_number)
+                  .single();
+
+                const customerId = ticket?.customer_id;
+                if (customerId && reviewedById) {
+                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
+                    fromWarehouseId: customerInstalledWh.id,
+                    toWarehouseId: inServiceWh.id,
+                    customerId,
+                    physicalProductId: product.id,
+                    serialNumber: product.serial_number,
+                    productId: product.product_id,
+                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
+                    createdById: reviewedById,
+                  });
+
+                  console.log(
+                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                  );
+                }
+              }
+            }
+          }
+        } catch (transferError) {
+          // Don't fail the request submission if transfer fails
+          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        }
+      }
+
       // AC 9: Return tracking token
 
       // Story 1.15: Send email notification (async, non-blocking)
@@ -1186,6 +1249,70 @@ export const serviceRequestRouter = router({
         });
       }
 
+      // Auto-transfer products to in_service when status changes to received
+      if (input.status === "received") {
+        try {
+          const { data: warehouses } = await ctx.supabaseAdmin
+            .from("virtual_warehouses")
+            .select("id, warehouse_type")
+            .in("warehouse_type", ["customer_installed", "in_service"]);
+
+          const customerInstalledWh = warehouses?.find(
+            (w) => w.warehouse_type === "customer_installed",
+          );
+          const inServiceWh = warehouses?.find(
+            (w) => w.warehouse_type === "in_service",
+          );
+
+          if (customerInstalledWh && inServiceWh) {
+            // Get items for this request
+            const { data: items } = await ctx.supabaseAdmin
+              .from("service_request_items")
+              .select("serial_number")
+              .eq("request_id", input.request_id);
+
+            for (const item of items || []) {
+              const { data: product } = await ctx.supabaseAdmin
+                .from("physical_products")
+                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .eq("serial_number", item.serial_number)
+                .single();
+
+              if (
+                product &&
+                product.virtual_warehouse_id === customerInstalledWh.id
+              ) {
+                const { data: ticket } = await ctx.supabaseAdmin
+                  .from("service_tickets")
+                  .select("id, customer_id")
+                  .eq("request_id", input.request_id)
+                  .eq("serial_number", item.serial_number)
+                  .single();
+
+                if (ticket?.customer_id) {
+                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
+                    fromWarehouseId: customerInstalledWh.id,
+                    toWarehouseId: inServiceWh.id,
+                    customerId: ticket.customer_id,
+                    physicalProductId: product.id,
+                    serialNumber: product.serial_number,
+                    productId: product.product_id,
+                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${data.tracking_token}`,
+                    createdById: profile.id,
+                  });
+
+                  console.log(
+                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                  );
+                }
+              }
+            }
+          }
+        } catch (transferError) {
+          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        }
+      }
+
       return data;
     }),
 
@@ -1452,6 +1579,64 @@ export const serviceRequestRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to submit draft: ${finalUpdateError.message}`,
         });
+      }
+
+      // Auto-transfer products to in_service when received
+      if (input.data.receipt_status === "received") {
+        try {
+          const { data: warehouses } = await ctx.supabaseAdmin
+            .from("virtual_warehouses")
+            .select("id, warehouse_type")
+            .in("warehouse_type", ["customer_installed", "in_service"]);
+
+          const customerInstalledWh = warehouses?.find(
+            (w) => w.warehouse_type === "customer_installed",
+          );
+          const inServiceWh = warehouses?.find(
+            (w) => w.warehouse_type === "in_service",
+          );
+
+          if (customerInstalledWh && inServiceWh) {
+            for (const item of input.data.items) {
+              const { data: product } = await ctx.supabaseAdmin
+                .from("physical_products")
+                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .eq("serial_number", item.serial_number)
+                .single();
+
+              if (
+                product &&
+                product.virtual_warehouse_id === customerInstalledWh.id
+              ) {
+                const { data: ticket } = await ctx.supabaseAdmin
+                  .from("service_tickets")
+                  .select("id, customer_id")
+                  .eq("request_id", input.request_id)
+                  .eq("serial_number", item.serial_number)
+                  .single();
+
+                if (ticket?.customer_id) {
+                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
+                    fromWarehouseId: customerInstalledWh.id,
+                    toWarehouseId: inServiceWh.id,
+                    customerId: ticket.customer_id,
+                    physicalProductId: product.id,
+                    serialNumber: product.serial_number,
+                    productId: product.product_id,
+                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
+                    createdById: profile.id,
+                  });
+
+                  console.log(
+                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                  );
+                }
+              }
+            }
+          }
+        } catch (transferError) {
+          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        }
       }
 
       return {

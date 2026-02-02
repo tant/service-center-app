@@ -25,6 +25,9 @@
 > - Sản phẩm vật lý sẽ có status **In stock** nếu được điền vào phiếu nhập **trước khi duyệt**
 > - Sản phẩm vật lý sẽ có status **Draft** nếu được điền vào phiếu nhập **sau khi duyệt**
 >   - Những sản phẩm này sẽ **không thể xuất kho**
+>
+> **Hiển thị status không chính xác:**
+> - Trang danh sách sản phẩm vật lý hiển thị status **"Mới"** cho cả 3 status: **Draft**, **In stock** và **Issued**
 
 ### Bước 2: Xuất bán
 

@@ -26,8 +26,9 @@
 > - **Fix:** Trigger `create_physical_product_from_receipt_serial` đã sửa — serial thêm sau duyệt sẽ tự động có status `active`
 > - Xem chi tiết: `docs/doc-kien/fix/fix-lock-document-after-approval.md`
 >
-> **Hiển thị status không chính xác:**
-> - Trang danh sách sản phẩm vật lý hiển thị status **"Mới"** cho cả 3 status: **Draft**, **In stock** và **Issued**
+> **~~Hiển thị status không chính xác~~ (FIXED 2026-02-02):**
+> - ~~Trang danh sách sản phẩm vật lý hiển thị status **"Mới"** cho cả 3 status: **Draft**, **In stock** và **Issued**~~
+> - **Fix:** Cột "Tình Trạng" hiển thị `condition` (tình trạng vật lý), đã thêm cột "Trạng Thái" riêng hiển thị `status` (vòng đời: Nháp/Sẵn sàng/Đang chuyển/Đã xuất/Đã hủy)
 
 ### Bước 2: Xuất bán
 

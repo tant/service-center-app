@@ -67,6 +67,7 @@ supabase/storage/*
 
 # linh tinh AI
 .bmad-core
+_bmad
 .claude
 .vscode
 .gemini

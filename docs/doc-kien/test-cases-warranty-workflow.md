@@ -45,6 +45,10 @@
 >
 > **Xóa phiếu nhập xuất:**
 > - Phiếu có được phép xóa sau khi hủy phiếu không? (cần xác định business rule)
+>
+> **Vô hiệu hóa kho ảo:**
+> - Trang quản lý kho chưa có tính năng xóa hay vô hiệu hóa kho ảo, trong khi database đã có cột `is_active` trong bảng `virtual_warehouses`
+> - Dropdown chọn kho chưa filter theo `is_active`, kho không còn sử dụng vẫn hiển thị
 
 ### Bước 3: Tạo phiếu bảo hành
 

@@ -35,13 +35,15 @@ export default function CreateIssuePage() {
   const router = useRouter();
   const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal"); // REDESIGNED
   const [virtualWarehouseId, setVirtualWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
+  const [toVirtualWarehouseId, setToVirtualWarehouseId] = useState(""); // Kho đích (archive)
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createIssue = trpc.inventory.issues.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: false }); // Kho nguồn: chỉ kho không archive
+  const { data: archiveWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: true }); // Kho đích: chỉ kho archive
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -58,7 +60,7 @@ export default function CreateIssuePage() {
   };
 
   const handleSubmit = async () => {
-    if (!issueType || !virtualWarehouseId || items.length === 0) {
+    if (!issueType || !virtualWarehouseId || !toVirtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -82,7 +84,8 @@ export default function CreateIssuePage() {
     try {
       const issue = await createIssue.mutateAsync({
         issueType,
-        virtualWarehouseId, // REDESIGNED: Use warehouse ID
+        virtualWarehouseId,
+        toVirtualWarehouseId,
         issueDate,
         notes: notes || undefined,
         items: items.map((item) => ({
@@ -146,6 +149,22 @@ export default function CreateIssuePage() {
                         </SelectTrigger>
                         <SelectContent>
                           {virtualWarehouses?.map((wh) => (
+                            <SelectItem key={wh.id} value={wh.id}>
+                              {wh.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Kho đích *</Label>
+                      <Select value={toVirtualWarehouseId} onValueChange={setToVirtualWarehouseId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn kho đích" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {archiveWarehouses?.map((wh) => (
                             <SelectItem key={wh.id} value={wh.id}>
                               {wh.name}
                             </SelectItem>

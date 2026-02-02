@@ -182,15 +182,21 @@ export const warehouseRouter = router({
    */
   listVirtualWarehouses: publicProcedure
     .use(requireAnyAuthenticated)
-    .query(async ({ ctx }) => {
-    const { data: warehouses, error } = await ctx.supabaseAdmin
+    .input(z.object({ isArchive: z.boolean().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+    let query = ctx.supabaseAdmin
       .from("virtual_warehouses")
       .select(`
         *,
         physical_warehouse:physical_warehouses(id, name, code, location)
       `)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+      .eq("is_active", true);
+
+    if (input?.isArchive !== undefined) {
+      query = query.eq("is_archive", input.isArchive);
+    }
+
+    const { data: warehouses, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch virtual warehouses: ${error.message}`);

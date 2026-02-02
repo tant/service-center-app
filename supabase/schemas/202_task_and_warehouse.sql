@@ -194,11 +194,13 @@ CREATE TABLE IF NOT EXISTS public.virtual_warehouses (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_archive BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 COMMENT ON TABLE public.virtual_warehouses IS 'Virtual warehouse categories for product state management';
 COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (primary display name)';
+COMMENT ON COLUMN public.virtual_warehouses.is_archive IS 'Kho archive: không tính vào tồn kho khả dụng, không cho phép tạo phiếu xuất từ kho này';
 CREATE TRIGGER trigger_virtual_warehouses_updated_at BEFORE UPDATE ON public.virtual_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- PHYSICAL PRODUCTS

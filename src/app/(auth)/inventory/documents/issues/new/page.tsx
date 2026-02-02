@@ -227,7 +227,7 @@ export default function CreateIssuePage() {
                               type="number"
                               min={issueType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
                               value={item.quantity}
-                              onChange={(e) => handleItemChange(index, "quantity", Number.parseInt(e.target.value))}
+                              onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
                               className={item.quantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>

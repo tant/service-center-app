@@ -53,18 +53,6 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
               </div>
             </div>
 
-            {(issue as any).to_virtual_warehouse?.name && (
-              <div className="flex items-start gap-2">
-                <Warehouse className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Kho đích</div>
-                  <div className="text-sm text-muted-foreground">
-                    {(issue as any).to_virtual_warehouse.name}
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="flex items-start gap-2">
               <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
               <div>

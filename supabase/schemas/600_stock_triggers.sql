@@ -157,28 +157,22 @@ AS $$
 DECLARE
   v_product_id UUID;
   v_from_warehouse_id UUID;
-  v_to_warehouse_id UUID;
 BEGIN
   -- Get info from issue
-  SELECT sii.product_id, si.virtual_warehouse_id, si.to_virtual_warehouse_id
-  INTO v_product_id, v_from_warehouse_id, v_to_warehouse_id
+  SELECT sii.product_id, si.virtual_warehouse_id
+  INTO v_product_id, v_from_warehouse_id
   FROM public.stock_issue_items sii
   JOIN public.stock_issues si ON sii.issue_id = si.id
   WHERE sii.id = NEW.issue_item_id;
 
-  -- Move physical product to destination warehouse (if specified)
+  -- Mark physical product as issued
   UPDATE public.physical_products
-  SET virtual_warehouse_id = COALESCE(v_to_warehouse_id, virtual_warehouse_id),
+  SET status = 'issued',
       updated_at = NOW()
   WHERE id = NEW.physical_product_id;
 
   -- Decrease stock from source warehouse
   PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
-
-  -- Increase stock at destination warehouse (if specified)
-  IF v_to_warehouse_id IS NOT NULL THEN
-    PERFORM public.upsert_product_stock(v_product_id, v_to_warehouse_id, 1);
-  END IF;
 
   RETURN NEW;
 END;

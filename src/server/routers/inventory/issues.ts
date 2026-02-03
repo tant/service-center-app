@@ -116,8 +116,7 @@ export const issuesRouter = router({
               physical_product:physical_products(serial_number, manufacturer_warranty_end_date, user_warranty_end_date)
             )
           ),
-          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, is_archive),
-          to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
           created_by:profiles!created_by_id(id, full_name),
           ticket:service_tickets(id, ticket_number)
         `
@@ -152,7 +151,6 @@ export const issuesRouter = router({
       z.object({
         issueType: z.enum(["normal", "adjustment"]),
         virtualWarehouseId: z.string(),
-        toVirtualWarehouseId: z.string().optional(),
         issueDate: z.string(),
         ticketId: z.string().optional(),
         rmaBatchId: z.string().optional(),
@@ -195,7 +193,6 @@ export const issuesRouter = router({
         .insert({
           issue_type: input.issueType,
           virtual_warehouse_id: input.virtualWarehouseId,
-          to_virtual_warehouse_id: input.toVirtualWarehouseId || null,
           issue_date: input.issueDate,
           ticket_id: input.ticketId,
           rma_batch_id: input.rmaBatchId,
@@ -271,7 +268,6 @@ export const issuesRouter = router({
         id: z.string(),
         issueType: z.enum(["normal", "adjustment"]),
         virtualWarehouseId: z.string(),
-        toVirtualWarehouseId: z.string().optional(),
         issueDate: z.string(),
         notes: z.string().optional(),
         items: z.array(

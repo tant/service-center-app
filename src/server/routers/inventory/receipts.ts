@@ -14,11 +14,8 @@ export const receiptsRouter = router({
   list: publicProcedure.use(requireAnyAuthenticated)
     .input(
       z.object({
-        status: z
-          .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
-          .optional(),
         receiptType: z
-          .enum(["normal", "adjustment"]) // REDESIGNED: Simplified to 2 types
+          .enum(["normal", "adjustment"])
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
@@ -30,15 +27,10 @@ export const receiptsRouter = router({
         .select(
           `
           *,
-          created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name)
         `,
           { count: "exact" }
         );
-
-      if (input.status) {
-        query = query.eq("status", input.status);
-      }
 
       if (input.receiptType) {
         query = query.eq("receipt_type", input.receiptType);
@@ -107,9 +99,7 @@ export const receiptsRouter = router({
             serials:stock_receipt_serials(*)
           ),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
-          created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name),
-          completed_by:profiles!completed_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name)
         `
         )
         .eq("id", input.id)
@@ -195,7 +185,7 @@ export const receiptsRouter = router({
           rma_batch_id: input.rmaBatchId,
           reference_document_number: input.referenceDocumentNumber,
           notes: input.notes,
-          status: "draft",
+          status: "completed",
           created_by_id: profile.id,
         })
         .select()
@@ -228,7 +218,7 @@ export const receiptsRouter = router({
     }),
 
   /**
-   * Update receipt (only if draft)
+   * Update receipt notes/reference (simplified - no draft check)
    */
   update: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -239,40 +229,6 @@ export const receiptsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: receipt } = await ctx.supabaseAdmin
-        .from("stock_receipts")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!receipt) {
-        throw new Error("Receipt not found");
-      }
-
-      if (receipt.status !== "draft") {
-        throw new Error("Cannot edit receipt after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        receipt.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this receipt");
-      }
-
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_receipts")
         .update({
@@ -291,7 +247,9 @@ export const receiptsRouter = router({
     }),
 
   /**
-   * Update full receipt (only if draft) - for editing all fields
+   * Update full receipt - DISABLED in simplified workflow
+   * In the simplified workflow, receipts are completed immediately and cannot be fully edited.
+   * Use the `update` method to edit notes/reference only.
    */
   updateFull: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -309,117 +267,13 @@ export const receiptsRouter = router({
             declaredQuantity: z.number().int(),
           })
         ).min(1),
-      }).refine(
-        (data) => {
-          // Validate: normal receipts must have positive quantities
-          if (data.receiptType === "normal") {
-            return data.items.every((item) => item.declaredQuantity > 0);
-          }
-          // Adjustment receipts: allow negative but not zero
-          return data.items.every((item) => item.declaredQuantity !== 0);
-        },
-        {
-          message: "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
-        }
-      )
+      })
     )
-    .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: receipt } = await ctx.supabaseAdmin
-        .from("stock_receipts")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!receipt) {
-        throw new Error("Receipt not found");
-      }
-
-      if (receipt.status !== "draft") {
-        throw new Error("Cannot edit receipt after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        receipt.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this receipt");
-      }
-
-      // Get existing item IDs first
-      const { data: existingItems } = await ctx.supabaseAdmin
-        .from("stock_receipt_items")
-        .select("id")
-        .eq("receipt_id", input.id);
-
-      const itemIds = existingItems?.map(item => item.id) || [];
-
-      // Delete existing serials first (if there are items)
-      if (itemIds.length > 0) {
-        await ctx.supabaseAdmin
-          .from("stock_receipt_serials")
-          .delete()
-          .in("receipt_item_id", itemIds);
-      }
-
-      // Delete existing items
-      const { error: deleteItems } = await ctx.supabaseAdmin
-        .from("stock_receipt_items")
-        .delete()
-        .eq("receipt_id", input.id);
-
-      if (deleteItems) {
-        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
-      }
-
-      // Update receipt header
-      const { data: updatedReceipt, error: updateError } = await ctx.supabaseAdmin
-        .from("stock_receipts")
-        .update({
-          receipt_type: input.receiptType,
-          virtual_warehouse_id: input.virtualWarehouseId,
-          receipt_date: input.receiptDate,
-          notes: input.notes,
-          reference_document_number: input.referenceDocumentNumber,
-        })
-        .eq("id", input.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to update receipt: ${updateError.message}`);
-      }
-
-      // Insert new items
-      if (input.items.length > 0) {
-        const items = input.items.map((item) => ({
-          receipt_id: input.id,
-          product_id: item.productId,
-          declared_quantity: item.declaredQuantity,
-        }));
-
-        const { error: itemsError } = await ctx.supabaseAdmin
-          .from("stock_receipt_items")
-          .insert(items);
-
-        if (itemsError) {
-          throw new Error(`Failed to create receipt items: ${itemsError.message}`);
-        }
-      }
-
-      return updatedReceipt;
+    .mutation(async () => {
+      // In simplified workflow, receipts are completed immediately.
+      // Editing items would affect stock and physical products.
+      // Create a new receipt instead, or use adjustment receipt to correct.
+      throw new Error("Không thể sửa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.");
     }),
 
   /**
@@ -453,12 +307,11 @@ export const receiptsRouter = router({
         throw new Error("Receipt item not found");
       }
 
-      // Check in physical_products (only ACTIVE products - exclude draft)
+      // Check in physical_products (all products - simplified workflow has no draft)
       const { data: existing, error: checkError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("serial_number")
-        .in("serial_number", serialNumbers)
-        .eq("status", "active");
+        .in("serial_number", serialNumbers);
 
       if (checkError) {
         throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
@@ -511,52 +364,8 @@ export const receiptsRouter = router({
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
-      // Auto-complete: Check if all serials are complete
-      // Get receipt item to know declared_quantity
-      const { data: receiptItemForComplete } = await ctx.supabaseAdmin
-        .from("stock_receipt_items")
-        .select("declared_quantity, receipt_id")
-        .eq("id", input.receiptItemId)
-        .single();
-
-      if (receiptItemForComplete) {
-        // Get receipt status
-        const { data: receipt } = await ctx.supabaseAdmin
-          .from("stock_receipts")
-          .select("status")
-          .eq("id", receiptItemForComplete.receipt_id)
-          .single();
-
-        if (receipt && receipt.status === "approved") {
-          // Get current serial count for this receipt
-          const { data: allItems } = await ctx.supabaseAdmin
-            .from("stock_receipt_items")
-            .select(`
-              id,
-              declared_quantity,
-              stock_receipt_serials(id)
-            `)
-            .eq("receipt_id", receiptItemForComplete.receipt_id);
-
-          if (allItems) {
-            const totalDeclared = allItems.reduce((sum, item) => sum + item.declared_quantity, 0);
-            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_receipt_serials?.length || 0), 0);
-
-            // Auto-complete if all serials are entered
-            if (totalSerials >= totalDeclared) {
-              await ctx.supabaseAdmin
-                .from("stock_receipts")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  completed_by_id: ctx.user?.id
-                })
-                .eq("id", receiptItemForComplete.receipt_id)
-                .eq("status", "approved");
-            }
-          }
-        }
-      }
+      // Note: In simplified workflow, stock is updated immediately via trigger
+      // when serial is inserted. No auto-complete needed.
 
       return data;
     }),
@@ -580,21 +389,15 @@ export const receiptsRouter = router({
     }),
 
   /**
-   * Delete receipt (only if draft)
+   * Delete receipt - DISABLED in simplified workflow
+   * Deleting a completed receipt would affect stock and physical products.
+   * Use adjustment receipt to correct inventory instead.
    */
   delete: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { error } = await ctx.supabaseAdmin
-        .from("stock_receipts")
-        .delete()
-        .eq("id", input.id)
-        .eq("status", "draft");
-
-      if (error) {
-        throw new Error(`Failed to delete receipt: ${error.message}`);
-      }
-
-      return { success: true };
+    .mutation(async () => {
+      // In simplified workflow, receipts are completed immediately with stock effects.
+      // Deleting would cause data inconsistency.
+      throw new Error("Không thể xóa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.");
     }),
 });

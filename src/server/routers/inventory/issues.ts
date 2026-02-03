@@ -1,11 +1,12 @@
 /**
  * Issues Router - Stock issue (Phiếu Xuất Kho) management
+ * SIMPLIFIED: No draft/approval workflow - all issues are completed immediately
  */
 
 import { z } from "zod";
 import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockIssue, StockIssueWithRelations } from "@/types/inventory";
+import { requireManagerOrAbove } from "../../middleware/requireRole";
+import type { StockIssueWithRelations } from "@/types/inventory";
 
 export const issuesRouter = router({
   /**
@@ -14,11 +15,8 @@ export const issuesRouter = router({
   list: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
-        status: z
-          .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
-          .optional(),
         issueType: z
-          .enum(["normal", "adjustment"]) // REDESIGNED: Simplified to 2 types
+          .enum(["normal", "adjustment"])
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
@@ -30,15 +28,10 @@ export const issuesRouter = router({
         .select(
           `
           *,
-          created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name)
         `,
           { count: "exact" }
         );
-
-      if (input.status) {
-        query = query.eq("status", input.status);
-      }
 
       if (input.issueType) {
         query = query.eq("issue_type", input.issueType);
@@ -57,8 +50,6 @@ export const issuesRouter = router({
       let serialCounts: Record<string, { declared: number; entered: number }> = {};
 
       if (issueIds.length > 0) {
-        // For issues, count serials directly from stock_issue_serials table
-        // (issue items don't have serial_count column, they use existing physical products)
         const { data: itemsData } = await ctx.supabaseAdmin
           .from("stock_issue_items")
           .select(`
@@ -69,20 +60,17 @@ export const issuesRouter = router({
           .in("issue_id", issueIds);
 
         if (itemsData) {
-          // Get serial counts for all items
           const itemIds = itemsData.map(item => item.id);
           const { data: serialData } = await ctx.supabaseAdmin
             .from("stock_issue_serials")
             .select("issue_item_id")
             .in("issue_item_id", itemIds);
 
-          // Count serials per item
           const serialCountsByItem: Record<string, number> = {};
           (serialData || []).forEach(serial => {
             serialCountsByItem[serial.issue_item_id] = (serialCountsByItem[serial.issue_item_id] || 0) + 1;
           });
 
-          // Aggregate by issue_id
           itemsData.forEach(item => {
             if (!serialCounts[item.issue_id]) {
               serialCounts[item.issue_id] = { declared: 0, entered: 0 };
@@ -93,7 +81,6 @@ export const issuesRouter = router({
         }
       }
 
-      // Merge serial counts with issues
       const issuesWithSerials = (data || []).map(issue => ({
         ...issue,
         totalDeclaredQuantity: serialCounts[issue.id]?.declared || 0,
@@ -132,8 +119,6 @@ export const issuesRouter = router({
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, is_archive),
           to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
           created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name),
-          completed_by:profiles!completed_by_id(id, full_name),
           ticket:service_tickets(id, ticket_number)
         `
         )
@@ -147,7 +132,6 @@ export const issuesRouter = router({
         throw new Error(`Failed to get issue: ${error.message}`);
       }
 
-      // Query attachments separately (polymorphic relationship)
       const { data: attachments } = await ctx.supabaseAdmin
         .from("stock_document_attachments")
         .select("*")
@@ -161,36 +145,33 @@ export const issuesRouter = router({
     }),
 
   /**
-   * Create new issue (draft)
+   * Create new issue (completed immediately)
    */
   create: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
-        issueType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
-        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
-        toVirtualWarehouseId: z.string().optional(), // Kho đích (archive) sau khi xuất
+        issueType: z.enum(["normal", "adjustment"]),
+        virtualWarehouseId: z.string(),
+        toVirtualWarehouseId: z.string().optional(),
         issueDate: z.string(),
         ticketId: z.string().optional(),
         rmaBatchId: z.string().optional(),
         referenceDocumentNumber: z.string().optional(),
         notes: z.string().optional(),
         autoGenerated: z.boolean().default(false),
-        autoApproveThreshold: z.number().optional(),
         items: z.array(
           z.object({
             productId: z.string(),
-            quantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
+            quantity: z.number().int(),
             unitPrice: z.number().optional(),
             notes: z.string().optional(),
           })
         ).min(1),
       }).refine(
         (data) => {
-          // Validate: normal issues must have positive quantities
           if (data.issueType === "normal") {
             return data.items.every((item) => item.quantity > 0);
           }
-          // Adjustment issues: allow negative but not zero
           return data.items.every((item) => item.quantity !== 0);
         },
         {
@@ -199,7 +180,6 @@ export const issuesRouter = router({
       )
     )
     .mutation(async ({ ctx, input }) => {
-      // Get user profile ID
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
@@ -210,12 +190,11 @@ export const issuesRouter = router({
         throw new Error("Unauthorized: Only admin and manager can create issues");
       }
 
-      // Insert issue
       const { data: issue, error: issueError } = await ctx.supabaseAdmin
         .from("stock_issues")
         .insert({
           issue_type: input.issueType,
-          virtual_warehouse_id: input.virtualWarehouseId, // REDESIGNED: Direct warehouse reference
+          virtual_warehouse_id: input.virtualWarehouseId,
           to_virtual_warehouse_id: input.toVirtualWarehouseId || null,
           issue_date: input.issueDate,
           ticket_id: input.ticketId,
@@ -223,8 +202,7 @@ export const issuesRouter = router({
           reference_document_number: input.referenceDocumentNumber,
           notes: input.notes,
           auto_generated: input.autoGenerated,
-          auto_approve_threshold: input.autoApproveThreshold,
-          status: "draft",
+          status: "completed",
           created_by_id: profile.id,
         })
         .select()
@@ -234,7 +212,6 @@ export const issuesRouter = router({
         throw new Error(`Failed to create issue: ${issueError.message}`);
       }
 
-      // Insert items
       if (input.items.length > 0) {
         const items = input.items.map((item) => ({
           issue_id: issue.id,
@@ -257,7 +234,7 @@ export const issuesRouter = router({
     }),
 
   /**
-   * Update issue (only if draft)
+   * Update issue notes/reference (simplified)
    */
   update: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -268,40 +245,6 @@ export const issuesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: issue } = await ctx.supabaseAdmin
-        .from("stock_issues")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!issue) {
-        throw new Error("Issue not found");
-      }
-
-      if (issue.status !== "draft") {
-        throw new Error("Cannot edit issue after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        issue.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this issue");
-      }
-
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_issues")
         .update({
@@ -320,7 +263,7 @@ export const issuesRouter = router({
     }),
 
   /**
-   * Update full issue (only if draft) - for editing all fields
+   * Update full issue - DISABLED in simplified workflow
    */
   updateFull: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -338,122 +281,15 @@ export const issuesRouter = router({
             quantity: z.number().int(),
           })
         ).min(1),
-      }).refine(
-        (data) => {
-          // Validate: normal issues must have positive quantities
-          if (data.issueType === "normal") {
-            return data.items.every((item) => item.quantity > 0);
-          }
-          // Adjustment issues: allow negative but not zero
-          return data.items.every((item) => item.quantity !== 0);
-        },
-        {
-          message: "Normal issues require positive quantities. Adjustments cannot have zero quantity.",
-        }
-      )
+      })
     )
-    .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: issue } = await ctx.supabaseAdmin
-        .from("stock_issues")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!issue) {
-        throw new Error("Issue not found");
-      }
-
-      if (issue.status !== "draft") {
-        throw new Error("Cannot edit issue after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        issue.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this issue");
-      }
-
-      // Get existing item IDs first
-      const { data: existingItems } = await ctx.supabaseAdmin
-        .from("stock_issue_items")
-        .select("id")
-        .eq("issue_id", input.id);
-
-      const itemIds = existingItems?.map(item => item.id) || [];
-
-      // Delete existing serials first (if there are items)
-      if (itemIds.length > 0) {
-        await ctx.supabaseAdmin
-          .from("stock_issue_serials")
-          .delete()
-          .in("issue_item_id", itemIds);
-      }
-
-      // Delete existing items
-      const { error: deleteItems } = await ctx.supabaseAdmin
-        .from("stock_issue_items")
-        .delete()
-        .eq("issue_id", input.id);
-
-      if (deleteItems) {
-        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
-      }
-
-      // Update issue header
-      const { data: updatedIssue, error: updateError } = await ctx.supabaseAdmin
-        .from("stock_issues")
-        .update({
-          issue_type: input.issueType,
-          virtual_warehouse_id: input.virtualWarehouseId,
-          to_virtual_warehouse_id: input.toVirtualWarehouseId || null,
-          issue_date: input.issueDate,
-          notes: input.notes,
-        })
-        .eq("id", input.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to update issue: ${updateError.message}`);
-      }
-
-      // Insert new items
-      if (input.items.length > 0) {
-        const items = input.items.map((item) => ({
-          issue_id: input.id,
-          product_id: item.productId,
-          quantity: item.quantity,
-        }));
-
-        const { error: itemsError } = await ctx.supabaseAdmin
-          .from("stock_issue_items")
-          .insert(items);
-
-        if (itemsError) {
-          throw new Error(`Failed to create issue items: ${itemsError.message}`);
-        }
-      }
-
-      return updatedIssue;
+    .mutation(async () => {
+      throw new Error("Không thể sửa phiếu xuất đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.");
     }),
 
   /**
    * Select serials for issue item
-   * This selects existing physical products rather than creating new ones
+   * Stock is updated immediately via trigger
    */
   selectSerials: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -463,7 +299,6 @@ export const issuesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Get issue item details
       const { data: issueItem } = await ctx.supabaseAdmin
         .from("stock_issue_items")
         .select("issue_id, product_id, quantity")
@@ -474,10 +309,9 @@ export const issuesRouter = router({
         throw new Error("Issue item not found");
       }
 
-      // Get issue to check warehouse
       const { data: issue } = await ctx.supabaseAdmin
         .from("stock_issues")
-        .select("virtual_warehouse_id, physical_warehouse_id")
+        .select("virtual_warehouse_id")
         .eq("id", issueItem.issue_id)
         .single();
 
@@ -485,10 +319,10 @@ export const issuesRouter = router({
         throw new Error("Issue not found");
       }
 
-      // Validate physical products exist, are ACTIVE, and belong to correct warehouse/product
+      // Validate physical products exist and are ACTIVE
       const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id, virtual_warehouse:virtual_warehouses!virtual_warehouse_id(physical_warehouse_id)")
+        .select("id, serial_number, product_id, virtual_warehouse_id")
         .in("id", input.physicalProductIds)
         .eq("status", "active");
 
@@ -497,27 +331,21 @@ export const issuesRouter = router({
       }
 
       if (!physicalProducts || physicalProducts.length !== input.physicalProductIds.length) {
-        throw new Error("Some physical products not found");
+        throw new Error("Some physical products not found or not active");
       }
 
       // Check all belong to correct product and warehouse
-      const invalid = physicalProducts.filter((p: any) => {
-        const productPhysicalWarehouseId = p.virtual_warehouse?.physical_warehouse_id;
-        return (
-          p.product_id !== issueItem.product_id ||
-          p.virtual_warehouse_id !== issue.virtual_warehouse_id ||
-          (issue.physical_warehouse_id && productPhysicalWarehouseId !== issue.physical_warehouse_id)
-        );
-      });
+      const invalid = physicalProducts.filter((p) =>
+        p.product_id !== issueItem.product_id ||
+        p.virtual_warehouse_id !== issue.virtual_warehouse_id
+      );
 
       if (invalid.length > 0) {
         const serials = invalid.map((p) => p.serial_number).join(", ");
-        throw new Error(
-          `Physical products do not match issue warehouse/product: ${serials}`
-        );
+        throw new Error(`Serial không thuộc kho/sản phẩm phiếu xuất: ${serials}`);
       }
 
-      // Check not already issued
+      // Check not already in another issue
       const { data: existingIssues } = await ctx.supabaseAdmin
         .from("stock_issue_serials")
         .select("physical_product_id, serial_number")
@@ -525,10 +353,10 @@ export const issuesRouter = router({
 
       if (existingIssues && existingIssues.length > 0) {
         const duplicates = existingIssues.map((e) => e.serial_number).join(", ");
-        throw new Error(`Physical products already issued: ${duplicates}`);
+        throw new Error(`Serial đã có trong phiếu xuất: ${duplicates}`);
       }
 
-      // Check quantity doesn't exceed declared quantity
+      // Check quantity limit
       const { data: currentSerials } = await ctx.supabaseAdmin
         .from("stock_issue_serials")
         .select("id")
@@ -537,11 +365,11 @@ export const issuesRouter = router({
       const currentCount = currentSerials?.length || 0;
       if (currentCount + input.physicalProductIds.length > issueItem.quantity) {
         throw new Error(
-          `Cannot add ${input.physicalProductIds.length} serials. Would exceed declared quantity of ${issueItem.quantity}`
+          `Không thể thêm ${input.physicalProductIds.length} serial. Sẽ vượt quá số lượng ${issueItem.quantity}`
         );
       }
 
-      // Insert issue serials
+      // Insert issue serials (trigger will update stock)
       const serialsToInsert = input.physicalProductIds.map((ppId) => {
         const pp = physicalProducts.find((p) => p.id === ppId);
         return {
@@ -560,59 +388,11 @@ export const issuesRouter = router({
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
-      // Auto-complete: Check if all serials are complete
-      // Get issue item to know issue_id
-      const { data: issueItemForComplete } = await ctx.supabaseAdmin
-        .from("stock_issue_items")
-        .select("quantity, issue_id")
-        .eq("id", input.issueItemId)
-        .single();
-
-      if (issueItemForComplete) {
-        // Get issue status
-        const { data: issueForComplete } = await ctx.supabaseAdmin
-          .from("stock_issues")
-          .select("status")
-          .eq("id", issueItemForComplete.issue_id)
-          .single();
-
-        if (issueForComplete && issueForComplete.status === "approved") {
-          // Get current serial count for this issue
-          const { data: allItemsForComplete } = await ctx.supabaseAdmin
-            .from("stock_issue_items")
-            .select(`
-              id,
-              quantity,
-              stock_issue_serials(id)
-            `)
-            .eq("issue_id", issueItemForComplete.issue_id);
-
-          if (allItemsForComplete) {
-            const totalQuantity = allItemsForComplete.reduce((sum, item) => sum + item.quantity, 0);
-            const totalSerials = allItemsForComplete.reduce((sum, item) => sum + (item.stock_issue_serials?.length || 0), 0);
-
-            // Auto-complete if all serials are selected
-            if (totalSerials >= totalQuantity) {
-              await ctx.supabaseAdmin
-                .from("stock_issues")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  completed_by_id: ctx.user?.id
-                })
-                .eq("id", issueItemForComplete.issue_id)
-                .eq("status", "approved");
-            }
-          }
-        }
-      }
-
       return data;
     }),
 
   /**
    * Select serials by serial numbers (for manual input)
-   * Accepts serial numbers as strings and finds matching physical products
    */
   selectSerialsByNumbers: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -627,7 +407,6 @@ export const issuesRouter = router({
         throw new Error("No serial numbers provided");
       }
 
-      // Get issue item details
       const { data: issueItem } = await ctx.supabaseAdmin
         .from("stock_issue_items")
         .select("issue_id, product_id, quantity")
@@ -638,7 +417,6 @@ export const issuesRouter = router({
         throw new Error("Issue item not found");
       }
 
-      // Get issue to verify source warehouse
       const { data: issue } = await ctx.supabaseAdmin
         .from("stock_issues")
         .select("virtual_warehouse_id")
@@ -649,12 +427,11 @@ export const issuesRouter = router({
         throw new Error("Issue not found");
       }
 
-      // CRITICAL: Validate warehouse ID matches issue's source warehouse
       if (input.virtualWarehouseId !== issue.virtual_warehouse_id) {
-        throw new Error("Kho nguồn không khớp với phiếu xuất. Chỉ có thể chọn serial từ kho xuất.");
+        throw new Error("Kho nguồn không khớp với phiếu xuất.");
       }
 
-      // Find ACTIVE physical products by serial numbers
+      // Find ACTIVE physical products
       const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, product_id, virtual_warehouse_id")
@@ -667,36 +444,18 @@ export const issuesRouter = router({
         throw new Error(`Failed to find serial numbers: ${findError.message}`);
       }
 
-      // Check all serials were found
       const foundSerials = new Set(physicalProducts?.map(p => p.serial_number) || []);
       const notFound = input.serialNumbers.filter(sn => !foundSerials.has(sn));
 
       if (notFound.length > 0) {
-        throw new Error(`Serial không tồn tại trong kho: ${notFound.join(", ")}`);
+        throw new Error(`Serial không tồn tại hoặc không khả dụng: ${notFound.join(", ")}`);
       }
 
-      // CRITICAL: Ensure we found all physical products and they have valid IDs
       if (!physicalProducts || physicalProducts.length !== input.serialNumbers.length) {
-        throw new Error(`Không tìm thấy đủ serial trong kho. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`);
+        throw new Error(`Không tìm thấy đủ serial trong kho`);
       }
 
-      // Validate all physical products have valid IDs (not NULL)
-      const invalidProducts = physicalProducts.filter(p => !p.id);
-      if (invalidProducts.length > 0) {
-        throw new Error(`Có ${invalidProducts.length} serial không có physical product ID hợp lệ`);
-      }
-
-      // CRITICAL: Double-check all products are actually in the source warehouse (defense in depth)
-      const wrongWarehouse = physicalProducts.filter(p => p.virtual_warehouse_id !== issue.virtual_warehouse_id);
-      if (wrongWarehouse.length > 0) {
-        const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
-        throw new Error(`Serial không thuộc kho xuất: ${wrongSerials}`);
-      }
-
-      // Note: No need to check if already issued - if physical_product exists in DB, it hasn't been issued yet
-      // (issued products are deleted by trigger)
-
-      // Check not already in this or another issue
+      // Check not already in another issue
       const productIds = physicalProducts.map(p => p.id);
       const { data: existingIssues } = await ctx.supabaseAdmin
         .from("stock_issue_serials")
@@ -708,7 +467,7 @@ export const issuesRouter = router({
         throw new Error(`Serial đã có trong phiếu xuất khác: ${duplicates}`);
       }
 
-      // Check quantity doesn't exceed declared quantity
+      // Check quantity limit
       const { data: currentSerials } = await ctx.supabaseAdmin
         .from("stock_issue_serials")
         .select("id")
@@ -717,11 +476,11 @@ export const issuesRouter = router({
       const currentCount = currentSerials?.length || 0;
       if (currentCount + input.serialNumbers.length > issueItem.quantity) {
         throw new Error(
-          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng khai báo ${issueItem.quantity}`
+          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng ${issueItem.quantity}`
         );
       }
 
-      // Insert issue serials
+      // Insert issue serials (trigger will update stock)
       const serialsToInsert = physicalProducts.map((pp) => ({
         issue_item_id: input.issueItemId,
         physical_product_id: pp.id,
@@ -737,58 +496,11 @@ export const issuesRouter = router({
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
-      // Auto-complete: Check if all serials are complete
-      // Get issue item to know issue_id
-      const { data: issueItemData } = await ctx.supabaseAdmin
-        .from("stock_issue_items")
-        .select("quantity, issue_id")
-        .eq("id", input.issueItemId)
-        .single();
-
-      if (issueItemData) {
-        // Get issue status
-        const { data: issueData } = await ctx.supabaseAdmin
-          .from("stock_issues")
-          .select("status")
-          .eq("id", issueItemData.issue_id)
-          .single();
-
-        if (issueData && issueData.status === "approved") {
-          // Get current serial count for this issue
-          const { data: allItems } = await ctx.supabaseAdmin
-            .from("stock_issue_items")
-            .select(`
-              id,
-              quantity,
-              stock_issue_serials(id)
-            `)
-            .eq("issue_id", issueItemData.issue_id);
-
-          if (allItems) {
-            const totalQuantity = allItems.reduce((sum, item) => sum + item.quantity, 0);
-            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_issue_serials?.length || 0), 0);
-
-            // Auto-complete if all serials are selected
-            if (totalSerials >= totalQuantity) {
-              await ctx.supabaseAdmin
-                .from("stock_issues")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  completed_by_id: ctx.user?.id
-                })
-                .eq("id", issueItemData.issue_id)
-                .eq("status", "approved");
-            }
-          }
-        }
-      }
-
       return data;
     }),
 
   /**
-   * Remove serial from issue
+   * Remove serial from issue - Note: In simplified workflow, this may cause data inconsistency
    */
   removeSerial: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ serialId: z.string() }))
@@ -807,24 +519,22 @@ export const issuesRouter = router({
 
   /**
    * Get available serials for selection
-   * Returns serials in specified warehouse that are not already issued
    */
   getAvailableSerials: publicProcedure.use(requireManagerOrAbove)
     .input(
       z.object({
         productId: z.string(),
-        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
+        virtualWarehouseId: z.string(),
         search: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      // Query physical_products directly by virtual_warehouse_id
       let query = ctx.supabaseAdmin
         .from("physical_products")
         .select("id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at")
         .eq("product_id", input.productId)
-        .eq("virtual_warehouse_id", input.virtualWarehouseId);
-        // Note: No need to filter by issued_at - if product exists in DB, it's available (not issued yet)
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active");
 
       if (input.search) {
         query = query.ilike("serial_number", `%${input.search}%`);
@@ -842,21 +552,11 @@ export const issuesRouter = router({
     }),
 
   /**
-   * Delete issue (only if draft)
+   * Delete issue - DISABLED in simplified workflow
    */
   delete: publicProcedure.use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { error } = await ctx.supabaseAdmin
-        .from("stock_issues")
-        .delete()
-        .eq("id", input.id)
-        .eq("status", "draft");
-
-      if (error) {
-        throw new Error(`Failed to delete issue: ${error.message}`);
-      }
-
-      return { success: true };
+    .mutation(async () => {
+      throw new Error("Không thể xóa phiếu xuất đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.");
     }),
 });

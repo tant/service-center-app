@@ -1,58 +1,52 @@
 /**
  * Transfers Router - Stock transfer (Phiếu Chuyển Kho) management
+ * SIMPLIFIED: No draft/approval workflow - all transfers are completed immediately
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockTransfer } from "@/types/inventory";
+import { requireManagerOrAbove } from "../../middleware/requireRole";
+import { publicProcedure, router } from "../../trpc";
 
 export const transfersRouter = router({
   /**
    * List transfers with pagination and filters
    */
-  list: publicProcedure.use(requireManagerOrAbove)
+  list: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
-        status: z
-          .enum(["draft", "pending_approval", "approved", "completed", "cancelled"])
-          .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
-      let query = ctx.supabaseAdmin
-        .from("stock_transfers")
-        .select(
-          `
+      const query = ctx.supabaseAdmin.from("stock_transfers").select(
+        `
           *,
-          created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name),
-          received_by:profiles!received_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name)
         `,
-          { count: "exact" }
-        );
-
-      if (input.status) {
-        query = query.eq("status", input.status);
-      }
+        { count: "exact" },
+      );
 
       const { data, error, count } = await query
         .order("created_at", { ascending: false })
-        .range(input.page * input.pageSize, (input.page + 1) * input.pageSize - 1);
+        .range(
+          input.page * input.pageSize,
+          (input.page + 1) * input.pageSize - 1,
+        );
 
       if (error) {
         throw new Error(`Failed to list transfers: ${error.message}`);
       }
 
       // Fetch serial counts for all transfers in this page
-      const transferIds = data?.map(t => t.id) || [];
-      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+      const transferIds = data?.map((t) => t.id) || [];
+      const serialCounts: Record<
+        string,
+        { declared: number; entered: number }
+      > = {};
 
       if (transferIds.length > 0) {
-        // For transfers, count serials directly from stock_transfer_serials table
-        // (transfer items don't have serial_count column, they use existing physical products)
         const { data: itemsData } = await ctx.supabaseAdmin
           .from("stock_transfer_items")
           .select(`
@@ -63,36 +57,36 @@ export const transfersRouter = router({
           .in("transfer_id", transferIds);
 
         if (itemsData) {
-          // Get serial counts for all items
-          const itemIds = itemsData.map(item => item.id);
+          const itemIds = itemsData.map((item) => item.id);
           const { data: serialData } = await ctx.supabaseAdmin
             .from("stock_transfer_serials")
             .select("transfer_item_id")
             .in("transfer_item_id", itemIds);
 
-          // Count serials per item
           const serialCountsByItem: Record<string, number> = {};
-          (serialData || []).forEach(serial => {
-            serialCountsByItem[serial.transfer_item_id] = (serialCountsByItem[serial.transfer_item_id] || 0) + 1;
+          (serialData || []).forEach((serial) => {
+            serialCountsByItem[serial.transfer_item_id] =
+              (serialCountsByItem[serial.transfer_item_id] || 0) + 1;
           });
 
-          // Aggregate by transfer_id
-          itemsData.forEach(item => {
+          itemsData.forEach((item) => {
             if (!serialCounts[item.transfer_id]) {
               serialCounts[item.transfer_id] = { declared: 0, entered: 0 };
             }
             serialCounts[item.transfer_id].declared += item.quantity;
-            serialCounts[item.transfer_id].entered += (serialCountsByItem[item.id] || 0);
+            serialCounts[item.transfer_id].entered +=
+              serialCountsByItem[item.id] || 0;
           });
         }
       }
 
-      // Merge serial counts with transfers
-      const transfersWithSerials = (data || []).map(transfer => ({
+      const transfersWithSerials = (data || []).map((transfer) => ({
         ...transfer,
         totalDeclaredQuantity: serialCounts[transfer.id]?.declared || 0,
         totalSerialsEntered: serialCounts[transfer.id]?.entered || 0,
-        missingSerialsCount: (serialCounts[transfer.id]?.declared || 0) - (serialCounts[transfer.id]?.entered || 0),
+        missingSerialsCount:
+          (serialCounts[transfer.id]?.declared || 0) -
+          (serialCounts[transfer.id]?.entered || 0),
       }));
 
       return {
@@ -107,7 +101,8 @@ export const transfersRouter = router({
   /**
    * Get single transfer with full details
    */
-  getById: publicProcedure.use(requireManagerOrAbove)
+  getById: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const { data, error } = await ctx.supabaseAdmin
@@ -125,10 +120,8 @@ export const transfersRouter = router({
           ),
           from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name),
           to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
-          created_by:profiles!created_by_id(id, full_name),
-          approved_by:profiles!approved_by_id(id, full_name),
-          received_by:profiles!received_by_id(id, full_name)
-        `
+          created_by:profiles!created_by_id(id, full_name)
+        `,
         )
         .eq("id", input.id)
         .single();
@@ -140,7 +133,6 @@ export const transfersRouter = router({
         throw new Error(`Failed to get transfer: ${error.message}`);
       }
 
-      // Query attachments separately (polymorphic relationship)
       const { data: attachments } = await ctx.supabaseAdmin
         .from("stock_document_attachments")
         .select("*")
@@ -149,70 +141,75 @@ export const transfersRouter = router({
 
       return {
         ...data,
-        attachments: attachments || []
+        attachments: attachments || [],
       };
     }),
 
   /**
-   * Create new transfer (draft)
+   * Create new transfer (completed immediately)
    */
-  create: publicProcedure.use(requireManagerOrAbove)
+  create: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
-        fromVirtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
-        toVirtualWarehouseId: z.string(),   // REDESIGNED: Direct warehouse reference
+        fromVirtualWarehouseId: z.string(),
+        toVirtualWarehouseId: z.string(),
         transferDate: z.string(),
         expectedDeliveryDate: z.string().optional(),
         notes: z.string().optional(),
         customerId: z.string().uuid().optional(), // Required when transferring to customer_installed
-        items: z.array(
-          z.object({
-            productId: z.string(),
-            quantity: z.number().int().min(1),
-            notes: z.string().optional(),
-          })
-        ).min(1),
-      })
+        items: z
+          .array(
+            z.object({
+              productId: z.string(),
+              quantity: z.number().int().min(1),
+              notes: z.string().optional(),
+            }),
+          )
+          .min(1),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get user profile ID
       const { data: profile } = await ctx.supabaseAdmin
         .from("profiles")
         .select("id, role")
-        .eq("user_id", ctx.user!.id)
+        .eq("user_id", ctx.user?.id)
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
-        throw new Error("Unauthorized: Only admin and manager can create transfers");
+        throw new Error(
+          "Unauthorized: Only admin and manager can create transfers",
+        );
       }
 
-      // Validate: Cannot transfer to same warehouse
       if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
         throw new Error("Cannot transfer to the same warehouse");
       }
-
-      // Validate: Check if destination is customer_installed and require customer_id
       const { data: toWarehouse } = await ctx.supabaseAdmin
         .from("virtual_warehouses")
         .select("warehouse_type")
         .eq("id", input.toVirtualWarehouseId)
         .single();
 
-      if (toWarehouse?.warehouse_type === "customer_installed" && !input.customerId) {
-        throw new Error("Customer ID is required when transferring to customer_installed warehouse");
+      if (
+        toWarehouse?.warehouse_type === "customer_installed" &&
+        !input.customerId
+      ) {
+        throw new Error(
+          "Customer ID is required when transferring to customer_installed warehouse",
+        );
       }
 
-      // Insert transfer
       const { data: transfer, error: transferError } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .insert({
-          from_virtual_warehouse_id: input.fromVirtualWarehouseId, // REDESIGNED: Direct warehouse reference
-          to_virtual_warehouse_id: input.toVirtualWarehouseId,     // REDESIGNED: Direct warehouse reference
+          from_virtual_warehouse_id: input.fromVirtualWarehouseId,
+          to_virtual_warehouse_id: input.toVirtualWarehouseId,
           transfer_date: input.transferDate,
           expected_delivery_date: input.expectedDeliveryDate,
           notes: input.notes,
-          customer_id: input.customerId, // Track customer for customer_installed transfers
-          status: "draft",
+          customer_id: input.customerId,
+          status: "completed",
           created_by_id: profile.id,
         })
         .select()
@@ -222,7 +219,6 @@ export const transfersRouter = router({
         throw new Error(`Failed to create transfer: ${transferError.message}`);
       }
 
-      // Insert items
       if (input.items.length > 0) {
         const items = input.items.map((item) => ({
           transfer_id: transfer.id,
@@ -236,7 +232,9 @@ export const transfersRouter = router({
           .insert(items);
 
         if (itemsError) {
-          throw new Error(`Failed to create transfer items: ${itemsError.message}`);
+          throw new Error(
+            `Failed to create transfer items: ${itemsError.message}`,
+          );
         }
       }
 
@@ -244,51 +242,18 @@ export const transfersRouter = router({
     }),
 
   /**
-   * Update transfer (only if draft)
+   * Update transfer notes/reference (simplified - no draft check)
    */
-  update: publicProcedure.use(requireManagerOrAbove)
+  update: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         id: z.string(),
         notes: z.string().optional(),
         expectedDeliveryDate: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: transfer } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!transfer) {
-        throw new Error("Transfer not found");
-      }
-
-      if (transfer.status !== "draft") {
-        throw new Error("Cannot edit transfer after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        transfer.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this transfer");
-      }
-
       const { data, error } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .update({
@@ -307,9 +272,10 @@ export const transfersRouter = router({
     }),
 
   /**
-   * Update full transfer (only if draft) - for editing all fields
+   * Update full transfer - DISABLED in simplified workflow
    */
-  updateFull: publicProcedure.use(requireManagerOrAbove)
+  updateFull: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         id: z.string(),
@@ -318,143 +284,36 @@ export const transfersRouter = router({
         transferDate: z.string(),
         notes: z.string().optional(),
         customerId: z.string().uuid().optional(),
-        items: z.array(
-          z.object({
-            id: z.string().optional(), // Existing item ID (not used for now, we recreate)
-            productId: z.string(),
-            quantity: z.number().int().min(1),
-          })
-        ).min(1),
-      })
+        items: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              productId: z.string(),
+              quantity: z.number().int().min(1),
+            }),
+          )
+          .min(1),
+      }),
     )
-    .mutation(async ({ ctx, input }) => {
-      // Check status first
-      const { data: transfer } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .select("status, created_by_id")
-        .eq("id", input.id)
-        .single();
-
-      if (!transfer) {
-        throw new Error("Transfer not found");
-      }
-
-      if (transfer.status !== "draft") {
-        throw new Error("Cannot edit transfer after draft status");
-      }
-
-      // Check permission
-      const { data: profile } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", ctx.user!.id)
-        .single();
-
-      if (!profile) {
-        throw new Error("Profile not found");
-      }
-
-      // Only creator or admin/manager can edit
-      if (
-        transfer.created_by_id !== profile.id &&
-        !["admin", "manager"].includes(profile.role)
-      ) {
-        throw new Error("Unauthorized to edit this transfer");
-      }
-
-      // Validate: Cannot transfer to same warehouse
-      if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
-        throw new Error("Cannot transfer to the same warehouse");
-      }
-
-      // Validate: Check if destination is customer_installed and require customer_id
-      const { data: toWarehouse } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("warehouse_type")
-        .eq("id", input.toVirtualWarehouseId)
-        .single();
-
-      if (toWarehouse?.warehouse_type === "customer_installed" && !input.customerId) {
-        throw new Error("Customer ID is required when transferring to customer_installed warehouse");
-      }
-
-      // Get existing item IDs first
-      const { data: existingItems } = await ctx.supabaseAdmin
-        .from("stock_transfer_items")
-        .select("id")
-        .eq("transfer_id", input.id);
-
-      const itemIds = existingItems?.map(item => item.id) || [];
-
-      // Delete existing serials first (if there are items)
-      if (itemIds.length > 0) {
-        await ctx.supabaseAdmin
-          .from("stock_transfer_serials")
-          .delete()
-          .in("transfer_item_id", itemIds);
-      }
-
-      // Delete existing items
-      const { error: deleteItems } = await ctx.supabaseAdmin
-        .from("stock_transfer_items")
-        .delete()
-        .eq("transfer_id", input.id);
-
-      if (deleteItems) {
-        throw new Error(`Failed to delete existing items: ${deleteItems.message}`);
-      }
-
-      // Update transfer header
-      const { data: updatedTransfer, error: updateError } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .update({
-          from_virtual_warehouse_id: input.fromVirtualWarehouseId,
-          to_virtual_warehouse_id: input.toVirtualWarehouseId,
-          transfer_date: input.transferDate,
-          notes: input.notes,
-          customer_id: input.customerId,
-        })
-        .eq("id", input.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to update transfer: ${updateError.message}`);
-      }
-
-      // Insert new items
-      if (input.items.length > 0) {
-        const items = input.items.map((item) => ({
-          transfer_id: input.id,
-          product_id: item.productId,
-          quantity: item.quantity,
-        }));
-
-        const { error: itemsError } = await ctx.supabaseAdmin
-          .from("stock_transfer_items")
-          .insert(items);
-
-        if (itemsError) {
-          throw new Error(`Failed to create transfer items: ${itemsError.message}`);
-        }
-      }
-
-      return updatedTransfer;
+    .mutation(async () => {
+      throw new Error(
+        "Không thể sửa phiếu chuyển đã hoàn thành. Vui lòng tạo phiếu chuyển mới nếu cần.",
+      );
     }),
 
   /**
    * Select serials for transfer item
-   * Selects existing physical products from source warehouse
+   * Stock is updated immediately via trigger
    */
-  selectSerials: publicProcedure.use(requireManagerOrAbove)
+  selectSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         transferItemId: z.string(),
         physicalProductIds: z.array(z.string()),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get transfer item details
       const { data: transferItem } = await ctx.supabaseAdmin
         .from("stock_transfer_items")
         .select("transfer_id, product_id, quantity")
@@ -477,17 +336,25 @@ export const transfersRouter = router({
       }
 
       // Validate physical products exist, are ACTIVE, and belong to source warehouse
-      const { data: physicalProducts, error: validateError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id")
-        .in("id", input.physicalProductIds)
-        .eq("status", "active");
+      const { data: physicalProducts, error: validateError } =
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .select(
+            "id, serial_number, product_id, virtual_warehouse_id, physical_warehouse_id",
+          )
+          .in("id", input.physicalProductIds)
+          .eq("status", "active");
 
       if (validateError) {
-        throw new Error(`Failed to validate physical products: ${validateError.message}`);
+        throw new Error(
+          `Failed to validate physical products: ${validateError.message}`,
+        );
       }
 
-      if (!physicalProducts || physicalProducts.length !== input.physicalProductIds.length) {
+      if (
+        !physicalProducts ||
+        physicalProducts.length !== input.physicalProductIds.length
+      ) {
         throw new Error("Some physical products not found");
       }
 
@@ -497,13 +364,13 @@ export const transfersRouter = router({
           p.product_id !== transferItem.product_id ||
           p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id ||
           (transfer.from_physical_warehouse_id &&
-            p.physical_warehouse_id !== transfer.from_physical_warehouse_id)
+            p.physical_warehouse_id !== transfer.from_physical_warehouse_id),
       );
 
       if (invalid.length > 0) {
         const serials = invalid.map((p) => p.serial_number).join(", ");
         throw new Error(
-          `Physical products do not match source warehouse/product: ${serials}`
+          `Physical products do not match source warehouse/product: ${serials}`,
         );
       }
 
@@ -514,7 +381,9 @@ export const transfersRouter = router({
         .in("physical_product_id", input.physicalProductIds);
 
       if (existingTransfers && existingTransfers.length > 0) {
-        const duplicates = existingTransfers.map((e) => e.serial_number).join(", ");
+        const duplicates = existingTransfers
+          .map((e) => e.serial_number)
+          .join(", ");
         throw new Error(`Physical products already in transfer: ${duplicates}`);
       }
 
@@ -525,19 +394,22 @@ export const transfersRouter = router({
         .eq("transfer_item_id", input.transferItemId);
 
       const currentCount = currentSerials?.length || 0;
-      if (currentCount + input.physicalProductIds.length > transferItem.quantity) {
+      if (
+        currentCount + input.physicalProductIds.length >
+        transferItem.quantity
+      ) {
         throw new Error(
-          `Cannot add ${input.physicalProductIds.length} serials. Would exceed declared quantity of ${transferItem.quantity}`
+          `Cannot add ${input.physicalProductIds.length} serials. Would exceed declared quantity of ${transferItem.quantity}`,
         );
       }
 
-      // Insert transfer serials
+      // Insert transfer serials (trigger will update stock)
       const serialsToInsert = input.physicalProductIds.map((ppId) => {
         const pp = physicalProducts.find((p) => p.id === ppId);
         return {
           transfer_item_id: input.transferItemId,
           physical_product_id: ppId,
-          serial_number: pp!.serial_number,
+          serial_number: pp?.serial_number ?? "",
         };
       });
 
@@ -557,7 +429,10 @@ export const transfersRouter = router({
         .eq("id", transferItem.transfer_id)
         .single();
 
-      if (transferForCustomer?.to_virtual_warehouse_id && transferForCustomer.customer_id) {
+      if (
+        transferForCustomer?.to_virtual_warehouse_id &&
+        transferForCustomer.customer_id
+      ) {
         const { data: toWarehouse } = await ctx.supabaseAdmin
           .from("virtual_warehouses")
           .select("warehouse_type")
@@ -572,74 +447,26 @@ export const transfersRouter = router({
         }
       }
 
-      // Auto-complete: Check if all serials are complete
-      // Get transfer item to know transfer_id
-      const { data: transferItemForComplete } = await ctx.supabaseAdmin
-        .from("stock_transfer_items")
-        .select("quantity, transfer_id")
-        .eq("id", input.transferItemId)
-        .single();
-
-      if (transferItemForComplete) {
-        // Get transfer status
-        const { data: transferForComplete } = await ctx.supabaseAdmin
-          .from("stock_transfers")
-          .select("status")
-          .eq("id", transferItemForComplete.transfer_id)
-          .single();
-
-        if (transferForComplete && transferForComplete.status === "approved") {
-          // Get current serial count for this transfer
-          const { data: allItemsForComplete } = await ctx.supabaseAdmin
-            .from("stock_transfer_items")
-            .select(`
-              id,
-              quantity,
-              stock_transfer_serials(id)
-            `)
-            .eq("transfer_id", transferItemForComplete.transfer_id);
-
-          if (allItemsForComplete) {
-            const totalQuantity = allItemsForComplete.reduce((sum, item) => sum + item.quantity, 0);
-            const totalSerials = allItemsForComplete.reduce((sum, item) => sum + (item.stock_transfer_serials?.length || 0), 0);
-
-            // Auto-complete if all serials are selected
-            if (totalSerials >= totalQuantity) {
-              await ctx.supabaseAdmin
-                .from("stock_transfers")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  received_by_id: ctx.user?.id
-                })
-                .eq("id", transferItemForComplete.transfer_id)
-                .eq("status", "approved");
-            }
-          }
-        }
-      }
-
       return data;
     }),
 
   /**
    * Select serials by serial numbers (for manual input)
-   * Accepts serial numbers as strings and finds matching physical products
    */
-  selectSerialsByNumbers: publicProcedure.use(requireManagerOrAbove)
+  selectSerialsByNumbers: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         transferItemId: z.string(),
         serialNumbers: z.array(z.string()),
         virtualWarehouseId: z.string(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (input.serialNumbers.length === 0) {
         throw new Error("No serial numbers provided");
       }
 
-      // Get transfer item details
       const { data: transferItem } = await ctx.supabaseAdmin
         .from("stock_transfer_items")
         .select("transfer_id, product_id, quantity")
@@ -650,7 +477,6 @@ export const transfersRouter = router({
         throw new Error("Transfer item not found");
       }
 
-      // Get transfer to verify source warehouse
       const { data: transfer } = await ctx.supabaseAdmin
         .from("stock_transfers")
         .select("from_virtual_warehouse_id, to_virtual_warehouse_id")
@@ -661,47 +487,63 @@ export const transfersRouter = router({
         throw new Error("Transfer not found");
       }
 
-      // CRITICAL: Validate warehouse ID matches transfer's source warehouse
       if (input.virtualWarehouseId !== transfer.from_virtual_warehouse_id) {
-        throw new Error("Kho nguồn không khớp với phiếu chuyển. Chỉ có thể chọn serial từ kho nguồn.");
+        throw new Error("Kho nguồn không khớp với phiếu chuyển.");
       }
 
-      // Find ACTIVE physical products by serial numbers in source warehouse
-      const { data: physicalProducts, error: findError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id")
-        .eq("product_id", transferItem.product_id)
-        .eq("virtual_warehouse_id", input.virtualWarehouseId)
-        .eq("status", "active")
-        .in("serial_number", input.serialNumbers);
+      const { data: physicalProducts, error: findError } =
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("id, serial_number, product_id, virtual_warehouse_id")
+          .eq("product_id", transferItem.product_id)
+          .eq("virtual_warehouse_id", input.virtualWarehouseId)
+          .eq("status", "active")
+          .in("serial_number", input.serialNumbers);
 
       if (findError) {
         throw new Error(`Failed to find serial numbers: ${findError.message}`);
       }
 
       // Check all serials were found
-      const foundSerials = new Set(physicalProducts?.map(p => p.serial_number) || []);
-      const notFound = input.serialNumbers.filter(sn => !foundSerials.has(sn));
+      const foundSerials = new Set(
+        physicalProducts?.map((p) => p.serial_number) || [],
+      );
+      const notFound = input.serialNumbers.filter(
+        (sn) => !foundSerials.has(sn),
+      );
 
       if (notFound.length > 0) {
-        throw new Error(`Serial không tồn tại trong kho nguồn: ${notFound.join(", ")}`);
+        throw new Error(
+          `Serial không tồn tại trong kho nguồn: ${notFound.join(", ")}`,
+        );
       }
 
       // CRITICAL: Ensure we found all physical products and they have valid IDs
-      if (!physicalProducts || physicalProducts.length !== input.serialNumbers.length) {
-        throw new Error(`Không tìm thấy đủ serial trong kho nguồn. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`);
+      if (
+        !physicalProducts ||
+        physicalProducts.length !== input.serialNumbers.length
+      ) {
+        throw new Error(
+          `Không tìm thấy đủ serial trong kho nguồn. Cần ${input.serialNumbers.length}, tìm thấy ${physicalProducts?.length || 0}`,
+        );
       }
 
       // Validate all physical products have valid IDs (not NULL)
-      const invalidProducts = physicalProducts.filter(p => !p.id);
+      const invalidProducts = physicalProducts.filter((p) => !p.id);
       if (invalidProducts.length > 0) {
-        throw new Error(`Có ${invalidProducts.length} serial không có physical product ID hợp lệ`);
+        throw new Error(
+          `Có ${invalidProducts.length} serial không có physical product ID hợp lệ`,
+        );
       }
 
       // CRITICAL: Double-check all products are actually in the source warehouse (defense in depth)
-      const wrongWarehouse = physicalProducts.filter(p => p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id);
+      const wrongWarehouse = physicalProducts.filter(
+        (p) => p.virtual_warehouse_id !== transfer.from_virtual_warehouse_id,
+      );
       if (wrongWarehouse.length > 0) {
-        const wrongSerials = wrongWarehouse.map(p => p.serial_number).join(", ");
+        const wrongSerials = wrongWarehouse
+          .map((p) => p.serial_number)
+          .join(", ");
         throw new Error(`Serial không thuộc kho nguồn: ${wrongSerials}`);
       }
 
@@ -709,14 +551,16 @@ export const transfersRouter = router({
       // (issued products are deleted by trigger)
 
       // Check not already in another transfer
-      const productIds = physicalProducts.map(p => p.id);
+      const productIds = physicalProducts.map((p) => p.id);
       const { data: existingTransfers } = await ctx.supabaseAdmin
         .from("stock_transfer_serials")
         .select("physical_product_id, serial_number")
         .in("physical_product_id", productIds);
 
       if (existingTransfers && existingTransfers.length > 0) {
-        const duplicates = existingTransfers.map(e => e.serial_number).join(", ");
+        const duplicates = existingTransfers
+          .map((e) => e.serial_number)
+          .join(", ");
         throw new Error(`Serial đã có trong phiếu chuyển khác: ${duplicates}`);
       }
 
@@ -729,7 +573,7 @@ export const transfersRouter = router({
       const currentCount = currentSerials?.length || 0;
       if (currentCount + input.serialNumbers.length > transferItem.quantity) {
         throw new Error(
-          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng khai báo ${transferItem.quantity}`
+          `Không thể thêm ${input.serialNumbers.length} serial. Sẽ vượt quá số lượng khai báo ${transferItem.quantity}`,
         );
       }
 
@@ -756,7 +600,10 @@ export const transfersRouter = router({
         .eq("id", transferItem.transfer_id)
         .single();
 
-      if (transferForCustomer?.to_virtual_warehouse_id && transferForCustomer.customer_id) {
+      if (
+        transferForCustomer?.to_virtual_warehouse_id &&
+        transferForCustomer.customer_id
+      ) {
         const { data: toWarehouse } = await ctx.supabaseAdmin
           .from("virtual_warehouses")
           .select("warehouse_type")
@@ -767,54 +614,7 @@ export const transfersRouter = router({
           await ctx.supabaseAdmin
             .from("physical_products")
             .update({ last_known_customer_id: transferForCustomer.customer_id })
-            .in("id", productIds); // productIds already defined at line 583
-        }
-      }
-
-      // Auto-complete: Check if all serials are complete
-      // Get transfer item to know transfer_id
-      const { data: transferItemData } = await ctx.supabaseAdmin
-        .from("stock_transfer_items")
-        .select("quantity, transfer_id")
-        .eq("id", input.transferItemId)
-        .single();
-
-      if (transferItemData) {
-        // Get transfer status
-        const { data: transferData } = await ctx.supabaseAdmin
-          .from("stock_transfers")
-          .select("status")
-          .eq("id", transferItemData.transfer_id)
-          .single();
-
-        if (transferData && transferData.status === "approved") {
-          // Get current serial count for this transfer
-          const { data: allItems } = await ctx.supabaseAdmin
-            .from("stock_transfer_items")
-            .select(`
-              id,
-              quantity,
-              stock_transfer_serials(id)
-            `)
-            .eq("transfer_id", transferItemData.transfer_id);
-
-          if (allItems) {
-            const totalQuantity = allItems.reduce((sum, item) => sum + item.quantity, 0);
-            const totalSerials = allItems.reduce((sum, item) => sum + (item.stock_transfer_serials?.length || 0), 0);
-
-            // Auto-complete if all serials are selected
-            if (totalSerials >= totalQuantity) {
-              await ctx.supabaseAdmin
-                .from("stock_transfers")
-                .update({
-                  status: "completed",
-                  completed_at: new Date().toISOString(),
-                  received_by_id: ctx.user?.id
-                })
-                .eq("id", transferItemData.transfer_id)
-                .eq("status", "approved");
-            }
-          }
+            .in("id", productIds);
         }
       }
 
@@ -824,7 +624,8 @@ export const transfersRouter = router({
   /**
    * Remove serial from transfer
    */
-  removeSerial: publicProcedure.use(requireManagerOrAbove)
+  removeSerial: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ serialId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { error } = await ctx.supabaseAdmin
@@ -842,22 +643,25 @@ export const transfersRouter = router({
   /**
    * Get available serials for transfer from source warehouse
    */
-  getAvailableSerials: publicProcedure.use(requireManagerOrAbove)
+  getAvailableSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         productId: z.string(),
         virtualWarehouseId: z.string(),
         physicalWarehouseId: z.string().optional(),
         search: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       let query = ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at")
+        .select(
+          "id, serial_number, manufacturer_warranty_end_date, user_warranty_end_date, created_at",
+        )
         .eq("product_id", input.productId)
-        .eq("virtual_warehouse_id", input.virtualWarehouseId);
-        // Note: No need to filter by issued_at - if product exists in DB, it's available
+        .eq("virtual_warehouse_id", input.virtualWarehouseId)
+        .eq("status", "active");
 
       if (input.physicalWarehouseId) {
         query = query.eq("physical_warehouse_id", input.physicalWarehouseId);
@@ -879,21 +683,14 @@ export const transfersRouter = router({
     }),
 
   /**
-   * Delete transfer (only if draft)
+   * Delete transfer - DISABLED in simplified workflow
    */
-  delete: publicProcedure.use(requireManagerOrAbove)
+  delete: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { error } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .delete()
-        .eq("id", input.id)
-        .eq("status", "draft");
-
-      if (error) {
-        throw new Error(`Failed to delete transfer: ${error.message}`);
-      }
-
-      return { success: true };
+    .mutation(async () => {
+      throw new Error(
+        "Không thể xóa phiếu chuyển đã hoàn thành. Vui lòng tạo phiếu chuyển mới nếu cần.",
+      );
     }),
 });

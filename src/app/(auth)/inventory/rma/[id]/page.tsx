@@ -35,6 +35,7 @@ import { AddProductsToRMADrawer } from "@/components/drawers/add-products-to-rma
 import { UpdateShippingInfoDrawer } from "@/components/drawers/update-shipping-info-drawer";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -247,7 +248,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         currentTrackingNumber={batch.tracking_number}
                         trigger={
                           <Button variant="outline" size="sm">
-                            <IconTruck className="mr-2 h-4 w-4" />
+                            <IconTruck className="h-4 w-4" />
                             Cập nhật thông tin vận chuyển
                           </Button>
                         }
@@ -257,7 +258,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button size="sm" disabled={isFinalizing}>
-                              <IconCheck className="mr-2 h-4 w-4" />
+                              <IconCheck className="h-4 w-4" />
                               {isFinalizing ? "Đang xử lý..." : "Chốt danh sách"}
                             </Button>
                           </DialogTrigger>
@@ -270,9 +271,9 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                               </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
-                              <Button variant="outline" onClick={() => {}}>
-                                Hủy
-                              </Button>
+                              <DialogClose asChild>
+                                <Button variant="outline">Hủy</Button>
+                              </DialogClose>
                               <Button onClick={handleFinalizeBatch}>
                                 Xác nhận chốt
                               </Button>
@@ -290,7 +291,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                             className="text-destructive border-destructive hover:bg-destructive/10"
                             onClick={() => setShowCancelDialog(true)}
                           >
-                            <IconX className="mr-2 h-4 w-4" />
+                            <IconX className="h-4 w-4" />
                             Hủy lô RMA
                           </Button>
                         </DialogTrigger>
@@ -333,7 +334,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         currentTrackingNumber={batch.tracking_number}
                         trigger={
                           <Button variant="outline" size="sm">
-                            <IconTruck className="mr-2 h-4 w-4" />
+                            <IconTruck className="h-4 w-4" />
                             Cập nhật thông tin vận chuyển
                           </Button>
                         }
@@ -341,7 +342,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button size="sm" disabled={isCompleting}>
-                            <IconCheck className="mr-2 h-4 w-4" />
+                            <IconCheck className="h-4 w-4" />
                             {isCompleting ? "Đang xử lý..." : "Hoàn thành & Xuất kho"}
                           </Button>
                         </DialogTrigger>
@@ -350,21 +351,21 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                             <DialogTitle>Xác nhận hoàn thành lô RMA</DialogTitle>
                             <DialogDescription>
                               Lô RMA sẽ được đánh dấu hoàn thành, hệ thống sẽ tự động:
-                              <ul className="list-disc list-inside mt-2 space-y-1">
-                                <li>Chuyển sản phẩm từ Kho Hàng Hỏng sang Kho RMA</li>
-                                <li>Tạo phiếu xuất kho từ Kho RMA</li>
-                              </ul>
-                              {!batch.tracking_number && (
-                                <p className="mt-2 text-yellow-600">
-                                  Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận.
-                                </p>
-                              )}
                             </DialogDescription>
+                            <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
+                              <li>Chuyển sản phẩm từ Kho Hàng Hỏng sang Kho RMA</li>
+                              <li>Tạo phiếu xuất kho từ Kho RMA</li>
+                            </ul>
+                            {!batch.tracking_number && (
+                              <p className="mt-2 text-sm text-yellow-600">
+                                Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận.
+                              </p>
+                            )}
                           </DialogHeader>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => {}}>
-                              Hủy
-                            </Button>
+                            <DialogClose asChild>
+                              <Button variant="outline">Hủy</Button>
+                            </DialogClose>
                             <Button onClick={() => completeBatch({
                               batch_id: batch.id,
                               shipping_date: batch.shipping_date || new Date().toISOString().split("T")[0],
@@ -385,7 +386,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                             className="text-destructive border-destructive hover:bg-destructive/10"
                             onClick={() => setShowCancelDialog(true)}
                           >
-                            <IconX className="mr-2 h-4 w-4" />
+                            <IconX className="h-4 w-4" />
                             Hủy lô RMA
                           </Button>
                         </DialogTrigger>
@@ -434,7 +435,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                       batchId={batch.id}
                       trigger={
                         <Button size="sm">
-                          <IconPlus className="mr-2 h-4 w-4" />
+                          <IconPlus className="h-4 w-4" />
                           Thêm sản phẩm
                         </Button>
                       }

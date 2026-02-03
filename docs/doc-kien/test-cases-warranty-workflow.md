@@ -40,6 +40,13 @@
 |----|--------|-------------------|
 | TC02 | Xuất bán 60 sản phẩm cho khách | Tồn kho giảm còn 40 |
 
+> **✅ Issues đã fix - TC02:**
+>
+> **~~Tồn kho thực tế đếm cả sản phẩm đã bán~~ (FIXED 2026-02-03):**
+> - ~~Warehouse functions (`get_warehouse_dashboard_stats`, `get_product_stock_details`) và reporting views (`warehouse_stock_overview`, `product_stock_alerts`, `virtual_warehouse_summary`) đếm tất cả `physical_products` không phân biệt status, dẫn đến số tồn kho thực tế bao gồm cả sản phẩm đã xuất bán (status = `issued`)~~
+> - **Fix:** Thêm điều kiện `WHERE pp.status = 'active'` vào tất cả các query đếm `physical_products` trong `501_warehouse_functions.sql` và `700_reporting_views.sql`
+> - Commit: `6cf0b2d`
+
 > **Issues phát hiện - TC02:**
 >
 > **Yêu cầu:** Sản phẩm phải có status **In stock** thì mới được xuất.

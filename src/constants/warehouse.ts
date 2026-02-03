@@ -132,23 +132,23 @@ export const RMA_BATCH_SETTINGS = {
   batch_number_prefix: 'RMA-',
   batch_number_format: 'RMA-YYYY-MM-NNN',
   max_products_per_batch: 50,
-  statuses: ['draft', 'submitted', 'shipped', 'completed'],
+  statuses: ['draft', 'submitted', 'completed', 'cancelled'],
 } as const;
 
 // RMA batch status labels (Vietnamese)
 export const RMA_STATUS_LABELS: Record<string, string> = {
   draft: 'Nháp',
-  submitted: 'Đã gửi',
-  shipped: 'Đã vận chuyển',
+  submitted: 'Chờ gửi',
   completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
 };
 
 // RMA batch status colors
 export const RMA_STATUS_COLORS: Record<string, string> = {
   draft: '#6B7280', // Gray
   submitted: '#3B82F6', // Blue
-  shipped: '#F59E0B', // Orange
   completed: '#10B981', // Green
+  cancelled: '#EF4444', // Red
 };
 
 // Stock verification settings

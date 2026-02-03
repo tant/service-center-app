@@ -1083,7 +1083,7 @@ export const inventoryRouter = router({
 
       const errors: string[] = [];
 
-      // Find warehouses once
+      // Find dead_stock warehouse for validation
       const { data: deadStockWarehouse } = await ctx.supabaseAdmin
         .from("virtual_warehouses")
         .select("id")
@@ -1091,17 +1091,10 @@ export const inventoryRouter = router({
         .limit(1)
         .single();
 
-      const { data: rmaWarehouse } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("id")
-        .eq("warehouse_type", "rma_staging")
-        .limit(1)
-        .single();
-
-      if (!deadStockWarehouse || !rmaWarehouse) {
+      if (!deadStockWarehouse) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "dead_stock or rma_staging warehouse not found in system",
+          message: "dead_stock warehouse not found in system",
         });
       }
 
@@ -1156,76 +1149,13 @@ export const inventoryRouter = router({
         };
       }
 
-      // Create stock_transfer (dead_stock → rma_staging)
-      const { data: transfer, error: transferError } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .insert({
-          from_virtual_warehouse_id: deadStockWarehouse.id,
-          to_virtual_warehouse_id: rmaWarehouse.id,
-          transfer_date: new Date().toISOString().split("T")[0],
-          notes: `Chuyển kho cho lô RMA: ${input.batch_id}`,
-          status: "completed",
-          created_by_id: profile.id,
-        })
-        .select()
-        .single();
-
-      if (transferError || !transfer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create transfer: ${transferError?.message}`,
-        });
-      }
-
-      // Group products by product_id for transfer items
-      const productGroups = new Map<string, typeof validProducts>();
-      for (const p of validProducts) {
-        const group = productGroups.get(p.product_id) || [];
-        group.push(p);
-        productGroups.set(p.product_id, group);
-      }
-
-      // Create transfer items and serials
-      for (const [productId, groupProducts] of productGroups) {
-        const { data: transferItem, error: itemError } = await ctx.supabaseAdmin
-          .from("stock_transfer_items")
-          .insert({
-            transfer_id: transfer.id,
-            product_id: productId,
-            quantity: groupProducts.length,
-          })
-          .select()
-          .single();
-
-        if (itemError || !transferItem) {
-          errors.push(`Failed to create transfer item for product ${productId}`);
-          continue;
-        }
-
-        // Insert transfer serials (trigger will move products)
-        const serialsToInsert = groupProducts.map(p => ({
-          transfer_item_id: transferItem.id,
-          physical_product_id: p.id,
-          serial_number: p.serial_number,
-        }));
-
-        const { error: serialsError } = await ctx.supabaseAdmin
-          .from("stock_transfer_serials")
-          .insert(serialsToInsert);
-
-        if (serialsError) {
-          errors.push(`Failed to create transfer serials: ${serialsError.message}`);
-        }
-      }
-
-      // Update rma_batch_id, rma_date, rma_reason for valid products
+      // Update rma_batch_id, rma_date for valid products (no transfer yet - transfer happens at complete)
       const validProductIds = validProducts.map(p => p.id);
       const { error: updateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .update({
           rma_batch_id: input.batch_id,
           rma_date: new Date().toISOString(),
-          rma_reason: "Pending RMA",
         })
         .in("id", validProductIds);
 
@@ -1236,12 +1166,11 @@ export const inventoryRouter = router({
       return {
         success: true,
         added: validProducts.length,
-        transfer_id: transfer.id,
         errors: errors.length > 0 ? errors : undefined,
       };
     }),
 
-  // Finalize RMA batch
+  // Finalize RMA batch (draft → submitted) - only locks the product list, no stock movement yet
   finalizeRMABatch: publicProcedure
     .input(
       z.object({
@@ -1306,23 +1235,7 @@ export const inventoryRouter = router({
         });
       }
 
-      // Get all products in batch for creating issue
-      const { data: batchProducts, error: productsError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id")
-        .eq("rma_batch_id", input.batch_id);
-
-      if (productsError || !batchProducts || batchProducts.length === 0) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to fetch batch products: ${productsError?.message || "No products found"}`,
-        });
-      }
-
-      // Get rma_staging warehouse
-      const rmaWarehouseId = batchProducts[0].virtual_warehouse_id;
-
-      // Update batch status to submitted
+      // Update batch status to submitted (no stock movement - that happens at complete)
       const { data, error } = await ctx.supabaseAdmin
         .from("rma_batches")
         .update({
@@ -1349,150 +1262,16 @@ export const inventoryRouter = router({
         });
       }
 
-      // Create stock_issue for RMA batch (xuất kho từ rma_staging)
-      const { data: issue, error: issueError } = await ctx.supabaseAdmin
-        .from("stock_issues")
-        .insert({
-          issue_type: "normal",
-          virtual_warehouse_id: rmaWarehouseId,
-          issue_date: input.shipping_date || new Date().toISOString().split("T")[0],
-          rma_batch_id: input.batch_id,
-          notes: `Phiếu xuất kho cho lô RMA: ${data.id}`,
-          status: "completed",
-          created_by_id: profile.id,
-        })
-        .select()
-        .single();
-
-      if (issueError || !issue) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create stock issue: ${issueError?.message}`,
-        });
-      }
-
-      // Group products by product_id for issue items
-      const productGroups = new Map<string, typeof batchProducts>();
-      for (const p of batchProducts) {
-        const group = productGroups.get(p.product_id) || [];
-        group.push(p);
-        productGroups.set(p.product_id, group);
-      }
-
-      // Create issue items and serials
-      for (const [productId, groupProducts] of productGroups) {
-        const { data: issueItem, error: itemError } = await ctx.supabaseAdmin
-          .from("stock_issue_items")
-          .insert({
-            issue_id: issue.id,
-            product_id: productId,
-            quantity: groupProducts.length,
-          })
-          .select()
-          .single();
-
-        if (itemError || !issueItem) {
-          console.error(`Failed to create issue item for product ${productId}:`, itemError);
-          continue;
-        }
-
-        // Insert issue serials (trigger will update stock)
-        const serialsToInsert = groupProducts.map(p => ({
-          issue_item_id: issueItem.id,
-          physical_product_id: p.id,
-          serial_number: p.serial_number,
-        }));
-
-        const { error: serialsError } = await ctx.supabaseAdmin
-          .from("stock_issue_serials")
-          .insert(serialsToInsert);
-
-        if (serialsError) {
-          console.error(`Failed to create issue serials:`, serialsError);
-        }
-      }
-
-      return { ...data, issue_id: issue.id };
+      return data;
     }),
 
-  // Ship RMA batch (submitted → shipped)
-  shipRMABatch: publicProcedure
+  // Complete RMA batch (submitted → completed) - performs transfer and stock issue
+  completeRMABatch: publicProcedure
     .input(
       z.object({
         batch_id: z.string().uuid(),
         shipping_date: z.string().optional(),
         tracking_number: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const {
-        data: { user },
-        error: authError,
-      } = await ctx.supabaseClient.auth.getUser();
-
-      if (authError || !user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "You must be logged in",
-        });
-      }
-
-      const { data: profile, error: profileError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id, role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profileError || !profile) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch user profile",
-        });
-      }
-
-      if (!["admin", "manager"].includes(profile.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only admins and managers can ship RMA batches",
-        });
-      }
-
-      const updateData: Record<string, unknown> = {
-        status: "shipped",
-      };
-      if (input.shipping_date) updateData.shipping_date = input.shipping_date;
-      if (input.tracking_number) updateData.tracking_number = input.tracking_number;
-
-      const { data, error } = await ctx.supabaseAdmin
-        .from("rma_batches")
-        .update(updateData)
-        .eq("id", input.batch_id)
-        .eq("status", "submitted")
-        .select()
-        .single();
-
-      if (error) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to ship RMA batch: ${error.message}`,
-        });
-      }
-
-      if (!data) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Batch is not in submitted status",
-        });
-      }
-
-      return data;
-    }),
-
-  // Complete RMA batch (shipped → completed)
-  completeRMABatch: publicProcedure
-    .input(
-      z.object({
-        batch_id: z.string().uuid(),
         notes: z.string().optional(),
       })
     )
@@ -1529,16 +1308,194 @@ export const inventoryRouter = router({
         });
       }
 
+      // Get batch and verify status
+      const { data: batch, error: batchError } = await ctx.supabaseAdmin
+        .from("rma_batches")
+        .select("id, status, shipping_date, tracking_number")
+        .eq("id", input.batch_id)
+        .single();
+
+      if (batchError || !batch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "RMA batch not found",
+        });
+      }
+
+      if (batch.status !== "submitted") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Batch must be in submitted status to complete",
+        });
+      }
+
+      // Get all products in batch
+      const { data: batchProducts, error: productsError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select("id, serial_number, product_id, virtual_warehouse_id")
+        .eq("rma_batch_id", input.batch_id);
+
+      if (productsError || !batchProducts || batchProducts.length === 0) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch batch products: ${productsError?.message || "No products found"}`,
+        });
+      }
+
+      // Get warehouses
+      const { data: deadStockWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("id")
+        .eq("warehouse_type", "dead_stock")
+        .limit(1)
+        .single();
+
+      const { data: rmaWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("id")
+        .eq("warehouse_type", "rma_staging")
+        .limit(1)
+        .single();
+
+      if (!deadStockWarehouse || !rmaWarehouse) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "dead_stock or rma_staging warehouse not found in system",
+        });
+      }
+
+      const shippingDate = input.shipping_date || batch.shipping_date || new Date().toISOString().split("T")[0];
+
+      // Step 1: Create stock_transfer (dead_stock → rma_staging)
+      const { data: transfer, error: transferError } = await ctx.supabaseAdmin
+        .from("stock_transfers")
+        .insert({
+          from_virtual_warehouse_id: deadStockWarehouse.id,
+          to_virtual_warehouse_id: rmaWarehouse.id,
+          transfer_date: shippingDate,
+          rma_batch_id: input.batch_id,
+          notes: `Chuyển kho cho lô RMA: ${input.batch_id}`,
+          status: "completed",
+          created_by_id: profile.id,
+        })
+        .select()
+        .single();
+
+      if (transferError || !transfer) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create transfer: ${transferError?.message}`,
+        });
+      }
+
+      // Group products by product_id
+      const productGroups = new Map<string, typeof batchProducts>();
+      for (const p of batchProducts) {
+        const group = productGroups.get(p.product_id) || [];
+        group.push(p);
+        productGroups.set(p.product_id, group);
+      }
+
+      // Create transfer items and serials
+      for (const [productId, groupProducts] of productGroups) {
+        const { data: transferItem, error: itemError } = await ctx.supabaseAdmin
+          .from("stock_transfer_items")
+          .insert({
+            transfer_id: transfer.id,
+            product_id: productId,
+            quantity: groupProducts.length,
+          })
+          .select()
+          .single();
+
+        if (itemError || !transferItem) {
+          console.error(`Failed to create transfer item for product ${productId}:`, itemError);
+          continue;
+        }
+
+        // Insert transfer serials (trigger will move products to rma_staging)
+        const serialsToInsert = groupProducts.map(p => ({
+          transfer_item_id: transferItem.id,
+          physical_product_id: p.id,
+          serial_number: p.serial_number,
+        }));
+
+        const { error: serialsError } = await ctx.supabaseAdmin
+          .from("stock_transfer_serials")
+          .insert(serialsToInsert);
+
+        if (serialsError) {
+          console.error(`Failed to create transfer serials:`, serialsError);
+        }
+      }
+
+      // Step 2: Create stock_issue (xuất kho từ rma_staging)
+      const { data: issue, error: issueError } = await ctx.supabaseAdmin
+        .from("stock_issues")
+        .insert({
+          issue_type: "normal",
+          virtual_warehouse_id: rmaWarehouse.id,
+          issue_date: shippingDate,
+          rma_batch_id: input.batch_id,
+          notes: `Phiếu xuất kho cho lô RMA: ${input.batch_id}`,
+          status: "completed",
+          created_by_id: profile.id,
+        })
+        .select()
+        .single();
+
+      if (issueError || !issue) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create stock issue: ${issueError?.message}`,
+        });
+      }
+
+      // Create issue items and serials
+      for (const [productId, groupProducts] of productGroups) {
+        const { data: issueItem, error: itemError } = await ctx.supabaseAdmin
+          .from("stock_issue_items")
+          .insert({
+            issue_id: issue.id,
+            product_id: productId,
+            quantity: groupProducts.length,
+          })
+          .select()
+          .single();
+
+        if (itemError || !issueItem) {
+          console.error(`Failed to create issue item for product ${productId}:`, itemError);
+          continue;
+        }
+
+        // Insert issue serials (trigger will update stock - mark as issued)
+        const serialsToInsert = groupProducts.map(p => ({
+          issue_item_id: issueItem.id,
+          physical_product_id: p.id,
+          serial_number: p.serial_number,
+        }));
+
+        const { error: serialsError } = await ctx.supabaseAdmin
+          .from("stock_issue_serials")
+          .insert(serialsToInsert);
+
+        if (serialsError) {
+          console.error(`Failed to create issue serials:`, serialsError);
+        }
+      }
+
+      // Step 3: Update batch status to completed
       const updateData: Record<string, unknown> = {
         status: "completed",
       };
+      if (input.shipping_date) updateData.shipping_date = input.shipping_date;
+      if (input.tracking_number) updateData.tracking_number = input.tracking_number;
       if (input.notes) updateData.notes = input.notes;
 
       const { data, error } = await ctx.supabaseAdmin
         .from("rma_batches")
         .update(updateData)
         .eq("id", input.batch_id)
-        .eq("status", "shipped")
         .select()
         .single();
 
@@ -1549,17 +1506,10 @@ export const inventoryRouter = router({
         });
       }
 
-      if (!data) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Batch is not in shipped status",
-        });
-      }
-
-      return data;
+      return { ...data, transfer_id: transfer.id, issue_id: issue.id };
     }),
 
-  // Remove product from RMA batch
+  // Remove product from RMA batch (draft only - no transfer needed since product stays in dead_stock)
   removeProductFromRMA: publicProcedure
     .input(
       z.object({
@@ -1627,7 +1577,7 @@ export const inventoryRouter = router({
       // Get product to check
       const { data: product, error: productError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, rma_batch_id, virtual_warehouse_id")
+        .select("id, serial_number, product_id, rma_batch_id")
         .eq("id", input.product_id)
         .single();
 
@@ -1645,83 +1595,12 @@ export const inventoryRouter = router({
         });
       }
 
-      // Find dead_stock warehouse as destination (SP returns to where it came from)
-      const { data: deadStockWarehouse } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("id")
-        .eq("warehouse_type", "dead_stock")
-        .limit(1)
-        .single();
-
-      if (!deadStockWarehouse) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "dead_stock warehouse not found",
-        });
-      }
-
-      // Create stock_transfer (rma_staging → dead_stock) for traceability
-      const { data: transfer, error: transferError } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .insert({
-          from_virtual_warehouse_id: product.virtual_warehouse_id,
-          to_virtual_warehouse_id: deadStockWarehouse.id,
-          transfer_date: new Date().toISOString().split("T")[0],
-          notes: `Hoàn trả SP khỏi lô RMA: ${input.batch_id}`,
-          status: "completed",
-          created_by_id: profile.id,
-        })
-        .select()
-        .single();
-
-      if (transferError || !transfer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create transfer: ${transferError?.message}`,
-        });
-      }
-
-      // Create transfer item
-      const { data: transferItem, error: itemError } = await ctx.supabaseAdmin
-        .from("stock_transfer_items")
-        .insert({
-          transfer_id: transfer.id,
-          product_id: product.product_id,
-          quantity: 1,
-        })
-        .select()
-        .single();
-
-      if (itemError || !transferItem) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create transfer item: ${itemError?.message}`,
-        });
-      }
-
-      // Create transfer serial (trigger will move SP back to dead_stock)
-      const { error: serialError } = await ctx.supabaseAdmin
-        .from("stock_transfer_serials")
-        .insert({
-          transfer_item_id: transferItem.id,
-          physical_product_id: product.id,
-          serial_number: product.serial_number,
-        });
-
-      if (serialError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create transfer serial: ${serialError.message}`,
-        });
-      }
-
-      // Clear RMA info (trigger already moved the SP)
+      // Clear RMA info (product stays in dead_stock - no transfer needed)
       const { error: updateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .update({
           rma_batch_id: null,
           rma_date: null,
-          rma_reason: null,
         })
         .eq("id", input.product_id);
 
@@ -1732,14 +1611,117 @@ export const inventoryRouter = router({
         });
       }
 
-      return { success: true, transfer_id: transfer.id };
+      return { success: true };
+    }),
+
+  // Cancel RMA batch (draft or submitted → cancelled)
+  cancelRMABatch: publicProcedure
+    .input(
+      z.object({
+        batch_id: z.string().uuid(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
+
+      if (authError || !user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in",
+        });
+      }
+
+      const { data: profile, error: profileError } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch user profile",
+        });
+      }
+
+      if (!["admin", "manager"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins and managers can cancel RMA batches",
+        });
+      }
+
+      // Get batch and verify status
+      const { data: batch, error: batchError } = await ctx.supabaseAdmin
+        .from("rma_batches")
+        .select("id, status")
+        .eq("id", input.batch_id)
+        .single();
+
+      if (batchError || !batch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "RMA batch not found",
+        });
+      }
+
+      if (!["draft", "submitted"].includes(batch.status)) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Can only cancel draft or submitted batches",
+        });
+      }
+
+      // Clear rma_batch_id from all products in this batch
+      const { error: clearError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .update({
+          rma_batch_id: null,
+          rma_date: null,
+        })
+        .eq("rma_batch_id", input.batch_id);
+
+      if (clearError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to clear products from batch: ${clearError.message}`,
+        });
+      }
+
+      // Update batch status to cancelled
+      const updateData: Record<string, unknown> = {
+        status: "cancelled",
+      };
+      if (input.reason) {
+        updateData.notes = input.reason;
+      }
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("rma_batches")
+        .update(updateData)
+        .eq("id", input.batch_id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to cancel RMA batch: ${error.message}`,
+        });
+      }
+
+      return data;
     }),
 
   // Get RMA batches with pagination
   getRMABatches: publicProcedure
     .input(
       z.object({
-        status: z.enum(["draft", "submitted", "shipped", "completed"]).optional(),
+        status: z.enum(["draft", "submitted", "completed", "cancelled"]).optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
       })

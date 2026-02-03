@@ -44,7 +44,7 @@ import { useRMABatches } from "@/hooks/use-warehouse";
 import { RMA_STATUS_LABELS, RMA_STATUS_COLORS } from "@/constants/warehouse";
 import { CreateRMABatchDrawer } from "@/components/drawers/create-rma-batch-drawer";
 
-type RMAStatus = "draft" | "submitted" | "shipped" | "completed";
+type RMAStatus = "draft" | "submitted" | "completed" | "cancelled";
 
 interface RMABatch {
   id: string;
@@ -143,9 +143,9 @@ export function RMABatchesTable() {
           <SelectContent>
             <SelectItem value="all">Tất cả</SelectItem>
             <SelectItem value="draft">Nháp</SelectItem>
-            <SelectItem value="submitted">Đã gửi</SelectItem>
-            <SelectItem value="shipped">Đã vận chuyển</SelectItem>
+            <SelectItem value="submitted">Chờ gửi</SelectItem>
             <SelectItem value="completed">Hoàn thành</SelectItem>
+            <SelectItem value="cancelled">Đã hủy</SelectItem>
           </SelectContent>
         </Select>
 
@@ -153,9 +153,9 @@ export function RMABatchesTable() {
         <TabsList className="hidden @4xl/main:flex">
           <TabsTrigger value="all">Tất cả</TabsTrigger>
           <TabsTrigger value="draft">Nháp</TabsTrigger>
-          <TabsTrigger value="submitted">Đã gửi</TabsTrigger>
-          <TabsTrigger value="shipped">Đã vận chuyển</TabsTrigger>
+          <TabsTrigger value="submitted">Chờ gửi</TabsTrigger>
           <TabsTrigger value="completed">Hoàn thành</TabsTrigger>
+          <TabsTrigger value="cancelled">Đã hủy</TabsTrigger>
         </TabsList>
 
         {/* Action Buttons */}

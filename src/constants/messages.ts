@@ -37,8 +37,9 @@ export const SUCCESS_MESSAGES = {
 
   // RMA
   rma_batch_created: 'RMA batch created successfully',
-  rma_batch_shipped: 'RMA batch marked as shipped',
+  rma_batch_submitted: 'RMA batch submitted successfully',
   rma_batch_completed: 'RMA batch completed',
+  rma_batch_cancelled: 'RMA batch cancelled',
 
   // General
   changes_saved: 'Changes saved successfully',
@@ -88,8 +89,10 @@ export const ERROR_MESSAGES = {
 
   // RMA
   rma_batch_not_found: 'RMA batch not found',
-  rma_batch_already_shipped: 'RMA batch has already been shipped',
-  cannot_add_to_shipped_batch: 'Cannot add products to shipped batch',
+  rma_batch_already_completed: 'RMA batch has already been completed',
+  rma_batch_already_cancelled: 'RMA batch has already been cancelled',
+  cannot_modify_completed_batch: 'Cannot modify completed batch',
+  cannot_modify_cancelled_batch: 'Cannot modify cancelled batch',
 
   // Permissions
   permission_denied: 'You do not have permission to perform this action',

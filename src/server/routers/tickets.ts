@@ -1956,7 +1956,7 @@ ${changes.join("\n")}
       let warrantyWarehouseId: string | null = null;
       let customerInstalledWarehouseId: string | null = null;
       let inServiceWarehouseId: string | null = null;
-      let rmaStagingWarehouseId: string | null = null;
+      let deadStockWarehouseId: string | null = null;
       let replacementProductInfo: {
         id: string;
         serial_number: string;
@@ -1977,7 +1977,7 @@ ${changes.join("\n")}
             "warranty_stock",
             "customer_installed",
             "in_service",
-            "rma_staging",
+            "dead_stock",
           ]);
 
         const warrantyWarehouse = warehouses?.find(
@@ -1989,20 +1989,20 @@ ${changes.join("\n")}
         const inServiceWarehouse = warehouses?.find(
           (w) => w.warehouse_type === "in_service",
         );
-        const rmaStagingWarehouse = warehouses?.find(
-          (w) => w.warehouse_type === "rma_staging",
+        const deadStockWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "dead_stock",
         );
 
-        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !rmaStagingWarehouse) {
+        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !deadStockWarehouse) {
           throw new Error(
-            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, rma_staging)",
+            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, dead_stock)",
           );
         }
 
         warrantyWarehouseId = warrantyWarehouse.id;
         customerInstalledWarehouseId = customerWarehouse.id;
         inServiceWarehouseId = inServiceWarehouse.id;
-        rmaStagingWarehouseId = rmaStagingWarehouse.id;
+        deadStockWarehouseId = deadStockWarehouse.id;
 
         // Validate replacement product
         const { data: replacementProduct, error: rpError } =
@@ -2106,9 +2106,9 @@ ${changes.join("\n")}
           })
           .eq("id", replacement_product_id);
 
-        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → rma_staging
+        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → dead_stock
         // Only if ticket has serial_number (old product from customer)
-        if (ticket.serial_number && rmaStagingWarehouseId) {
+        if (ticket.serial_number && deadStockWarehouseId) {
           const { data: oldProduct } = await ctx.supabaseAdmin
             .from("physical_products")
             .select("id, serial_number, product_id, virtual_warehouse_id")
@@ -2123,18 +2123,18 @@ ${changes.join("\n")}
               ctx.supabaseAdmin,
               {
                 fromWarehouseId: inServiceWarehouseId,
-                toWarehouseId: rmaStagingWarehouseId,
+                toWarehouseId: deadStockWarehouseId,
                 customerId: ticket.customer_id,
                 physicalProductId: oldProduct.id,
                 serialNumber: oldProduct.serial_number,
                 productId: oldProduct.product_id,
-                notes: `Auto: Chuyển sản phẩm hỏng sang kho RMA - Phiếu ${ticket.ticket_number}`,
+                notes: `Auto: Chuyển sản phẩm hỏng sang Kho Hàng Hỏng - Phiếu ${ticket.ticket_number}`,
                 createdById: profileId,
               },
             );
 
             console.log(
-              `[WARRANTY] Created RMA transfer: ${inboundTransfer.transferNumber}`,
+              `[WARRANTY] Created dead_stock transfer: ${inboundTransfer.transferNumber}`,
             );
           }
         }

@@ -993,13 +993,13 @@ export const inventoryRouter = router({
           };
         }
 
-        // Only accept products from warranty_stock warehouse (RMA eligible inventory)
+        // Only accept products from dead_stock warehouse (faulty products eligible for RMA)
         const warehouse = product.virtual_warehouse as any;
-        if (!warehouse || warehouse.warehouse_type !== "warranty_stock") {
+        if (!warehouse || warehouse.warehouse_type !== "dead_stock") {
           return {
             serial_number: serial,
             status: "invalid" as const,
-            message: `Sản phẩm phải ở kho warranty_stock mới có thể RMA. Hiện tại: "${warehouse?.name || "unknown"}"`,
+            message: `Sản phẩm phải ở Kho Hàng Hỏng (dead_stock) mới có thể RMA. Hiện tại: "${warehouse?.name || "unknown"}"`,
           };
         }
 

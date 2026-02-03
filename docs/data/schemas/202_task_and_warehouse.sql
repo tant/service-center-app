@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE RESTRICT,
   serial_number VARCHAR(255) NOT NULL,
   condition public.product_condition NOT NULL DEFAULT 'new',
-  status public.physical_product_status NOT NULL DEFAULT 'draft',
+  status public.physical_product_status NOT NULL DEFAULT 'active',
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
   previous_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
   manufacturer_warranty_end_date DATE,
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   CONSTRAINT physical_products_serial_unique UNIQUE(serial_number)
 );
 COMMENT ON TABLE public.physical_products IS 'Serialized product instances with warranty and location tracking';
-COMMENT ON COLUMN public.physical_products.status IS 'Lifecycle status: draft (from unapproved receipt) → active (in stock) → issued (out) / disposed (scrapped)';
+COMMENT ON COLUMN public.physical_products.status IS 'Simplified status: active (available) or locked (temporarily unavailable)';
 COMMENT ON COLUMN public.physical_products.virtual_warehouse_id IS 'Virtual warehouse this product belongs to (required - every product must be in a warehouse)';
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_id IS 'Previous virtual warehouse before RMA - used to restore location when removed from RMA batch';
 COMMENT ON COLUMN public.physical_products.manufacturer_warranty_end_date IS 'Manufacturer warranty end date (nullable - managed separately at /inventory/products)';

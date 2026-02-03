@@ -47,16 +47,17 @@ export default function EditTransferPage({ params }: EditTransferPageProps) {
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
   const { data: customers } = trpc.customers.getCustomers.useQuery();
 
-  // Load existing transfer data
+  // Redirect immediately - editing is no longer supported
   useEffect(() => {
     if (transfer && !transferLoading) {
-      // Check if transfer can be edited
-      if (transfer.status !== "draft") {
-        toast.error("Chỉ có thể chỉnh sửa phiếu chuyển ở trạng thái bản nháp");
-        router.push(`/inventory/documents/transfers/${id}`);
-        return;
-      }
+      toast.error("Phiếu chuyển đã hoàn tất, không thể chỉnh sửa");
+      router.push(`/inventory/documents/transfers/${id}`);
+    }
+  }, [transfer, transferLoading, router, id]);
 
+  // This code will not run due to redirect, but kept for TypeScript
+  useEffect(() => {
+    if (transfer && !transferLoading) {
       setFromWarehouseId(transfer.from_virtual_warehouse_id || "");
       setToWarehouseId(transfer.to_virtual_warehouse_id || "");
       setTransferDate(transfer.transfer_date?.split("T")[0] || new Date().toISOString().split("T")[0]);

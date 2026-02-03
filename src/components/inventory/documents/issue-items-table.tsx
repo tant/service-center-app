@@ -30,9 +30,8 @@ export function IssueItemsTable({ issue, onSerialsSelected }: IssueItemsTablePro
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Allow editing when: draft, pending_approval, approved, or completed
-  // v2.0 Workflow: Serial selection is non-blocking and can continue even after approval/completion
-  const canEdit = issue.status === "draft" || issue.status === "pending_approval" || issue.status === "approved" || issue.status === "completed";
+  // Allow editing - status is always 'completed' now
+  const canEdit = issue.status === "completed";
 
   const handleSelectSerials = (itemId: string) => {
     setSelectedItemId(itemId);

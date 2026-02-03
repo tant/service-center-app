@@ -53,16 +53,17 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: false });
   const { data: archiveWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: true });
 
-  // Load existing issue data
+  // Redirect immediately - editing is no longer supported
   useEffect(() => {
     if (issue && !issueLoading) {
-      // Check if issue can be edited
-      if (issue.status !== "draft") {
-        toast.error("Chỉ có thể chỉnh sửa phiếu xuất ở trạng thái bản nháp");
-        router.push(`/inventory/documents/issues/${id}`);
-        return;
-      }
+      toast.error("Phiếu xuất đã hoàn tất, không thể chỉnh sửa");
+      router.push(`/inventory/documents/issues/${id}`);
+    }
+  }, [issue, issueLoading, router, id]);
 
+  // This code will not run due to redirect, but kept for TypeScript
+  useEffect(() => {
+    if (issue && !issueLoading) {
       setIssueType(issue.issue_type as "normal" | "adjustment");
       setVirtualWarehouseId(issue.virtual_warehouse_id || "");
       setToVirtualWarehouseId((issue as any).to_virtual_warehouse_id || "");

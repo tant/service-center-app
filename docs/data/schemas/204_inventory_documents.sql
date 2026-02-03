@@ -34,33 +34,24 @@ CREATE TABLE IF NOT EXISTS public.stock_receipts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   receipt_number VARCHAR(50) NOT NULL UNIQUE,
   receipt_type public.stock_receipt_type NOT NULL DEFAULT 'normal',
-  status public.stock_document_status NOT NULL DEFAULT 'draft',
+  status public.stock_document_status NOT NULL DEFAULT 'completed',
 
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
 
   receipt_date DATE NOT NULL DEFAULT CURRENT_DATE,
   expected_date DATE,
-  completed_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
 
   supplier_id UUID,
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   reference_document_number VARCHAR(100),
 
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  approved_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  approved_at TIMESTAMPTZ,
-  completed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
 
   notes TEXT,
-  rejection_reason TEXT,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-  CONSTRAINT receipt_approved_requires_approver
-    CHECK (status != 'approved' OR approved_by_id IS NOT NULL),
-  CONSTRAINT receipt_completed_requires_completer
-    CHECK (status != 'completed' OR completed_by_id IS NOT NULL)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_stock_receipts_status ON public.stock_receipts(status);
@@ -167,36 +158,26 @@ CREATE TABLE IF NOT EXISTS public.stock_issues (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   issue_number VARCHAR(50) NOT NULL UNIQUE,
   issue_type public.stock_issue_type NOT NULL DEFAULT 'normal',
-  status public.stock_document_status NOT NULL DEFAULT 'draft',
+  status public.stock_document_status NOT NULL DEFAULT 'completed',
 
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
   to_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
 
   issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  completed_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
 
   ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   reference_document_number VARCHAR(100),
 
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  approved_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  approved_at TIMESTAMPTZ,
-  completed_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
 
   auto_generated BOOLEAN NOT NULL DEFAULT false,
-  auto_approve_threshold DECIMAL(12,2),
 
   notes TEXT,
-  rejection_reason TEXT,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-  CONSTRAINT issue_approved_requires_approver
-    CHECK (status != 'approved' OR approved_by_id IS NOT NULL),
-  CONSTRAINT issue_completed_requires_completer
-    CHECK (status != 'completed' OR completed_by_id IS NOT NULL)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_stock_issues_status ON public.stock_issues(status);
@@ -307,19 +288,16 @@ CREATE TRIGGER trigger_validate_issue_serial_physical_product
 CREATE TABLE IF NOT EXISTS public.stock_transfers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   transfer_number VARCHAR(50) NOT NULL UNIQUE,
-  status public.transfer_status NOT NULL DEFAULT 'draft',
+  status public.transfer_status NOT NULL DEFAULT 'completed',
 
   from_virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
   to_virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
 
   transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
   expected_delivery_date DATE,
-  completed_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ DEFAULT NOW(),
 
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  approved_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  approved_at TIMESTAMPTZ,
-  received_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
 
   generated_issue_id UUID REFERENCES public.stock_issues(id) ON DELETE SET NULL,
   generated_receipt_id UUID REFERENCES public.stock_receipts(id) ON DELETE SET NULL,
@@ -327,15 +305,12 @@ CREATE TABLE IF NOT EXISTS public.stock_transfers (
   customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
 
   notes TEXT,
-  rejection_reason TEXT,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT transfer_warehouses_different
-    CHECK (from_virtual_warehouse_id != to_virtual_warehouse_id),
-  CONSTRAINT transfer_approved_requires_approver
-    CHECK (status != 'approved' OR approved_by_id IS NOT NULL)
+    CHECK (from_virtual_warehouse_id != to_virtual_warehouse_id)
 );
 
 CREATE INDEX idx_stock_transfers_status ON public.stock_transfers(status);

@@ -81,18 +81,6 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
               </div>
             </div>
 
-            {transfer.approved_by && (
-              <div className="flex items-start gap-2">
-                <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <div className="text-sm font-medium">Người duyệt</div>
-                  <div className="text-sm text-muted-foreground">
-                    {transfer.approved_by.full_name}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {transfer.received_by && (
               <div className="flex items-start gap-2">
                 <User className="h-4 w-4 mt-0.5 text-muted-foreground" />

@@ -4,12 +4,7 @@
 
 // ==================== Enums ====================
 
-export type StockDocumentStatus =
-  | 'draft'
-  | 'pending_approval'
-  | 'approved'
-  | 'completed'
-  | 'cancelled';
+export type StockDocumentStatus = 'completed';
 
 export type StockReceiptType =
   | 'normal'      // Phiếu nhập bình thường (mặc định)
@@ -19,13 +14,7 @@ export type StockIssueType =
   | 'normal'      // Phiếu xuất bình thường (mặc định)
   | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
-export type TransferStatus =
-  | 'draft'
-  | 'pending_approval'
-  | 'approved'
-  | 'in_transit'
-  | 'completed'
-  | 'cancelled';
+export type TransferStatus = 'completed';
 
 export type StockStatus = 'ok' | 'warning' | 'critical';
 
@@ -56,11 +45,8 @@ export interface StockReceipt {
   rma_batch_id: string | null;
   reference_document_number: string | null;
   created_by_id: string;
-  approved_by_id: string | null;
-  approved_at: string | null;
   completed_by_id: string | null;
   notes: string | null;
-  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,10 +87,6 @@ export interface StockReceiptWithRelations extends StockReceipt {
     id: string;
     full_name: string;
   };
-  approved_by?: {
-    id: string;
-    full_name: string;
-  };
   completed_by?: {
     id: string;
     full_name: string;
@@ -126,13 +108,9 @@ export interface StockIssue {
   rma_batch_id: string | null;
   reference_document_number: string | null;
   created_by_id: string;
-  approved_by_id: string | null;
-  approved_at: string | null;
   completed_by_id: string | null;
   auto_generated: boolean;
-  auto_approve_threshold: number | null;
   notes: string | null;
-  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -174,10 +152,6 @@ export interface StockIssueWithRelations extends StockIssue {
     id: string;
     full_name: string;
   };
-  approved_by?: {
-    id: string;
-    full_name: string;
-  };
   ticket?: {
     id: string;
     ticket_number: string;
@@ -196,13 +170,10 @@ export interface StockTransfer {
   expected_delivery_date: string | null;
   completed_at: string | null;
   created_by_id: string;
-  approved_by_id: string | null;
-  approved_at: string | null;
   received_by_id: string | null;
-  generated_issue_id: string | null;   // NEW: Auto-generated issue document
-  generated_receipt_id: string | null; // NEW: Auto-generated receipt document
+  generated_issue_id: string | null;
+  generated_receipt_id: string | null;
   notes: string | null;
-  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -278,16 +249,3 @@ export interface InventoryStats {
   warning_count: number;
 }
 
-export interface PendingApproval {
-  document_type: 'receipt' | 'issue' | 'transfer';
-  id: string;
-  document_number: string;
-  sub_type: string;
-  status: string;
-  document_date: string;
-  created_by_id: string;
-  created_by_name: string;
-  created_at: string;
-  total_quantity: number;
-  total_value: number;
-}

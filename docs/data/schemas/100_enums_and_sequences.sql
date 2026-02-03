@@ -131,9 +131,9 @@ COMMENT ON TYPE public.product_condition IS 'Physical condition classification f
 DROP TYPE IF EXISTS public.physical_product_status CASCADE;
 CREATE TYPE public.physical_product_status AS ENUM (
   'active',       -- In stock, available
-  'locked'        -- Locked for specific operation (e.g., pending sale confirmation)
+  'issued'        -- Issued in a stock issue document (đã xuất trong phiếu xuất kho)
 );
-COMMENT ON TYPE public.physical_product_status IS 'Simplified status: active (available) or locked (temporarily unavailable)';
+COMMENT ON TYPE public.physical_product_status IS 'Simplified status: active (available) or issued (included in stock issue)';
 
 -- Service Type Enum
 DROP TYPE IF EXISTS public.service_type CASCADE;

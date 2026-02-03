@@ -47,14 +47,13 @@
 | **Trước mốc 1** (khách chưa gửi) | Sản phẩm ở tay khách hàng |
 | **Sau mốc 1** (tạo phiếu yêu cầu) | **Kho Đang Sửa Chữa** — sản phẩm được chuyển cho kỹ thuật viên xử lý |
 | **Sau mốc 2** (tạo phiếu dịch vụ) | **Kho Đang Sửa Chữa** |
-| **Sau mốc 3** (hoàn thành) | **Kho Chờ Trả Hàng** (Khu vực RMA) — chờ trả lại nhà cung cấp/nhà sản xuất |
+| **Sau mốc 3** (hoàn thành) | **Kho Hàng Hỏng** — chờ được thêm vào lô RMA để trả lại nhà cung cấp/nhà sản xuất |
 
 ### Sản phẩm thay thế trả cho khách
 
 | Thời điểm | Vị trí kho |
 |---|---|
 | Chưa cần dùng | **Kho Bảo Hành** — hàng hóa còn bảo hành, sẵn sàng để thay thế cho khách hàng |
-| Được xuất ra để thay thế | **Kho Đang Sửa Chữa** — đi kèm phiếu dịch vụ, đang trong quá trình xử lý |
 | **Sau mốc 3** (hoàn thành) | **Hàng Đã Bán** — đã giao cho khách |
 
 ---
@@ -66,8 +65,8 @@ Trường hợp 1 & 2 (sửa / không sửa được):
   Hàng Đã Bán → Kho Đang Sửa Chữa → Hàng Đã Bán
 
 Trường hợp 3 - Sản phẩm hỏng (bảo hành đổi trả):
-  Hàng Đã Bán → Kho Đang Sửa Chữa → Kho Chờ Trả Hàng (RMA)
+  Hàng Đã Bán → Kho Đang Sửa Chữa → Kho Hàng Hỏng → (Lô RMA) → Kho Chờ Trả Hàng
 
 Trường hợp 3 - Sản phẩm thay thế:
-  Kho Bảo Hành → Kho Đang Sửa Chữa → Hàng Đã Bán
+  Kho Bảo Hành → Hàng Đã Bán
 ```

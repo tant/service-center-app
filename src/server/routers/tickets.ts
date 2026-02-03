@@ -146,8 +146,15 @@ async function sendEmailNotification(
 }
 
 /**
- * Helper function to create and auto-approve a stock transfer
+ * Helper function to create a stock transfer
  * Used for warranty replacement flow to create proper transfer documents
+ *
+ * SIMPLIFIED WORKFLOW (no approval):
+ * 1. Create transfer (status defaults to 'completed')
+ * 2. Create transfer item
+ * 3. Add serial → trigger_process_transfer_serial automatically:
+ *    - Moves physical_product.virtual_warehouse_id
+ *    - Updates stock counts at source and destination
  */
 export async function createAutoTransfer(
   supabaseAdmin: TRPCContext["supabaseAdmin"],
@@ -173,14 +180,14 @@ export async function createAutoTransfer(
     createdById,
   } = params;
 
-  // 1. Create transfer
+  // 1. Create transfer (status defaults to 'completed' per simplified schema)
   const { data: transfer, error: transferError } = await supabaseAdmin
     .from("stock_transfers")
     .insert({
       from_virtual_warehouse_id: fromWarehouseId,
       to_virtual_warehouse_id: toWarehouseId,
       customer_id: customerId,
-      status: "draft",
+      // status defaults to 'completed' - no approval workflow
       notes,
       created_by_id: createdById,
     })
@@ -207,6 +214,12 @@ export async function createAutoTransfer(
   }
 
   // 3. Add serial to transfer
+  // This triggers `trigger_process_transfer_serial` which automatically:
+  // - Updates physical_product.virtual_warehouse_id to destination
+  // - Sets physical_product.previous_virtual_warehouse_id
+  // - Updates physical_product.last_known_customer_id (if customer_id set)
+  // - Decrements stock at source warehouse
+  // - Increments stock at destination warehouse
   const { error: serialError } = await supabaseAdmin
     .from("stock_transfer_serials")
     .insert({
@@ -221,21 +234,7 @@ export async function createAutoTransfer(
     );
   }
 
-  // 4. Approve transfer - triggers will handle:
-  //    - Update physical_product location
-  //    - Generate stock_issue + stock_receipt
-  const { error: approveError } = await supabaseAdmin
-    .from("stock_transfers")
-    .update({
-      status: "approved",
-      approved_by_id: createdById,
-      approved_at: new Date().toISOString(),
-    })
-    .eq("id", transfer.id);
-
-  if (approveError) {
-    throw new Error(`Lỗi duyệt phiếu chuyển kho: ${approveError.message}`);
-  }
+  // No step 4 needed - trigger handles everything on serial insert
 
   return {
     transferId: transfer.id,

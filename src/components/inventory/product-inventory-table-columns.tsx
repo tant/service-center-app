@@ -26,6 +26,22 @@ const CONDITION_COLORS = {
   for_parts: "destructive",
 } as const;
 
+export const STATUS_LABELS: Record<string, string> = {
+  draft: "Nháp",
+  active: "Sẵn sàng",
+  transferring: "Đang chuyển",
+  issued: "Đã xuất",
+  disposed: "Đã hủy",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  draft: "outline",
+  active: "default",
+  transferring: "secondary",
+  issued: "secondary",
+  disposed: "destructive",
+};
+
 interface TableMeta {
   onEdit: (product: PhysicalProductWithRelations) => void;
 }
@@ -86,6 +102,15 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
       ),
     },
     {
+      accessorKey: "status",
+      header: "Trạng Thái",
+      cell: ({ row }) => (
+        <Badge variant={STATUS_COLORS[row.original.status] as "default" | "secondary" | "outline" | "destructive"}>
+          {STATUS_LABELS[row.original.status] || row.original.status}
+        </Badge>
+      ),
+    },
+    {
       accessorKey: "manufacturer_warranty_end_date",
       header: "BH Nhà Máy",
       cell: ({ row }) => (
@@ -110,7 +135,7 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => meta.onEdit(row.original)}
+              onClick={(e) => { e.stopPropagation(); meta.onEdit(row.original); }}
             >
               <IconEdit className="h-4 w-4" />
             </Button>

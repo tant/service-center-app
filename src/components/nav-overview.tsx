@@ -37,16 +37,16 @@ export function NavOverview({
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
               asChild
-              tooltip="Tạo phiếu nhanh"
+              tooltip="Tạo phiếu yêu cầu"
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
             >
               <a
-                href="/operations/tickets/add"
+                href="/operations/service-requests/new"
                 className="flex items-center gap-2"
-                onClick={(e) => handleClick(e, "/tickets/add")}
+                onClick={(e) => handleClick(e, "/operations/service-requests/new")}
               >
                 <IconCirclePlusFilled />
-                <span>Tạo phiếu</span>
+                <span>Tạo phiếu yêu cầu</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

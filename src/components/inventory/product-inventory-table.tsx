@@ -55,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 import { usePhysicalProducts } from "@/hooks/use-warehouse";
 import { trpc } from "@/components/providers/trpc-provider";
 import { EditProductDrawer } from "./edit-product-drawer";
@@ -130,6 +131,8 @@ export function ProductInventoryTable() {
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [warehouseFilter, searchQuery]);
+
+  const router = useRouter();
 
   const handleEdit = React.useCallback((product: PhysicalProductWithRelations) => {
     setEditingProduct(product);
@@ -295,6 +298,8 @@ export function ProductInventoryTable() {
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
+                      className="cursor-pointer"
+                      onClick={() => router.push(`/inventory/products/${row.original.id}`)}
                     >
                       {row.getVisibleCells().map((cell, index) => (
                         <TableCell

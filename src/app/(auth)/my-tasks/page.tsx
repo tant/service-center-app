@@ -6,7 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ClipboardList, RefreshCw } from "lucide-react";
 import { TaskCard } from "@/components/tasks/task-card";
 import { TasksTable } from "@/components/tasks/tasks-table";
-import { TaskFilters, type TaskFilterValues } from "@/components/tasks/task-filters";
+import {
+  TaskFilters,
+  type TaskFilterValues,
+} from "@/components/tasks/task-filters";
 import {
   CompleteTaskDialog,
   BlockTaskDialog,
@@ -43,7 +46,8 @@ export default function MyTasksPage() {
   // Dialog state
   const [completeDialogOpen, setCompleteDialogOpen] = React.useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = React.useState(false);
-  const [selectedTask, setSelectedTask] = React.useState<TaskWithContext | null>(null);
+  const [selectedTask, setSelectedTask] =
+    React.useState<TaskWithContext | null>(null);
 
   // Build query filters
   const queryFilters = React.useMemo(() => {
@@ -61,8 +65,14 @@ export default function MyTasksPage() {
     if (filters.status !== "all") {
       queryFilters.status = filters.status;
     } else {
-      // Default: show active tasks only
-      queryFilters.status = ["pending", "in_progress", "blocked"];
+      // Show all tasks when "all" is selected
+      queryFilters.status = [
+        "pending",
+        "in_progress",
+        "blocked",
+        "completed",
+        "skipped",
+      ];
     }
 
     if (filters.entityType !== "all") {
@@ -81,13 +91,41 @@ export default function MyTasksPage() {
   }, [filters]);
 
   // Fetch tasks with polling every 30 seconds
-  const { data: tasks = [], isLoading, error, refetch } = trpc.tasks.myTasks.useQuery(
-    queryFilters,
-    {
-      refetchInterval: 30000, // 30 seconds
-      refetchOnWindowFocus: true,
-    }
-  );
+  const {
+    data: tasks = [],
+    isLoading,
+    error,
+    refetch,
+  } = trpc.tasks.myTasks.useQuery(queryFilters, {
+    refetchInterval: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Sort tasks: prioritize in_progress and pending first
+  const sortedTasks = React.useMemo(() => {
+    const statusPriority: Record<string, number> = {
+      in_progress: 0,
+      pending: 1,
+      blocked: 2,
+      completed: 3,
+      skipped: 4,
+    };
+
+    return [...tasks].sort((a, b) => {
+      const priorityA = statusPriority[a.status] ?? 5;
+      const priorityB = statusPriority[b.status] ?? 5;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      // Secondary sort by due_date
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    });
+  }, [tasks]);
 
   // Mutations
   const startTaskMutation = trpc.tasks.startTask.useMutation({
@@ -185,7 +223,10 @@ export default function MyTasksPage() {
     const pending = tasks.filter((t) => t.status === "pending").length;
     const blocked = tasks.filter((t) => t.status === "blocked").length;
     const overdue = tasks.filter(
-      (t) => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed"
+      (t) =>
+        t.due_date &&
+        new Date(t.due_date) < new Date() &&
+        t.status !== "completed",
     ).length;
 
     return { total, completed, inProgress, pending, blocked, overdue };
@@ -218,7 +259,9 @@ export default function MyTasksPage() {
           onClick={() => refetch()}
           disabled={isLoading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+          />
           Làm mới
         </Button>
       </PageHeader>
@@ -311,7 +354,7 @@ export default function MyTasksPage() {
                 {filters.assignedTo === "me" ? (
                   // Card UI - For "My Tasks" view
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {tasks.map((task) => (
+                    {sortedTasks.map((task) => (
                       <TaskCard
                         key={task.id}
                         task={task}
@@ -325,7 +368,7 @@ export default function MyTasksPage() {
                   </div>
                 ) : (
                   // Table UI - For "All Tasks" view
-                    <TasksTable tasks={tasks} isLoading={false} />
+                  <TasksTable tasks={sortedTasks} isLoading={false} />
                 )}
               </>
             )}

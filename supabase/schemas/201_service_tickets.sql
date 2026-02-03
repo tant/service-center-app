@@ -50,9 +50,19 @@ CREATE TABLE "service_tickets" (
   "delivery_confirmed_at" TIMESTAMPTZ,
   "delivery_confirmed_by_id" UUID REFERENCES "profiles"("id"),
 
+  -- Ticket completion outcome (Story 01.22 - 2025-12-15)
+  "outcome" public.ticket_outcome,
+  "replacement_product_id" UUID,
+
+  -- Task completion tracking (Outcome Checkpoint feature)
+  "tasks_completed_at" TIMESTAMPTZ,
+
   CONSTRAINT "service_tickets_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "service_tickets_dates_check" CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
-  CONSTRAINT "service_tickets_delivery_requires_address" CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL)
+  CONSTRAINT "service_tickets_delivery_requires_address" CHECK (delivery_method != 'delivery' OR delivery_address IS NOT NULL),
+  CONSTRAINT "chk_replacement_requires_outcome" CHECK (
+    replacement_product_id IS NULL OR outcome = 'warranty_replacement'
+  )
 );
 
 COMMENT ON COLUMN public.service_tickets.workflow_id IS 'Workflow template used for task execution (Phase 2)';
@@ -63,6 +73,9 @@ COMMENT ON COLUMN public.service_tickets.delivery_address IS 'Delivery address i
 COMMENT ON COLUMN public.service_tickets.serial_number IS 'Captured serial number for the product at ticket creation time';
 COMMENT ON COLUMN public.service_tickets.delivery_confirmed_at IS 'Timestamp when delivery to customer was confirmed';
 COMMENT ON COLUMN public.service_tickets.delivery_confirmed_by_id IS 'profiles.id of staff who confirmed delivery';
+COMMENT ON COLUMN public.service_tickets.outcome IS 'Final result: repaired (fixed original), warranty_replacement (issued new product), unrepairable (could not fix)';
+COMMENT ON COLUMN public.service_tickets.replacement_product_id IS 'ID of replacement product from physical_products. Only set when outcome = warranty_replacement';
+COMMENT ON COLUMN public.service_tickets.tasks_completed_at IS 'Timestamp when all required tasks were completed. NULL means tasks not done yet or ticket has no tasks. Used to show outcome selection form.';
 
 -- Indexes
 CREATE INDEX "service_tickets_ticket_number_idx" ON "service_tickets" USING btree ("ticket_number");
@@ -78,6 +91,8 @@ CREATE INDEX "service_tickets_status_created_at_idx" ON "service_tickets" USING 
 CREATE INDEX IF NOT EXISTS idx_service_tickets_workflow ON public.service_tickets(workflow_id) WHERE workflow_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_service_tickets_request ON public.service_tickets(request_id) WHERE request_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_service_tickets_delivery_method ON public.service_tickets(delivery_method) WHERE delivery_method IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_service_tickets_outcome ON public.service_tickets(outcome) WHERE outcome IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_service_tickets_replacement_product ON public.service_tickets(replacement_product_id) WHERE replacement_product_id IS NOT NULL;
 
 -- Triggers
 CREATE TRIGGER "service_tickets_updated_at_trigger"
@@ -125,10 +140,42 @@ CREATE TRIGGER "service_tickets_set_number_trigger"
 -- STATUS CHANGE LOGGING
 -- =====================================================
 
+-- Helper function to get Vietnamese status label
+CREATE OR REPLACE FUNCTION public.get_ticket_status_label_vi(status public.ticket_status)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN CASE status
+    WHEN 'pending' THEN 'Chờ xử lý'
+    WHEN 'in_progress' THEN 'Đang sửa chữa'
+    WHEN 'ready_for_pickup' THEN 'Sẵn sàng bàn giao'
+    WHEN 'completed' THEN 'Hoàn thành'
+    WHEN 'cancelled' THEN 'Hủy bỏ'
+    ELSE status::TEXT
+  END;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Helper function to get Vietnamese status change message for customers
+CREATE OR REPLACE FUNCTION public.get_ticket_status_message_vi(old_status public.ticket_status, new_status public.ticket_status)
+RETURNS TEXT AS $$
+BEGIN
+  -- Generate customer-friendly Vietnamese message based on the new status
+  RETURN CASE new_status
+    WHEN 'pending' THEN 'Phiếu dịch vụ đang chờ xử lý.'
+    WHEN 'in_progress' THEN 'Kỹ thuật viên đang tiến hành sửa chữa thiết bị của bạn.'
+    WHEN 'ready_for_pickup' THEN 'Tất cả công việc đã hoàn thành. Phiếu chuyển sang trạng thái Sẵn sàng bàn giao.'
+    WHEN 'completed' THEN 'Phiếu dịch vụ đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.'
+    WHEN 'cancelled' THEN 'Phiếu dịch vụ đã bị hủy bỏ.'
+    ELSE 'Trạng thái phiếu đã thay đổi từ "' || public.get_ticket_status_label_vi(old_status) || '" sang "' || public.get_ticket_status_label_vi(new_status) || '".'
+  END;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
 CREATE OR REPLACE FUNCTION public.log_status_change()
 RETURNS TRIGGER AS $$
 DECLARE
   profile_id_var UUID;
+  customer_message TEXT;
 BEGIN
   IF (tg_op = 'UPDATE' AND old.status IS DISTINCT FROM new.status) THEN
     -- Use updated_by if available, otherwise lookup profile from auth.uid()
@@ -141,8 +188,12 @@ BEGIN
       WHERE user_id = auth.uid();
     END IF;
 
+    -- Generate Vietnamese customer-friendly message
+    customer_message := public.get_ticket_status_message_vi(old.status, new.status);
+
+    -- Insert customer-visible comment (Vietnamese)
     INSERT INTO public.service_ticket_comments (ticket_id, comment, comment_type, is_internal, created_by)
-    VALUES (new.id, 'Status changed from "' || old.status || '" to "' || new.status || '"', 'status_change', false, profile_id_var);
+    VALUES (new.id, customer_message, 'status_change', false, profile_id_var);
   END IF;
   RETURN new;
 END;

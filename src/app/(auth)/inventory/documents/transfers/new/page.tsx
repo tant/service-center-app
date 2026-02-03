@@ -252,7 +252,10 @@ export default function CreateTransferPage() {
                               type="number"
                               min="1"
                               value={item.quantity}
-                              onChange={(e) => handleItemChange(index, "quantity", Number.parseInt(e.target.value))}
+                              onChange={(e) => {
+                              const val = Number.parseInt(e.target.value);
+                              handleItemChange(index, "quantity", Number.isNaN(val) ? 0 : val);
+                            }}
                             />
                           </div>
 

@@ -21,6 +21,9 @@ import {
   IconClipboardText,
   IconTool,
   IconCurrencyDollar,
+  IconCircleCheck,
+  IconRefresh,
+  IconX,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { TicketComments } from "@/components/ticket-comments";
@@ -74,6 +77,16 @@ async function getTicketData(ticketId: string) {
       workflows (
         id,
         name
+      ),
+      replacement_product:physical_products!replacement_product_id (
+        id,
+        serial_number,
+        condition,
+        product:products (
+          id,
+          name,
+          model
+        )
       ),
       service_ticket_parts (
         id,
@@ -172,15 +185,23 @@ async function getTicketData(ticketId: string) {
   );
   console.log("[TicketDetailPage] === END TICKET DATA ===");
 
+  // Check if ticket has any tasks
+  const { count: taskCount } = await supabase
+    .from("entity_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("entity_type", "service_ticket")
+    .eq("entity_id", ticketId);
+
   // Tasks are now fetched client-side by TaskListAccordion component
   // This provides real-time updates and better separation of concerns
-  return ticket;
+  return { ...ticket, _taskCount: taskCount || 0 };
 }
 
 function getStatusBadge(status: string) {
   const statusMap = {
     pending: { label: "Chờ xử lý", variant: "pending" as const },
     in_progress: { label: "Đang xử lý", variant: "processing" as const },
+    ready_for_pickup: { label: "Sẵn sàng bàn giao", variant: "ready" as const },
     completed: { label: "Hoàn thành", variant: "resolved" as const },
     cancelled: { label: "Đã hủy", variant: "closed" as const },
   };
@@ -214,6 +235,33 @@ function getWarrantyType(warrantyType: string) {
     goodwill: "Thiện chí",
   };
   return warrantyMap[warrantyType as keyof typeof warrantyMap] || warrantyType;
+}
+
+function getOutcomeDisplay(outcome: string | null) {
+  if (!outcome) return null;
+
+  const outcomeMap = {
+    repaired: {
+      label: "Đã sửa chữa",
+      icon: <IconCircleCheck className="h-5 w-5 text-green-600" />,
+      variant: "resolved" as const,
+      description: "Sản phẩm đã được sửa chữa thành công",
+    },
+    warranty_replacement: {
+      label: "Đổi bảo hành",
+      icon: <IconRefresh className="h-5 w-5 text-blue-600" />,
+      variant: "processing" as const,
+      description: "Sản phẩm đã được thay thế bằng máy mới",
+    },
+    unrepairable: {
+      label: "Không thể sửa",
+      icon: <IconX className="h-5 w-5 text-red-600" />,
+      variant: "closed" as const,
+      description: "Sản phẩm không thể sửa chữa hoặc thay thế",
+    },
+  };
+
+  return outcomeMap[outcome as keyof typeof outcomeMap] || null;
 }
 
 export default async function Page({ params }: PageProps) {
@@ -264,13 +312,18 @@ export default async function Page({ params }: PageProps) {
       <PageHeader title={`Phiếu Dịch Vụ ${ticket.ticket_number}`}>
         <TicketActions
           ticketId={ticketId}
+          ticketNumber={ticket.ticket_number}
           ticketStatus={ticket.status}
+          warrantyType={ticket.warranty_type}
           currentTemplateId={ticket.workflow_id || undefined}
           currentTemplateName={
             Array.isArray(ticket.workflows)
               ? ticket.workflows[0]?.name
               : ticket.workflows?.name
           }
+          tasksCompletedAt={ticket.tasks_completed_at}
+          outcome={ticket.outcome}
+          hasTasks={ticket._taskCount > 0}
         />
       </PageHeader>
 
@@ -362,6 +415,72 @@ export default async function Page({ params }: PageProps) {
           </Card>
         </div>
 
+        {/* Outcome Info - Show when ticket is completed */}
+        {ticket.outcome && (
+          <Card className="border-2 border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {getOutcomeDisplay(ticket.outcome)?.icon}
+                Kết quả xử lý
+              </CardTitle>
+              <CardDescription>
+                {getOutcomeDisplay(ticket.outcome)?.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground">Kết quả:</span>
+                <Badge variant={getOutcomeDisplay(ticket.outcome)?.variant}>
+                  {getOutcomeDisplay(ticket.outcome)?.label}
+                </Badge>
+              </div>
+
+              {/* Replacement Product Info */}
+              {ticket.outcome === "warranty_replacement" &&
+                ticket.replacement_product && (
+                  <div className="border rounded-lg p-4 bg-background">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Sản phẩm thay thế
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Serial Number:
+                        </span>
+                        <Link
+                          href={`/inventory/products/${ticket.replacement_product.serial_number}`}
+                          className="font-mono font-medium text-blue-600 hover:underline"
+                        >
+                          {ticket.replacement_product.serial_number}
+                        </Link>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sản phẩm:</span>
+                        <span>
+                          {ticket.replacement_product.product?.name || "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Model:</span>
+                        <span>
+                          {ticket.replacement_product.product?.model || "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Tình trạng:
+                        </span>
+                        <Badge variant="outline">
+                          {ticket.replacement_product.condition}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Product Info */}
         <Card>
           <CardHeader>
@@ -394,9 +513,16 @@ export default async function Page({ params }: PageProps) {
                 <p className="text-sm text-muted-foreground font-medium">
                   Serial
                 </p>
-                <p className="font-mono">
-                  {ticket.serial_number || "—"}
-                </p>
+                {ticket.serial_number ? (
+                  <Link
+                    href={`/inventory/products/${ticket.serial_number}`}
+                    className="font-mono text-blue-600 hover:underline"
+                  >
+                    {ticket.serial_number}
+                  </Link>
+                ) : (
+                  <p className="font-mono">—</p>
+                )}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-medium">
@@ -437,7 +563,9 @@ export default async function Page({ params }: PageProps) {
             <TaskListAccordion
               entityType="service_ticket"
               entityId={ticketId}
-              allowActions={ticket.status !== 'completed' && ticket.status !== 'cancelled'}
+              allowActions={
+                ticket.status !== "completed" && ticket.status !== "cancelled"
+              }
             />
           </CardContent>
         </Card>

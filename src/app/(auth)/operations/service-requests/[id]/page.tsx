@@ -7,6 +7,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,14 +27,14 @@ import { TaskCard } from "@/components/tasks/task-card";
 import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
 import { ListTodo } from "lucide-react";
 
-// Status mapping
+// Status mapping using existing Badge variants
 const STATUS_MAP = {
   draft: { label: "Nháp", variant: "outline" as const },
   submitted: { label: "Đã gửi", variant: "secondary" as const },
-  pickingup: { label: "Chờ lấy hàng", variant: "secondary" as const },
-  received: { label: "Đã tiếp nhận", variant: "default" as const },
-  processing: { label: "Đang xử lý", variant: "default" as const },
-  completed: { label: "Hoàn thành", variant: "default" as const },
+  pickingup: { label: "Chờ lấy hàng", variant: "processing" as const },
+  received: { label: "Đã tiếp nhận", variant: "ready" as const },
+  processing: { label: "Đang xử lý", variant: "processing" as const },
+  completed: { label: "Hoàn thành", variant: "resolved" as const },
   cancelled: { label: "Đã hủy", variant: "destructive" as const },
 };
 
@@ -383,7 +384,16 @@ export default function ServiceRequestDetailPage() {
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Serial Number</p>
-                          <p className="font-mono text-sm font-medium">{item.serial_number}</p>
+                          {item.serial_number ? (
+                            <Link
+                              href={`/inventory/products/${item.serial_number}`}
+                              className="font-mono text-sm font-medium text-blue-600 hover:underline"
+                            >
+                              {item.serial_number}
+                            </Link>
+                          ) : (
+                            <p className="font-mono text-sm font-medium">—</p>
+                          )}
                         </div>
                         {item.issue_description && (
                           <div>

@@ -17,7 +17,10 @@ import {
   requireAdmin,
 } from "../middleware/requireRole";
 import { logAudit } from "../utils/auditLog";
-import { createTasksFromWorkflow, getTicketTasksWithProgress } from "../utils/workflow-tasks";
+import {
+  createTasksFromWorkflow,
+  getTicketTasksWithProgress,
+} from "../utils/workflow-tasks";
 
 /**
  * Helper function to send email notifications (Story 1.15)
@@ -38,27 +41,27 @@ async function sendEmailNotification(
     deliveryDate?: string;
   },
   serviceRequestId?: string,
-  serviceTicketId?: string
+  serviceTicketId?: string,
 ) {
   try {
     // Check rate limiting (100 emails/day per customer)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count } = await ctx.supabaseAdmin
-      .from('email_notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_email', recipientEmail)
-      .gte('created_at', oneDayAgo);
+      .from("email_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_email", recipientEmail)
+      .gte("created_at", oneDayAgo);
 
     if (count && count >= 100) {
       console.log(`[EMAIL SKIPPED] Rate limit exceeded for ${recipientEmail}`);
-      return { success: false, reason: 'rate_limit' };
+      return { success: false, reason: "rate_limit" };
     }
 
     // Check email preferences
     const { data: customer } = await ctx.supabaseAdmin
-      .from('customers')
-      .select('email_preferences')
-      .eq('email', recipientEmail)
+      .from("customers")
+      .select("email_preferences")
+      .eq("email", recipientEmail)
       .single();
 
     if (customer?.email_preferences) {
@@ -70,7 +73,7 @@ async function sendEmailNotification(
     }
 
     // Generate unsubscribe URL
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3025"}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
 
     // Generate email content
     const { html, text, subject } = getEmailTemplate(emailType, {
@@ -81,7 +84,7 @@ async function sendEmailNotification(
 
     // Log email to database
     const { data: emailLog, error: logError } = await ctx.supabaseAdmin
-      .from('email_notifications')
+      .from("email_notifications")
       .insert({
         email_type: emailType,
         recipient_email: recipientEmail,
@@ -90,7 +93,7 @@ async function sendEmailNotification(
         html_body: html,
         text_body: text,
         context,
-        status: 'pending',
+        status: "pending",
         service_request_id: serviceRequestId,
         service_ticket_id: serviceTicketId,
       })
@@ -98,7 +101,7 @@ async function sendEmailNotification(
       .single();
 
     if (logError) {
-      console.error('[EMAIL ERROR] Failed to log email:', logError);
+      console.error("[EMAIL ERROR] Failed to log email:", logError);
       return { success: false, error: logError.message };
     }
 
@@ -106,34 +109,138 @@ async function sendEmailNotification(
     try {
       // Simulate sending
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'sent',
+          status: "sent",
           sent_at: new Date().toISOString(),
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
-      console.log(`[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`);
+      console.log(
+        `[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`,
+      );
       return { success: true, emailId: emailLog.id };
     } catch (error) {
       // Mark as failed
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'failed',
+          status: "failed",
           failed_at: new Date().toISOString(),
-          error_message: error instanceof Error ? error.message : 'Unknown error',
+          error_message:
+            error instanceof Error ? error.message : "Unknown error",
           retry_count: 1,
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
       console.error(`[EMAIL FAILED] ${emailType}:`, error);
       return { success: false, willRetry: true };
     }
   } catch (error) {
-    console.error('[EMAIL ERROR] Unexpected error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error("[EMAIL ERROR] Unexpected error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
+}
+
+/**
+ * Helper function to create and auto-approve a stock transfer
+ * Used for warranty replacement flow to create proper transfer documents
+ */
+export async function createAutoTransfer(
+  supabaseAdmin: TRPCContext["supabaseAdmin"],
+  params: {
+    fromWarehouseId: string;
+    toWarehouseId: string;
+    customerId: string;
+    physicalProductId: string;
+    serialNumber: string;
+    productId: string;
+    notes: string;
+    createdById: string;
+  },
+): Promise<{ transferId: string; transferNumber: string }> {
+  const {
+    fromWarehouseId,
+    toWarehouseId,
+    customerId,
+    physicalProductId,
+    serialNumber,
+    productId,
+    notes,
+    createdById,
+  } = params;
+
+  // 1. Create transfer
+  const { data: transfer, error: transferError } = await supabaseAdmin
+    .from("stock_transfers")
+    .insert({
+      from_virtual_warehouse_id: fromWarehouseId,
+      to_virtual_warehouse_id: toWarehouseId,
+      customer_id: customerId,
+      status: "draft",
+      notes,
+      created_by_id: createdById,
+    })
+    .select("id, transfer_number")
+    .single();
+
+  if (transferError || !transfer) {
+    throw new Error(`Lỗi tạo phiếu chuyển kho: ${transferError?.message}`);
+  }
+
+  // 2. Create transfer item
+  const { data: transferItem, error: itemError } = await supabaseAdmin
+    .from("stock_transfer_items")
+    .insert({
+      transfer_id: transfer.id,
+      product_id: productId,
+      quantity: 1,
+    })
+    .select("id")
+    .single();
+
+  if (itemError || !transferItem) {
+    throw new Error(`Lỗi tạo item chuyển kho: ${itemError?.message}`);
+  }
+
+  // 3. Add serial to transfer
+  const { error: serialError } = await supabaseAdmin
+    .from("stock_transfer_serials")
+    .insert({
+      transfer_item_id: transferItem.id,
+      physical_product_id: physicalProductId,
+      serial_number: serialNumber,
+    });
+
+  if (serialError) {
+    throw new Error(
+      `Lỗi thêm serial vào phiếu chuyển kho: ${serialError.message}`,
+    );
+  }
+
+  // 4. Approve transfer - triggers will handle:
+  //    - Update physical_product location
+  //    - Generate stock_issue + stock_receipt
+  const { error: approveError } = await supabaseAdmin
+    .from("stock_transfers")
+    .update({
+      status: "approved",
+      approved_by_id: createdById,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", transfer.id);
+
+  if (approveError) {
+    throw new Error(`Lỗi duyệt phiếu chuyển kho: ${approveError.message}`);
+  }
+
+  return {
+    transferId: transfer.id,
+    transferNumber: transfer.transfer_number,
+  };
 }
 
 function validateStatusTransition(
@@ -189,6 +296,9 @@ const createTicketSchema = z.object({
   description: z.string().min(1, "Issue description is required"),
   priority_level: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).default("paid"),
+  outcome: z
+    .enum(["repaired", "warranty_replacement", "unrepairable"])
+    .default("warranty_replacement"),
   service_fee: z.number().min(0, "Service fee must be non-negative"),
   diagnosis_fee: z
     .number()
@@ -211,7 +321,13 @@ const createTicketSchema = z.object({
 
 const updateTicketStatusSchema = z.object({
   id: z.string().uuid("Ticket ID must be a valid UUID"),
-  status: z.enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"]),
+  status: z.enum([
+    "pending",
+    "in_progress",
+    "ready_for_pickup",
+    "completed",
+    "cancelled",
+  ]),
 });
 
 const updateTicketSchema = z.object({
@@ -223,7 +339,13 @@ const updateTicketSchema = z.object({
   priority_level: z.enum(["low", "normal", "high", "urgent"]).optional(),
   warranty_type: z.enum(["warranty", "paid", "goodwill"]).optional(),
   status: z
-    .enum(["pending", "in_progress", "ready_for_pickup", "completed", "cancelled"])
+    .enum([
+      "pending",
+      "in_progress",
+      "ready_for_pickup",
+      "completed",
+      "cancelled",
+    ])
     .optional(),
   service_fee: z.number().min(0, "Service fee must be non-negative").optional(),
   diagnosis_fee: z
@@ -236,7 +358,35 @@ const updateTicketSchema = z.object({
     .optional(),
   notes: z.string().nullable().optional(),
   assigned_to: z.string().uuid().nullable().optional(),
+  outcome: z
+    .enum(["repaired", "warranty_replacement", "unrepairable"])
+    .optional(),
 });
+
+// Story 01.22: Complete ticket with outcome
+const completeTicketSchema = z
+  .object({
+    ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+    outcome: z.enum(["repaired", "warranty_replacement", "unrepairable"]),
+    replacement_product_id: z
+      .string()
+      .uuid("Replacement product ID must be a valid UUID")
+      .optional(),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // If outcome = warranty_replacement, replacement_product_id is required
+      if (data.outcome === "warranty_replacement") {
+        return !!data.replacement_product_id;
+      }
+      return true;
+    },
+    {
+      message: "Phải chọn sản phẩm thay thế khi đổi bảo hành",
+      path: ["replacement_product_id"],
+    },
+  );
 
 export const ticketsRouter = router({
   getPendingCount: publicProcedure
@@ -259,30 +409,30 @@ export const ticketsRouter = router({
   getDailyRevenue: publicProcedure
     .use(requireManagerOrAbove)
     .query(async ({ ctx }) => {
-    const { data: tickets, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select("created_at, total_cost")
-      .eq("status", "completed")
-      .order("created_at", { ascending: true });
+      const { data: tickets, error } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("created_at, total_cost")
+        .eq("status", "completed")
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch tickets revenue: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch tickets revenue: ${error.message}`);
+      }
 
-    // Group by date and calculate total revenue
-    const dailyRevenue =
-      tickets?.reduce((acc: Record<string, number>, ticket) => {
-        const date = new Date(ticket.created_at).toISOString().split("T")[0];
-        acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
-        return acc;
-      }, {}) || {};
+      // Group by date and calculate total revenue
+      const dailyRevenue =
+        tickets?.reduce((acc: Record<string, number>, ticket) => {
+          const date = new Date(ticket.created_at).toISOString().split("T")[0];
+          acc[date] = (acc[date] || 0) + (ticket.total_cost || 0);
+          return acc;
+        }, {}) || {};
 
-    // Convert to array format for chart
-    return Object.entries(dailyRevenue).map(([date, revenue]) => ({
-      date,
-      revenue,
-    }));
-  }),
+      // Convert to array format for chart
+      return Object.entries(dailyRevenue).map(([date, revenue]) => ({
+        date,
+        revenue,
+      }));
+    }),
 
   createTicket: publicProcedure
     .use(requireOperationsStaff)
@@ -295,7 +445,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Note: Ticket number is now auto-generated by database trigger
       // No need to manually generate it here
@@ -358,6 +511,7 @@ export const ticketsRouter = router({
           service_fee: input.service_fee,
           diagnosis_fee: input.diagnosis_fee,
           discount_amount: input.discount_amount,
+          outcome: input.outcome,
           parts_total: partsTotal,
           // total_cost will be calculated automatically by generated column
         })
@@ -375,7 +529,7 @@ export const ticketsRouter = router({
           tasksCount = await createTasksFromWorkflow(
             ctx,
             ticketData.id,
-            input.workflow_id
+            input.workflow_id,
           );
         } catch (error) {
           console.error(`Failed to create tasks from workflow: ${error}`);
@@ -506,8 +660,8 @@ export const ticketsRouter = router({
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
       const { data: tickets, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select(`
+        .from("service_tickets")
+        .select(`
         *,
         customers (
           id,
@@ -525,14 +679,14 @@ export const ticketsRouter = router({
           )
         )
       `)
-      .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch tickets: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch tickets: ${error.message}`);
+      }
 
-    return tickets || [];
-  }),
+      return tickets || [];
+    }),
 
   getTicket: publicProcedure
     .use(requireAnyAuthenticated)
@@ -618,7 +772,9 @@ export const ticketsRouter = router({
 
   getTasks: publicProcedure
     .use(requireAnyAuthenticated)
-    .input(z.object({ ticketId: z.string().uuid("Ticket ID must be a valid UUID") }))
+    .input(
+      z.object({ ticketId: z.string().uuid("Ticket ID must be a valid UUID") }),
+    )
     .query(async ({ input, ctx }) => {
       const result = await getTicketTasksWithProgress(ctx, input.ticketId);
       return result;
@@ -651,7 +807,10 @@ export const ticketsRouter = router({
       validateStatusTransition(oldStatus, input.status);
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -683,10 +842,10 @@ export const ticketsRouter = router({
       // No need to create manual comment here
 
       // Story 1.15: Send email notification when service is completed
-      if (input.status === 'completed') {
+      if (input.status === "completed") {
         // Fetch customer and product info for email
         const { data: fullTicket } = await ctx.supabaseAdmin
-          .from('service_tickets')
+          .from("service_tickets")
           .select(`
             ticket_number,
             serial_number,
@@ -694,28 +853,33 @@ export const ticketsRouter = router({
             customer:customers(email, name),
             product:products(name)
           `)
-          .eq('id', input.id)
+          .eq("id", input.id)
           .single();
 
         if (fullTicket && fullTicket.customer && fullTicket.product) {
-          const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
-          const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
+          const customer = Array.isArray(fullTicket.customer)
+            ? fullTicket.customer[0]
+            : fullTicket.customer;
+          const product = Array.isArray(fullTicket.product)
+            ? fullTicket.product[0]
+            : fullTicket.product;
 
           sendEmailNotification(
             ctx,
-            'service_completed',
+            "service_completed",
             customer.email,
             customer.name,
             {
               ticketNumber: fullTicket.ticket_number,
               productName: product.name,
               serialNumber: fullTicket.serial_number,
-              completedDate: fullTicket.completed_at || new Date().toISOString(),
+              completedDate:
+                fullTicket.completed_at || new Date().toISOString(),
             },
             undefined,
-            input.id
+            input.id,
           ).catch((err) => {
-            console.error('[EMAIL ERROR] service_completed failed:', err);
+            console.error("[EMAIL ERROR] service_completed failed:", err);
           });
         }
       }
@@ -751,7 +915,8 @@ export const ticketsRouter = router({
           assigned_to,
           total_cost,
           issue_description,
-          notes
+          notes,
+          outcome
         `)
         .eq("id", id)
         .single();
@@ -779,7 +944,10 @@ export const ticketsRouter = router({
       }
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Build update object with only provided fields
       const updateObject: any = {
@@ -808,6 +976,13 @@ export const ticketsRouter = router({
       if (updateData.notes !== undefined) updateObject.notes = updateData.notes;
       if (updateData.assigned_to !== undefined)
         updateObject.assigned_to = updateData.assigned_to;
+      if (updateData.outcome !== undefined) {
+        updateObject.outcome = updateData.outcome;
+        // Clear replacement_product_id if outcome changes away from warranty_replacement
+        if (updateData.outcome !== "warranty_replacement") {
+          updateObject.replacement_product_id = null;
+        }
+      }
 
       const { data: ticketData, error: ticketError } = await ctx.supabaseAdmin
         .from("service_tickets")
@@ -950,10 +1125,10 @@ export const ticketsRouter = router({
           // New assignment
           const { data: newTechnician } = await ctx.supabaseAdmin
             .from("profiles")
-            .select("name")
-            .eq("user_id", updateData.assigned_to)
+            .select("full_name")
+            .eq("id", updateData.assigned_to)
             .single();
-          assignmentComment = `👤 Đã phân công cho: ${newTechnician?.name || "Kỹ thuật viên"}`;
+          assignmentComment = `👤 Đã phân công cho: ${newTechnician?.full_name || "Kỹ thuật viên"}`;
         } else if (
           updateData.assigned_to === null &&
           currentTicket.assigned_to !== null
@@ -964,10 +1139,10 @@ export const ticketsRouter = router({
           // Change assignment
           const { data: newTechnician } = await ctx.supabaseAdmin
             .from("profiles")
-            .select("name")
-            .eq("user_id", updateData.assigned_to)
+            .select("full_name")
+            .eq("id", updateData.assigned_to)
             .single();
-          assignmentComment = `👤 Chuyển giao từ ${assignedTechnicianName || "Kỹ thuật viên"} sang ${newTechnician?.name || "Kỹ thuật viên"}`;
+          assignmentComment = `👤 Chuyển giao từ ${assignedTechnicianName || "Kỹ thuật viên"} sang ${newTechnician?.full_name || "Kỹ thuật viên"}`;
         }
 
         await createAutoComment({
@@ -1032,7 +1207,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get part information for the comment
       const { data: partInfo, error: partInfoError } = await ctx.supabaseAdmin
@@ -1147,7 +1325,10 @@ export const ticketsRouter = router({
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get current part data for comparison
       const { data: currentPart, error: currentPartError } =
@@ -1317,7 +1498,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       // Get part data before deletion for the auto-comment
       const { data: partData, error: fetchError } = await ctx.supabaseAdmin
@@ -1424,7 +1608,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: commentData, error: commentError } = await ctx.supabaseAdmin
         .from("service_ticket_comments")
@@ -1475,7 +1662,10 @@ ${changes.join("\n")}
       const user = ctx.user;
 
       // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        user.id,
+      );
 
       const { data: attachmentData, error: attachmentError } =
         await ctx.supabaseAdmin
@@ -1553,114 +1743,6 @@ ${changes.join("\n")}
   // ========================================
 
   /**
-   * Story 1.14: Confirm delivery
-   * AC 1, 2, 3: Staff marks ticket as delivered
-   */
-  confirmDelivery: publicProcedure
-    .use(requireOperationsStaff)
-    .input(
-      z.object({
-        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      // User is guaranteed by middleware
-      if (!ctx.user) {
-        throw new Error("User context not available");
-      }
-      const user = ctx.user;
-
-      // Lookup profile ID from auth user ID
-      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, user.id);
-
-      // Verify ticket exists and is ready for pickup
-      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
-        .from("service_tickets")
-        .select("id, ticket_number, status")
-        .eq("id", input.ticket_id)
-        .single();
-
-      if (ticketError || !ticket) {
-        throw new Error("Ticket not found");
-      }
-
-      if (ticket.status !== "ready_for_pickup") {
-        throw new Error(
-          "Only tickets ready for pickup can be marked as delivered. Current status: " +
-            ticket.status,
-        );
-      }
-
-      // Update ticket with delivery confirmation and close status
-      const { data: updatedTicket, error: updateError } =
-        await ctx.supabaseAdmin
-          .from("service_tickets")
-          .update({
-            status: "completed",
-            delivery_confirmed_at: new Date().toISOString(),
-            delivery_confirmed_by_id: profileId,
-          })
-          .eq("id", input.ticket_id)
-          .select()
-          .single();
-
-      if (updateError) {
-        throw new Error(
-          `Failed to confirm delivery: ${updateError.message}`,
-        );
-      }
-
-      // Add comment about delivery confirmation
-      await ctx.supabaseAdmin.from("service_ticket_comments").insert({
-        ticket_id: input.ticket_id,
-        comment: "Đã xác nhận giao hàng cho khách hàng",
-        comment_type: "note",
-        is_internal: false,
-        created_by: profileId,
-      });
-
-      // Story 1.15: Send delivery confirmation email
-      const { data: fullTicket } = await ctx.supabaseAdmin
-        .from('service_tickets')
-        .select(`
-          ticket_number,
-          serial_number,
-          delivery_confirmed_at,
-          customer:customers(email, name),
-          product:products(name)
-        `)
-        .eq('id', input.ticket_id)
-        .single();
-
-      if (fullTicket && fullTicket.customer && fullTicket.product) {
-        const customer = Array.isArray(fullTicket.customer) ? fullTicket.customer[0] : fullTicket.customer;
-        const product = Array.isArray(fullTicket.product) ? fullTicket.product[0] : fullTicket.product;
-
-        sendEmailNotification(
-          ctx,
-          'delivery_confirmed',
-          customer.email,
-          customer.name,
-          {
-            ticketNumber: fullTicket.ticket_number,
-            productName: product.name,
-            serialNumber: fullTicket.serial_number,
-            deliveryDate: fullTicket.delivery_confirmed_at || new Date().toISOString(),
-          },
-          undefined,
-          input.ticket_id
-        ).catch((err) => {
-          console.error('[EMAIL ERROR] delivery_confirmed failed:', err);
-        });
-      }
-
-      return {
-        success: true,
-        ticket: updatedTicket,
-      };
-    }),
-
-  /**
    * Story 1.14: Get list of completed tickets pending delivery confirmation
    * AC 4, 5: List view of tickets awaiting delivery confirmation
    */
@@ -1679,7 +1761,11 @@ ${changes.join("\n")}
       }
 
       // Query tickets ready for pickup/delivery (not yet confirmed)
-      const { data: tickets, error: ticketsError, count } = await ctx.supabaseAdmin
+      const {
+        data: tickets,
+        error: ticketsError,
+        count,
+      } = await ctx.supabaseAdmin
         .from("service_tickets")
         .select(
           `
@@ -1719,18 +1805,602 @@ ${changes.join("\n")}
         return 0;
       }
 
-    const { count, error } = await ctx.supabaseAdmin
-      .from("service_tickets")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "ready_for_pickup");
+      const { count, error } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "ready_for_pickup");
 
-    if (error) {
-      console.error("Failed to get pending deliveries count:", error);
-      return 0;
-    }
+      if (error) {
+        console.error("Failed to get pending deliveries count:", error);
+        return 0;
+      }
 
-    return count || 0;
-  }),
+      return count || 0;
+    }),
+
+  /**
+   * Story 01.22: Get available replacement products for warranty ticket
+   * Returns physical products from warranty_stock that match the ticket's product_id
+   */
+  getAvailableReplacements: publicProcedure
+    .use(requireOperationsStaff)
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      // Get ticket's product_id
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("product_id, warranty_type")
+        .eq("id", input.ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Ticket not found");
+      }
+
+      // Only warranty tickets can have replacements
+      if (ticket.warranty_type !== "warranty") {
+        return [];
+      }
+
+      // Get warranty_stock virtual warehouse
+      const { data: warrantyWarehouse, error: warehouseError } =
+        await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id")
+          .eq("warehouse_type", "warranty_stock")
+          .limit(1)
+          .single();
+
+      if (warehouseError || !warrantyWarehouse) {
+        console.error("No warranty_stock warehouse found");
+        return [];
+      }
+
+      // Get available products from warranty_stock (any product type)
+      const { data: products, error: productsError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(`
+          id,
+          serial_number,
+          condition,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
+          product:products (
+            id,
+            name,
+            model,
+            brand:brands (
+              name
+            )
+          )
+        `)
+        .eq("virtual_warehouse_id", warrantyWarehouse.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: true });
+
+      if (productsError) {
+        console.error("Failed to get replacement products:", productsError);
+        throw new Error("Không thể lấy danh sách sản phẩm thay thế");
+      }
+
+      return products || [];
+    }),
+
+  /**
+   * Set outcome for ticket and transition to ready_for_pickup
+   * Requires all tasks to be completed (if ticket has tasks)
+   * Handles inventory movements for warranty_replacement outcome
+   */
+  setOutcome: publicProcedure
+    .use(requireOperationsStaff)
+    .input(completeTicketSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { ticket_id, outcome, replacement_product_id, notes } = input;
+
+      // User is guaranteed by middleware
+      if (!ctx.user) {
+        throw new Error("User context not available");
+      }
+
+      // 1. Validate ticket exists and check current status
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(`
+          id,
+          status,
+          warranty_type,
+          customer_id,
+          product_id,
+          ticket_number,
+          serial_number,
+          tasks_completed_at,
+          customer:customers (
+            email,
+            name
+          ),
+          product:products (
+            name
+          )
+        `)
+        .eq("id", ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Phiếu không tồn tại");
+      }
+
+      // Only allow from in_progress status
+      if (ticket.status !== "in_progress") {
+        throw new Error(
+          `Chỉ có thể chọn kết quả cho phiếu đang xử lý. Trạng thái hiện tại: ${ticket.status}`,
+        );
+      }
+
+      // Check if ticket has tasks - if so, they must be completed
+      const { count: taskCount } = await ctx.supabaseAdmin
+        .from("entity_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("entity_type", "service_ticket")
+        .eq("entity_id", ticket_id);
+
+      if (taskCount && taskCount > 0 && !ticket.tasks_completed_at) {
+        throw new Error(
+          "Phải hoàn thành tất cả công việc trước khi chọn kết quả xử lý",
+        );
+      }
+
+      // 2. If warranty_replacement, validate replacement product
+      let warrantyWarehouseId: string | null = null;
+      let customerInstalledWarehouseId: string | null = null;
+      let inServiceWarehouseId: string | null = null;
+      let rmaStagingWarehouseId: string | null = null;
+      let replacementProductInfo: {
+        id: string;
+        serial_number: string;
+        product_id: string;
+      } | null = null;
+
+      if (outcome === "warranty_replacement") {
+        // Only warranty tickets can have warranty_replacement outcome
+        if (ticket.warranty_type !== "warranty") {
+          throw new Error("Chỉ phiếu bảo hành mới được đổi sản phẩm");
+        }
+
+        // Get all required warehouses
+        const { data: warehouses } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id, warehouse_type")
+          .in("warehouse_type", [
+            "warranty_stock",
+            "customer_installed",
+            "in_service",
+            "rma_staging",
+          ]);
+
+        const warrantyWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "warranty_stock",
+        );
+        const customerWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "customer_installed",
+        );
+        const inServiceWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "in_service",
+        );
+        const rmaStagingWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "rma_staging",
+        );
+
+        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !rmaStagingWarehouse) {
+          throw new Error(
+            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, rma_staging)",
+          );
+        }
+
+        warrantyWarehouseId = warrantyWarehouse.id;
+        customerInstalledWarehouseId = customerWarehouse.id;
+        inServiceWarehouseId = inServiceWarehouse.id;
+        rmaStagingWarehouseId = rmaStagingWarehouse.id;
+
+        // Validate replacement product
+        const { data: replacementProduct, error: rpError } =
+          await ctx.supabaseAdmin
+            .from("physical_products")
+            .select(
+              "id, serial_number, product_id, virtual_warehouse_id, status",
+            )
+            .eq("id", replacement_product_id)
+            .single();
+
+        if (rpError || !replacementProduct) {
+          throw new Error("Sản phẩm thay thế không tồn tại");
+        }
+
+        if (replacementProduct.virtual_warehouse_id !== warrantyWarehouse.id) {
+          throw new Error("Sản phẩm phải ở kho bảo hành (warranty_stock)");
+        }
+
+        if (replacementProduct.status !== "active") {
+          throw new Error(
+            `Sản phẩm không khả dụng. Trạng thái: ${replacementProduct.status}`,
+          );
+        }
+
+        // Check same product type
+        if (replacementProduct.product_id !== ticket.product_id) {
+          throw new Error(
+            "Sản phẩm thay thế phải cùng loại với sản phẩm trong phiếu",
+          );
+        }
+
+        // Store for later use
+        replacementProductInfo = {
+          id: replacementProduct.id,
+          serial_number: replacementProduct.serial_number,
+          product_id: replacementProduct.product_id,
+        };
+      }
+
+      // 3. Get profile ID
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        ctx.user.id,
+      );
+
+      // 4. Update ticket - transition to ready_for_pickup (NOT completed)
+      const { data: updatedTicket, error: updateError } =
+        await ctx.supabaseAdmin
+          .from("service_tickets")
+          .update({
+            status: "ready_for_pickup",
+            outcome,
+            replacement_product_id:
+              outcome === "warranty_replacement"
+                ? replacement_product_id
+                : null,
+            updated_by: profileId,
+            ...(notes && { notes }),
+          })
+          .eq("id", ticket_id)
+          .select()
+          .single();
+
+      if (updateError) {
+        throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
+      }
+
+      // 5. If warranty_replacement, create stock transfers
+      if (
+        outcome === "warranty_replacement" &&
+        replacement_product_id &&
+        replacementProductInfo &&
+        warrantyWarehouseId &&
+        customerInstalledWarehouseId &&
+        inServiceWarehouseId
+      ) {
+        // [TRANSFER 1] Xuất sản phẩm thay thế: warranty_stock → customer_installed
+        const outboundTransfer = await createAutoTransfer(ctx.supabaseAdmin, {
+          fromWarehouseId: warrantyWarehouseId,
+          toWarehouseId: customerInstalledWarehouseId,
+          customerId: ticket.customer_id,
+          physicalProductId: replacementProductInfo.id,
+          serialNumber: replacementProductInfo.serial_number,
+          productId: replacementProductInfo.product_id,
+          notes: `Auto: Xuất sản phẩm đổi bảo hành - Phiếu ${ticket.ticket_number}`,
+          createdById: profileId,
+        });
+
+        console.log(
+          `[WARRANTY] Created outbound transfer: ${outboundTransfer.transferNumber}`,
+        );
+
+        // Update replacement product's customer reference and status
+        // Status = 'issued' means product has been delivered to customer
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .update({
+            last_known_customer_id: ticket.customer_id,
+            status: "issued",
+          })
+          .eq("id", replacement_product_id);
+
+        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → rma_staging
+        // Only if ticket has serial_number (old product from customer)
+        if (ticket.serial_number && rmaStagingWarehouseId) {
+          const { data: oldProduct } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, product_id, virtual_warehouse_id")
+            .eq("serial_number", ticket.serial_number)
+            .single();
+
+          if (
+            oldProduct &&
+            oldProduct.virtual_warehouse_id === inServiceWarehouseId
+          ) {
+            const inboundTransfer = await createAutoTransfer(
+              ctx.supabaseAdmin,
+              {
+                fromWarehouseId: inServiceWarehouseId,
+                toWarehouseId: rmaStagingWarehouseId,
+                customerId: ticket.customer_id,
+                physicalProductId: oldProduct.id,
+                serialNumber: oldProduct.serial_number,
+                productId: oldProduct.product_id,
+                notes: `Auto: Chuyển sản phẩm hỏng sang kho RMA - Phiếu ${ticket.ticket_number}`,
+                createdById: profileId,
+              },
+            );
+
+            console.log(
+              `[WARRANTY] Created RMA transfer: ${inboundTransfer.transferNumber}`,
+            );
+          }
+        }
+      }
+
+      // 5b. If repaired or unrepairable, return product to customer: in_service → customer_installed
+      if (
+        (outcome === "repaired" || outcome === "unrepairable") &&
+        ticket.serial_number
+      ) {
+        const { data: warehouses } = await ctx.supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id, warehouse_type")
+          .in("warehouse_type", ["in_service", "customer_installed"]);
+
+        const inServiceWh = warehouses?.find(
+          (w) => w.warehouse_type === "in_service",
+        );
+        const customerInstalledWh = warehouses?.find(
+          (w) => w.warehouse_type === "customer_installed",
+        );
+
+        if (inServiceWh && customerInstalledWh) {
+          const { data: product } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("id, serial_number, product_id, virtual_warehouse_id")
+            .eq("serial_number", ticket.serial_number)
+            .single();
+
+          if (product && product.virtual_warehouse_id === inServiceWh.id) {
+            const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
+              fromWarehouseId: inServiceWh.id,
+              toWarehouseId: customerInstalledWh.id,
+              customerId: ticket.customer_id,
+              physicalProductId: product.id,
+              serialNumber: product.serial_number,
+              productId: product.product_id,
+              notes: `Auto: Trả sản phẩm cho khách (${outcome}) - Phiếu ${ticket.ticket_number}`,
+              createdById: profileId,
+            });
+
+            console.log(
+              `[${outcome.toUpperCase()}] Created return transfer: ${transfer.transferNumber}`,
+            );
+          }
+        }
+      }
+
+      // 6. Create auto-comment with outcome details
+      const outcomeLabels: Record<string, string> = {
+        repaired: "Sửa chữa thành công",
+        warranty_replacement: "Đổi sản phẩm bảo hành",
+        unrepairable: "Không thể sửa chữa",
+      };
+
+      let commentText = `Kết quả xử lý: ${outcomeLabels[outcome]}. Sẵn sàng bàn giao cho khách.`;
+
+      if (outcome === "warranty_replacement" && replacement_product_id) {
+        // Get replacement product serial
+        const { data: rp } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("serial_number")
+          .eq("id", replacement_product_id)
+          .single();
+
+        if (rp) {
+          commentText += `\nSerial mới: ${rp.serial_number}`;
+        }
+      }
+
+      if (notes) {
+        commentText += `\nGhi chú: ${notes}`;
+      }
+
+      await createAutoComment({
+        ticketId: ticket_id,
+        profileId,
+        comment: commentText,
+        isInternal: false,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
+
+      // 7. Send email notification
+      if (ticket.customer && ticket.product) {
+        const customer = Array.isArray(ticket.customer)
+          ? ticket.customer[0]
+          : ticket.customer;
+        const product = Array.isArray(ticket.product)
+          ? ticket.product[0]
+          : ticket.product;
+
+        if (customer?.email && customer?.name) {
+          sendEmailNotification(
+            ctx,
+            "service_completed",
+            customer.email,
+            customer.name,
+            {
+              ticketNumber: ticket.ticket_number,
+              productName: product?.name,
+              serialNumber: ticket.serial_number || undefined,
+              completedDate: new Date().toISOString(),
+            },
+            undefined,
+            ticket_id,
+          ).catch((err) => {
+            console.error("[EMAIL ERROR] service_completed failed:", err);
+          });
+        }
+      }
+
+      // 8. Audit log
+      await logAudit(ctx.supabaseAdmin, ctx.user.id, {
+        action: "status_change",
+        resourceType: "ticket",
+        resourceId: ticket_id,
+        oldValues: { status: ticket.status },
+        newValues: {
+          status: "ready_for_pickup",
+          outcome,
+          replacement_product_id,
+        },
+        metadata: { operation: "set_outcome" },
+      });
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+      };
+    }),
+
+  /**
+   * Confirm delivery to customer - transitions ticket from ready_for_pickup to completed
+   * This is the final step in the ticket lifecycle
+   */
+  confirmDelivery: publicProcedure
+    .use(requireOperationsStaff)
+    .input(
+      z.object({
+        ticket_id: z.string().uuid("Ticket ID must be a valid UUID"),
+        delivery_notes: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { ticket_id, delivery_notes } = input;
+
+      if (!ctx.user) {
+        throw new Error("User context not available");
+      }
+
+      // 1. Validate ticket
+      const { data: ticket, error: ticketError } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select("id, status, outcome, ticket_number")
+        .eq("id", ticket_id)
+        .single();
+
+      if (ticketError || !ticket) {
+        throw new Error("Phiếu không tồn tại");
+      }
+
+      if (ticket.status !== "ready_for_pickup") {
+        throw new Error(
+          `Chỉ có thể xác nhận bàn giao cho phiếu sẵn sàng bàn giao. Trạng thái hiện tại: ${ticket.status}`,
+        );
+      }
+
+      if (!ticket.outcome) {
+        throw new Error("Phiếu chưa có kết quả xử lý");
+      }
+
+      // 2. Get profile ID
+      const profileId = await getProfileIdFromUserId(
+        ctx.supabaseAdmin,
+        ctx.user.id,
+      );
+
+      // 3. Update ticket to completed
+      const { data: updatedTicket, error: updateError } =
+        await ctx.supabaseAdmin
+          .from("service_tickets")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            delivery_confirmed_at: new Date().toISOString(),
+            delivery_confirmed_by_id: profileId,
+            updated_by: profileId,
+          })
+          .eq("id", ticket_id)
+          .select()
+          .single();
+
+      if (updateError) {
+        throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
+      }
+
+      // 4. Create auto-comment
+      let commentText = "Khách hàng đã nhận sản phẩm. Phiếu hoàn thành.";
+      if (delivery_notes) {
+        commentText += `\nGhi chú bàn giao: ${delivery_notes}`;
+      }
+
+      await createAutoComment({
+        ticketId: ticket_id,
+        profileId,
+        comment: commentText,
+        isInternal: false,
+        supabaseAdmin: ctx.supabaseAdmin,
+      });
+
+      // 5. Audit log
+      await logAudit(ctx.supabaseAdmin, ctx.user.id, {
+        action: "status_change",
+        resourceType: "ticket",
+        resourceId: ticket_id,
+        oldValues: { status: "ready_for_pickup" },
+        newValues: { status: "completed" },
+        metadata: { operation: "confirm_delivery", delivery_notes },
+      });
+
+      // 6. Send delivery confirmation email (Story 1.15)
+      const { data: fullTicket } = await ctx.supabaseAdmin
+        .from("service_tickets")
+        .select(`
+          ticket_number,
+          serial_number,
+          delivery_confirmed_at,
+          customer:customers(email, name),
+          product:products(name)
+        `)
+        .eq("id", ticket_id)
+        .single();
+
+      if (fullTicket?.customer && fullTicket?.product) {
+        const customer = Array.isArray(fullTicket.customer)
+          ? fullTicket.customer[0]
+          : fullTicket.customer;
+        const product = Array.isArray(fullTicket.product)
+          ? fullTicket.product[0]
+          : fullTicket.product;
+
+        sendEmailNotification(
+          ctx,
+          "delivery_confirmed",
+          customer.email,
+          customer.name,
+          {
+            ticketNumber: fullTicket.ticket_number,
+            productName: product.name,
+            serialNumber: fullTicket.serial_number,
+            deliveryDate:
+              fullTicket.delivery_confirmed_at || new Date().toISOString(),
+          },
+          undefined,
+          ticket_id,
+        ).catch((err) => {
+          console.error("[EMAIL ERROR] delivery_confirmed failed:", err);
+        });
+      }
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+      };
+    }),
 });
 
 export type TicketsRouter = typeof ticketsRouter;

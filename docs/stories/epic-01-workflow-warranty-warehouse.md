@@ -58,8 +58,8 @@ Deliver task-based workflow management, comprehensive warranty service support w
 
 ## Story Structure and Sequencing
 
-**Total Stories:** 20
-**Estimated Effort:** 324-404 hours
+**Total Stories:** 22
+**Estimated Effort:** 338-426 hours
 **Sequencing Strategy:** Risk-Minimizing Approach
 
 ### Phase 1: Foundation (Stories 1-3)
@@ -110,10 +110,19 @@ Deliver task-based workflow management, comprehensive warranty service support w
 - **Story 1.19**: Documentation and Training Materials - 12-16 hours
 - **Story 1.20**: Production Deployment and Monitoring Setup - 8-12 hours
 
+### Phase 8: Enhancements (Stories 21-22)
+**Post-MVP Features**
+
+- **Story 1.21**: Customer Delivery Confirmation - 8-12 hours
+- **Story 1.22**: Ticket Completion with Outcome & Replacement Product - 6-10 hours *(NEW)*
+  - FR32-FR33: Outcome tracking, replacement product selection from warranty_stock
+  - See: `docs/plans/TICKET-COMPLETION-WITH-REPLACEMENT.md`
+
 **Dependencies:**
 - Sequential execution required for stories 1-8
 - Parallel execution possible for stories 9-17
 - Story 1.18 serves as quality gate before production deployment
+- Stories 21-22 can be implemented after MVP deployment
 
 ---
 
@@ -188,7 +197,7 @@ Deliver task-based workflow management, comprehensive warranty service support w
 
 ### Epic-Level Completion Criteria
 
-- ✅ All 20 stories completed with acceptance criteria met
+- ✅ All 22 stories completed with acceptance criteria met (Stories 21-22 are post-MVP enhancements)
 - ✅ Integration testing passed (Story 1.18)
 - ✅ Documentation complete (Story 1.19)
 - ✅ Production deployment successful (Story 1.20)

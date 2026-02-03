@@ -1,7 +1,7 @@
 # 2. Requirements
 
-**✅ IMPLEMENTATION STATUS: 30/31 Functional Requirements COMPLETE (97%)**
-**Note**: FR1-FR30 have been implemented. FR31 (Default Warehouse Seeding) requires implementation. Only QA phase remains (Stories 01.18-01.20).
+**✅ IMPLEMENTATION STATUS: 30/33 Functional Requirements COMPLETE (91%)**
+**Note**: FR1-FR30 have been implemented. FR31 (Default Warehouse Seeding), FR32-FR33 (Ticket Completion with Outcome & Replacement) require implementation. See `docs/plans/TICKET-COMPLETION-WITH-REPLACEMENT.md` for FR32-FR33 implementation plan.
 
 ## 2.1 Functional Requirements
 
@@ -67,6 +67,10 @@
 
 **FR31**: The system shall automatically create a default physical warehouse named "Công ty" (Company) with all 7 virtual warehouse types linked on initial database setup, and these defaults shall be recreated on database reset and cannot be deleted by users.
 
+**FR32**: The system shall support ticket completion with outcome tracking (repaired, warranty_replacement, unrepairable), allowing staff to select a replacement product from warranty_stock when outcome is warranty_replacement, and automatically update inventory locations.
+
+**FR33**: The system shall display replacement product information on ticket detail page for warranty tickets, showing the selected replacement product's serial number, model, and warranty status.
+
 ---
 
 ### 2.1.1 Functional Requirements Implementation Mapping
@@ -97,6 +101,10 @@
 **Integration Requirements (FR18, FR24)** - ✅ Multiple Stories:
 - FR18: Story 01.01 (Foundation maintains backward compatibility)
 - FR24: Story 01.10 (RMA workflow)
+
+**Ticket Completion & Warranty Replacement (FR32-FR33)** - 🔲 Story 01.22 (Pending):
+- FR32-FR33: Story 01.22 (Ticket Completion with Outcome & Replacement Product)
+- See: `docs/plans/TICKET-COMPLETION-WITH-REPLACEMENT.md`
 
 ---
 

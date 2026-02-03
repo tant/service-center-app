@@ -38,6 +38,11 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
   CONSTRAINT service_requests_cancelled_requires_reason CHECK (status != 'cancelled' OR cancellation_reason IS NOT NULL)
 );
 
+-- Ensure columns added after initial table creation exist
+ALTER TABLE public.service_requests ADD COLUMN IF NOT EXISTS "status" public.request_status NOT NULL DEFAULT 'submitted';
+ALTER TABLE public.service_requests ADD COLUMN IF NOT EXISTS "receipt_status" public.receipt_status NOT NULL DEFAULT 'received';
+ALTER TABLE public.service_requests ADD COLUMN IF NOT EXISTS "delivery_method" public.delivery_method;
+
 COMMENT ON TABLE public.service_requests IS 'Public service request submissions from customer portal (1:N with service_request_items)';
 COMMENT ON COLUMN public.service_requests.issue_description IS 'General issue description for the entire request (specific issues per product in service_request_items)';
 COMMENT ON COLUMN public.service_requests.receipt_status IS 'Whether products have been received from customer (triggers ticket creation)';
@@ -148,7 +153,9 @@ BEGIN
       issue_description,
       status,
       request_id,
-      created_by
+      created_by,
+      warranty_type,
+      outcome
     ) VALUES (
       v_customer_id,
       v_product_id,
@@ -157,7 +164,9 @@ BEGIN
       COALESCE(v_item.issue_description, p_issue_description),
       'pending',
       p_request_id,
-      p_reviewed_by_id
+      p_reviewed_by_id,
+      'warranty',
+      'warranty_replacement'
     )
     RETURNING id INTO v_ticket_id;
 

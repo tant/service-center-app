@@ -30,13 +30,14 @@ BEGIN
   SELECT
     COUNT(DISTINCT pws.product_id)::BIGINT AS total_skus,
     COALESCE(SUM(pws.declared_quantity), 0)::BIGINT AS total_declared,
-    (SELECT COUNT(*)::BIGINT FROM public.physical_products) AS total_actual,
+    (SELECT COUNT(*)::BIGINT FROM public.physical_products WHERE status = 'active') AS total_actual,
     COUNT(DISTINCT CASE
       WHEN (
         SELECT COUNT(*)::INTEGER
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
+          AND pp.status = 'active'
       ) < (pws.declared_quantity * 0.1) THEN pws.id
     END)::BIGINT AS critical_count,
     COUNT(DISTINCT CASE
@@ -45,12 +46,14 @@ BEGIN
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
+          AND pp.status = 'active'
       ) >= (pws.declared_quantity * 0.1)
       AND (
         SELECT COUNT(*)::INTEGER
         FROM public.physical_products pp
         WHERE pp.product_id = pws.product_id
           AND pp.virtual_warehouse_id = pws.virtual_warehouse_id
+          AND pp.status = 'active'
       ) < (pws.declared_quantity * 0.5) THEN pws.id
     END)::BIGINT AS warning_count
   FROM public.product_warehouse_stock pws;
@@ -84,26 +87,26 @@ BEGIN
     COALESCE(
       (SELECT COUNT(*)::INTEGER
        FROM public.physical_products pp
-       WHERE pp.product_id = p.id), 0
+       WHERE pp.product_id = p.id AND pp.status = 'active'), 0
     )::BIGINT AS total_actual,
     (
       COALESCE(SUM(pws.declared_quantity), 0) -
       COALESCE(
         (SELECT COUNT(*)::INTEGER
          FROM public.physical_products pp
-         WHERE pp.product_id = p.id), 0
+         WHERE pp.product_id = p.id AND pp.status = 'active'), 0
       )
     )::BIGINT AS serial_gap,
     CASE
       WHEN COALESCE(
         (SELECT COUNT(*)::INTEGER
          FROM public.physical_products pp
-         WHERE pp.product_id = p.id), 0
+         WHERE pp.product_id = p.id AND pp.status = 'active'), 0
       ) = 0 THEN 'critical'
       WHEN COALESCE(
         (SELECT COUNT(*)::INTEGER
          FROM public.physical_products pp
-         WHERE pp.product_id = p.id), 0
+         WHERE pp.product_id = p.id AND pp.status = 'active'), 0
       ) < (COALESCE(SUM(pws.declared_quantity), 0) * 0.5) THEN 'warning'
       ELSE 'ok'
     END AS stock_status

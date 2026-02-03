@@ -581,3 +581,51 @@ export function useFinalizeRMABatch() {
     isFinalizing: mutation.isPending,
   };
 }
+
+/**
+ * Hook for shipping RMA batch (submitted → shipped)
+ * Admin/Manager only
+ */
+export function useShipRMABatch() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.physicalProducts.shipRMABatch.useMutation({
+    onSuccess: () => {
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
+      toast.success('Đã đánh dấu lô RMA đã vận chuyển');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi cập nhật trạng thái vận chuyển');
+    },
+  });
+
+  return {
+    shipBatch: mutation.mutate,
+    shipBatchAsync: mutation.mutateAsync,
+    isShipping: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for completing RMA batch (shipped → completed)
+ * Admin/Manager only
+ */
+export function useCompleteRMABatch() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.physicalProducts.completeRMABatch.useMutation({
+    onSuccess: () => {
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
+      toast.success('Đã hoàn thành lô RMA');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi hoàn thành lô RMA');
+    },
+  });
+
+  return {
+    completeBatch: mutation.mutate,
+    completeBatchAsync: mutation.mutateAsync,
+    isCompleting: mutation.isPending,
+  };
+}

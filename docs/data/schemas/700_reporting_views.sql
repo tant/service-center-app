@@ -37,6 +37,7 @@ SELECT
      FROM public.physical_products pp
      WHERE pp.product_id = p.id
        AND pp.virtual_warehouse_id = vw.id
+       AND pp.status = 'active'
     ), 0
   ) as actual_serial_count,
   pws.declared_quantity - COALESCE(
@@ -44,6 +45,7 @@ SELECT
      FROM public.physical_products pp
      WHERE pp.product_id = p.id
        AND pp.virtual_warehouse_id = vw.id
+       AND pp.status = 'active'
     ), 0
   ) as serial_gap,
   pws.initial_stock_entry,
@@ -136,6 +138,7 @@ LEFT JOIN (
     COUNT(*) AS quantity
   FROM public.physical_products pp
   JOIN public.virtual_warehouses vw ON pp.virtual_warehouse_id = vw.id
+  WHERE pp.status = 'active'
   GROUP BY pp.product_id, vw.warehouse_type
 ) stock ON stock.product_id = p.id AND stock.warehouse_type = pst.warehouse_type
 WHERE pst.alert_enabled = true
@@ -181,7 +184,7 @@ SELECT
   MAX(pp.created_at) AS newest_stock_date
 FROM public.virtual_warehouses vw
 JOIN public.physical_warehouses pw ON vw.physical_warehouse_id = pw.id
-LEFT JOIN public.physical_products pp ON pp.virtual_warehouse_id = vw.id
+LEFT JOIN public.physical_products pp ON pp.virtual_warehouse_id = vw.id AND pp.status = 'active'
 LEFT JOIN public.products p ON pp.product_id = p.id
 LEFT JOIN public.brands b ON p.brand_id = b.id
 LEFT JOIN public.product_stock_thresholds pst ON pst.product_id = p.id AND pst.warehouse_type = vw.warehouse_type

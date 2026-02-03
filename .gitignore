@@ -67,10 +67,12 @@ supabase/storage/*
 
 # linh tinh AI
 .bmad-core
+_bmad
 .claude
 .vscode
 .gemini
 .codex
+.bmad
 GEMINI.md
 CLAUDE.md
 AGENTS.md

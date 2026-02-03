@@ -180,7 +180,10 @@ BEGIN
     NEW.serial_number,
     v_virtual_warehouse_id,
     'new',
-    'draft',  -- Always start as draft
+    CASE
+      WHEN v_receipt_status IN ('approved', 'completed') THEN 'active'::public.physical_product_status
+      ELSE 'draft'::public.physical_product_status
+    END,
     NEW.manufacturer_warranty_end_date,
     NEW.user_warranty_end_date
   )
@@ -583,9 +586,11 @@ BEGIN
   IF NEW.status = 'approved' AND OLD.status != 'approved' THEN
 
     -- Update all transferring physical products from this issue to 'issued'
+    -- and move them to the destination warehouse if specified
     UPDATE public.physical_products pp
     SET
       status = 'issued',
+      virtual_warehouse_id = COALESCE(NEW.to_virtual_warehouse_id, pp.virtual_warehouse_id),
       updated_at = NOW()
     FROM public.stock_issue_serials sis
     JOIN public.stock_issue_items sii ON sis.issue_item_id = sii.id

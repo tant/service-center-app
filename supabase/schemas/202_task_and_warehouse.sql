@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.rma_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   batch_number VARCHAR(20) NOT NULL UNIQUE,
   supplier_id UUID,
+  supplier_name VARCHAR(255),
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
   shipping_date DATE,
   tracking_number VARCHAR(255),
@@ -194,11 +195,13 @@ CREATE TABLE IF NOT EXISTS public.virtual_warehouses (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  is_archive BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 COMMENT ON TABLE public.virtual_warehouses IS 'Virtual warehouse categories for product state management';
 COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (primary display name)';
+COMMENT ON COLUMN public.virtual_warehouses.is_archive IS 'Kho archive: không tính vào tồn kho khả dụng, không cho phép tạo phiếu xuất từ kho này';
 CREATE TRIGGER trigger_virtual_warehouses_updated_at BEFORE UPDATE ON public.virtual_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- PHYSICAL PRODUCTS
@@ -212,7 +215,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   previous_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
   manufacturer_warranty_end_date DATE,
   user_warranty_end_date DATE,
-  current_ticket_id UUID REFERENCES public.service_tickets(id) ON DELETE SET NULL,
+  current_ticket_id UUID,
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   rma_reason TEXT,
   rma_date DATE,

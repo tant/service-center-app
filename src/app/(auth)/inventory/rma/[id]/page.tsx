@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useRMABatchDetails, useFinalizeRMABatch, useRemoveProductFromRMA } from "@/hooks/use-warehouse";
+import { useRMABatchDetails, useFinalizeRMABatch, useShipRMABatch, useCompleteRMABatch, useRemoveProductFromRMA } from "@/hooks/use-warehouse";
 import { RMA_STATUS_LABELS, RMA_STATUS_COLORS } from "@/constants/warehouse";
 import { AddProductsToRMADrawer } from "@/components/drawers/add-products-to-rma-drawer";
 import { UpdateShippingInfoDrawer } from "@/components/drawers/update-shipping-info-drawer";
@@ -51,6 +51,8 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
   const router = useRouter();
   const { batch, products, isLoading, error } = useRMABatchDetails(id);
   const { finalizeBatch, isFinalizing } = useFinalizeRMABatch();
+  const { shipBatch, isShipping } = useShipRMABatch();
+  const { completeBatch, isCompleting } = useCompleteRMABatch();
   const { removeProduct, isRemoving } = useRemoveProductFromRMA();
   const [productToDelete, setProductToDelete] = React.useState<string | null>(null);
 
@@ -167,6 +169,8 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
   }
 
   const isDraft = batch.status === "draft";
+  const isSubmitted = batch.status === "submitted";
+  const isShipped = batch.status === "shipped";
   const canEdit = isDraft;
 
   return (
@@ -228,6 +232,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                 )}
 
                 {/* Actions */}
+                {/* Draft actions */}
                 {canEdit && (
                   <>
                     <Separator />
@@ -271,6 +276,88 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                           </DialogContent>
                         </Dialog>
                       )}
+                    </div>
+                  </>
+                )}
+
+                {/* Submitted → Shipped */}
+                {isSubmitted && (
+                  <>
+                    <Separator />
+                    <div className="flex flex-wrap gap-2">
+                      <UpdateShippingInfoDrawer
+                        batchId={batch.id}
+                        currentShippingDate={batch.shipping_date}
+                        currentTrackingNumber={batch.tracking_number}
+                        trigger={
+                          <Button variant="outline" size="sm">
+                            <IconTruck className="mr-2 h-4 w-4" />
+                            Cập nhật thông tin vận chuyển
+                          </Button>
+                        }
+                      />
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" disabled={isShipping}>
+                            <IconTruck className="mr-2 h-4 w-4" />
+                            {isShipping ? "Đang xử lý..." : "Đánh dấu đã vận chuyển"}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Xác nhận đã vận chuyển</DialogTitle>
+                            <DialogDescription>
+                              Đánh dấu lô RMA này đã được gửi đi cho nhà cung cấp.
+                              {!batch.tracking_number && " Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận."}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => {}}>
+                              Hủy
+                            </Button>
+                            <Button onClick={() => shipBatch({
+                              batch_id: batch.id,
+                              shipping_date: batch.shipping_date || new Date().toISOString().split("T")[0],
+                              tracking_number: batch.tracking_number || undefined,
+                            })}>
+                              Xác nhận đã vận chuyển
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </>
+                )}
+
+                {/* Shipped → Completed */}
+                {isShipped && (
+                  <>
+                    <Separator />
+                    <div className="flex flex-wrap gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" disabled={isCompleting}>
+                            <IconCheck className="mr-2 h-4 w-4" />
+                            {isCompleting ? "Đang xử lý..." : "Đánh dấu hoàn thành"}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Xác nhận hoàn thành lô RMA</DialogTitle>
+                            <DialogDescription>
+                              Đánh dấu lô RMA này đã được nhà cung cấp xử lý xong.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => {}}>
+                              Hủy
+                            </Button>
+                            <Button onClick={() => completeBatch({ batch_id: batch.id })}>
+                              Xác nhận hoàn thành
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </>
                 )}

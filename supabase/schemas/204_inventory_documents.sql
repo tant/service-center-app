@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS public.stock_issues (
   status public.stock_document_status NOT NULL DEFAULT 'draft',
 
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
+  to_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
 
   issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
   completed_at TIMESTAMPTZ,

@@ -43,22 +43,23 @@ WHERE physical_warehouses.code = 'COMPANY';
 
 -- Step 3: Seed 7 system virtual warehouses
 -- Link all virtual warehouses to the default "Công ty" physical warehouse
-INSERT INTO public.virtual_warehouses (warehouse_type, name, description, physical_warehouse_id)
+INSERT INTO public.virtual_warehouses (warehouse_type, name, description, physical_warehouse_id, is_archive)
 SELECT
   v.warehouse_type,
   v.name,
   v.description,
-  (SELECT id FROM public.physical_warehouses WHERE code = 'COMPANY' LIMIT 1)
+  (SELECT id FROM public.physical_warehouses WHERE code = 'COMPANY' LIMIT 1),
+  v.is_archive
 FROM (VALUES
-  ('main'::warehouse_type, 'Kho Chính', 'Kho hàng chính, quản lý hàng hóa tồn kho thông thường'),
-  ('warranty_stock'::warehouse_type, 'Kho Bảo Hành', 'Hàng hóa còn bảo hành, sẵn sàng để thay thế cho khách hàng'),
-  ('rma_staging'::warehouse_type, 'Kho Chờ Trả Hàng', 'Sản phẩm chờ trả lại nhà cung cấp hoặc nhà sản xuất'),
-  ('dead_stock'::warehouse_type, 'Kho Hàng Hỏng', 'Sản phẩm hỏng không sửa được, dùng để tháo linh kiện hoặc thanh lý'),
-  ('in_service'::warehouse_type, 'Kho Đang Sửa Chữa', 'Sản phẩm đang trong quá trình bảo hành hoặc sửa chữa'),
-  ('parts'::warehouse_type, 'Kho Linh Kiện', 'Linh kiện thay thế và phụ tùng'),
-  ('customer_installed'::warehouse_type, 'Hàng Đã Bán', 'Sản phẩm đã bán và đang lắp đặt tại địa điểm khách hàng')
-) AS v(warehouse_type, name, description)
-ON CONFLICT (warehouse_type) DO NOTHING;
+  ('main'::warehouse_type, 'Kho Chính', 'Kho hàng chính, quản lý hàng hóa tồn kho thông thường', FALSE),
+  ('warranty_stock'::warehouse_type, 'Kho Bảo Hành', 'Hàng hóa còn bảo hành, sẵn sàng để thay thế cho khách hàng', FALSE),
+  ('rma_staging'::warehouse_type, 'Kho Chờ Trả Hàng', 'Sản phẩm chờ trả lại nhà cung cấp hoặc nhà sản xuất', TRUE),
+  ('dead_stock'::warehouse_type, 'Kho Hàng Hỏng', 'Sản phẩm hỏng không sửa được, dùng để tháo linh kiện hoặc thanh lý', TRUE),
+  ('in_service'::warehouse_type, 'Kho Đang Sửa Chữa', 'Sản phẩm đang trong quá trình bảo hành hoặc sửa chữa', FALSE),
+  ('parts'::warehouse_type, 'Kho Linh Kiện', 'Linh kiện thay thế và phụ tùng', FALSE),
+  ('customer_installed'::warehouse_type, 'Hàng Đã Bán', 'Sản phẩm đã bán và đang lắp đặt tại địa điểm khách hàng', TRUE)
+) AS v(warehouse_type, name, description, is_archive)
+ON CONFLICT (warehouse_type) DO UPDATE SET is_archive = EXCLUDED.is_archive;
 
 -- Display result
 SELECT 'Default Warehouse System: Created ' ||

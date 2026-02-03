@@ -345,7 +345,7 @@ export const inventoryRouter = router({
           id,
           name,
           sku,
-          warranty_months,
+          warranty_period_months,
           brand:brands(name)
         ),
         virtual_warehouse:virtual_warehouses!virtual_warehouse_id(
@@ -359,7 +359,7 @@ export const inventoryRouter = router({
             location
           )
         ),
-        current_ticket:service_tickets(
+        current_ticket:service_tickets!current_ticket_id(
           id,
           ticket_number,
           status
@@ -501,7 +501,7 @@ export const inventoryRouter = router({
           *,
           product:products(*),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*, physical_warehouse:physical_warehouses(*)),
-          current_ticket:service_tickets(id, ticket_number, status)
+          current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
         `
         )
         .eq("serial_number", input.serial_number.toUpperCase())
@@ -572,7 +572,7 @@ export const inventoryRouter = router({
         .select(
           `
           *,
-          current_ticket:service_tickets(id, ticket_number, status)
+          current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
         `
         )
         .eq("id", input.product_id)
@@ -1254,6 +1254,150 @@ export const inventoryRouter = router({
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "Batch is not in draft status",
+        });
+      }
+
+      return data;
+    }),
+
+  // Ship RMA batch (submitted → shipped)
+  shipRMABatch: publicProcedure
+    .input(
+      z.object({
+        batch_id: z.string().uuid(),
+        shipping_date: z.string().optional(),
+        tracking_number: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
+
+      if (authError || !user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in",
+        });
+      }
+
+      const { data: profile, error: profileError } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch user profile",
+        });
+      }
+
+      if (!["admin", "manager"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins and managers can ship RMA batches",
+        });
+      }
+
+      const updateData: Record<string, unknown> = {
+        status: "shipped",
+      };
+      if (input.shipping_date) updateData.shipping_date = input.shipping_date;
+      if (input.tracking_number) updateData.tracking_number = input.tracking_number;
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("rma_batches")
+        .update(updateData)
+        .eq("id", input.batch_id)
+        .eq("status", "submitted")
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to ship RMA batch: ${error.message}`,
+        });
+      }
+
+      if (!data) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Batch is not in submitted status",
+        });
+      }
+
+      return data;
+    }),
+
+  // Complete RMA batch (shipped → completed)
+  completeRMABatch: publicProcedure
+    .input(
+      z.object({
+        batch_id: z.string().uuid(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabaseClient.auth.getUser();
+
+      if (authError || !user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in",
+        });
+      }
+
+      const { data: profile, error: profileError } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch user profile",
+        });
+      }
+
+      if (!["admin", "manager"].includes(profile.role)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins and managers can complete RMA batches",
+        });
+      }
+
+      const updateData: Record<string, unknown> = {
+        status: "completed",
+      };
+      if (input.notes) updateData.notes = input.notes;
+
+      const { data, error } = await ctx.supabaseAdmin
+        .from("rma_batches")
+        .update(updateData)
+        .eq("id", input.batch_id)
+        .eq("status", "shipped")
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to complete RMA batch: ${error.message}`,
+        });
+      }
+
+      if (!data) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Batch is not in shipped status",
         });
       }
 

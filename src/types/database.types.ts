@@ -1573,8 +1573,11 @@ export type Database = {
           id: string
           issue_description: string
           notes: string | null
+          outcome: Database["public"]["Enums"]["ticket_outcome"] | null
           parts_total: number
-          product_id: string,
+          priority_level: Database["public"]["Enums"]["priority_level"]
+          product_id: string
+          replacement_product_id: string | null
           request_id: string | null
           serial_number: string | null
           service_fee: number
@@ -1604,8 +1607,11 @@ export type Database = {
           id?: string
           issue_description: string
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["ticket_outcome"] | null
           parts_total?: number
-product_id: string,
+          priority_level?: Database["public"]["Enums"]["priority_level"]
+          product_id: string
+          replacement_product_id?: string | null
           request_id?: string | null
           serial_number?: string | null
           service_fee?: number
@@ -1635,9 +1641,11 @@ product_id: string,
           id?: string
           issue_description?: string
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["ticket_outcome"] | null
           parts_total?: number
           priority_level?: Database["public"]["Enums"]["priority_level"]
           product_id?: string
+          replacement_product_id?: string | null
           request_id?: string | null
           serial_number?: string | null
           service_fee?: number
@@ -1679,7 +1687,6 @@ product_id: string,
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-
           {
             foreignKeyName: "service_tickets_product_id_fkey"
             columns: ["product_id"]
@@ -1714,6 +1721,27 @@ product_id: string,
             isOneToOne: false
             referencedRelation: "v_warranty_expiring_soon"
             referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_replacement_product_id_fkey"
+            columns: ["replacement_product_id"]
+            isOneToOne: false
+            referencedRelation: "physical_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_tickets_replacement_product_id_fkey"
+            columns: ["replacement_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_movement_history"
+            referencedColumns: ["physical_product_id"]
+          },
+          {
+            foreignKeyName: "service_tickets_replacement_product_id_fkey"
+            columns: ["replacement_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_warranty_expiring_soon"
+            referencedColumns: ["physical_product_id"]
           },
           {
             foreignKeyName: "service_tickets_request_id_fkey"
@@ -3541,12 +3569,13 @@ product_id: string,
         | "completed"
         | "blocked"
         | "skipped"
+      ticket_outcome: "repaired" | "warranty_replacement" | "unrepairable"
       ticket_status:
         | "pending"
         | "in_progress"
+        | "ready_for_pickup"
         | "completed"
         | "cancelled"
-        | "ready_for_pickup"
       transfer_status:
         | "draft"
         | "pending_approval"
@@ -3745,12 +3774,13 @@ export const Constants = {
         "blocked",
         "skipped",
       ],
+      ticket_outcome: ["repaired", "warranty_replacement", "unrepairable"],
       ticket_status: [
         "pending",
         "in_progress",
+        "ready_for_pickup",
         "completed",
         "cancelled",
-        "ready_for_pickup",
       ],
       transfer_status: [
         "draft",

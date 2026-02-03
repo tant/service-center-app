@@ -37,29 +37,35 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
     const badges = {
       service_ticket: {
         label: "🎫 Phiếu sửa",
-        className: "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+        className:
+          "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
       },
       inventory_receipt: {
         label: "📦 Phiếu nhập",
-        className: "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
+        className:
+          "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
       },
       inventory_issue: {
         label: "📤 Phiếu xuất",
-        className: "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
+        className:
+          "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
       },
       inventory_transfer: {
         label: "🔄 Phiếu chuyển",
-        className: "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
+        className:
+          "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
       },
       service_request: {
         label: "📋 Yêu cầu DV",
-        className: "bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700",
+        className:
+          "bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700",
       },
     };
 
     const badge = badges[entityType as keyof typeof badges] || {
       label: entityType,
-      className: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700",
+      className:
+        "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-700",
     };
 
     return (
@@ -70,39 +76,41 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges = {
+    const badges: Record<
+      string,
+      {
+        label: string;
+        variant: "pending" | "processing" | "ready" | "resolved" | "closed";
+      }
+    > = {
       pending: {
         label: "Chờ xử lý",
-        className: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
+        variant: "processing",
       },
       in_progress: {
         label: "Đang làm",
-        className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+        variant: "ready",
       },
       completed: {
         label: "Hoàn thành",
-        className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+        variant: "resolved",
       },
       blocked: {
         label: "Bị chặn",
-        className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+        variant: "pending",
       },
       skipped: {
         label: "Bỏ qua",
-        className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+        variant: "closed",
       },
     };
 
-    const badge = badges[status as keyof typeof badges] || {
+    const badge = badges[status] || {
       label: status,
-      className: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
+      variant: "closed" as const,
     };
 
-    return (
-      <Badge variant="secondary" className={badge.className}>
-        {badge.label}
-      </Badge>
-    );
+    return <Badge variant={badge.variant}>{badge.label}</Badge>;
   };
 
   const getInitials = (name: string) => {
@@ -158,12 +166,17 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thứ tự</TableHead>
               <TableHead>Hạn chót</TableHead>
-              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">
+                Thao tác
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell
+                colSpan={7}
+                className="text-center py-8 text-muted-foreground"
+              >
                 Đang tải...
               </TableCell>
             </TableRow>
@@ -185,12 +198,17 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thứ tự</TableHead>
               <TableHead>Hạn chót</TableHead>
-              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">
+                Thao tác
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell
+                colSpan={7}
+                className="text-center py-8 text-muted-foreground"
+              >
                 Không tìm thấy công việc nào.
               </TableCell>
             </TableRow>
@@ -211,7 +229,9 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
             <TableHead>Trạng thái</TableHead>
             <TableHead className="w-[70px]">Thứ tự</TableHead>
             <TableHead className="w-[120px]">Hạn chót</TableHead>
-            <TableHead className="text-right w-[80px] pr-4 lg:pr-6">Thao tác</TableHead>
+            <TableHead className="text-right w-[80px] pr-4 lg:pr-6">
+              Thao tác
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -220,7 +240,7 @@ export function TasksTable({ tasks, isLoading }: TasksTableProps) {
               key={task.id}
               className={cn(
                 "cursor-pointer hover:bg-muted/50",
-                isOverdue(task) && "bg-red-50 dark:bg-red-950/20"
+                isOverdue(task) && "bg-red-50 dark:bg-red-950/20",
               )}
               onClick={() => handleTaskClick(task.id)}
             >

@@ -302,6 +302,7 @@ CREATE TABLE IF NOT EXISTS public.stock_transfers (
   generated_receipt_id UUID REFERENCES public.stock_receipts(id) ON DELETE SET NULL,
 
   customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
 
   notes TEXT,
 
@@ -318,6 +319,7 @@ CREATE INDEX idx_stock_transfers_to ON public.stock_transfers(to_virtual_warehou
 CREATE INDEX idx_stock_transfers_generated_issue ON public.stock_transfers(generated_issue_id);
 CREATE INDEX idx_stock_transfers_generated_receipt ON public.stock_transfers(generated_receipt_id);
 CREATE INDEX idx_stock_transfers_customer ON public.stock_transfers(customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX idx_stock_transfers_rma_batch ON public.stock_transfers(rma_batch_id) WHERE rma_batch_id IS NOT NULL;
 
 COMMENT ON TABLE public.stock_transfers IS 'Stock transfer documents (Phiếu Chuyển Kho)';
 COMMENT ON COLUMN public.stock_transfers.from_virtual_warehouse_id IS 'Source virtual warehouse';
@@ -325,6 +327,7 @@ COMMENT ON COLUMN public.stock_transfers.to_virtual_warehouse_id IS 'Destination
 COMMENT ON COLUMN public.stock_transfers.generated_issue_id IS 'Auto-generated issue document';
 COMMENT ON COLUMN public.stock_transfers.generated_receipt_id IS 'Auto-generated receipt document';
 COMMENT ON COLUMN public.stock_transfers.customer_id IS 'Customer receiving the products when transferring to customer_installed warehouse. Required for customer_installed transfers.';
+COMMENT ON COLUMN public.stock_transfers.rma_batch_id IS 'RMA batch this transfer belongs to (for RMA workflow transfers)';
 
 CREATE OR REPLACE FUNCTION public.generate_transfer_number()
 RETURNS TRIGGER

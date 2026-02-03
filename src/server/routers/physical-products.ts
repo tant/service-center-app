@@ -1105,10 +1105,10 @@ export const inventoryRouter = router({
             continue;
           }
 
-          // Only accept products from warranty_stock warehouse type
+          // Only accept products from dead_stock warehouse (faulty products eligible for RMA)
           const currentWarehouse = product.virtual_warehouse as any;
-          if (!currentWarehouse || currentWarehouse.warehouse_type !== "warranty_stock") {
-            errors.push(`Product ${product.serial_number} must be in warranty_stock warehouse. Current: ${currentWarehouse?.name || "unknown"}`);
+          if (!currentWarehouse || currentWarehouse.warehouse_type !== "dead_stock") {
+            errors.push(`Product ${product.serial_number} must be in dead_stock warehouse. Current: ${currentWarehouse?.name || "unknown"}`);
             continue;
           }
 

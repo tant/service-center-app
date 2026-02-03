@@ -1,5 +1,21 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/page-header";
-import { StockDocumentsTable } from "@/components/inventory/documents/stock-documents-table";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const StockDocumentsTable = dynamic(
+  () => import("@/components/inventory/documents/stock-documents-table").then((mod) => mod.StockDocumentsTable),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
+        <Skeleton className="h-10 w-full max-w-2xl" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    ),
+  }
+);
 
 export default function StockDocumentsPage() {
   return (

@@ -5,11 +5,12 @@
  * Displays header information for a stock receipt
  */
 
-import { StockReceiptWithRelations } from "@/types/inventory";
+import { StockReceiptWithRelations, StockReceiptReason } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, Package, Warehouse } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, User, FileText, Package, Warehouse, Users, Tag } from "lucide-react";
 
 interface ReceiptDetailHeaderProps {
   receipt: StockReceiptWithRelations;
@@ -21,12 +22,37 @@ const RECEIPT_TYPE_LABELS: Record<string, string> = {
   adjustment: "Phiếu điều chỉnh (kiểm kê)",
 };
 
+// Receipt reason labels and styles
+const RECEIPT_REASON_CONFIG: Record<StockReceiptReason, { label: string; className: string }> = {
+  purchase: {
+    label: "Nhập mua hàng",
+    className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  },
+  customer_return: {
+    label: "Nhập hàng trả lại",
+    className: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  },
+  rma_return: {
+    label: "Nhập RMA về",
+    className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  },
+};
+
 export function ReceiptDetailHeader({ receipt }: ReceiptDetailHeaderProps) {
+  const reasonConfig = receipt.reason ? RECEIPT_REASON_CONFIG[receipt.reason] : null;
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl">{receipt.receipt_number}</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-2xl">{receipt.receipt_number}</CardTitle>
+            {reasonConfig && (
+              <Badge variant="secondary" className={reasonConfig.className}>
+                {reasonConfig.label}
+              </Badge>
+            )}
+          </div>
           <DocumentStatusBadge status={receipt.status} />
         </div>
       </CardHeader>
@@ -48,7 +74,7 @@ export function ReceiptDetailHeader({ receipt }: ReceiptDetailHeaderProps) {
               <div>
                 <div className="text-sm font-medium">Kho nhập</div>
                 <div className="text-sm text-muted-foreground">
-                  {(receipt as any).virtual_warehouse?.name || "-"}
+                  {receipt.virtual_warehouse?.name || "-"}
                 </div>
               </div>
             </div>
@@ -86,6 +112,31 @@ export function ReceiptDetailHeader({ receipt }: ReceiptDetailHeaderProps) {
                 </div>
               </div>
             </div>
+
+            {/* Customer for customer_return */}
+            {receipt.reason === "customer_return" && receipt.customer && (
+              <div className="flex items-start gap-2">
+                <Users className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">Khách hàng trả lại</div>
+                  <div className="text-sm text-muted-foreground">
+                    {receipt.customer.name}
+                    {receipt.customer.phone && ` (${receipt.customer.phone})`}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* RMA Reference for rma_return */}
+            {receipt.reason === "rma_return" && receipt.rma_reference && (
+              <div className="flex items-start gap-2">
+                <Tag className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">Mã RMA</div>
+                  <div className="text-sm text-muted-foreground">{receipt.rma_reference}</div>
+                </div>
+              </div>
+            )}
 
             {receipt.notes && (
               <div className="flex items-start gap-2">

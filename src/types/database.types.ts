@@ -1141,6 +1141,7 @@ export type Database = {
           shipping_date: string | null
           status: string
           supplier_id: string | null
+          supplier_name: string | null
           tracking_number: string | null
           updated_at: string
         }
@@ -1153,6 +1154,7 @@ export type Database = {
           shipping_date?: string | null
           status?: string
           supplier_id?: string | null
+          supplier_name?: string | null
           tracking_number?: string | null
           updated_at?: string
         }
@@ -1165,6 +1167,7 @@ export type Database = {
           shipping_date?: string | null
           status?: string
           supplier_id?: string | null
+          supplier_name?: string | null
           tracking_number?: string | null
           updated_at?: string
         }
@@ -1583,6 +1586,7 @@ export type Database = {
           service_fee: number
           started_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
+          tasks_completed_at: string | null
           ticket_number: string
           total_cost: number | null
           updated_at: string
@@ -1617,6 +1621,7 @@ export type Database = {
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
+          tasks_completed_at?: string | null
           ticket_number: string
           total_cost?: number | null
           updated_at?: string
@@ -1651,6 +1656,7 @@ export type Database = {
           service_fee?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
+          tasks_completed_at?: string | null
           ticket_number?: string
           total_cost?: number | null
           updated_at?: string
@@ -1948,21 +1954,20 @@ export type Database = {
       }
       stock_issues: {
         Row: {
-          approved_at: string | null
-          approved_by_id: string | null
-          auto_approve_threshold: number | null
           auto_generated: boolean
           completed_at: string | null
-          completed_by_id: string | null
           created_at: string
           created_by_id: string
+          customer_id: string | null
           id: string
           issue_date: string
           issue_number: string
+          issue_reason: Database["public"]["Enums"]["stock_issue_reason"] | null
           issue_type: Database["public"]["Enums"]["stock_issue_type"]
           notes: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
           reference_document_number: string | null
-          rejection_reason: string | null
           rma_batch_id: string | null
           status: Database["public"]["Enums"]["stock_document_status"]
           ticket_id: string | null
@@ -1970,21 +1975,22 @@ export type Database = {
           virtual_warehouse_id: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by_id?: string | null
-          auto_approve_threshold?: number | null
           auto_generated?: boolean
           completed_at?: string | null
-          completed_by_id?: string | null
           created_at?: string
           created_by_id: string
+          customer_id?: string | null
           id?: string
           issue_date?: string
           issue_number: string
+          issue_reason?:
+            | Database["public"]["Enums"]["stock_issue_reason"]
+            | null
           issue_type?: Database["public"]["Enums"]["stock_issue_type"]
           notes?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
           reference_document_number?: string | null
-          rejection_reason?: string | null
           rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["stock_document_status"]
           ticket_id?: string | null
@@ -1992,21 +1998,22 @@ export type Database = {
           virtual_warehouse_id: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by_id?: string | null
-          auto_approve_threshold?: number | null
           auto_generated?: boolean
           completed_at?: string | null
-          completed_by_id?: string | null
           created_at?: string
           created_by_id?: string
+          customer_id?: string | null
           id?: string
           issue_date?: string
           issue_number?: string
+          issue_reason?:
+            | Database["public"]["Enums"]["stock_issue_reason"]
+            | null
           issue_type?: Database["public"]["Enums"]["stock_issue_type"]
           notes?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
           reference_document_number?: string | null
-          rejection_reason?: string | null
           rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["stock_document_status"]
           ticket_id?: string | null
@@ -2015,24 +2022,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "stock_issues_approved_by_id_fkey"
-            columns: ["approved_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issues_completed_by_id_fkey"
-            columns: ["completed_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_issues_created_by_id_fkey"
             columns: ["created_by_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {
@@ -2364,10 +2364,7 @@ export type Database = {
       }
       stock_receipts: {
         Row: {
-          approved_at: string | null
-          approved_by_id: string | null
           completed_at: string | null
-          completed_by_id: string | null
           created_at: string
           created_by_id: string
           expected_date: string | null
@@ -2377,7 +2374,6 @@ export type Database = {
           receipt_number: string
           receipt_type: Database["public"]["Enums"]["stock_receipt_type"]
           reference_document_number: string | null
-          rejection_reason: string | null
           rma_batch_id: string | null
           status: Database["public"]["Enums"]["stock_document_status"]
           supplier_id: string | null
@@ -2385,10 +2381,7 @@ export type Database = {
           virtual_warehouse_id: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by_id?: string | null
           completed_at?: string | null
-          completed_by_id?: string | null
           created_at?: string
           created_by_id: string
           expected_date?: string | null
@@ -2398,7 +2391,6 @@ export type Database = {
           receipt_number: string
           receipt_type?: Database["public"]["Enums"]["stock_receipt_type"]
           reference_document_number?: string | null
-          rejection_reason?: string | null
           rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["stock_document_status"]
           supplier_id?: string | null
@@ -2406,10 +2398,7 @@ export type Database = {
           virtual_warehouse_id: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by_id?: string | null
           completed_at?: string | null
-          completed_by_id?: string | null
           created_at?: string
           created_by_id?: string
           expected_date?: string | null
@@ -2419,7 +2408,6 @@ export type Database = {
           receipt_number?: string
           receipt_type?: Database["public"]["Enums"]["stock_receipt_type"]
           reference_document_number?: string | null
-          rejection_reason?: string | null
           rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["stock_document_status"]
           supplier_id?: string | null
@@ -2427,20 +2415,6 @@ export type Database = {
           virtual_warehouse_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "stock_receipts_approved_by_id_fkey"
-            columns: ["approved_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_receipts_completed_by_id_fkey"
-            columns: ["completed_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "stock_receipts_created_by_id_fkey"
             columns: ["created_by_id"]
@@ -2603,8 +2577,6 @@ export type Database = {
       }
       stock_transfers: {
         Row: {
-          approved_at: string | null
-          approved_by_id: string | null
           completed_at: string | null
           created_at: string
           created_by_id: string
@@ -2615,8 +2587,7 @@ export type Database = {
           generated_receipt_id: string | null
           id: string
           notes: string | null
-          received_by_id: string | null
-          rejection_reason: string | null
+          rma_batch_id: string | null
           status: Database["public"]["Enums"]["transfer_status"]
           to_virtual_warehouse_id: string
           transfer_date: string
@@ -2624,8 +2595,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_id: string
@@ -2636,8 +2605,7 @@ export type Database = {
           generated_receipt_id?: string | null
           id?: string
           notes?: string | null
-          received_by_id?: string | null
-          rejection_reason?: string | null
+          rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["transfer_status"]
           to_virtual_warehouse_id: string
           transfer_date?: string
@@ -2645,8 +2613,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_id?: string
@@ -2657,8 +2623,7 @@ export type Database = {
           generated_receipt_id?: string | null
           id?: string
           notes?: string | null
-          received_by_id?: string | null
-          rejection_reason?: string | null
+          rma_batch_id?: string | null
           status?: Database["public"]["Enums"]["transfer_status"]
           to_virtual_warehouse_id?: string
           transfer_date?: string
@@ -2666,13 +2631,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "stock_transfers_approved_by_id_fkey"
-            columns: ["approved_by_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "stock_transfers_created_by_id_fkey"
             columns: ["created_by_id"]
@@ -2723,10 +2681,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_transfers_received_by_id_fkey"
-            columns: ["received_by_id"]
+            foreignKeyName: "stock_transfers_rma_batch_id_fkey"
+            columns: ["rma_batch_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "rma_batches"
             referencedColumns: ["id"]
           },
           {
@@ -3477,6 +3435,17 @@ export type Database = {
         }[]
       }
       get_my_role: { Args: never; Returns: string }
+      get_ticket_status_label_vi: {
+        Args: { status: Database["public"]["Enums"]["ticket_status"] }
+        Returns: string
+      }
+      get_ticket_status_message_vi: {
+        Args: {
+          new_status: Database["public"]["Enums"]["ticket_status"]
+          old_status: Database["public"]["Enums"]["ticket_status"]
+        }
+        Returns: string
+      }
       get_warranty_status: {
         Args: { p_warranty_end_date: string }
         Returns: string
@@ -3537,12 +3506,7 @@ export type Database = {
         | "assignment"
         | "return"
         | "disposal"
-      physical_product_status:
-        | "draft"
-        | "active"
-        | "transferring"
-        | "issued"
-        | "disposed"
+      physical_product_status: "active" | "issued"
       priority_level: "low" | "normal" | "high" | "urgent"
       product_condition: "new" | "refurbished" | "used" | "faulty" | "for_parts"
       receipt_status: "received" | "pending_receipt"
@@ -3555,12 +3519,17 @@ export type Database = {
         | "completed"
         | "cancelled"
       service_type: "warranty" | "paid" | "replacement"
-      stock_document_status:
-        | "draft"
-        | "pending_approval"
-        | "approved"
-        | "completed"
-        | "cancelled"
+      stock_document_status: "completed"
+      stock_issue_reason:
+        | "sale"
+        | "warranty_replacement"
+        | "repair"
+        | "internal_use"
+        | "sample"
+        | "gift"
+        | "return_to_supplier"
+        | "damage"
+        | "other"
       stock_issue_type: "normal" | "adjustment"
       stock_receipt_type: "normal" | "adjustment"
       task_status:
@@ -3576,12 +3545,7 @@ export type Database = {
         | "ready_for_pickup"
         | "completed"
         | "cancelled"
-      transfer_status:
-        | "draft"
-        | "pending_approval"
-        | "approved"
-        | "completed"
-        | "cancelled"
+      transfer_status: "completed"
       user_role: "admin" | "manager" | "technician" | "reception"
       warehouse_type:
         | "main"
@@ -3738,13 +3702,7 @@ export const Constants = {
         "return",
         "disposal",
       ],
-      physical_product_status: [
-        "draft",
-        "active",
-        "transferring",
-        "issued",
-        "disposed",
-      ],
+      physical_product_status: ["active", "issued"],
       priority_level: ["low", "normal", "high", "urgent"],
       product_condition: ["new", "refurbished", "used", "faulty", "for_parts"],
       receipt_status: ["received", "pending_receipt"],
@@ -3758,12 +3716,17 @@ export const Constants = {
         "cancelled",
       ],
       service_type: ["warranty", "paid", "replacement"],
-      stock_document_status: [
-        "draft",
-        "pending_approval",
-        "approved",
-        "completed",
-        "cancelled",
+      stock_document_status: ["completed"],
+      stock_issue_reason: [
+        "sale",
+        "warranty_replacement",
+        "repair",
+        "internal_use",
+        "sample",
+        "gift",
+        "return_to_supplier",
+        "damage",
+        "other",
       ],
       stock_issue_type: ["normal", "adjustment"],
       stock_receipt_type: ["normal", "adjustment"],
@@ -3782,13 +3745,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
-      transfer_status: [
-        "draft",
-        "pending_approval",
-        "approved",
-        "completed",
-        "cancelled",
-      ],
+      transfer_status: ["completed"],
       user_role: ["admin", "manager", "technician", "reception"],
       warehouse_type: [
         "main",

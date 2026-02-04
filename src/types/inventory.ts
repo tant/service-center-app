@@ -14,6 +14,22 @@ export type StockIssueType =
   | 'normal'      // Phiếu xuất bình thường (mặc định)
   | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
+export type StockIssueReason =
+  | 'sale'                 // Bán hàng
+  | 'warranty_replacement' // Đổi bảo hành
+  | 'repair'               // Sửa chữa (linh kiện cho ticket)
+  | 'internal_use'         // Sử dụng nội bộ
+  | 'sample'               // Hàng mẫu
+  | 'gift'                 // Quà tặng
+  | 'return_to_supplier'   // Trả nhà cung cấp
+  | 'damage'               // Hàng hỏng/mất
+  | 'other';               // Khác
+
+export type StockReceiptReason =
+  | 'purchase'        // Nhập mua hàng từ NCC/NSX
+  | 'customer_return' // Nhập hàng trả lại từ khách hàng
+  | 'rma_return';     // Nhập RMA về từ NCC
+
 export type TransferStatus = 'completed';
 
 export type StockStatus = 'ok' | 'warning' | 'critical';
@@ -37,6 +53,9 @@ export interface StockReceipt {
   receipt_number: string;
   receipt_type: StockReceiptType;
   status: StockDocumentStatus;
+  reason: StockReceiptReason | null; // Lý do nhập kho
+  customer_id: string | null;        // Khách hàng trả lại (cho customer_return)
+  rma_reference: string | null;      // Mã tham chiếu RMA (cho rma_return)
   virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   receipt_date: string;
   expected_date: string | null;
@@ -91,6 +110,15 @@ export interface StockReceiptWithRelations extends StockReceipt {
     id: string;
     full_name: string;
   };
+  customer?: {
+    id: string;
+    name: string;
+    phone: string | null;
+  } | null;
+  virtual_warehouse?: {
+    id: string;
+    name: string;
+  };
   attachments: StockDocumentAttachment[];
 }
 
@@ -107,6 +135,11 @@ export interface StockIssue {
   ticket_id: string | null;
   rma_batch_id: string | null;
   reference_document_number: string | null;
+  // Recipient information
+  customer_id: string | null;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  issue_reason: StockIssueReason | null;
   created_by_id: string;
   completed_by_id: string | null;
   auto_generated: boolean;
@@ -152,6 +185,11 @@ export interface StockIssueWithRelations extends StockIssue {
     id: string;
     full_name: string;
   };
+  customer?: {
+    id: string;
+    name: string;
+    phone: string | null;
+  } | null;
   ticket?: {
     id: string;
     ticket_number: string;
@@ -173,6 +211,7 @@ export interface StockTransfer {
   received_by_id: string | null;
   generated_issue_id: string | null;
   generated_receipt_id: string | null;
+  customer_id: string | null; // Customer receiving products (for customer_installed transfers)
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -193,6 +232,45 @@ export interface StockTransferSerial {
   physical_product_id: string;
   serial_number: string;
   created_at: string;
+}
+
+export interface StockTransferWithRelations extends StockTransfer {
+  items: (StockTransferItem & {
+    product: {
+      id: string;
+      name: string;
+      sku: string | null;
+    };
+    serials: (StockTransferSerial & {
+      physical_product: {
+        serial_number: string;
+        manufacturer_warranty_end_date: string | null;
+        user_warranty_end_date: string | null;
+      };
+    })[];
+  })[];
+  from_virtual_warehouse: {
+    id: string;
+    name: string;
+  };
+  to_virtual_warehouse: {
+    id: string;
+    name: string;
+  };
+  created_by: {
+    id: string;
+    full_name: string;
+  };
+  received_by?: {
+    id: string;
+    full_name: string;
+  } | null;
+  customer?: {
+    id: string;
+    name: string;
+    phone: string | null;
+  } | null;
+  attachments: StockDocumentAttachment[];
 }
 
 // ==================== Attachments ====================

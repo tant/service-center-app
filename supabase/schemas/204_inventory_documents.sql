@@ -36,6 +36,11 @@ CREATE TABLE IF NOT EXISTS public.stock_receipts (
   receipt_type public.stock_receipt_type NOT NULL DEFAULT 'normal',
   status public.stock_document_status NOT NULL DEFAULT 'completed',
 
+  -- Receipt reason (track origin of goods)
+  reason public.stock_receipt_reason DEFAULT 'purchase',
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  rma_reference TEXT,
+
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
 
   receipt_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -59,10 +64,15 @@ CREATE INDEX idx_stock_receipts_type ON public.stock_receipts(receipt_type);
 CREATE INDEX idx_stock_receipts_date ON public.stock_receipts(receipt_date);
 CREATE INDEX idx_stock_receipts_warehouse ON public.stock_receipts(virtual_warehouse_id);
 CREATE INDEX idx_stock_receipts_created_by ON public.stock_receipts(created_by_id);
+CREATE INDEX idx_stock_receipts_reason ON public.stock_receipts(reason) WHERE reason IS NOT NULL;
+CREATE INDEX idx_stock_receipts_customer ON public.stock_receipts(customer_id) WHERE customer_id IS NOT NULL;
 
 COMMENT ON TABLE public.stock_receipts IS 'Stock receipt documents (Phiếu Nhập Kho)';
 COMMENT ON COLUMN public.stock_receipts.virtual_warehouse_id IS 'Virtual warehouse to receive stock';
 COMMENT ON COLUMN public.stock_receipts.receipt_type IS 'normal (default) or adjustment (kiểm kê)';
+COMMENT ON COLUMN public.stock_receipts.reason IS 'Lý do nhập kho: purchase (mua hàng), customer_return (khách trả lại), rma_return (RMA về)';
+COMMENT ON COLUMN public.stock_receipts.customer_id IS 'Khách hàng trả lại (bắt buộc khi reason = customer_return)';
+COMMENT ON COLUMN public.stock_receipts.rma_reference IS 'Mã tham chiếu RMA (optional khi reason = rma_return)';
 
 CREATE OR REPLACE FUNCTION public.generate_receipt_number()
 RETURNS TRIGGER
@@ -169,6 +179,12 @@ CREATE TABLE IF NOT EXISTS public.stock_issues (
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   reference_document_number VARCHAR(100),
 
+  -- Recipient information
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  recipient_name VARCHAR(255),
+  recipient_phone VARCHAR(50),
+  issue_reason public.stock_issue_reason,
+
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
 
   auto_generated BOOLEAN NOT NULL DEFAULT false,
@@ -184,10 +200,16 @@ CREATE INDEX idx_stock_issues_type ON public.stock_issues(issue_type);
 CREATE INDEX idx_stock_issues_ticket ON public.stock_issues(ticket_id);
 CREATE INDEX idx_stock_issues_date ON public.stock_issues(issue_date);
 CREATE INDEX idx_stock_issues_warehouse ON public.stock_issues(virtual_warehouse_id);
+CREATE INDEX idx_stock_issues_customer ON public.stock_issues(customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX idx_stock_issues_reason ON public.stock_issues(issue_reason);
 
 COMMENT ON TABLE public.stock_issues IS 'Stock issue documents (Phiếu Xuất Kho)';
 COMMENT ON COLUMN public.stock_issues.virtual_warehouse_id IS 'Virtual warehouse to deduct stock from';
 COMMENT ON COLUMN public.stock_issues.issue_type IS 'normal (default) or adjustment (kiểm kê)';
+COMMENT ON COLUMN public.stock_issues.customer_id IS 'Customer receiving the products (if applicable)';
+COMMENT ON COLUMN public.stock_issues.recipient_name IS 'Recipient name (for non-customer recipients like employees or partners)';
+COMMENT ON COLUMN public.stock_issues.recipient_phone IS 'Recipient phone number';
+COMMENT ON COLUMN public.stock_issues.issue_reason IS 'Reason for stock issue: sale, warranty_replacement, repair, internal_use, etc.';
 
 CREATE OR REPLACE FUNCTION public.generate_issue_number()
 RETURNS TRIGGER

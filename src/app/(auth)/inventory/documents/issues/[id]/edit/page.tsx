@@ -2,7 +2,7 @@
 
 /**
  * Edit Issue Page
- * Form for editing draft stock issues
+ * Form for editing stock issue (recipient info, notes only - items cannot be changed)
  */
 
 import { use, useState, useEffect } from "react";
@@ -15,21 +15,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { toast } from "sonner";
+import type { StockIssueReason } from "@/types/inventory";
 
-const ISSUE_TYPES = [
-  { value: "normal", label: "Phiếu xuất bình thường" },
-  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+// Issue reason labels
+const ISSUE_REASONS: { value: StockIssueReason; label: string }[] = [
+  { value: "sale", label: "Bán hàng" },
+  { value: "warranty_replacement", label: "Đổi bảo hành" },
+  { value: "repair", label: "Sửa chữa (linh kiện)" },
+  { value: "internal_use", label: "Sử dụng nội bộ" },
+  { value: "sample", label: "Hàng mẫu" },
+  { value: "gift", label: "Quà tặng" },
+  { value: "return_to_supplier", label: "Trả nhà cung cấp" },
+  { value: "damage", label: "Hàng hỏng/mất" },
+  { value: "other", label: "Khác" },
 ];
-
-interface ProductItem {
-  id?: string;
-  productId: string;
-  quantity: number;
-}
 
 interface EditIssuePageProps {
   params: Promise<{ id: string }>;
@@ -39,97 +42,48 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   const router = useRouter();
   const { id } = use(params);
 
-  const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal");
-  const [virtualWarehouseId, setVirtualWarehouseId] = useState("");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
+  // Editable fields
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<ProductItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [referenceDocumentNumber, setReferenceDocumentNumber] = useState("");
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [issueReason, setIssueReason] = useState<StockIssueReason | "">("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { data: issue, isLoading: issueLoading } = trpc.inventory.issues.getById.useQuery({ id });
-  const updateIssue = trpc.inventory.issues.updateFull.useMutation();
-  const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const updateIssue = trpc.inventory.issues.update.useMutation();
+  const { data: customers } = trpc.customers.getCustomers.useQuery();
 
-  // Redirect immediately - editing is no longer supported
+  // Initialize form with existing data
   useEffect(() => {
-    if (issue && !issueLoading) {
-      toast.error("Phiếu xuất đã hoàn tất, không thể chỉnh sửa");
-      router.push(`/inventory/documents/issues/${id}`);
-    }
-  }, [issue, issueLoading, router, id]);
-
-  // This code will not run due to redirect, but kept for TypeScript
-  useEffect(() => {
-    if (issue && !issueLoading) {
-      setIssueType(issue.issue_type as "normal" | "adjustment");
-      setVirtualWarehouseId(issue.virtual_warehouse_id || "");
-      setIssueDate(issue.issue_date?.split("T")[0] || new Date().toISOString().split("T")[0]);
+    if (issue && !isInitialized) {
       setNotes(issue.notes || "");
-
-      // Load items
-      if (issue.items && Array.isArray(issue.items)) {
-        setItems(
-          issue.items.map((item: any) => ({
-            id: item.id,
-            productId: item.product_id,
-            quantity: item.quantity,
-          }))
-        );
-      }
-
-      setIsLoading(false);
+      setReferenceDocumentNumber(issue.reference_document_number || "");
+      setCustomerId(issue.customer_id);
+      setRecipientName(issue.recipient_name || "");
+      setRecipientPhone(issue.recipient_phone || "");
+      setIssueReason(issue.issue_reason || "");
+      setIsInitialized(true);
     }
-  }, [issue, issueLoading, router, id]);
-
-  const handleAddItem = () => {
-    setItems([...items, { productId: "", quantity: 1 }]);
-  };
-
-  const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const handleItemChange = (index: number, field: keyof ProductItem, value: any) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
-  };
+  }, [issue, isInitialized]);
 
   const handleSubmit = async () => {
-    if (!issueType || !virtualWarehouseId || items.length === 0) {
-      toast.error("Vui lòng điền đầy đủ thông tin");
+    // Validation: Require customer when issueReason = 'sale'
+    if (issueReason === "sale" && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi xuất bán hàng");
       return;
-    }
-
-    // Validate based on type
-    if (issueType === "normal") {
-      const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
-      if (invalidItems.length > 0) {
-        toast.error("Phiếu xuất bình thường phải có số lượng dương");
-        return;
-      }
-    } else {
-      // Adjustment: allow negative but not zero
-      const invalidItems = items.filter((item) => !item.productId || item.quantity === 0);
-      if (invalidItems.length > 0) {
-        toast.error("Số lượng không được bằng 0");
-        return;
-      }
     }
 
     try {
       await updateIssue.mutateAsync({
         id,
-        issueType,
-        virtualWarehouseId,
-        issueDate,
         notes: notes || undefined,
-        items: items.map((item) => ({
-          id: item.id,
-          productId: item.productId,
-          quantity: item.quantity,
-        })),
+        referenceDocumentNumber: referenceDocumentNumber || undefined,
+        customerId: customerId,
+        recipientName: recipientName || undefined,
+        recipientPhone: recipientPhone || undefined,
+        issueReason: issueReason || undefined,
       });
 
       toast.success("Đã cập nhật phiếu xuất thành công");
@@ -139,7 +93,7 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
     }
   };
 
-  if (issueLoading || isLoading) {
+  if (issueLoading) {
     return (
       <>
         <PageHeader title="Chỉnh sửa phiếu xuất" />
@@ -190,23 +144,32 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
             </div>
 
             <div className="px-4 lg:px-6 space-y-4">
-              {/* Basic Info */}
+              {/* Info Alert */}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Phiếu xuất đã hoàn tất. Chỉ có thể chỉnh sửa thông tin người nhận, ghi chú và số chứng từ tham chiếu.
+                </AlertDescription>
+              </Alert>
+
+              {/* Recipient Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Thông tin phiếu xuất</CardTitle>
+                  <CardTitle>Thông tin người nhận</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Loại phiếu *</Label>
-                      <Select value={issueType} onValueChange={(v) => setIssueType(v as "normal" | "adjustment")}>
+                      <Label>Lý do xuất kho</Label>
+                      <Select value={issueReason} onValueChange={(v) => setIssueReason(v as StockIssueReason)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại phiếu" />
+                          <SelectValue placeholder="Chọn lý do" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ISSUE_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
+                          <SelectItem value="">-- Không chọn --</SelectItem>
+                          {ISSUE_REASONS.map((reason) => (
+                            <SelectItem key={reason.value} value={reason.value}>
+                              {reason.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -214,15 +177,18 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Kho xuất *</Label>
-                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn kho" />
+                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
+                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Select value={customerId || ""} onValueChange={(v) => setCustomerId(v || null)}>
+                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
+                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
+                          {issueReason !== "sale" && <SelectItem value="">-- Không chọn --</SelectItem>}
+                          {customers?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name} {customer.phone ? `(${customer.phone})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -230,19 +196,40 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Ngày xuất *</Label>
-                      <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+                      <Label>Tên người nhận</Label>
+                      <Input
+                        placeholder="Nhập tên người nhận (nếu không phải khách hàng)"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>SĐT người nhận</Label>
+                      <Input
+                        placeholder="Nhập số điện thoại"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                      />
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {issueType === "adjustment" && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Phiếu điều chỉnh:</strong> Số dương = giảm stock, số âm = tăng stock. Dùng khi kiểm kê hoặc sửa sai sót.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+              {/* Notes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thông tin bổ sung</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label>Số chứng từ tham chiếu</Label>
+                    <Input
+                      placeholder="Nhập số hóa đơn, số hợp đồng..."
+                      value={referenceDocumentNumber}
+                      onChange={(e) => setReferenceDocumentNumber(e.target.value)}
+                    />
+                  </div>
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -255,75 +242,6 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Items */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Danh sách sản phẩm</CardTitle>
-                    <Button variant="outline" size="sm" onClick={handleAddItem}>
-                      <Plus className="h-4 w-4" />
-                      Thêm sản phẩm
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {items.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Chưa có sản phẩm. Nhấn "Thêm sản phẩm" để bắt đầu.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {items.map((item, index) => (
-                        <div key={index} className="flex items-end gap-2">
-                          <div className="flex-1 grid gap-2">
-                            <Label>Sản phẩm</Label>
-                            <Select
-                              value={item.productId}
-                              onValueChange={(value) => handleItemChange(index, "productId", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Chọn sản phẩm" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} {product.sku ? `(${product.sku})` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="w-32 grid gap-2">
-                            <Label>Số lượng</Label>
-                            <Input
-                              type="number"
-                              min={issueType === "adjustment" ? undefined : "1"}
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(index, "quantity", Number.parseInt(e.target.value))}
-                              className={item.quantity < 0 ? "text-red-600 font-medium" : ""}
-                            />
-                          </div>
-
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Warning about serials */}
-              {issue.items?.some((item: any) => item.serials && item.serials.length > 0) && (
-                <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700 p-4">
-                  <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                    <strong>Lưu ý:</strong> Phiếu xuất này đã có một số serial được chọn. Nếu bạn thay đổi sản phẩm hoặc số lượng, các serial đã chọn có thể bị xóa.
-                  </div>
-                </div>
-              )}
 
               {/* Submit */}
               <div className="flex justify-end gap-2">

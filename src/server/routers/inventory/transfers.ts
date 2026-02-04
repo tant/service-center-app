@@ -120,7 +120,8 @@ export const transfersRouter = router({
           ),
           from_virtual_warehouse:virtual_warehouses!from_virtual_warehouse_id(id, name),
           to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name),
-          created_by:profiles!created_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name),
+          customer:customers(id, name, phone)
         `,
         )
         .eq("id", input.id)
@@ -185,18 +186,29 @@ export const transfersRouter = router({
       if (input.fromVirtualWarehouseId === input.toVirtualWarehouseId) {
         throw new Error("Cannot transfer to the same warehouse");
       }
+
+      // Validate warehouse types - customer_installed cannot be used in transfers
+      const { data: fromWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("warehouse_type")
+        .eq("id", input.fromVirtualWarehouseId)
+        .single();
+
+      if (fromWarehouse?.warehouse_type === "customer_installed") {
+        throw new Error(
+          "Không thể chuyển kho từ 'Hàng Đã Bán'. Nếu khách trả lại hàng, vui lòng sử dụng Phiếu nhập kho.",
+        );
+      }
+
       const { data: toWarehouse } = await ctx.supabaseAdmin
         .from("virtual_warehouses")
         .select("warehouse_type")
         .eq("id", input.toVirtualWarehouseId)
         .single();
 
-      if (
-        toWarehouse?.warehouse_type === "customer_installed" &&
-        !input.customerId
-      ) {
+      if (toWarehouse?.warehouse_type === "customer_installed") {
         throw new Error(
-          "Customer ID is required when transferring to customer_installed warehouse",
+          "Không thể chuyển kho vào 'Hàng Đã Bán'. Để xuất hàng cho khách, vui lòng sử dụng Phiếu xuất kho.",
         );
       }
 

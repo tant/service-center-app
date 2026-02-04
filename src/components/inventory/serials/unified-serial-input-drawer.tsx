@@ -3,7 +3,7 @@
 /**
  * Unified Serial Input Drawer Component
  * Single component for all 3 document types: Receipt, Issue, Transfer
- * Simple flow: Enter → Save (with automatic validation)
+ * Redesigned for better UX: Focus on primary action (textarea)
  */
 
 import { useState } from "react";
@@ -13,7 +13,6 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
@@ -23,8 +22,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { SerialProgressBar } from "./serial-progress-bar";
-import { Upload, FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Upload, Loader2, AlertCircle, CheckCircle2, ChevronDown, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 type DocumentType = "receipt" | "issue" | "transfer";
@@ -59,9 +63,12 @@ export function UnifiedSerialInputDrawer({
 }: UnifiedSerialInputDrawerProps) {
   const isMobile = useIsMobile();
   const [serialInput, setSerialInput] = useState("");
-  const [mode, setMode] = useState<"manual" | "csv">("manual");
-  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+
+  // Warranty fields (only for receipt type)
+  const [warrantyOpen, setWarrantyOpen] = useState(false);
+  const [manufacturerWarrantyDate, setManufacturerWarrantyDate] = useState("");
+  const [userWarrantyDate, setUserWarrantyDate] = useState("");
 
   // Mutations based on document type
   const addReceiptSerials = trpc.inventory.receipts.addSerials.useMutation();
@@ -69,6 +76,13 @@ export function UnifiedSerialInputDrawer({
   const selectTransferSerials = trpc.inventory.transfers.selectSerialsByNumbers.useMutation();
 
   const remaining = quantity - currentSerialCount;
+
+  // Count serials in input
+  const inputSerials = serialInput
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const serialCount = inputSerials.length;
 
   const getDocumentTypeLabel = () => {
     switch (type) {
@@ -78,19 +92,22 @@ export function UnifiedSerialInputDrawer({
     }
   };
 
+  const getValidationHint = () => {
+    switch (type) {
+      case "receipt": return "Serial phải chưa tồn tại trong hệ thống";
+      case "issue": return "Serial phải đã có trong kho xuất";
+      case "transfer": return "Serial phải đã có trong kho nguồn";
+    }
+  };
+
   const handleSave = async () => {
     if (!serialInput.trim()) {
       toast.error("Vui lòng nhập ít nhất một số serial");
       return;
     }
 
-    const serials = serialInput
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (serials.length > remaining) {
-      toast.error(`Bạn chỉ có thể thêm ${remaining} serial. Bạn đã nhập ${serials.length}.`);
+    if (serialCount > remaining) {
+      toast.error(`Bạn chỉ có thể thêm ${remaining} serial. Bạn đã nhập ${serialCount}.`);
       return;
     }
 
@@ -99,46 +116,50 @@ export function UnifiedSerialInputDrawer({
     try {
       if (type === "receipt") {
         // Receipt: Add new serials (validates uniqueness)
-        const serialsData = serials.map((s) => ({ serialNumber: s }));
+        const serialsData = inputSerials.map((s) => ({
+          serialNumber: s,
+          // Apply warranty dates if set
+          ...(manufacturerWarrantyDate && {
+            manufacturerWarrantyEndDate: manufacturerWarrantyDate,
+          }),
+          ...(userWarrantyDate && {
+            userWarrantyEndDate: userWarrantyDate,
+          }),
+        }));
         await addReceiptSerials.mutateAsync({
           receiptItemId: itemId,
           serials: serialsData,
         });
       } else if (type === "issue") {
-        // Issue: Select existing serials from warehouse
-        // First need to find physical product IDs by serial numbers
-        // This will be validated in backend
         await selectIssueSerials.mutateAsync({
           issueItemId: itemId,
-          serialNumbers: serials,
+          serialNumbers: inputSerials,
           virtualWarehouseId: warehouseId!,
         });
       } else {
-        // Transfer: Select existing serials from source warehouse
         await selectTransferSerials.mutateAsync({
           transferItemId: itemId,
-          serialNumbers: serials,
+          serialNumbers: inputSerials,
           virtualWarehouseId: warehouseId!,
         });
       }
 
-      toast.success(`Đã lưu ${serials.length} serial thành công!`);
+      toast.success(`Đã lưu ${serialCount} serial thành công!`);
       onSuccess();
       setSerialInput("");
       setValidationErrors([]);
+      setWarrantyOpen(false);
+      setManufacturerWarrantyDate("");
+      setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
       console.error("Save error:", error);
 
-      // Parse validation errors from backend
       if (error.message) {
-        // Try to extract detailed errors if available
         const errorMsg = error.message;
 
-        // Check if it's a structured validation error
         if (errorMsg.includes("Duplicate") || errorMsg.includes("not found") || errorMsg.includes("already")) {
-          // Parse individual serial errors
-          const errors: ValidationError[] = serials.map(serial => ({
+          const errors: ValidationError[] = inputSerials.map(serial => ({
             serial,
             error: errorMsg.includes(serial) ? errorMsg : ""
           })).filter(e => e.error);
@@ -146,7 +167,6 @@ export function UnifiedSerialInputDrawer({
           if (errors.length > 0) {
             setValidationErrors(errors);
           } else {
-            // Generic error for all
             toast.error(errorMsg);
           }
         } else {
@@ -162,13 +182,10 @@ export function UnifiedSerialInputDrawer({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setCsvFile(file);
-
     const reader = new FileReader();
     reader.onload = (e) => {
       const csvData = e.target?.result as string;
 
-      // Parse CSV - extract serial numbers
       const lines = csvData.trim().split("\n");
       const hasHeader = lines[0].toLowerCase().includes("serial");
       const dataLines = hasHeader ? lines.slice(1) : lines;
@@ -180,9 +197,7 @@ export function UnifiedSerialInputDrawer({
         })
         .filter(Boolean);
 
-      // Put into textarea
       setSerialInput(serials.join("\n"));
-      setCsvFile(null);
       event.target.value = "";
       toast.success(`Đã tải ${serials.length} serial từ CSV`);
     };
@@ -195,199 +210,179 @@ export function UnifiedSerialInputDrawer({
     selectIssueSerials.isPending ||
     selectTransferSerials.isPending;
 
+  const hasWarrantySet = manufacturerWarrantyDate || userWarrantyDate;
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction={isMobile ? "bottom" : "right"}>
-      <DrawerContent className="overflow-visible">
-        <DrawerHeader>
-          <DrawerTitle>Nhập Số Serial - {getDocumentTypeLabel()}</DrawerTitle>
-          <DrawerDescription>
-            Sản phẩm: <span className="font-medium">{productName}</span>
-          </DrawerDescription>
+      <DrawerContent className="overflow-visible flex flex-col max-h-[95vh]">
+        {/* Header with inline progress */}
+        <DrawerHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <DrawerTitle className="text-base">{getDocumentTypeLabel()}</DrawerTitle>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">{currentSerialCount}/{quantity}</span>
+              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(currentSerialCount / quantity) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{productName}</p>
         </DrawerHeader>
 
-        <div className="flex flex-col gap-6 px-4 text-sm max-h-[70vh] overflow-y-auto">
-          {/* Progress Bar */}
-          <SerialProgressBar current={currentSerialCount} total={quantity} />
-
+        {/* Main content - scrollable */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
           {remaining === 0 ? (
             <div className="rounded-md bg-green-50 dark:bg-green-950 p-4 text-sm text-green-800 dark:text-green-300">
-              ✅ Đã nhập/chọn đủ serial! Bạn có thể đóng hộp thoại này.
+              Đã nhập đủ serial! Bạn có thể đóng hộp thoại này.
             </div>
           ) : (
-            <>
-              {/* Validation Type Info */}
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {type === "receipt" && (
-                    <span>📝 Serial phải <strong>chưa tồn tại</strong> trong hệ thống</span>
-                  )}
-                  {type === "issue" && (
-                    <span>📦 Serial phải <strong>đã có</strong> trong kho xuất</span>
-                  )}
-                  {type === "transfer" && (
-                    <span>🚚 Serial phải <strong>đã có</strong> trong kho nguồn</span>
-                  )}
-                </AlertDescription>
-              </Alert>
-
-              {/* Mode Switcher */}
-              <div className="flex gap-2">
-                <Button
-                  variant={mode === "manual" ? "default" : "outline"}
-                  onClick={() => setMode("manual")}
-                  className="flex-1"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Nhập thủ công
-                </Button>
-                <Button
-                  variant={mode === "csv" ? "default" : "outline"}
-                  onClick={() => setMode("csv")}
-                  className="flex-1"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Nhập CSV
-                </Button>
-              </div>
-
-              {/* Manual Entry Mode */}
-              {mode === "manual" && (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="serials">
-                      Số Serial <span className="text-muted-foreground">(mỗi dòng một số)</span>
-                    </Label>
-                    <Textarea
-                      id="serials"
-                      placeholder={`SN001\nSN002\nSN003\n\n(Tối đa ${remaining} serial)`}
-                      value={serialInput}
-                      onChange={(e) => setSerialInput(e.target.value)}
-                      rows={12}
-                      className="font-mono text-sm mt-2"
+            <div className="space-y-4">
+              {/* Primary: Serial Input */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="serials" className="text-sm font-medium">
+                    Số Serial
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {getValidationHint()}
+                  </span>
+                </div>
+                <Textarea
+                  id="serials"
+                  placeholder={`Nhập mỗi serial một dòng...\n\nVD:\nSN001\nSN002\nSN003`}
+                  value={serialInput}
+                  onChange={(e) => setSerialInput(e.target.value)}
+                  rows={isMobile ? 8 : 12}
+                  className="font-mono text-sm resize-none"
+                  disabled={isProcessing}
+                  autoFocus
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {serialCount > 0 ? (
+                      <span className={serialCount > remaining ? "text-destructive font-medium" : ""}>
+                        Đã nhập {serialCount} serial {serialCount > remaining && `(vượt ${serialCount - remaining})`}
+                      </span>
+                    ) : (
+                      "Có thể paste nhiều serial cùng lúc"
+                    )}
+                  </span>
+                  <Label htmlFor="csv-upload" className="cursor-pointer hover:text-foreground flex items-center gap-1">
+                    <Upload className="h-3 w-3" />
+                    Tải từ CSV
+                    <Input
+                      id="csv-upload"
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={handleCsvUpload}
                       disabled={isProcessing}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      💡 Bạn có thể paste nhiều serial cùng lúc
-                    </p>
-                  </div>
-
-                  {/* Validation Errors */}
-                  {validationErrors.length > 0 && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="font-medium mb-2">
-                          Có {validationErrors.length} lỗi:
-                        </div>
-                        <ul className="list-disc list-inside space-y-1 text-sm">
-                          {validationErrors.map((err, idx) => (
-                            <li key={idx}>
-                              <span className="font-mono">{err.serial}</span>: {err.error}
-                            </li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {/* Save Button */}
-                  <Button
-                    onClick={handleSave}
-                    disabled={!serialInput.trim() || isProcessing}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang lưu...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Lưu Serial
-                      </>
-                    )}
-                  </Button>
+                  </Label>
                 </div>
+              </div>
+
+              {/* Validation Errors */}
+              {validationErrors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="font-medium mb-1">Có {validationErrors.length} lỗi:</div>
+                    <ul className="list-disc list-inside space-y-0.5 text-xs">
+                      {validationErrors.slice(0, 5).map((err, idx) => (
+                        <li key={idx}>
+                          <span className="font-mono">{err.serial}</span>: {err.error}
+                        </li>
+                      ))}
+                      {validationErrors.length > 5 && (
+                        <li>...và {validationErrors.length - 5} lỗi khác</li>
+                      )}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
               )}
 
-              {/* CSV Import Mode */}
-              {mode === "csv" && (
-                <div className="space-y-4">
-                  <div className="rounded-md border-2 border-dashed p-8 text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <Label htmlFor="csv-upload" className="cursor-pointer">
-                      <span className="text-sm font-medium">
-                        Click để tải file CSV
-                      </span>
-                      <Input
-                        id="csv-upload"
-                        type="file"
-                        accept=".csv"
-                        className="hidden"
-                        onChange={handleCsvUpload}
-                        disabled={isProcessing}
-                      />
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      CSV format: serial_number (mỗi dòng một số)
-                    </p>
-                  </div>
-
-                  {serialInput && (
-                    <div className="space-y-2">
-                      <Label>Preview ({serialInput.split("\n").filter(Boolean).length} serial)</Label>
-                      <Textarea
-                        value={serialInput}
-                        onChange={(e) => setSerialInput(e.target.value)}
-                        rows={8}
-                        className="font-mono text-sm"
-                        disabled={isProcessing}
-                      />
-                      <Button
-                        onClick={handleSave}
-                        disabled={!serialInput.trim() || isProcessing}
-                        className="w-full"
-                        size="lg"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Đang lưu...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Lưu Serial
-                          </>
+              {/* Warranty Section - Collapsible (only for receipt) */}
+              {type === "receipt" && (
+                <Collapsible open={warrantyOpen} onOpenChange={setWarrantyOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center justify-between w-full py-2 px-3 text-sm rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Settings2 className="h-4 w-4 text-muted-foreground" />
+                        <span>Tùy chọn bảo hành</span>
+                        {hasWarrantySet && (
+                          <span className="text-xs text-primary">(đã thiết lập)</span>
                         )}
-                      </Button>
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${warrantyOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="grid gap-3 sm:grid-cols-2 p-3 rounded-lg bg-muted/30">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="manufacturer-warranty" className="text-xs">
+                          Hết hạn BH Nhà máy
+                        </Label>
+                        <DatePicker
+                          id="manufacturer-warranty"
+                          value={manufacturerWarrantyDate}
+                          onChange={(value) => setManufacturerWarrantyDate(value)}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="user-warranty" className="text-xs">
+                          Hết hạn BH User
+                        </Label>
+                        <DatePicker
+                          id="user-warranty"
+                          value={userWarrantyDate}
+                          onChange={(value) => setUserWarrantyDate(value)}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </div>
                     </div>
-                  )}
-
-                  <div className="rounded-md bg-muted p-4 text-sm">
-                    <p className="font-medium mb-2">CSV Format Example:</p>
-                    <pre className="font-mono text-xs bg-background p-2 rounded overflow-x-auto">
-{`serial_number
-SN001
-SN002
-SN003`}
-                    </pre>
-                  </div>
-                </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        <DrawerFooter>
-          <DrawerClose asChild>
-            <Button variant="outline">
-              Đóng
-            </Button>
-          </DrawerClose>
+        {/* Footer with action buttons */}
+        <DrawerFooter className="pt-2 border-t">
+          <div className="flex gap-2">
+            <DrawerClose asChild>
+              <Button variant="outline" className="flex-1">
+                Đóng
+              </Button>
+            </DrawerClose>
+            {remaining > 0 && (
+              <Button
+                onClick={handleSave}
+                disabled={serialCount === 0 || serialCount > remaining || isProcessing}
+                className="flex-1"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    {serialCount > 0 ? `Lưu ${serialCount} serial` : "Lưu"}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

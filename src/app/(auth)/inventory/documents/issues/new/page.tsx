@@ -19,11 +19,25 @@ import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { toast } from "sonner";
+import type { StockIssueReason } from "@/types/inventory";
 
 // REDESIGNED: Only 2 issue types
 const ISSUE_TYPES = [
   { value: "normal", label: "Phiếu xuất bình thường" },
   { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+];
+
+// Issue reason labels
+const ISSUE_REASONS: { value: StockIssueReason; label: string }[] = [
+  { value: "sale", label: "Bán hàng" },
+  { value: "warranty_replacement", label: "Đổi bảo hành" },
+  { value: "repair", label: "Sửa chữa (linh kiện)" },
+  { value: "internal_use", label: "Sử dụng nội bộ" },
+  { value: "sample", label: "Hàng mẫu" },
+  { value: "gift", label: "Quà tặng" },
+  { value: "return_to_supplier", label: "Trả nhà cung cấp" },
+  { value: "damage", label: "Hàng hỏng/mất" },
+  { value: "other", label: "Khác" },
 ];
 
 interface ProductItem {
@@ -39,9 +53,16 @@ export default function CreateIssuePage() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
+  // Recipient information
+  const [customerId, setCustomerId] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [issueReason, setIssueReason] = useState<StockIssueReason | "">("");
+
   const createIssue = trpc.inventory.issues.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: customers } = trpc.customers.getCustomers.useQuery();
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -60,6 +81,12 @@ export default function CreateIssuePage() {
   const handleSubmit = async () => {
     if (!issueType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    // Validation: Require customer when issueReason = 'sale'
+    if (issueReason === "sale" && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi xuất bán hàng");
       return;
     }
 
@@ -85,6 +112,11 @@ export default function CreateIssuePage() {
         virtualWarehouseId,
         issueDate,
         notes: notes || undefined,
+        // Recipient information
+        customerId: customerId || undefined,
+        recipientName: recipientName || undefined,
+        recipientPhone: recipientPhone || undefined,
+        issueReason: issueReason || undefined,
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -145,11 +177,13 @@ export default function CreateIssuePage() {
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
+                          {virtualWarehouses
+                            ?.filter((wh) => wh.warehouse_type !== "customer_installed")
+                            .map((wh) => (
+                              <SelectItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -178,6 +212,72 @@ export default function CreateIssuePage() {
                       onChange={(e) => setNotes(e.target.value)}
                       rows={3}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recipient Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thông tin người nhận</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Lý do xuất kho</Label>
+                      <Select value={issueReason} onValueChange={(v) => setIssueReason(v as StockIssueReason)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn lý do" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ISSUE_REASONS.map((reason) => (
+                            <SelectItem key={reason.value} value={reason.value}>
+                              {reason.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
+                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Select
+                        value={customerId || "__none__"}
+                        onValueChange={(v) => setCustomerId(v === "__none__" ? "" : v)}
+                      >
+                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
+                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {issueReason !== "sale" && <SelectItem value="__none__">-- Không chọn --</SelectItem>}
+                          {customers?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Tên người nhận</Label>
+                      <Input
+                        placeholder="Nhập tên người nhận (nếu không phải khách hàng)"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>SĐT người nhận</Label>
+                      <Input
+                        placeholder="Nhập số điện thoại"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

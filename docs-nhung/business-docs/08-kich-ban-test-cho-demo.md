@@ -29,6 +29,7 @@
 | 1 | UI | Remove "Phiếu nhập kho / Phiếu điều chỉnh (kiểm kê)" | Medium | Open |
 | 2 | UI | Hide Workflows module | Medium | Open |
 | 3 | UI | Bỏ "Danh mục linh kiện" trên menu (liên quan đến bỏ trường Linh kiện) | Medium | Open |
+| 4 | UI | Remove "Phiếu xuất điều chỉnh (kiểm kê)" | Medium | Open |
 
 ---
 
@@ -54,11 +55,11 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 |-----------|------------------|------------------------|------------|------------|-------------|
 | Sau Test 0 | 0 | 0 | 0 | 0 | 0 | *(Sản phẩm đã có trong catalog, chưa nhập kho)* |
 | Sau Test 1 | 100 | 0 | 0 | 0 | 0 |
-| Sau Test 2 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 3 | 40 | 59 | 1 | 0 | 0 |
-| Sau Test 4 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 5 | 39 | 60 | 0 | 0 | 1 |
-| Sau Test 6 | 40 | 60 | 0 | 0 | 0 |
+| Sau Test 2 | 39 | 61 | 0 | 0 | 0 |
+| Sau Test 3 | 39 | 60 | 1 | 0 | 0 |
+| Sau Test 4 | 39 | 61 | 0 | 0 | 0 |
+| Sau Test 5 | 38 | 61 | 0 | 0 | 1 |
+| Sau Test 6 | 39 | 61 | 0 | 0 | 0 |
 
 ---
 
@@ -489,6 +490,12 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 - ✅ Dropdown "Loại xuất kho" hiển thị: Sales, Transfer, RMA, etc.
 - ✅ Loại "Sales" được chọn
 
+#### 📝 ISSUES (Bước 1)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Validation | Ngày xuất: Block future date, chỉ cho phép back date tối đa 7 ngày (như phiếu nhập) | Medium | Open |
+| 2 | UI | Bỏ "Nhập CSV" trong chọn Serial - Phiếu xuất (như phiếu nhập) | Low | Open |
+
 ---
 
 ### BƯỚC 2: Nhập Thông tin Khách hàng
@@ -521,7 +528,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 1. Click **"Thêm Sản phẩm"**
 2. Chọn **Kho nguồn**: Kho Công ty → Main (Kho Chính)
 3. Chọn **Sản phẩm**: ZOTAC RTX 4090 24GB
-4. Nhập **Số lượng**: 60
+4. Nhập **Số lượng**: 61
 5. Hệ thống hiển thị **Số lượng khả dụng**: 100 cái ✅
 6. Click **"Thêm"**
 
@@ -529,10 +536,10 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 - ✅ Sản phẩm được thêm vào đơn hàng:
   - ZOTAC RTX 4090 24GB
-  - Số lượng: 60 / 100 khả dụng
+  - Số lượng: 61 / 100 khả dụng
   - Kho: Main (Kho Chính)
   - Trạng thái: ⏳ Chờ chọn serials
-- ✅ Hiển thị cảnh báo: "Cần chọn 60 serial numbers"
+- ✅ Hiển thị cảnh báo: "Cần chọn 61 serial numbers"
 - ✅ Nút "Chọn Serials" được kích hoạt
 - ✅ Nút "Xác nhận bán" bị disable (chưa chọn đủ serials)
 
@@ -544,16 +551,16 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 1. Click **"Chọn Serials"**
 2. Hệ thống hiển thị danh sách 100 serials khả dụng trong Main
-3. **Cách 1:** Click checkbox chọn từng serial (60 serials đầu: 701-760)
+3. **Cách 1:** Click checkbox chọn từng serial (61 serials đầu: 701-761)
    **HOẶC**
-   **Cách 2:** Click **"Chọn tự động 60 đầu tiên"**
-4. Kiểm tra: Đã chọn đủ 60/60 serials
+   **Cách 2:** Click **"Chọn tự động 61 đầu tiên"**
+4. Kiểm tra: Đã chọn đủ 61/61 serials
 5. Click **"Xác nhận chọn serials"**
 
 **Expected Outcome:**
 
-- ✅ Danh sách 60 serials được chọn: ABC123456701 đến ABC123456760
-- ✅ Hiển thị: "✅ Đã chọn 60/60 serials"
+- ✅ Danh sách 61 serials được chọn: ABC123456701 đến ABC123456761
+- ✅ Hiển thị: "✅ Đã chọn 61/61 serials"
 - ✅ Preview danh sách serials đã chọn
 - ✅ Nút "Xác nhận bán" được kích hoạt (enable)
 - ✅ Có thể xem/in danh sách serials trước khi xác nhận
@@ -566,9 +573,8 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 1. Kiểm tra lại thông tin tổng quan:
    - Khách hàng: Nguyễn Văn A (0912345678)
-   - Sản phẩm: ZOTAC RTX 4090 24GB × 60
-   - Serials: ABC123456701 → ABC123456760
-   - Thành tiền: 1,500,000,000 VNĐ
+   - Sản phẩm: ZOTAC RTX 4090 24GB × 61
+   - Serials: ABC123456701 → ABC123456761
 2. Chọn **Phương thức thanh toán**: Tiền mặt / Chuyển khoản
 3. Click **"Xác nhận Xuất Kho & Bán Hàng"**
 4. Chờ hệ thống xử lý
@@ -581,47 +587,38 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | Bước | Hành động | Kết quả |
 |------|-----------|---------|
 | A | Tạo Stock Issue (Phiếu xuất kho) | Mã phiếu: SO-2026-001 |
-| B | Di chuyển kho TỰ ĐỘNG (Quy tắc #7) | 60 serials: Main → Customer Installed |
+| B | Di chuyển kho TỰ ĐỘNG (Quy tắc #7) | 61 serials: Main → Customer Installed |
 | C | Cập nhật thông tin sản phẩm | Trạng thái: Đã bán, Chủ sở hữu: Nguyễn Văn A |
-| D | Cập nhật tồn kho | Main: 100 → 40, Customer Installed: 0 → 60 |
-| E | Ghi log | "04/02/2026 - Xuất bán 60 RTX 4090 cho KH Nguyễn Văn A" |
+| D | Cập nhật tồn kho | Main: 100 → 39, Customer Installed: 0 → 61 |
+| E | Ghi log | "04/02/2026 - Xuất bán 61 RTX 4090 cho KH Nguyễn Văn A" |
 
 - ✅ Hiển thị: "✅ Bán hàng thành công! Mã đơn: SO-2026-001"
-- ✅ Popup in hóa đơn tự động hiện ra
+
+#### 📝 ISSUES (Bước 5)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua kho "Hàng đã Bán" (Customer Installed). Hiện chỉ đang thay status là "Đã Xuất" - cần auto di chuyển kho theo Quy tắc #7 | High | Open |
 
 ---
 
-### BƯỚC 6: In Hóa đơn và Kiểm tra Kết quả
+### BƯỚC 6: Kiểm tra Kết quả
 
 **Thao tác:**
 
-1. Click **"In Hóa đơn"** và kiểm tra nội dung
-2. Vào **"Quản lý Kho"** → **"Xem Tồn Kho"** kiểm tra kho Main
-3. Kiểm tra kho Customer Installed
-4. Tra cứu serial **ABC123456701**
+1. Vào **"Quản lý Kho"** → **"Xem Tồn Kho"** kiểm tra kho Main
+2. Kiểm tra kho Customer Installed
+3. Tra cứu serial **ABC123456701**
 
 **Expected Outcome:**
 
-**A) Hóa đơn bán hàng:**
-
-| Mục | Nội dung |
-|-----|----------|
-| Mã đơn | SO-2026-001 |
-| Ngày | 04/02/2026 |
-| Khách hàng | Nguyễn Văn A, 0912345678, nguyenvana@email.com |
-| Sản phẩm | ZOTAC RTX 4090 24GB × 60 |
-| Thành tiền | 1,500,000,000 VNĐ |
-| Danh sách Serial | ABC123456701 → ABC123456760 |
-| Thông tin BH | Hãng: 36 tháng (đến 04/02/2029), Công ty: 48 tháng (đến 04/02/2030) |
-
-**B) Tồn kho sau khi bán:**
+**A) Tồn kho sau khi bán:**
 
 | Kho | Số lượng | Serials |
 |-----|----------|---------|
-| Main (Kho Chính) | **40 cái** ✅ | ABC123456761 → ABC123456800 |
-| Customer Installed (Hàng Đã Bán) | **60 cái** ✅ | ABC123456701 → ABC123456760 |
+| Main (Kho Chính) | **39 cái** ✅ | ABC123456762 → ABC123456800 |
+| Customer Installed (Hàng Đã Bán) | **61 cái** ✅ | ABC123456701 → ABC123456761 |
 
-**C) Serial ABC123456701:**
+**B) Serial ABC123456701:**
 
 | Thông tin | Giá trị |
 |-----------|---------|
@@ -630,6 +627,19 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | Chủ sở hữu | Nguyễn Văn A (0912345678) |
 | Ngày mua | 04/02/2026 |
 | Lịch sử | Nhập kho (SR-2026-001) → Bán cho KH (SO-2026-001) |
+
+#### 📝 ISSUES (Bước 6)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Bug | Inventory cập nhật không đúng (xem chi tiết bên dưới) | **Critical** | Open |
+
+**Chi tiết Critical Bug #1:**
+- **Hiện tại:** Kho Chính = 39, Customer Installed = 0, các kho khác = 0
+- **Mong đợi:** Kho Chính = 39, Customer Installed = 61 (sau khi bán 61 từ 100)
+- **Vấn đề:**
+  1. 61 items đã xuất không được ghi nhận vào kho Customer Installed
+  2. Quy tắc #7 (Auto di chuyển Main → Customer Installed khi bán) không hoạt động
+- **Impact:** Mất tracking 61 sản phẩm, inventory không khớp, ảnh hưởng báo cáo tồn kho
 
 ---
 

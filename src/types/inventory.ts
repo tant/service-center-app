@@ -14,6 +14,17 @@ export type StockIssueType =
   | 'normal'      // Phiếu xuất bình thường (mặc định)
   | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
+export type StockIssueReason =
+  | 'sale'                 // Bán hàng
+  | 'warranty_replacement' // Đổi bảo hành
+  | 'repair'               // Sửa chữa (linh kiện cho ticket)
+  | 'internal_use'         // Sử dụng nội bộ
+  | 'sample'               // Hàng mẫu
+  | 'gift'                 // Quà tặng
+  | 'return_to_supplier'   // Trả nhà cung cấp
+  | 'damage'               // Hàng hỏng/mất
+  | 'other';               // Khác
+
 export type TransferStatus = 'completed';
 
 export type StockStatus = 'ok' | 'warning' | 'critical';
@@ -107,6 +118,11 @@ export interface StockIssue {
   ticket_id: string | null;
   rma_batch_id: string | null;
   reference_document_number: string | null;
+  // Recipient information
+  customer_id: string | null;
+  recipient_name: string | null;
+  recipient_phone: string | null;
+  issue_reason: StockIssueReason | null;
   created_by_id: string;
   completed_by_id: string | null;
   auto_generated: boolean;
@@ -152,6 +168,11 @@ export interface StockIssueWithRelations extends StockIssue {
     id: string;
     full_name: string;
   };
+  customer?: {
+    id: string;
+    name: string;
+    phone: string | null;
+  } | null;
   ticket?: {
     id: string;
     ticket_number: string;

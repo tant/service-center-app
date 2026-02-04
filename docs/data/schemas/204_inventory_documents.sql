@@ -169,6 +169,12 @@ CREATE TABLE IF NOT EXISTS public.stock_issues (
   rma_batch_id UUID REFERENCES public.rma_batches(id) ON DELETE SET NULL,
   reference_document_number VARCHAR(100),
 
+  -- Recipient information
+  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  recipient_name VARCHAR(255),
+  recipient_phone VARCHAR(50),
+  issue_reason public.stock_issue_reason,
+
   created_by_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
 
   auto_generated BOOLEAN NOT NULL DEFAULT false,
@@ -184,10 +190,16 @@ CREATE INDEX idx_stock_issues_type ON public.stock_issues(issue_type);
 CREATE INDEX idx_stock_issues_ticket ON public.stock_issues(ticket_id);
 CREATE INDEX idx_stock_issues_date ON public.stock_issues(issue_date);
 CREATE INDEX idx_stock_issues_warehouse ON public.stock_issues(virtual_warehouse_id);
+CREATE INDEX idx_stock_issues_customer ON public.stock_issues(customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX idx_stock_issues_reason ON public.stock_issues(issue_reason);
 
 COMMENT ON TABLE public.stock_issues IS 'Stock issue documents (Phiếu Xuất Kho)';
 COMMENT ON COLUMN public.stock_issues.virtual_warehouse_id IS 'Virtual warehouse to deduct stock from';
 COMMENT ON COLUMN public.stock_issues.issue_type IS 'normal (default) or adjustment (kiểm kê)';
+COMMENT ON COLUMN public.stock_issues.customer_id IS 'Customer receiving the products (if applicable)';
+COMMENT ON COLUMN public.stock_issues.recipient_name IS 'Recipient name (for non-customer recipients like employees or partners)';
+COMMENT ON COLUMN public.stock_issues.recipient_phone IS 'Recipient phone number';
+COMMENT ON COLUMN public.stock_issues.issue_reason IS 'Reason for stock issue: sale, warranty_replacement, repair, internal_use, etc.';
 
 CREATE OR REPLACE FUNCTION public.generate_issue_number()
 RETURNS TRIGGER

@@ -198,6 +198,21 @@ CREATE TYPE public.stock_issue_type AS ENUM (
 );
 COMMENT ON TYPE public.stock_issue_type IS 'Issue types: normal or adjustment';
 
+-- Stock Issue Reason
+DROP TYPE IF EXISTS public.stock_issue_reason CASCADE;
+CREATE TYPE public.stock_issue_reason AS ENUM (
+  'sale',                 -- Bán hàng
+  'warranty_replacement', -- Đổi bảo hành
+  'repair',               -- Sửa chữa (linh kiện cho ticket)
+  'internal_use',         -- Sử dụng nội bộ
+  'sample',               -- Hàng mẫu
+  'gift',                 -- Quà tặng
+  'return_to_supplier',   -- Trả nhà cung cấp
+  'damage',               -- Hàng hỏng/mất
+  'other'                 -- Khác
+);
+COMMENT ON TYPE public.stock_issue_reason IS 'Reasons for stock issue: sale, warranty, repair, internal, etc.';
+
 -- Transfer Status (SIMPLIFIED - no approval workflow)
 DROP TYPE IF EXISTS public.transfer_status CASCADE;
 CREATE TYPE public.transfer_status AS ENUM (
@@ -243,5 +258,6 @@ GRANT USAGE ON TYPE public.movement_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_document_status TO authenticated;
 GRANT USAGE ON TYPE public.stock_receipt_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_issue_type TO authenticated;
+GRANT USAGE ON TYPE public.stock_issue_reason TO authenticated;
 GRANT USAGE ON TYPE public.transfer_status TO authenticated;
 GRANT USAGE ON TYPE public.ticket_outcome TO authenticated;

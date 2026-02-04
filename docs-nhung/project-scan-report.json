@@ -1,0 +1,16 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-02-04T12:00:00Z",
+    "last_updated": "2026-02-04T12:00:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "deep",
+  "project_root": "/Users/sapphirose/works/service-center-app",
+  "output_folder": "/Users/sapphirose/works/service-center-app/docs-nhung",
+  "completed_steps": [],
+  "current_step": "step_1",
+  "findings": {},
+  "outputs_generated": ["project-scan-report.json"],
+  "resume_instructions": "Starting from step 1"
+}

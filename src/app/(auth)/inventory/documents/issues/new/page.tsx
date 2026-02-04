@@ -233,12 +233,15 @@ export default function CreateIssuePage() {
 
                     <div className="grid gap-2">
                       <Label>Khách hàng</Label>
-                      <Select value={customerId} onValueChange={setCustomerId}>
+                      <Select
+                        value={customerId || "__none__"}
+                        onValueChange={(v) => setCustomerId(v === "__none__" ? "" : v)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn khách hàng (nếu có)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Không chọn --</SelectItem>
+                          <SelectItem value="__none__">-- Không chọn --</SelectItem>
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name} {customer.phone ? `(${customer.phone})` : ""}

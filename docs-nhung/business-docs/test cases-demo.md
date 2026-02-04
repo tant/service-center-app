@@ -141,8 +141,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 #### 📝 ISSUES (Bước 3)
 | # | Loại | Mô tả | Mức độ | Status |
 |---|------|-------|--------|--------|
-| 1 | Feature | Cần thêm trường "Loại bảo hành" | Medium | Open |
-| 2 | UI | Bỏ trường "Linh kiện liên quan" | Low | Open |
+| 1 | UI | Bỏ trường "Linh kiện liên quan" | Low | Open |
 
 ---
 

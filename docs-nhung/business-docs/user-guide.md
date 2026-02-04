@@ -1,21 +1,26 @@
 # HƯỚNG DẪN SỬ DỤNG HỆ THỐNG
-## Dành cho Nhân viên Tiếp nhận & Bán Hàng
-
-> **Phiên bản:** 1.0
-> **Cập nhật:** 04/02/2026
-> **Đối tượng:** Nhân viên tiếp nhận bảo hành, Nhân viên bán linh kiện
 
 ---
 
 ## MỤC LỤC
 
+### Phần A: Quản lý Sản phẩm & Kho
 1. [Giới thiệu](#1-giới-thiệu)
 2. [Đăng nhập hệ thống](#2-đăng-nhập-hệ-thống)
 3. [Thêm sản phẩm mới vào danh mục](#3-thêm-sản-phẩm-mới-vào-danh-mục)
 4. [Nhập kho hàng mới](#4-nhập-kho-hàng-mới)
 5. [Bán hàng / Xuất kho cho khách](#5-bán-hàng--xuất-kho-cho-khách)
-6. [Tra cứu thông tin nhanh](#6-tra-cứu-thông-tin-nhanh)
-7. [Xử lý lỗi thường gặp](#7-xử-lý-lỗi-thường-gặp)
+6. [Quản lý Khách hàng](#6-quản-lý-khách-hàng)
+
+### Phần B: Tiếp nhận & Xử lý Bảo hành
+7. [Tạo phiếu dịch vụ (Tiếp nhận bảo hành)](#7-tạo-phiếu-dịch-vụ-tiếp-nhận-bảo-hành)
+8. [Kỹ thuật viên thực hiện công việc](#8-kỹ-thuật-viên-thực-hiện-công-việc)
+9. [Duyệt đổi sản phẩm mới (Warranty Replacement)](#9-duyệt-đổi-sản-phẩm-mới-warranty-replacement)
+10. [Quy trình RMA gửi hàng về hãng](#10-quy-trình-rma-gửi-hàng-về-hãng)
+
+### Phần C: Tiện ích
+11. [Tra cứu thông tin nhanh](#11-tra-cứu-thông-tin-nhanh)
+12. [Xử lý lỗi thường gặp](#12-xử-lý-lỗi-thường-gặp)
 
 ---
 
@@ -28,6 +33,9 @@ Hệ thống quản lý trung tâm bảo hành giúp bạn thực hiện các c�
 | **Quản lý sản phẩm** | Thêm mới, chỉnh sửa thông tin sản phẩm trong danh mục |
 | **Nhập kho** | Nhập hàng mới từ nhà cung cấp, theo dõi serial number |
 | **Bán hàng** | Xuất bán sản phẩm cho khách, lưu thông tin khách hàng |
+| **Tiếp nhận bảo hành** | Tạo phiếu dịch vụ, kiểm tra tình trạng bảo hành |
+| **Xử lý bảo hành** | Kỹ thuật viên thực hiện sửa chữa theo workflow |
+| **Đổi trả & RMA** | Duyệt đổi sản phẩm mới, gửi hàng lỗi về hãng |
 | **Tra cứu** | Kiểm tra tồn kho, tra cứu serial, thông tin bảo hành |
 
 ### Cấu trúc kho trong hệ thống
@@ -277,9 +285,384 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 
 ---
 
-## 6. Tra cứu thông tin nhanh
+## 6. Quản lý Khách hàng
 
-### 6.1. Tra cứu Serial
+> **Khi nào cần thực hiện:** Khi cần tạo hồ sơ khách hàng mới hoặc cập nhật thông tin khách hàng
+
+### 6.1. Tạo khách hàng mới
+
+**Menu:** Quản lý Khách hàng → Tạo Khách hàng Mới
+
+#### Bước 1: Nhập thông tin cơ bản
+
+| Trường | Ví dụ | Ghi chú |
+|--------|-------|---------|
+| **Họ tên*** | Nguyễn Văn A | Bắt buộc |
+| **Số điện thoại*** | 0912345678 | Bắt buộc - dùng để định danh KH |
+| Email | nguyenvana@email.com | Tùy chọn - dùng gửi thông báo |
+| Địa chỉ | 123 Nguyễn Văn Linh, Q7, TP.HCM | Tùy chọn |
+
+#### Bước 2: Lưu khách hàng
+
+1. Kiểm tra lại thông tin
+2. Nhấn **"Lưu Khách hàng"**
+3. Nhận thông báo: "Tạo khách hàng thành công"
+
+**Lưu ý:**
+- Số điện thoại phải là **duy nhất** trong hệ thống
+- Nếu SĐT đã tồn tại → Hệ thống báo lỗi "Số điện thoại đã được sử dụng"
+
+### 6.2. Tìm kiếm khách hàng
+
+**Menu:** Quản lý Khách hàng
+
+**Cách tìm kiếm:**
+
+1. Nhập vào ô tìm kiếm:
+   - Số điện thoại (khuyến nghị)
+   - Họ tên
+   - Email
+2. Nhấn **"Tìm kiếm"** hoặc Enter
+3. Kết quả hiển thị danh sách khách hàng phù hợp
+
+### 6.3. Xem chi tiết khách hàng
+
+Click vào tên khách hàng để xem:
+
+| Tab | Nội dung |
+|-----|----------|
+| **Thông tin** | Họ tên, SĐT, Email, Địa chỉ, Ghi chú |
+| **Sản phẩm đã mua** | Danh sách SP đã mua + Serial |
+| **Lịch sử bảo hành** | Các phiếu dịch vụ liên quan |
+| **Lịch sử giao dịch** | Các phiếu xuất kho |
+
+### 6.4. Cập nhật thông tin khách hàng
+
+1. Tìm và mở chi tiết khách hàng
+2. Nhấn **"Chỉnh sửa"**
+3. Cập nhật thông tin cần thay đổi
+4. Nhấn **"Lưu thay đổi"**
+5. Nhận thông báo: "Cập nhật thông tin khách hàng thành công"
+
+**Lưu ý:** Không thể thay đổi số điện thoại nếu khách hàng đã có lịch sử giao dịch.
+
+### 6.5. Tạo khách hàng nhanh (trong flow Bán hàng)
+
+Khi tạo phiếu xuất kho / bán hàng:
+
+1. Nhập **Số điện thoại** khách hàng
+2. Nhấn **"Kiểm tra"**
+3. Nếu **khách mới**:
+   - Hệ thống hiển thị: "Khách hàng mới"
+   - Nhập **Họ tên** (bắt buộc)
+   - Nhập Email, Địa chỉ (tùy chọn)
+   - Khách hàng sẽ được tạo **tự động** khi xác nhận phiếu
+4. Nếu **khách cũ**:
+   - Hệ thống tự động điền thông tin
+   - Có thể chỉnh sửa nếu cần
+
+---
+
+## 7. Tạo phiếu dịch vụ (Tiếp nhận bảo hành)
+
+> **Khi nào cần thực hiện:** Khi khách hàng mang sản phẩm đến yêu cầu bảo hành/sửa chữa
+
+### 6.1. Truy cập chức năng
+
+**Menu:** Phiếu Dịch vụ → Tạo Phiếu Mới
+
+### 6.2. Nhập Serial và Kiểm tra Bảo hành
+
+1. Tại trường **"Serial Number"**, nhập serial sản phẩm khách mang đến
+   - VD: `ABC123456701`
+2. Nhấn **"Kiểm tra"**
+3. Chờ hệ thống xác minh (1-2 giây)
+
+**Kết quả kiểm tra:**
+
+| Trạng thái | Hiển thị | Ý nghĩa |
+|------------|----------|---------|
+| ✅ Còn bảo hành | Badge xanh lá | Sản phẩm được bảo hành miễn phí |
+| ⚠️ Hết bảo hành | Badge vàng | Dịch vụ có phí |
+| ❌ Không hợp lệ | Badge đỏ | Serial không tồn tại trong hệ thống |
+
+**Thông tin hiển thị sau khi kiểm tra:**
+
+| Thông tin | Ví dụ |
+|-----------|-------|
+| Sản phẩm | ZOTAC RTX 4090 24GB |
+| Thương hiệu | ZOTAC |
+| BH Hãng | 04/02/2026 → 04/02/2029 (còn 1095 ngày) |
+| BH Công ty | 04/02/2026 → 04/02/2030 (còn 1460 ngày) |
+| Chủ sở hữu | Nguyễn Văn A (0912345678) |
+
+### 6.3. Điền thông tin yêu cầu
+
+Sau khi xác minh thành công, hệ thống **TỰ ĐỘNG ĐIỀN SẴN** thông tin khách hàng từ dữ liệu mua hàng.
+
+**Thông tin cần nhập thêm:**
+
+| Trường | Ví dụ | Ghi chú |
+|--------|-------|---------|
+| **Mô tả lỗi*** | Card không lên màn hình, có tiếng beep 3 lần | Bắt buộc - mô tả chi tiết |
+| **Loại dịch vụ** | Warranty (Bảo hành) | Tự động chọn nếu còn BH |
+| Ảnh đính kèm | card-loi.jpg | Tùy chọn - tối đa 5 ảnh |
+
+### 6.4. Tạo phiếu dịch vụ
+
+1. Kiểm tra lại thông tin:
+   - Khách hàng đúng
+   - Serial đúng
+   - Mô tả lỗi rõ ràng
+2. Nhấn **"Tạo Phiếu Dịch vụ"**
+3. Chờ hệ thống xử lý
+4. Nhận thông báo: "Tạo phiếu dịch vụ thành công! Mã phiếu: SV-20XX-XXX"
+
+### Hệ thống tự động thực hiện
+
+| Hành động | Chi tiết |
+|-----------|----------|
+| Tạo phiếu | Mã phiếu: SV-20XX-XXX, Trạng thái: Pending |
+| Di chuyển kho | Serial từ **Hàng Đã Bán** → **Kho Đang Sửa Chữa** |
+| Gửi thông báo | Email xác nhận đến khách hàng |
+
+### 6.5. In phiếu tiếp nhận
+
+1. Nhấn **"In phiếu tiếp nhận"**
+2. In 2 bản: 1 cho khách ký, 1 lưu hồ sơ
+3. Khách hàng ký xác nhận giao sản phẩm
+
+---
+
+## 8. Kỹ thuật viên thực hiện công việc
+
+> **Khi nào cần thực hiện:** Khi có phiếu dịch vụ được gán cho kỹ thuật viên
+
+### 8.1. Xem danh sách công việc
+
+**Menu:** Hộp công việc của tôi (My Tasks)
+
+Màn hình hiển thị danh sách phiếu được gán:
+
+| Mã phiếu | Khách hàng | Sản phẩm | Trạng thái | Ưu tiên |
+|----------|------------|----------|------------|---------|
+| SV-2026-001 | Nguyễn Văn A | ZOTAC RTX 4090 | Pending | Normal |
+
+### 8.2. Mở phiếu và xem Workflow Tasks
+
+1. Click vào phiếu cần xử lý
+2. Xem thông tin chi tiết: khách hàng, sản phẩm, mô tả lỗi
+3. Xem danh sách **Workflow Tasks** (các bước cần thực hiện)
+
+**Ví dụ danh sách tasks:**
+
+| # | Task | Yêu cầu | Trạng thái |
+|---|------|---------|------------|
+| 1 | Kiểm tra bao bì và phụ kiện | Ghi chú | **Pending** ✅ |
+| 2 | Chụp ảnh tình trạng ban đầu | Ảnh | Blocked |
+| 3 | Kiểm tra nguồn card | Ghi chú | Blocked |
+| 4 | Test stress GPU 30 phút | Ghi chú + Ảnh | Blocked |
+| 5 | Vệ sinh card | - | Blocked (không bắt buộc) |
+| 6 | Chụp ảnh sau sửa chữa | Ảnh | Blocked |
+| 7 | Test cuối cùng | Ghi chú | Blocked |
+| 8 | Đóng gói sản phẩm | - | Blocked |
+
+> **Lưu ý:** Tasks phải thực hiện **theo thứ tự**. Task tiếp theo chỉ mở khóa khi task trước hoàn thành.
+
+### 8.3. Thực hiện từng Task
+
+**Quy trình cho mỗi task:**
+
+1. Nhấn **"Bắt đầu"** → Task chuyển sang **In Progress**
+2. Thực hiện công việc thực tế
+3. Nhập kết quả theo yêu cầu:
+   - **Ghi chú:** Nhập mô tả kết quả
+   - **Ảnh:** Upload ảnh minh chứng
+4. Nhấn **"Hoàn thành"** → Task chuyển sang **Completed**
+5. Task tiếp theo tự động mở khóa (**Pending**)
+
+**Ví dụ nhập kết quả:**
+
+| Task | Kết quả nhập |
+|------|--------------|
+| Kiểm tra bao bì | "Hộp nguyên vẹn, đầy đủ phụ kiện: cáp nguồn 8-pin x2" |
+| Chụp ảnh ban đầu | Upload: card-mat-truoc.jpg, card-mat-sau.jpg |
+| Test stress GPU | "Chạy test 30 phút, nhiệt độ max 75°C, không crash" + ảnh kết quả |
+
+### 8.4. Bỏ qua Task không bắt buộc
+
+- Task không bắt buộc có nút **"Bỏ qua (Skip)"**
+- Click để bỏ qua và chuyển sang task tiếp theo
+- VD: Task "Vệ sinh card" có thể bỏ qua nếu không cần thiết
+
+### 8.5. Hoàn thành phiếu
+
+Khi hoàn thành task cuối cùng, hệ thống **TỰ ĐỘNG**:
+
+| Hành động | Chi tiết |
+|-----------|----------|
+| Cập nhật phiếu | Trạng thái: **Sẵn sàng giao hàng** |
+| Di chuyển kho | Serial từ **Kho Đang Sửa Chữa** → **Hàng Đã Bán** |
+| Gửi email | Thông báo khách hàng: "Sản phẩm đã sửa xong" |
+
+### 8.6. Báo cáo không sửa được
+
+Nếu sản phẩm **KHÔNG SỬA ĐƯỢC**:
+
+1. Nhấn **"Báo cáo kết quả"**
+2. Chọn Outcome: **"Không sửa được (Unrepairable)"**
+3. Nhập lý do: "Chip GPU hỏng hoàn toàn, không thể khắc phục"
+4. Nhấn **"Gửi để Manager duyệt"**
+
+→ Phiếu chuyển sang trạng thái **Chờ duyệt**, Manager sẽ quyết định đổi mới hoặc xử lý khác.
+
+---
+
+## 8. Duyệt đổi sản phẩm mới (Warranty Replacement)
+
+> **Khi nào cần thực hiện:** Khi kỹ thuật viên báo cáo sản phẩm không sửa được và cần đổi mới
+
+### 8.1. Xem phiếu chờ duyệt
+
+**Menu:** Phiếu chờ duyệt (hoặc Dashboard thông báo)
+
+1. Click vào phiếu cần duyệt
+2. Xem kết quả chẩn đoán của kỹ thuật viên:
+   - Outcome: Không sửa được
+   - Lý do chi tiết
+   - Ảnh và ghi chú từ các tasks
+
+### 8.2. Kiểm tra điều kiện bảo hành
+
+Xác nhận:
+- ✅ Sản phẩm còn trong thời hạn bảo hành
+- ✅ Lỗi thuộc phạm vi bảo hành (không do người dùng)
+- ✅ Có sản phẩm thay thế trong kho
+
+### 8.3. Duyệt đổi sản phẩm mới
+
+1. Nhấn **"Duyệt đổi mới"**
+2. Form **"Chọn sản phẩm thay thế"** hiển thị
+
+### 8.4. Chọn sản phẩm thay thế
+
+| Trường | Giá trị |
+|--------|---------|
+| **Kho nguồn** | Kho Chính (Main) |
+| **Sản phẩm** | ZOTAC RTX 4090 24GB |
+| **Số lượng khả dụng** | 39 cái |
+
+1. Hệ thống hiển thị danh sách serial khả dụng
+2. Chọn 1 serial để thay thế: VD: `ABC123456762`
+3. Nhấn **"Xác nhận thay thế"**
+
+### Hệ thống tự động thực hiện
+
+| Hành động | Chi tiết |
+|-----------|----------|
+| Sản phẩm LỖI | Serial cũ: **Kho Đang Sửa Chữa** → **Kho Hàng Hỏng** |
+| Sản phẩm THAY THẾ | Serial mới: **Kho Chính** → **Hàng Đã Bán** |
+| Cập nhật phiếu | Outcome: Warranty Replacement, Trạng thái: Sẵn sàng giao |
+| Tạo phiếu xuất | Ghi nhận xuất kho sản phẩm thay thế |
+
+### 8.5. Giao sản phẩm thay thế cho khách
+
+1. Khi khách đến nhận:
+   - Kiểm tra thông tin khách hàng
+   - In biên nhận với serial mới
+2. Khách ký nhận
+3. Nhấn **"Xác nhận đã giao hàng"**
+4. Phiếu chuyển trạng thái: **Hoàn thành**
+
+---
+
+## 9. Quy trình RMA gửi hàng về hãng
+
+> **Khi nào cần thực hiện:** Khi có sản phẩm lỗi cần gửi về nhà sản xuất để đổi/sửa
+
+### 9.1. Tạo lô RMA
+
+**Menu:** Quản lý RMA → Tạo RMA Batch
+
+1. Nhấn **"Tạo lô RMA mới"**
+2. Chọn sản phẩm lỗi cần gửi về hãng:
+   - ☑ ABC123456702 (ZOTAC RTX 4090, Lỗi: Chip GPU hỏng)
+3. Nhập thông tin:
+
+| Trường | Ví dụ |
+|--------|-------|
+| **Nhà cung cấp/Hãng** | ZOTAC Technology |
+| Ghi chú | RMA theo bảo hành hãng, phiếu SV-2026-002 |
+
+4. Nhấn **"Xác nhận tạo lô RMA"**
+
+**Kết quả:**
+- Lô RMA được tạo: `RMA-20260205-001`
+- Serial tự động chuyển: **Kho Hàng Hỏng** → **Kho Chờ Trả Hàng**
+
+### 9.2. In phiếu RMA
+
+1. Vào chi tiết lô RMA
+2. Nhấn **"In phiếu RMA"**
+3. Phiếu bao gồm:
+   - Mã lô RMA
+   - Danh sách sản phẩm + serial
+   - Lý do RMA
+   - Thông tin nhà cung cấp
+
+### 9.3. Đóng gói và gửi hàng
+
+1. Lấy sản phẩm từ **Kho Chờ Trả Hàng**
+2. Đóng gói theo quy cách
+3. Đính kèm phiếu RMA đã in
+4. Gửi qua đơn vị vận chuyển
+
+### 9.4. Cập nhật trạng thái "Đã gửi"
+
+1. Vào lô RMA → Nhấn **"Đánh dấu đã gửi"**
+2. Nhập thông tin vận chuyển:
+
+| Trường | Ví dụ |
+|--------|-------|
+| **Tracking number** | VN1234567890 |
+| **Đơn vị vận chuyển** | GHTK / GHN |
+| **Ngày gửi** | 05/02/2026 |
+| **Dự kiến nhận** | 15/02/2026 |
+
+3. Nhấn **"Xác nhận"**
+4. Lô RMA chuyển trạng thái: **Đã gửi (Shipped)**
+
+### 9.5. Nhận hàng thay thế từ hãng
+
+Khi nhận được hàng từ hãng:
+
+1. Vào **Quản lý Kho → Nhập Kho**
+2. Tạo phiếu nhập:
+
+| Trường | Giá trị |
+|--------|---------|
+| **Loại nhập** | RMA Return (Trả về từ hãng) |
+| **Sản phẩm** | ZOTAC RTX 4090 24GB |
+| **Serial** | ZTC999888777 (serial mới từ hãng) |
+| **Kho đích** | Kho Chính (Main) |
+| **Link RMA Batch** | RMA-20260205-001 |
+
+3. Nhấn **"Xác nhận nhập kho"**
+
+### 9.6. Hoàn tất lô RMA
+
+1. Vào lô RMA → Nhấn **"Đánh dấu hoàn tất"**
+2. Nhập thông tin:
+   - Serial nhận được: ZTC999888777
+   - Ngày nhận: 15/02/2026
+3. Nhấn **"Xác nhận hoàn tất"**
+4. Lô RMA chuyển trạng thái: **Hoàn tất (Completed)**
+
+---
+
+## 10. Tra cứu thông tin nhanh
+
+### 10.1. Tra cứu Serial
 
 **Menu:** Tra cứu Serial
 
@@ -297,15 +680,15 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 | BH Công ty | Ngày hết hạn + số ngày còn lại |
 | Lịch sử | Các sự kiện đã xảy ra |
 
-### 6.2. Tra cứu tồn kho
+### 10.2. Tra cứu tồn kho
 
 **Menu:** Quản lý Kho → Xem Tồn Kho
 
-1. Chọn **Kho**: Main / Customer Installed / ...
+1. Chọn **Kho**: Kho Chính / Hàng Đã Bán / ...
 2. Tìm kiếm theo tên sản phẩm (nếu cần)
 3. Xem danh sách sản phẩm và số lượng
 
-### 6.3. Tra cứu khách hàng
+### 10.3. Tra cứu khách hàng
 
 **Menu:** Quản lý Khách hàng
 
@@ -316,11 +699,19 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
    - Sản phẩm đã mua
    - Lịch sử bảo hành
 
+### 10.4. Tra cứu phiếu dịch vụ
+
+**Menu:** Phiếu Dịch vụ → Danh sách
+
+1. Tìm theo: Mã phiếu, Serial, Tên khách hàng, SĐT
+2. Lọc theo: Trạng thái, Ngày tạo, Loại dịch vụ
+3. Xem chi tiết phiếu: Timeline, Tasks, Kết quả
+
 ---
 
-## 7. Xử lý lỗi thường gặp
+## 11. Xử lý lỗi thường gặp
 
-### 7.1. "SKU đã tồn tại"
+### 11.1. "SKU đã tồn tại"
 
 **Nguyên nhân:** Mã sản phẩm đã có trong hệ thống
 
@@ -329,7 +720,7 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 - Nếu đã có, không cần tạo mới
 - Nếu cần tạo SKU khác, đổi mã khác
 
-### 7.2. "Serial đã tồn tại"
+### 11.2. "Serial đã tồn tại"
 
 **Nguyên nhân:** Serial number đã được nhập trước đó
 
@@ -338,7 +729,7 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 - Kiểm tra lại serial trên sản phẩm thực tế
 - Liên hệ quản lý nếu serial bị trùng thật sự
 
-### 7.3. "Không đủ tồn kho"
+### 11.3. "Không đủ tồn kho"
 
 **Nguyên nhân:** Số lượng muốn xuất lớn hơn số có sẵn
 
@@ -347,7 +738,7 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 - Giảm số lượng xuất
 - Hoặc nhập thêm hàng trước khi xuất
 
-### 7.4. "Validation failed"
+### 11.4. "Validation failed"
 
 **Nguyên nhân:** Thiếu thông tin bắt buộc
 
@@ -356,9 +747,20 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 - Điền đầy đủ thông tin
 - Kiểm tra định dạng (số điện thoại, email...)
 
+### 11.5. "Serial không hợp lệ" (khi tạo phiếu bảo hành)
+
+**Nguyên nhân:** Serial không tồn tại trong hệ thống
+
+**Cách xử lý:**
+- Kiểm tra lại serial trên sản phẩm
+- Xác nhận sản phẩm có được mua từ công ty không
+- Nếu sản phẩm không có trong hệ thống, tạo dịch vụ có phí
+
 ---
 
 ## Quy trình tổng quát
+
+### A. Quy trình Nhập - Bán hàng
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -379,6 +781,59 @@ Khi bạn xác nhận bán hàng, hệ thống **TỰ ĐỘNG**:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### B. Quy trình Bảo hành
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      QUY TRÌNH BẢO HÀNH                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. TIẾP NHẬN (Reception)                                       │
+│     Phiếu Dịch vụ → Tạo mới → Nhập Serial → Kiểm tra BH        │
+│     → Mô tả lỗi → Tạo phiếu                                    │
+│                           ↓                                     │
+│  2. SỬA CHỮA (Technician)                                       │
+│     Hộp công việc → Mở phiếu → Thực hiện tasks theo thứ tự     │
+│                           ↓                                     │
+│            ┌──────────────┴──────────────┐                      │
+│            ↓                             ↓                      │
+│      SỬA ĐƯỢC                    KHÔNG SỬA ĐƯỢC                 │
+│         ↓                             ↓                         │
+│   Hoàn thành tasks            Báo cáo → Manager duyệt          │
+│         ↓                             ↓                         │
+│   Giao SP cho khách           Đổi SP mới (Warranty Replacement)│
+│                                       ↓                         │
+│                               Giao SP thay thế cho khách       │
+│                                       ↓                         │
+│                               SP lỗi → Kho Hàng Hỏng → RMA     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### C. Quy trình RMA
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        QUY TRÌNH RMA                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. TẠO LÔ RMA                                                  │
+│     Quản lý RMA → Tạo lô → Chọn SP lỗi → Xác nhận              │
+│     SP chuyển: Kho Hàng Hỏng → Kho Chờ Trả Hàng                │
+│                           ↓                                     │
+│  2. GỬI HÀNG                                                    │
+│     In phiếu RMA → Đóng gói → Gửi vận chuyển                   │
+│     Cập nhật: Đánh dấu đã gửi + Tracking number                │
+│                           ↓                                     │
+│  3. NHẬN HÀNG TỪ HÃNG                                          │
+│     Nhập Kho → Loại: RMA Return → Nhập serial mới              │
+│                           ↓                                     │
+│  4. HOÀN TẤT                                                    │
+│     Đánh dấu hoàn tất lô RMA                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Liên hệ hỗ trợ
@@ -394,4 +849,4 @@ Nếu gặp vấn đề không giải quyết được, liên hệ:
 ---
 
 _Tài liệu hướng dẫn sử dụng - Công ty Cổ phần Công nghệ SSTC_
-_Phiên bản 1.0 - Ngày 04/02/2026_
+_Phiên bản 2.0 - Ngày 04/02/2026_

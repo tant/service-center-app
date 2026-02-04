@@ -161,12 +161,12 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Lý do xuất kho</Label>
-                      <Select value={issueReason} onValueChange={(v) => setIssueReason(v as StockIssueReason)}>
+                      <Select value={issueReason || "__none__"} onValueChange={(v) => setIssueReason(v === "__none__" ? "" : v as StockIssueReason)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn lý do" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Không chọn --</SelectItem>
+                          <SelectItem value="__none__">-- Không chọn --</SelectItem>
                           {ISSUE_REASONS.map((reason) => (
                             <SelectItem key={reason.value} value={reason.value}>
                               {reason.label}
@@ -180,12 +180,12 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                       <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
                         Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
                       </Label>
-                      <Select value={customerId || ""} onValueChange={(v) => setCustomerId(v || null)}>
+                      <Select value={customerId || "__none__"} onValueChange={(v) => setCustomerId(v === "__none__" ? null : v)}>
                         <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
                           <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {issueReason !== "sale" && <SelectItem value="">-- Không chọn --</SelectItem>}
+                          {issueReason !== "sale" && <SelectItem value="__none__">-- Không chọn --</SelectItem>}
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name} {customer.phone ? `(${customer.phone})` : ""}

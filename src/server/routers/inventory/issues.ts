@@ -204,6 +204,25 @@ export const issuesRouter = router({
         throw new Error("Unauthorized: Only admin and manager can create issues");
       }
 
+      // Validation: Cannot issue from customer_installed warehouse
+      const { data: fromWarehouse } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select("warehouse_type")
+        .eq("id", input.virtualWarehouseId)
+        .single();
+
+      if (fromWarehouse?.warehouse_type === "customer_installed") {
+        throw new Error(
+          "Không thể xuất kho từ 'Hàng Đã Bán'. " +
+          "Nếu cần điều chỉnh, vui lòng sử dụng Phiếu nhập kho với lý do 'Khách trả lại'."
+        );
+      }
+
+      // Validation: Require customer_id when issueReason = 'sale'
+      if (input.issueReason === "sale" && !input.customerId) {
+        throw new Error("Vui lòng chọn khách hàng khi xuất bán hàng");
+      }
+
       const { data: issue, error: issueError } = await ctx.supabaseAdmin
         .from("stock_issues")
         .insert({

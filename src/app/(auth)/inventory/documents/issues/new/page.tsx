@@ -84,6 +84,12 @@ export default function CreateIssuePage() {
       return;
     }
 
+    // Validation: Require customer when issueReason = 'sale'
+    if (issueReason === "sale" && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi xuất bán hàng");
+      return;
+    }
+
     // REDESIGNED: Validate based on type
     if (issueType === "normal") {
       const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
@@ -171,11 +177,13 @@ export default function CreateIssuePage() {
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
+                          {virtualWarehouses
+                            ?.filter((wh) => wh.warehouse_type !== "customer_installed")
+                            .map((wh) => (
+                              <SelectItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -232,16 +240,18 @@ export default function CreateIssuePage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Khách hàng</Label>
+                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
+                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      </Label>
                       <Select
                         value={customerId || "__none__"}
                         onValueChange={(v) => setCustomerId(v === "__none__" ? "" : v)}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn khách hàng (nếu có)" />
+                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
+                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">-- Không chọn --</SelectItem>
+                          {issueReason !== "sale" && <SelectItem value="__none__">-- Không chọn --</SelectItem>}
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name} {customer.phone ? `(${customer.phone})` : ""}

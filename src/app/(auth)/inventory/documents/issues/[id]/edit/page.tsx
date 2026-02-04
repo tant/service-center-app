@@ -69,6 +69,12 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   }, [issue, isInitialized]);
 
   const handleSubmit = async () => {
+    // Validation: Require customer when issueReason = 'sale'
+    if (issueReason === "sale" && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi xuất bán hàng");
+      return;
+    }
+
     try {
       await updateIssue.mutateAsync({
         id,
@@ -171,13 +177,15 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Khách hàng</Label>
+                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
+                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      </Label>
                       <Select value={customerId || ""} onValueChange={(v) => setCustomerId(v || null)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn khách hàng (nếu có)" />
+                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
+                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Không chọn --</SelectItem>
+                          {issueReason !== "sale" && <SelectItem value="">-- Không chọn --</SelectItem>}
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
                               {customer.name} {customer.phone ? `(${customer.phone})` : ""}

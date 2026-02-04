@@ -157,22 +157,53 @@ AS $$
 DECLARE
   v_product_id UUID;
   v_from_warehouse_id UUID;
+  v_customer_id UUID;
+  v_issue_reason TEXT;
+  v_customer_installed_warehouse_id UUID;
 BEGIN
-  -- Get info from issue
-  SELECT sii.product_id, si.virtual_warehouse_id
-  INTO v_product_id, v_from_warehouse_id
+  -- Get info from issue (including customer_id and issue_reason)
+  SELECT sii.product_id, si.virtual_warehouse_id, si.customer_id, si.issue_reason
+  INTO v_product_id, v_from_warehouse_id, v_customer_id, v_issue_reason
   FROM public.stock_issue_items sii
   JOIN public.stock_issues si ON sii.issue_id = si.id
   WHERE sii.id = NEW.issue_item_id;
 
-  -- Mark physical product as issued
-  UPDATE public.physical_products
-  SET status = 'issued',
-      updated_at = NOW()
-  WHERE id = NEW.physical_product_id;
+  -- For sale issues: move product to customer_installed warehouse
+  IF v_issue_reason = 'sale' THEN
+    -- Get customer_installed warehouse ID (global warehouse, no physical_warehouse_id)
+    SELECT id INTO v_customer_installed_warehouse_id
+    FROM public.virtual_warehouses
+    WHERE warehouse_type = 'customer_installed'
+      AND physical_warehouse_id IS NULL
+    LIMIT 1;
 
-  -- Decrease stock from source warehouse
-  PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
+    -- Update physical product: move to customer_installed and track customer
+    UPDATE public.physical_products
+    SET status = 'issued',
+        previous_virtual_warehouse_id = virtual_warehouse_id,
+        virtual_warehouse_id = COALESCE(v_customer_installed_warehouse_id, virtual_warehouse_id),
+        last_known_customer_id = COALESCE(v_customer_id, last_known_customer_id),
+        updated_at = NOW()
+    WHERE id = NEW.physical_product_id;
+
+    -- Decrease stock from source warehouse
+    PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
+
+    -- Increase stock at customer_installed (for tracking sold quantity)
+    IF v_customer_installed_warehouse_id IS NOT NULL THEN
+      PERFORM public.upsert_product_stock(v_product_id, v_customer_installed_warehouse_id, 1);
+    END IF;
+  ELSE
+    -- For other issue reasons: just mark as issued (original behavior)
+    UPDATE public.physical_products
+    SET status = 'issued',
+        last_known_customer_id = COALESCE(v_customer_id, last_known_customer_id),
+        updated_at = NOW()
+    WHERE id = NEW.physical_product_id;
+
+    -- Decrease stock from source warehouse
+    PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
+  END IF;
 
   RETURN NEW;
 END;

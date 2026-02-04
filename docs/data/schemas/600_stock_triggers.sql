@@ -170,11 +170,10 @@ BEGIN
 
   -- For sale issues: move product to customer_installed warehouse
   IF v_issue_reason = 'sale' THEN
-    -- Get customer_installed warehouse ID (global warehouse, no physical_warehouse_id)
+    -- Get customer_installed warehouse ID
     SELECT id INTO v_customer_installed_warehouse_id
     FROM public.virtual_warehouses
     WHERE warehouse_type = 'customer_installed'
-      AND physical_warehouse_id IS NULL
     LIMIT 1;
 
     -- Update physical product: move to customer_installed and track customer

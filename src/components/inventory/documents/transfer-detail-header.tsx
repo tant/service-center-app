@@ -9,7 +9,7 @@ import { StockTransfer } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, ArrowRight } from "lucide-react";
+import { Calendar, User, UserCheck, Phone, FileText, ArrowRight } from "lucide-react";
 
 interface TransferDetailHeaderProps {
   transfer: any; // StockTransfer with relations
@@ -88,6 +88,30 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
                   <div className="text-sm font-medium">Người nhận</div>
                   <div className="text-sm text-muted-foreground">
                     {transfer.received_by.full_name}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {transfer.customer && (
+              <div className="flex items-start gap-2">
+                <UserCheck className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">Khách hàng nhận hàng</div>
+                  <div className="text-sm text-muted-foreground">
+                    {transfer.customer.name}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {transfer.customer?.phone && (
+              <div className="flex items-start gap-2">
+                <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">SĐT khách hàng</div>
+                  <div className="text-sm text-muted-foreground">
+                    {transfer.customer.phone}
                   </div>
                 </div>
               </div>

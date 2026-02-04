@@ -23,6 +23,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { SerialProgressBar } from "./serial-progress-bar";
 import { Upload, FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -63,6 +65,11 @@ export function UnifiedSerialInputDrawer({
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
+  // Warranty fields (only for receipt type)
+  const [applyWarranty, setApplyWarranty] = useState(false);
+  const [manufacturerWarrantyDate, setManufacturerWarrantyDate] = useState("");
+  const [userWarrantyDate, setUserWarrantyDate] = useState("");
+
   // Mutations based on document type
   const addReceiptSerials = trpc.inventory.receipts.addSerials.useMutation();
   const selectIssueSerials = trpc.inventory.issues.selectSerialsByNumbers.useMutation();
@@ -99,7 +106,16 @@ export function UnifiedSerialInputDrawer({
     try {
       if (type === "receipt") {
         // Receipt: Add new serials (validates uniqueness)
-        const serialsData = serials.map((s) => ({ serialNumber: s }));
+        const serialsData = serials.map((s) => ({
+          serialNumber: s,
+          // Apply warranty dates if checkbox is checked
+          ...(applyWarranty && manufacturerWarrantyDate && {
+            manufacturerWarrantyEndDate: manufacturerWarrantyDate,
+          }),
+          ...(applyWarranty && userWarrantyDate && {
+            userWarrantyEndDate: userWarrantyDate,
+          }),
+        }));
         await addReceiptSerials.mutateAsync({
           receiptItemId: itemId,
           serials: serialsData,
@@ -126,6 +142,9 @@ export function UnifiedSerialInputDrawer({
       onSuccess();
       setSerialInput("");
       setValidationErrors([]);
+      setApplyWarranty(false);
+      setManufacturerWarrantyDate("");
+      setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
       console.error("Save error:", error);
@@ -230,6 +249,49 @@ export function UnifiedSerialInputDrawer({
                   )}
                 </AlertDescription>
               </Alert>
+
+              {/* Warranty Fields - Only for receipt type */}
+              {type === "receipt" && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="apply-warranty"
+                      checked={applyWarranty}
+                      onCheckedChange={(checked) => setApplyWarranty(checked === true)}
+                    />
+                    <Label htmlFor="apply-warranty" className="text-sm font-medium cursor-pointer">
+                      Áp dụng bảo hành chung cho tất cả serial
+                    </Label>
+                  </div>
+
+                  {applyWarranty && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="manufacturer-warranty" className="text-sm">
+                          Hết hạn BH Nhà máy
+                        </Label>
+                        <DatePicker
+                          id="manufacturer-warranty"
+                          value={manufacturerWarrantyDate}
+                          onChange={(value) => setManufacturerWarrantyDate(value)}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="user-warranty" className="text-sm">
+                          Hết hạn BH User
+                        </Label>
+                        <DatePicker
+                          id="user-warranty"
+                          value={userWarrantyDate}
+                          onChange={(value) => setUserWarrantyDate(value)}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Mode Switcher */}
               <div className="flex gap-2">

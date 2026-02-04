@@ -51,32 +51,12 @@
 >
 > **Yêu cầu:** Sản phẩm phải có status **In stock** thì mới được xuất.
 >
-> **~~Kho đích sau khi xuất~~ (FIXED 2026-02-02):**
-> - ~~Sản phẩm vẫn ở trong kho cũ sau khi xuất kho (không chuyển sang kho đích)~~
-> - **Fix:** Thêm cột `to_virtual_warehouse_id` vào `stock_issues`, trigger duyệt phiếu xuất tự động chuyển `physical_products.virtual_warehouse_id` sang kho đích. Kho được phân loại `is_archive` để tách biệt kho khả dụng và kho lưu trữ.
-> - Xem chi tiết: `docs/doc-kien/fix/fix-issue-destination-warehouse.md`
->
 > **🔴 Xóa phiếu nhập xuất:**
 > - Phiếu có được phép xóa sau khi hủy phiếu không? (cần xác định business rule)
 >
 > **🔴 Vô hiệu hóa kho ảo:**
 > - Trang quản lý kho chưa có tính năng xóa hay vô hiệu hóa kho ảo, trong khi database đã có cột `is_active` trong bảng `virtual_warehouses`
 > - Dropdown chọn kho chưa filter theo `is_active`, kho không còn sử dụng vẫn hiển thị
->
-
-### Test Cases: Xuất kho chuyển kho đích (IMPLEMENTED 2026-02-02)
-
-> Liên quan: `docs/doc-kien/fix/fix-issue-destination-warehouse.md`
-
-| TC | Mô tả | Kết quả mong đợi | Trạng thái |
-|----|--------|-------------------|------------|
-| TC14 | Dropdown kho đích chỉ hiển thị kho archive | Chỉ hiện `rma_staging`, `dead_stock`, `customer_installed` | 🟡 Chờ test |
-| TC15 | Dropdown kho nguồn không hiển thị kho archive | Chỉ hiện các kho có `is_archive = FALSE` | 🟡 Chờ test |
-| TC16 | Tạo phiếu xuất không chọn kho đích | Validation lỗi, không cho submit | 🟡 Chờ test |
-| TC17 | Tạo phiếu xuất với kho đích hợp lệ | Phiếu tạo thành công, `to_virtual_warehouse_id` lưu đúng | 🟡 Chờ test |
-| TC18 | Duyệt phiếu xuất — sản phẩm chuyển kho đích | `physical_products.virtual_warehouse_id` = kho đích, `status = 'issued'`, stock kho nguồn bị trừ | 🟡 Chờ test |
-| TC19 | Sau duyệt, sản phẩm không còn hiển thị ở kho nguồn | Danh sách sản phẩm kho nguồn không chứa sản phẩm đã xuất | 🟡 Chờ test |
-| TC20 | Kho đích mặc định: xuất bán → `customer_installed`, xuất RMA → `rma_staging`, xuất hủy → `dead_stock` | Dropdown kho đích tự động chọn đúng theo ngữ cảnh | ⬜ Chưa implement (user chọn thủ công) |
 
 ### Bước 3: Tạo phiếu bảo hành
 

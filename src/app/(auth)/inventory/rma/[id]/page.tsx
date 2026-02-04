@@ -14,6 +14,7 @@ import {
   IconCheck,
   IconTruck,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,12 +29,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useRMABatchDetails, useFinalizeRMABatch, useShipRMABatch, useCompleteRMABatch, useRemoveProductFromRMA } from "@/hooks/use-warehouse";
+import { useRMABatchDetails, useFinalizeRMABatch, useCompleteRMABatch, useCancelRMABatch, useRemoveProductFromRMA } from "@/hooks/use-warehouse";
 import { RMA_STATUS_LABELS, RMA_STATUS_COLORS } from "@/constants/warehouse";
 import { AddProductsToRMADrawer } from "@/components/drawers/add-products-to-rma-drawer";
 import { UpdateShippingInfoDrawer } from "@/components/drawers/update-shipping-info-drawer";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -51,10 +53,11 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
   const router = useRouter();
   const { batch, products, isLoading, error } = useRMABatchDetails(id);
   const { finalizeBatch, isFinalizing } = useFinalizeRMABatch();
-  const { shipBatch, isShipping } = useShipRMABatch();
   const { completeBatch, isCompleting } = useCompleteRMABatch();
+  const { cancelBatch, isCancelling } = useCancelRMABatch();
   const { removeProduct, isRemoving } = useRemoveProductFromRMA();
   const [productToDelete, setProductToDelete] = React.useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = React.useState(false);
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "—";
@@ -170,8 +173,10 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
 
   const isDraft = batch.status === "draft";
   const isSubmitted = batch.status === "submitted";
-  const isShipped = batch.status === "shipped";
+  const isCancelled = batch.status === "cancelled";
+  const isCompleted = batch.status === "completed";
   const canEdit = isDraft;
+  const canCancel = isDraft || isSubmitted;
 
   return (
     <>
@@ -243,7 +248,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         currentTrackingNumber={batch.tracking_number}
                         trigger={
                           <Button variant="outline" size="sm">
-                            <IconTruck className="mr-2 h-4 w-4" />
+                            <IconTruck className="h-4 w-4" />
                             Cập nhật thông tin vận chuyển
                           </Button>
                         }
@@ -253,34 +258,72 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button size="sm" disabled={isFinalizing}>
-                              <IconCheck className="mr-2 h-4 w-4" />
-                              {isFinalizing ? "Đang xử lý..." : "Hoàn tất lô RMA"}
+                              <IconCheck className="h-4 w-4" />
+                              {isFinalizing ? "Đang xử lý..." : "Chốt danh sách"}
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Xác nhận hoàn tất lô RMA</DialogTitle>
+                              <DialogTitle>Xác nhận chốt danh sách</DialogTitle>
                               <DialogDescription>
-                                Sau khi hoàn tất, bạn sẽ không thể thêm hoặc xóa sản phẩm khỏi lô này nữa.
-                                Lô sẽ chuyển sang trạng thái "Đã gửi" và sẵn sàng để vận chuyển.
+                                Sau khi chốt, bạn sẽ không thể thêm hoặc xóa sản phẩm khỏi lô này nữa.
+                                Lô sẽ chuyển sang trạng thái "Chờ gửi".
                               </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
-                              <Button variant="outline" onClick={() => {}}>
-                                Hủy
-                              </Button>
+                              <DialogClose asChild>
+                                <Button variant="outline">Hủy</Button>
+                              </DialogClose>
                               <Button onClick={handleFinalizeBatch}>
-                                Xác nhận hoàn tất
+                                Xác nhận chốt
                               </Button>
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
                       )}
+
+                      {/* Cancel button for draft */}
+                      <Dialog open={showCancelDialog && isDraft} onOpenChange={(open) => !open && setShowCancelDialog(false)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                            onClick={() => setShowCancelDialog(true)}
+                          >
+                            <IconX className="h-4 w-4" />
+                            Hủy lô RMA
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Xác nhận hủy lô RMA</DialogTitle>
+                            <DialogDescription>
+                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm sẽ được gỡ khỏi lô và
+                              lô sẽ chuyển sang trạng thái "Đã hủy".
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                              Không
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              disabled={isCancelling}
+                              onClick={() => cancelBatch({ batch_id: batch.id }, {
+                                onSuccess: () => setShowCancelDialog(false),
+                              })}
+                            >
+                              {isCancelling ? "Đang hủy..." : "Xác nhận hủy"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </>
                 )}
 
-                {/* Submitted → Shipped */}
+                {/* Submitted → Completed */}
                 {isSubmitted && (
                   <>
                     <Separator />
@@ -291,69 +334,82 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         currentTrackingNumber={batch.tracking_number}
                         trigger={
                           <Button variant="outline" size="sm">
-                            <IconTruck className="mr-2 h-4 w-4" />
+                            <IconTruck className="h-4 w-4" />
                             Cập nhật thông tin vận chuyển
                           </Button>
                         }
                       />
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button size="sm" disabled={isShipping}>
-                            <IconTruck className="mr-2 h-4 w-4" />
-                            {isShipping ? "Đang xử lý..." : "Đánh dấu đã vận chuyển"}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Xác nhận đã vận chuyển</DialogTitle>
-                            <DialogDescription>
-                              Đánh dấu lô RMA này đã được gửi đi cho nhà cung cấp.
-                              {!batch.tracking_number && " Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận."}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => {}}>
-                              Hủy
-                            </Button>
-                            <Button onClick={() => shipBatch({
-                              batch_id: batch.id,
-                              shipping_date: batch.shipping_date || new Date().toISOString().split("T")[0],
-                              tracking_number: batch.tracking_number || undefined,
-                            })}>
-                              Xác nhận đã vận chuyển
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </>
-                )}
-
-                {/* Shipped → Completed */}
-                {isShipped && (
-                  <>
-                    <Separator />
-                    <div className="flex flex-wrap gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
                           <Button size="sm" disabled={isCompleting}>
-                            <IconCheck className="mr-2 h-4 w-4" />
-                            {isCompleting ? "Đang xử lý..." : "Đánh dấu hoàn thành"}
+                            <IconCheck className="h-4 w-4" />
+                            {isCompleting ? "Đang xử lý..." : "Hoàn thành & Xuất kho"}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Xác nhận hoàn thành lô RMA</DialogTitle>
                             <DialogDescription>
-                              Đánh dấu lô RMA này đã được nhà cung cấp xử lý xong.
+                              Lô RMA sẽ được đánh dấu hoàn thành, hệ thống sẽ tự động:
+                            </DialogDescription>
+                            <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
+                              <li>Chuyển sản phẩm từ Kho Hàng Hỏng sang Kho RMA</li>
+                              <li>Tạo phiếu xuất kho từ Kho RMA</li>
+                            </ul>
+                            {!batch.tracking_number && (
+                              <p className="mt-2 text-sm text-yellow-600">
+                                Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận.
+                              </p>
+                            )}
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Hủy</Button>
+                            </DialogClose>
+                            <Button onClick={() => completeBatch({
+                              batch_id: batch.id,
+                              shipping_date: batch.shipping_date || new Date().toISOString().split("T")[0],
+                              tracking_number: batch.tracking_number || undefined,
+                            })}>
+                              Xác nhận hoàn thành
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* Cancel button for submitted */}
+                      <Dialog open={showCancelDialog && isSubmitted} onOpenChange={(open) => !open && setShowCancelDialog(false)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                            onClick={() => setShowCancelDialog(true)}
+                          >
+                            <IconX className="h-4 w-4" />
+                            Hủy lô RMA
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Xác nhận hủy lô RMA</DialogTitle>
+                            <DialogDescription>
+                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm sẽ được gỡ khỏi lô và
+                              lô sẽ chuyển sang trạng thái "Đã hủy".
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => {}}>
-                              Hủy
+                            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                              Không
                             </Button>
-                            <Button onClick={() => completeBatch({ batch_id: batch.id })}>
-                              Xác nhận hoàn thành
+                            <Button
+                              variant="destructive"
+                              disabled={isCancelling}
+                              onClick={() => cancelBatch({ batch_id: batch.id }, {
+                                onSuccess: () => setShowCancelDialog(false),
+                              })}
+                            >
+                              {isCancelling ? "Đang hủy..." : "Xác nhận hủy"}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -379,7 +435,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                       batchId={batch.id}
                       trigger={
                         <Button size="sm">
-                          <IconPlus className="mr-2 h-4 w-4" />
+                          <IconPlus className="h-4 w-4" />
                           Thêm sản phẩm
                         </Button>
                       }
@@ -439,8 +495,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                                       <DialogTitle>Xác nhận xóa sản phẩm</DialogTitle>
                                       <DialogDescription>
                                         Bạn có chắc muốn xóa sản phẩm <strong>{item.serial_number}</strong> khỏi lô RMA này?
-                                        <br />
-                                        Sản phẩm sẽ được chuyển về kho chính.
+                                        Sản phẩm sẽ vẫn ở Kho Hàng Hỏng và có thể được thêm vào lô RMA khác.
                                       </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>

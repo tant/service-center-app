@@ -595,7 +595,7 @@ export const serialsRouter = router({
           )
         `
         )
-        .in("status", ["approved", "completed"])
+        .eq("status", "completed")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -691,7 +691,7 @@ export const serialsRouter = router({
           )
         `
         )
-        .in("status", ["approved", "completed"])
+        .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(input.limit);
 

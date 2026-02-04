@@ -262,12 +262,12 @@ export const stockRouter = router({
           receipt:stock_receipts!inner(
             receipt_date,
             status,
-            approved_at
+            completed_at
           )
         `)
         .eq("product_id", input.productId)
         .eq("receipt.status", "completed")
-        .order("receipt(approved_at)", { ascending: true });
+        .order("receipt(completed_at)", { ascending: true });
 
       // Get all issues for this product
       const { data: issues } = await ctx.supabaseAdmin
@@ -277,12 +277,12 @@ export const stockRouter = router({
           issue:stock_issues!inner(
             issue_date,
             status,
-            approved_at
+            completed_at
           )
         `)
         .eq("product_id", input.productId)
         .eq("issue.status", "completed")
-        .order("issue(approved_at)", { ascending: true });
+        .order("issue(completed_at)", { ascending: true });
 
       // Calculate cumulative stock over time
       type StockEvent = {
@@ -295,9 +295,9 @@ export const stockRouter = router({
 
       // Add receipt events
       receipts?.forEach((r: any) => {
-        if (r.receipt?.approved_at) {
+        if (r.receipt?.completed_at) {
           events.push({
-            date: r.receipt.approved_at,
+            date: r.receipt.completed_at,
             change: r.declared_quantity,
             type: 'receipt',
           });
@@ -306,9 +306,9 @@ export const stockRouter = router({
 
       // Add issue events (negative)
       issues?.forEach((i: any) => {
-        if (i.issue?.approved_at) {
+        if (i.issue?.completed_at) {
           events.push({
-            date: i.issue.approved_at,
+            date: i.issue.completed_at,
             change: -i.quantity,
             type: 'issue',
           });

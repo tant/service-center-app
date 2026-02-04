@@ -8,6 +8,7 @@ import { CheckCircle, Clock, AlertCircle, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ENTITY_TYPE_LABELS } from "@/lib/constants/workflow";
 
 interface WorkflowTask {
   id: string;
@@ -27,14 +28,6 @@ interface WorkflowPreviewProps {
   notes?: string;
   className?: string;
 }
-
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  service_ticket: "Phiếu sửa chữa",
-  service_request: "Phiếu yêu cầu dịch vụ",
-  inventory_receipt: "Phiếu nhập kho",
-  inventory_issue: "Phiếu xuất kho",
-  inventory_transfer: "Phiếu chuyển kho",
-};
 
 export function WorkflowPreview({
   name,

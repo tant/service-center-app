@@ -188,6 +188,7 @@ export function usePhysicalProducts(filters?: {
   physical_warehouse_id?: string;
   virtual_warehouse_id?: string;
   condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
+  status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
   warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
   search?: string;
   limit?: number;
@@ -433,7 +434,7 @@ export function useWarehouseAnalytics(period: string = '30d') {
  * Hook for listing RMA batches with pagination
  */
 export function useRMABatches(filters?: {
-  status?: 'draft' | 'submitted' | 'shipped' | 'completed';
+  status?: 'draft' | 'submitted' | 'completed' | 'cancelled';
   limit?: number;
   offset?: number;
 }) {
@@ -583,31 +584,8 @@ export function useFinalizeRMABatch() {
 }
 
 /**
- * Hook for shipping RMA batch (submitted → shipped)
- * Admin/Manager only
- */
-export function useShipRMABatch() {
-  const utils = trpc.useUtils();
-  const mutation = trpc.physicalProducts.shipRMABatch.useMutation({
-    onSuccess: () => {
-      utils.physicalProducts.getRMABatches.invalidate();
-      utils.physicalProducts.getRMABatchDetails.invalidate();
-      toast.success('Đã đánh dấu lô RMA đã vận chuyển');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Lỗi khi cập nhật trạng thái vận chuyển');
-    },
-  });
-
-  return {
-    shipBatch: mutation.mutate,
-    shipBatchAsync: mutation.mutateAsync,
-    isShipping: mutation.isPending,
-  };
-}
-
-/**
- * Hook for completing RMA batch (shipped → completed)
+ * Hook for completing RMA batch (submitted → completed)
+ * Creates transfer (dead_stock → rma_staging) and stock issue
  * Admin/Manager only
  */
 export function useCompleteRMABatch() {
@@ -616,6 +594,7 @@ export function useCompleteRMABatch() {
     onSuccess: () => {
       utils.physicalProducts.getRMABatches.invalidate();
       utils.physicalProducts.getRMABatchDetails.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
       toast.success('Đã hoàn thành lô RMA');
     },
     onError: (error) => {
@@ -627,5 +606,30 @@ export function useCompleteRMABatch() {
     completeBatch: mutation.mutate,
     completeBatchAsync: mutation.mutateAsync,
     isCompleting: mutation.isPending,
+  };
+}
+
+/**
+ * Hook for cancelling RMA batch (draft or submitted → cancelled)
+ * Admin/Manager only
+ */
+export function useCancelRMABatch() {
+  const utils = trpc.useUtils();
+  const mutation = trpc.physicalProducts.cancelRMABatch.useMutation({
+    onSuccess: () => {
+      utils.physicalProducts.getRMABatches.invalidate();
+      utils.physicalProducts.getRMABatchDetails.invalidate();
+      utils.physicalProducts.listProducts.invalidate();
+      toast.success('Đã hủy lô RMA');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Lỗi khi hủy lô RMA');
+    },
+  });
+
+  return {
+    cancelBatch: mutation.mutate,
+    cancelBatchAsync: mutation.mutateAsync,
+    isCancelling: mutation.isPending,
   };
 }

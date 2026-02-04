@@ -52,16 +52,17 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
   const { data: products } = trpc.products.getProducts.useQuery();
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
 
-  // Load existing receipt data
+  // Redirect immediately - editing is no longer supported
   useEffect(() => {
     if (receipt && !receiptLoading) {
-      // Check if receipt can be edited
-      if (receipt.status !== "draft") {
-        toast.error("Chỉ có thể chỉnh sửa phiếu nhập ở trạng thái bản nháp");
-        router.push(`/inventory/documents/receipts/${id}`);
-        return;
-      }
+      toast.error("Phiếu nhập đã hoàn tất, không thể chỉnh sửa");
+      router.push(`/inventory/documents/receipts/${id}`);
+    }
+  }, [receipt, receiptLoading, router, id]);
 
+  // This code will not run due to redirect, but kept for TypeScript
+  useEffect(() => {
+    if (receipt && !receiptLoading) {
       setReceiptType(receipt.receipt_type as "normal" | "adjustment");
       setVirtualWarehouseId(receipt.virtual_warehouse_id || "");
       setReceiptDate(receipt.receipt_date?.split("T")[0] || new Date().toISOString().split("T")[0]);

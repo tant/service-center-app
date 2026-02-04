@@ -6,7 +6,7 @@
 |---|----------|------------|
 | 1 | Mốc 1: Chuyển kho khi nhận hàng (`customer_installed` → `in_service`) | ✅ Done |
 | 2 | Mốc 3: Transfer cho outcome `repaired` / `unrepairable` (`in_service` → `customer_installed`) | ✅ Done |
-| 3 | Mốc 3: Sửa đích warranty (hỏng) từ `in_service` thành `rma_staging` | ✅ Done |
+| 3 | Mốc 3: Sửa đích warranty (hỏng) từ `in_service` thành `dead_stock` | ✅ Done |
 
 **Commit**: `13da446 feat: auto warehouse location transfers across service workflow`
 
@@ -19,7 +19,7 @@
 | Mốc 1 (nhận hàng) | → `in_service` | Không di chuyển | ✅ `customer_installed` → `in_service` |
 | Mốc 3 - repaired | → `customer_installed` | Không di chuyển | ✅ `in_service` → `customer_installed` |
 | Mốc 3 - unrepairable | → `customer_installed` | Không di chuyển | ✅ `in_service` → `customer_installed` |
-| Mốc 3 - warranty (hỏng) | → `rma_staging` | → `in_service` (sai) | ✅ `in_service` → `rma_staging` |
+| Mốc 3 - warranty (hỏng) | → `dead_stock` | → `in_service` (sai) | ✅ `in_service` → `dead_stock` |
 | Mốc 3 - warranty (thay thế) | → `customer_installed` | ✅ Đúng | ✅ Giữ nguyên |
 
 ---
@@ -30,7 +30,7 @@
 
 - **Export `createAutoTransfer`** — để dùng từ service-request router
 - **`setOutcome` — outcome `repaired` / `unrepairable`**: Thêm block tạo transfer `in_service` → `customer_installed`
-- **`setOutcome` — outcome `warranty_replacement`**: Sửa Transfer 2 từ `customer_installed → in_service` thành `in_service → rma_staging`, thêm lookup kho `rma_staging`
+- **`setOutcome` — outcome `warranty_replacement`**: Sửa Transfer 2 từ `customer_installed → in_service` thành `in_service → dead_stock`, thêm lookup kho `dead_stock`
 
 ### 2. `src/server/routers/service-request.ts`
 
@@ -69,5 +69,5 @@
 |---------|----------|
 | `repaired` | `in_service` → `customer_installed` |
 | `unrepairable` | `in_service` → `customer_installed` |
-| `warranty_replacement` (hỏng) | `in_service` → `rma_staging` |
+| `warranty_replacement` (hỏng) | `in_service` → `dead_stock` |
 | `warranty_replacement` (thay thế) | `warranty_stock` → `customer_installed` (giữ nguyên) |

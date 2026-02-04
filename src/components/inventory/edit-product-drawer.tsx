@@ -9,9 +9,25 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { useUpdatePhysicalProduct } from "@/hooks/use-warehouse";
 import type { PhysicalProduct } from "@/types/warehouse";
+import type { ProductCondition } from "@/types/enums";
+
+const CONDITION_OPTIONS: { value: ProductCondition; label: string }[] = [
+  { value: "new", label: "Mới" },
+  { value: "refurbished", label: "Tân trang" },
+  { value: "used", label: "Đã qua sử dụng" },
+  { value: "faulty", label: "Lỗi" },
+  { value: "for_parts", label: "Tháo linh kiện" },
+];
 
 interface EditProductDrawerProps {
   open: boolean;
@@ -28,6 +44,7 @@ interface EditProductDrawerProps {
 export function EditProductDrawer({ open, onClose, product }: EditProductDrawerProps) {
   const [formData, setFormData] = React.useState({
     serial_number: "",
+    condition: "" as ProductCondition | "",
     manufacturer_warranty_end_date: "",
     user_warranty_end_date: "",
   });
@@ -53,6 +70,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
     if (product) {
       setFormData({
         serial_number: product.serial_number || "",
+        condition: product.condition || "",
         manufacturer_warranty_end_date: formatDateForInput(product.manufacturer_warranty_end_date),
         user_warranty_end_date: formatDateForInput(product.user_warranty_end_date),
       });
@@ -82,6 +100,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
       {
         id: product.id,
         serial_number: formData.serial_number.toUpperCase(),
+        condition: formData.condition || undefined,
         manufacturer_warranty_end_date: formData.manufacturer_warranty_end_date || null,
         user_warranty_end_date: formData.user_warranty_end_date || null,
       },
@@ -163,6 +182,26 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
             Số serial phải unique trong toàn hệ thống
           </p>
         )}
+      </div>
+
+      {/* Condition */}
+      <div className="space-y-2">
+        <Label htmlFor="condition">Tình trạng</Label>
+        <Select
+          value={formData.condition}
+          onValueChange={(value) => handleChange("condition", value)}
+        >
+          <SelectTrigger id="condition">
+            <SelectValue placeholder="Chọn tình trạng" />
+          </SelectTrigger>
+          <SelectContent>
+            {CONDITION_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Manufacturer Warranty End Date */}

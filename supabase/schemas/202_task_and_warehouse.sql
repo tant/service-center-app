@@ -195,13 +195,11 @@ CREATE TABLE IF NOT EXISTS public.virtual_warehouses (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
-  is_archive BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 COMMENT ON TABLE public.virtual_warehouses IS 'Virtual warehouse categories for product state management';
 COMMENT ON COLUMN public.virtual_warehouses.name IS 'Virtual warehouse name (primary display name)';
-COMMENT ON COLUMN public.virtual_warehouses.is_archive IS 'Kho archive: không tính vào tồn kho khả dụng, không cho phép tạo phiếu xuất từ kho này';
 CREATE TRIGGER trigger_virtual_warehouses_updated_at BEFORE UPDATE ON public.virtual_warehouses FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- PHYSICAL PRODUCTS
@@ -210,7 +208,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE RESTRICT,
   serial_number VARCHAR(255) NOT NULL,
   condition public.product_condition NOT NULL DEFAULT 'new',
-  status public.physical_product_status NOT NULL DEFAULT 'draft',
+  status public.physical_product_status NOT NULL DEFAULT 'active',
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
   previous_virtual_warehouse_id UUID REFERENCES public.virtual_warehouses(id) ON DELETE SET NULL,
   manufacturer_warranty_end_date DATE,
@@ -229,7 +227,7 @@ CREATE TABLE IF NOT EXISTS public.physical_products (
   CONSTRAINT physical_products_serial_unique UNIQUE(serial_number)
 );
 COMMENT ON TABLE public.physical_products IS 'Serialized product instances with warranty and location tracking';
-COMMENT ON COLUMN public.physical_products.status IS 'Lifecycle status: draft (from unapproved receipt) → active (in stock) → issued (out) / disposed (scrapped)';
+COMMENT ON COLUMN public.physical_products.status IS 'Simplified status: active (available) or locked (temporarily unavailable)';
 COMMENT ON COLUMN public.physical_products.virtual_warehouse_id IS 'Virtual warehouse this product belongs to (required - every product must be in a warehouse)';
 COMMENT ON COLUMN public.physical_products.previous_virtual_warehouse_id IS 'Previous virtual warehouse before RMA - used to restore location when removed from RMA batch';
 COMMENT ON COLUMN public.physical_products.manufacturer_warranty_end_date IS 'Manufacturer warranty end date (nullable - managed separately at /inventory/products)';

@@ -16,28 +16,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { FileText, ChevronLeft, ChevronRight, Layers, PackagePlus, PackageMinus, ArrowLeftRight, Search } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 
 type DocumentType = "all" | "receipt" | "issue" | "transfer";
-type DocumentStatus = "draft" | "pending_approval" | "approved" | "in_transit" | "completed" | "cancelled";
 
 export function StockDocumentsTable() {
   const router = useRouter();
   const [documentType, setDocumentType] = useState<DocumentType>("all");
-  const [status, setStatus] = useState<DocumentStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 20;
@@ -48,11 +38,6 @@ export function StockDocumentsTable() {
     setPage(0);
   };
 
-  const handleStatusChange = (value: string) => {
-    setStatus(value as any);
-    setPage(0);
-  };
-
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(0);
@@ -60,29 +45,17 @@ export function StockDocumentsTable() {
 
   // Fetch all three document types
   const { data: receiptsData, isLoading: receiptsLoading } = trpc.inventory.receipts.list.useQuery(
-    {
-      status: status === "all" ? undefined : (status as any),
-      page,
-      pageSize,
-    },
+    { page, pageSize },
     { enabled: documentType === "all" || documentType === "receipt" }
   );
 
   const { data: issuesData, isLoading: issuesLoading } = trpc.inventory.issues.list.useQuery(
-    {
-      status: status === "all" ? undefined : (status as any),
-      page,
-      pageSize,
-    },
+    { page, pageSize },
     { enabled: documentType === "all" || documentType === "issue" }
   );
 
   const { data: transfersData, isLoading: transfersLoading } = trpc.inventory.transfers.list.useQuery(
-    {
-      status: status === "all" || status === "in_transit" ? undefined : (status as any),
-      page,
-      pageSize,
-    },
+    { page, pageSize },
     { enabled: documentType === "all" || documentType === "transfer" }
   );
 
@@ -176,7 +149,7 @@ export function StockDocumentsTable() {
 
   const renderTable = () => (
     <>
-      {/* Search Input and Status Filter */}
+      {/* Search Input */}
       <div className="flex items-center gap-2 mb-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -187,20 +160,6 @@ export function StockDocumentsTable() {
             className="pl-8"
           />
         </div>
-        <Select value={status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả trạng thái</SelectItem>
-            <SelectItem value="draft">Bản nháp</SelectItem>
-            <SelectItem value="pending_approval">Chờ duyệt</SelectItem>
-            <SelectItem value="approved">Đã duyệt</SelectItem>
-            <SelectItem value="in_transit">Đang chuyển</SelectItem>
-            <SelectItem value="completed">Hoàn thành</SelectItem>
-            <SelectItem value="cancelled">Đã hủy</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="rounded-md border">
@@ -211,7 +170,6 @@ export function StockDocumentsTable() {
               {documentType === "all" && <TableHead>Loại</TableHead>}
               <TableHead>Ngày</TableHead>
               <TableHead>Người tạo</TableHead>
-              <TableHead>Trạng thái</TableHead>
               <TableHead>Serial thiếu</TableHead>
               <TableHead>Ghi chú</TableHead>
               <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
@@ -220,13 +178,13 @@ export function StockDocumentsTable() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   Đang tải...
                 </TableCell>
               </TableRow>
             ) : allDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   Không tìm thấy chứng từ nào.
                 </TableCell>
               </TableRow>
@@ -246,22 +204,15 @@ export function StockDocumentsTable() {
                     {doc.created_by?.full_name || "-"}
                   </TableCell>
                   <TableCell>
-                    <DocumentStatusBadge status={doc.status} />
-                  </TableCell>
-                  <TableCell>
-                    {doc.status === "approved" || doc.status === "completed" ? (
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                          doc.missingSerialsCount > 0
-                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        }`}
-                      >
-                        {doc.missingSerialsCount > 0 ? `${doc.missingSerialsCount} serial` : "Hoàn thành"}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
-                    )}
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
+                        doc.missingSerialsCount > 0
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      }`}
+                    >
+                      {doc.missingSerialsCount > 0 ? `${doc.missingSerialsCount} serial` : "Hoàn thành"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {doc.notes || "-"}

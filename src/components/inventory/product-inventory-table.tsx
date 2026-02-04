@@ -84,9 +84,24 @@ export type PhysicalProductWithRelations = PhysicalProduct & {
   };
 };
 
+const CONDITION_OPTIONS = [
+  { value: "new", label: "Mới" },
+  { value: "refurbished", label: "Tân trang" },
+  { value: "used", label: "Đã qua sử dụng" },
+  { value: "faulty", label: "Lỗi" },
+  { value: "for_parts", label: "Tháo linh kiện" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Trong kho" },
+  { value: "issued", label: "Đã xuất" },
+] as const;
+
 export function ProductInventoryTable() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [warehouseFilter, setWarehouseFilter] = React.useState<string>("all");
+  const [conditionFilter, setConditionFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [editingProduct, setEditingProduct] = React.useState<PhysicalProductWithRelations | null>(null);
   const [showBulkWarrantyUpdate, setShowBulkWarrantyUpdate] = React.useState(false);
 
@@ -106,6 +121,8 @@ export function ProductInventoryTable() {
   const filters = React.useMemo(() => {
     const f: {
       virtual_warehouse_id?: string;
+      condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
+      status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
       search?: string;
       limit?: number;
       offset?: number;
@@ -113,6 +130,12 @@ export function ProductInventoryTable() {
 
     if (warehouseFilter && warehouseFilter !== "all") {
       f.virtual_warehouse_id = warehouseFilter;
+    }
+    if (conditionFilter && conditionFilter !== "all") {
+      f.condition = conditionFilter as typeof f.condition;
+    }
+    if (statusFilter && statusFilter !== "all") {
+      f.status = statusFilter as typeof f.status;
     }
     if (searchQuery && searchQuery.trim()) {
       f.search = searchQuery.trim();
@@ -123,14 +146,14 @@ export function ProductInventoryTable() {
     f.offset = pagination.pageIndex * pagination.pageSize;
 
     return f;
-  }, [warehouseFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
+  }, [warehouseFilter, conditionFilter, statusFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
 
   const { products, total, isLoading } = usePhysicalProducts(filters);
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [warehouseFilter, searchQuery]);
+  }, [warehouseFilter, conditionFilter, statusFilter, searchQuery]);
 
   const router = useRouter();
 
@@ -224,16 +247,16 @@ export function ProductInventoryTable() {
         </div>
 
         {/* Filters Row */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             placeholder="Tìm kiếm theo số serial, tên sản phẩm, hoặc SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full"
+            className="max-w-sm"
           />
 
           <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger size="sm">
+            <SelectTrigger size="sm" className="w-40">
               <SelectValue placeholder="Tất cả kho ảo" />
             </SelectTrigger>
             <SelectContent>
@@ -245,11 +268,34 @@ export function ProductInventoryTable() {
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        {/* Results count */}
-        <div className="text-sm text-muted-foreground">
-          Hiển thị {table.getRowModel().rows.length} / {total} sản phẩm
+          <Select value={conditionFilter} onValueChange={setConditionFilter}>
+            <SelectTrigger size="sm" className="w-40">
+              <SelectValue placeholder="Tất cả tình trạng" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả tình trạng</SelectItem>
+              {CONDITION_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger size="sm" className="w-40">
+              <SelectValue placeholder="Tất cả trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -260,7 +306,9 @@ export function ProductInventoryTable() {
         ) : table.getRowModel().rows?.length === 0 ? (
           <div className="rounded-lg border py-8 text-center text-muted-foreground">
             {searchQuery ||
-             (warehouseFilter && warehouseFilter !== "all")
+             warehouseFilter !== "all" ||
+             conditionFilter !== "all" ||
+             statusFilter !== "all"
               ? "Không tìm thấy sản phẩm phù hợp"
               : "Chưa có sản phẩm nào"}
           </div>

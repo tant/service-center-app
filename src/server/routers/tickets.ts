@@ -146,8 +146,15 @@ async function sendEmailNotification(
 }
 
 /**
- * Helper function to create and auto-approve a stock transfer
+ * Helper function to create a stock transfer
  * Used for warranty replacement flow to create proper transfer documents
+ *
+ * SIMPLIFIED WORKFLOW (no approval):
+ * 1. Create transfer (status defaults to 'completed')
+ * 2. Create transfer item
+ * 3. Add serial → trigger_process_transfer_serial automatically:
+ *    - Moves physical_product.virtual_warehouse_id
+ *    - Updates stock counts at source and destination
  */
 export async function createAutoTransfer(
   supabaseAdmin: TRPCContext["supabaseAdmin"],
@@ -173,14 +180,14 @@ export async function createAutoTransfer(
     createdById,
   } = params;
 
-  // 1. Create transfer
+  // 1. Create transfer (status defaults to 'completed' per simplified schema)
   const { data: transfer, error: transferError } = await supabaseAdmin
     .from("stock_transfers")
     .insert({
       from_virtual_warehouse_id: fromWarehouseId,
       to_virtual_warehouse_id: toWarehouseId,
       customer_id: customerId,
-      status: "draft",
+      // status defaults to 'completed' - no approval workflow
       notes,
       created_by_id: createdById,
     })
@@ -207,6 +214,12 @@ export async function createAutoTransfer(
   }
 
   // 3. Add serial to transfer
+  // This triggers `trigger_process_transfer_serial` which automatically:
+  // - Updates physical_product.virtual_warehouse_id to destination
+  // - Sets physical_product.previous_virtual_warehouse_id
+  // - Updates physical_product.last_known_customer_id (if customer_id set)
+  // - Decrements stock at source warehouse
+  // - Increments stock at destination warehouse
   const { error: serialError } = await supabaseAdmin
     .from("stock_transfer_serials")
     .insert({
@@ -221,21 +234,7 @@ export async function createAutoTransfer(
     );
   }
 
-  // 4. Approve transfer - triggers will handle:
-  //    - Update physical_product location
-  //    - Generate stock_issue + stock_receipt
-  const { error: approveError } = await supabaseAdmin
-    .from("stock_transfers")
-    .update({
-      status: "approved",
-      approved_by_id: createdById,
-      approved_at: new Date().toISOString(),
-    })
-    .eq("id", transfer.id);
-
-  if (approveError) {
-    throw new Error(`Lỗi duyệt phiếu chuyển kho: ${approveError.message}`);
-  }
+  // No step 4 needed - trigger handles everything on serial insert
 
   return {
     transferId: transfer.id,
@@ -1957,7 +1956,7 @@ ${changes.join("\n")}
       let warrantyWarehouseId: string | null = null;
       let customerInstalledWarehouseId: string | null = null;
       let inServiceWarehouseId: string | null = null;
-      let rmaStagingWarehouseId: string | null = null;
+      let deadStockWarehouseId: string | null = null;
       let replacementProductInfo: {
         id: string;
         serial_number: string;
@@ -1978,7 +1977,7 @@ ${changes.join("\n")}
             "warranty_stock",
             "customer_installed",
             "in_service",
-            "rma_staging",
+            "dead_stock",
           ]);
 
         const warrantyWarehouse = warehouses?.find(
@@ -1990,20 +1989,20 @@ ${changes.join("\n")}
         const inServiceWarehouse = warehouses?.find(
           (w) => w.warehouse_type === "in_service",
         );
-        const rmaStagingWarehouse = warehouses?.find(
-          (w) => w.warehouse_type === "rma_staging",
+        const deadStockWarehouse = warehouses?.find(
+          (w) => w.warehouse_type === "dead_stock",
         );
 
-        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !rmaStagingWarehouse) {
+        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !deadStockWarehouse) {
           throw new Error(
-            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, rma_staging)",
+            "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, dead_stock)",
           );
         }
 
         warrantyWarehouseId = warrantyWarehouse.id;
         customerInstalledWarehouseId = customerWarehouse.id;
         inServiceWarehouseId = inServiceWarehouse.id;
-        rmaStagingWarehouseId = rmaStagingWarehouse.id;
+        deadStockWarehouseId = deadStockWarehouse.id;
 
         // Validate replacement product
         const { data: replacementProduct, error: rpError } =
@@ -2107,9 +2106,9 @@ ${changes.join("\n")}
           })
           .eq("id", replacement_product_id);
 
-        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → rma_staging
+        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → dead_stock
         // Only if ticket has serial_number (old product from customer)
-        if (ticket.serial_number && rmaStagingWarehouseId) {
+        if (ticket.serial_number && deadStockWarehouseId) {
           const { data: oldProduct } = await ctx.supabaseAdmin
             .from("physical_products")
             .select("id, serial_number, product_id, virtual_warehouse_id")
@@ -2124,18 +2123,18 @@ ${changes.join("\n")}
               ctx.supabaseAdmin,
               {
                 fromWarehouseId: inServiceWarehouseId,
-                toWarehouseId: rmaStagingWarehouseId,
+                toWarehouseId: deadStockWarehouseId,
                 customerId: ticket.customer_id,
                 physicalProductId: oldProduct.id,
                 serialNumber: oldProduct.serial_number,
                 productId: oldProduct.product_id,
-                notes: `Auto: Chuyển sản phẩm hỏng sang kho RMA - Phiếu ${ticket.ticket_number}`,
+                notes: `Auto: Chuyển sản phẩm hỏng sang Kho Hàng Hỏng - Phiếu ${ticket.ticket_number}`,
                 createdById: profileId,
               },
             );
 
             console.log(
-              `[WARRANTY] Created RMA transfer: ${inboundTransfer.transferNumber}`,
+              `[WARRANTY] Created dead_stock transfer: ${inboundTransfer.transferNumber}`,
             );
           }
         }

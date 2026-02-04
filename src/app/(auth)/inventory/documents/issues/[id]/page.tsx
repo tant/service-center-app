@@ -15,12 +15,8 @@ import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selecti
 import { TaskCard } from "@/components/tasks/task-card";
 import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Send, CheckCircle, Trash2, X, ListTodo, Edit } from "lucide-react";
+import { ArrowLeft, ListTodo } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -32,8 +28,6 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
   const router = useRouter();
   const { id } = use(params);
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
-  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
 
   // Task action dialog state
   const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
@@ -53,71 +47,12 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
     { refetchInterval: 30000 }
   );
   const tasks = taskData?.tasks || [];
-  const submitForApproval = trpc.inventory.issues.submitForApproval.useMutation();
-  const approveIssue = trpc.inventory.issues.approve.useMutation();
-  const rejectIssue = trpc.inventory.issues.reject.useMutation();
-  const deleteIssue = trpc.inventory.issues.delete.useMutation();
 
   // Task mutations
   const startTaskMutation = trpc.tasks.startTask.useMutation();
   const completeTaskMutation = trpc.tasks.completeTask.useMutation();
   const blockTaskMutation = trpc.tasks.blockTask.useMutation();
   const unblockTaskMutation = trpc.tasks.unblockTask.useMutation();
-
-  const handleSubmitForApproval = async () => {
-    try {
-      await submitForApproval.mutateAsync({ id });
-      toast.success("Đã gửi phiếu xuất để duyệt");
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || "Không thể gửi phiếu xuất");
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!confirm("Bạn có chắc chắn muốn duyệt phiếu xuất này?")) {
-      return;
-    }
-
-    try {
-      await approveIssue.mutateAsync({ id });
-      toast.success("Đã duyệt phiếu xuất");
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || "Không thể duyệt phiếu xuất");
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectionReason.trim()) {
-      toast.error("Vui lòng nhập lý do từ chối");
-      return;
-    }
-
-    try {
-      await rejectIssue.mutateAsync({ id, reason: rejectionReason });
-      toast.success("Đã từ chối phiếu xuất");
-      setIsRejectDialogOpen(false);
-      setRejectionReason("");
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || "Không thể từ chối phiếu xuất");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm("Bạn có chắc chắn muốn xóa phiếu xuất này?")) {
-      return;
-    }
-
-    try {
-      await deleteIssue.mutateAsync({ id });
-      toast.success("Đã xóa phiếu xuất");
-      router.push("/inventory/documents");
-    } catch (error: any) {
-      toast.error(error.message || "Không thể xóa phiếu xuất");
-    }
-  };
 
   // Task action handlers
   const handleStartTask = async (taskId: string) => {
@@ -227,11 +162,6 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
     (item) => (item.serials?.length || 0) === item.quantity
   );
 
-  const canSubmitForApproval = issue.status === "draft" && allItemsComplete;
-  const canDelete = issue.status === "draft";
-  const canApprove = issue.status === "pending_approval";
-  const canReject = issue.status === "pending_approval";
-
   return (
     <>
       <PageHeader title="Chi tiết phiếu xuất" />
@@ -256,66 +186,6 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
                   <ListTodo className="h-4 w-4" />
                   <span className="hidden lg:inline">Tạo công việc</span>
                 </Button>
-
-                {canDelete && (
-                  <Link href={`/inventory/documents/issues/${id}/edit`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="hidden lg:inline">Chỉnh sửa</span>
-                    </Button>
-                  </Link>
-                )}
-
-                {canDelete && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={deleteIssue.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="hidden lg:inline">Xóa phiếu</span>
-                  </Button>
-                )}
-
-                {canSubmitForApproval && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleSubmitForApproval}
-                    disabled={submitForApproval.isPending}
-                  >
-                    <Send className="h-4 w-4" />
-                    <span className="hidden lg:inline">Gửi duyệt</span>
-                  </Button>
-                )}
-
-                {canReject && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setIsRejectDialogOpen(true)}
-                    disabled={rejectIssue.isPending}
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="hidden lg:inline">Từ chối</span>
-                  </Button>
-                )}
-
-                {canApprove && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApprove}
-                    disabled={approveIssue.isPending}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    <span className="hidden lg:inline">Duyệt phiếu</span>
-                  </Button>
-                )}
               </div>
             </div>
 
@@ -354,14 +224,6 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
               )}
 
               <IssueItemsTable issue={issue} onSerialsSelected={() => refetch()} />
-
-              {!allItemsComplete && issue.status === "draft" && (
-                <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700 p-4">
-                  <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                    Vui lòng chọn đầy đủ số serial cho tất cả sản phẩm trước khi gửi duyệt
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -400,47 +262,6 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
         isLoading={blockTaskMutation.isPending}
       />
 
-      {/* Reject Dialog */}
-      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Từ chối phiếu xuất</DialogTitle>
-            <DialogDescription>
-              Vui lòng nhập lý do từ chối phiếu xuất này
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="rejection-reason">Lý do từ chối</Label>
-              <Textarea
-                id="rejection-reason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Nhập lý do từ chối..."
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsRejectDialogOpen(false);
-                setRejectionReason("");
-              }}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={rejectIssue.isPending || !rejectionReason.trim()}
-            >
-              Từ chối phiếu
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

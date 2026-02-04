@@ -127,16 +127,13 @@ CREATE TYPE public.product_condition AS ENUM (
 );
 COMMENT ON TYPE public.product_condition IS 'Physical condition classification for inventory products';
 
--- Physical Product Status Enum
+-- Physical Product Status Enum (SIMPLIFIED)
 DROP TYPE IF EXISTS public.physical_product_status CASCADE;
 CREATE TYPE public.physical_product_status AS ENUM (
-  'draft',        -- From unapproved receipt (temporary, can be deleted)
-  'active',       -- In stock, available (receipt approved)
-  'transferring', -- In draft issue/transfer document (locked, cannot be selected by other documents)
-  'issued',       -- Issued out (via approved stock issue document)
-  'disposed'      -- Disposed/scrapped (no longer usable)
+  'active',       -- In stock, available
+  'issued'        -- Issued in a stock issue document (đã xuất trong phiếu xuất kho)
 );
-COMMENT ON TYPE public.physical_product_status IS 'Lifecycle status: draft (unapproved receipt) → active (available) → transferring (locked in draft issue/transfer) → issued (out) / disposed';
+COMMENT ON TYPE public.physical_product_status IS 'Simplified status: active (available) or issued (included in stock issue)';
 
 -- Service Type Enum
 DROP TYPE IF EXISTS public.service_type CASCADE;
@@ -178,16 +175,12 @@ COMMENT ON TYPE public.movement_type IS 'Type of stock movement transaction';
 -- INVENTORY DOCUMENT ENUM TYPES
 -- =====================================================
 
--- Stock Document Status
+-- Stock Document Status (SIMPLIFIED - no approval workflow)
 DROP TYPE IF EXISTS public.stock_document_status CASCADE;
 CREATE TYPE public.stock_document_status AS ENUM (
-  'draft',
-  'pending_approval',
-  'approved',
-  'completed',
-  'cancelled'
+  'completed'     -- Documents are completed immediately upon creation
 );
-COMMENT ON TYPE public.stock_document_status IS 'Workflow status for stock documents';
+COMMENT ON TYPE public.stock_document_status IS 'Simplified: all documents are completed immediately';
 
 -- Stock Receipt Type (SIMPLIFIED)
 DROP TYPE IF EXISTS public.stock_receipt_type CASCADE;
@@ -205,16 +198,12 @@ CREATE TYPE public.stock_issue_type AS ENUM (
 );
 COMMENT ON TYPE public.stock_issue_type IS 'Issue types: normal or adjustment';
 
--- Transfer Status (SIMPLIFIED - removed in_transit to match receipts/issues)
+-- Transfer Status (SIMPLIFIED - no approval workflow)
 DROP TYPE IF EXISTS public.transfer_status CASCADE;
 CREATE TYPE public.transfer_status AS ENUM (
-  'draft',
-  'pending_approval',
-  'approved',
-  'completed',
-  'cancelled'
+  'completed'     -- Transfers are completed immediately upon creation
 );
-COMMENT ON TYPE public.transfer_status IS 'Simplified workflow status for stock transfers (removed in_transit)';
+COMMENT ON TYPE public.transfer_status IS 'Simplified: all transfers are completed immediately';
 
 -- Ticket Outcome Enum (Added 2025-12-15 - Story 01.22)
 DROP TYPE IF EXISTS public.ticket_outcome CASCADE;

@@ -41,7 +41,6 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
 
   const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal");
   const [virtualWarehouseId, setVirtualWarehouseId] = useState("");
-  const [toVirtualWarehouseId, setToVirtualWarehouseId] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
@@ -50,22 +49,21 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   const { data: issue, isLoading: issueLoading } = trpc.inventory.issues.getById.useQuery({ id });
   const updateIssue = trpc.inventory.issues.updateFull.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: false });
-  const { data: archiveWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery({ isArchive: true });
+  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
 
-  // Load existing issue data
+  // Redirect immediately - editing is no longer supported
   useEffect(() => {
     if (issue && !issueLoading) {
-      // Check if issue can be edited
-      if (issue.status !== "draft") {
-        toast.error("Chỉ có thể chỉnh sửa phiếu xuất ở trạng thái bản nháp");
-        router.push(`/inventory/documents/issues/${id}`);
-        return;
-      }
+      toast.error("Phiếu xuất đã hoàn tất, không thể chỉnh sửa");
+      router.push(`/inventory/documents/issues/${id}`);
+    }
+  }, [issue, issueLoading, router, id]);
 
+  // This code will not run due to redirect, but kept for TypeScript
+  useEffect(() => {
+    if (issue && !issueLoading) {
       setIssueType(issue.issue_type as "normal" | "adjustment");
       setVirtualWarehouseId(issue.virtual_warehouse_id || "");
-      setToVirtualWarehouseId((issue as any).to_virtual_warehouse_id || "");
       setIssueDate(issue.issue_date?.split("T")[0] || new Date().toISOString().split("T")[0]);
       setNotes(issue.notes || "");
 
@@ -99,7 +97,7 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   };
 
   const handleSubmit = async () => {
-    if (!issueType || !virtualWarehouseId || !toVirtualWarehouseId || items.length === 0) {
+    if (!issueType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -125,7 +123,6 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
         id,
         issueType,
         virtualWarehouseId,
-        toVirtualWarehouseId,
         issueDate,
         notes: notes || undefined,
         items: items.map((item) => ({
@@ -224,22 +221,6 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                         </SelectTrigger>
                         <SelectContent>
                           {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label>Kho đích *</Label>
-                      <Select value={toVirtualWarehouseId} onValueChange={setToVirtualWarehouseId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn kho đích" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {archiveWarehouses?.map((wh) => (
                             <SelectItem key={wh.id} value={wh.id}>
                               {wh.name}
                             </SelectItem>

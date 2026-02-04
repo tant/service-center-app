@@ -92,18 +92,16 @@ const CONDITION_OPTIONS = [
   { value: "for_parts", label: "Tháo linh kiện" },
 ] as const;
 
-const WARRANTY_STATUS_OPTIONS = [
-  { value: "active", label: "Còn bảo hành" },
-  { value: "expired", label: "Hết bảo hành" },
-  { value: "expiring_soon", label: "Sắp hết hạn" },
-  { value: "no_warranty", label: "Không có BH" },
+const STATUS_OPTIONS = [
+  { value: "active", label: "Trong kho" },
+  { value: "issued", label: "Đã xuất" },
 ] as const;
 
 export function ProductInventoryTable() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [warehouseFilter, setWarehouseFilter] = React.useState<string>("all");
   const [conditionFilter, setConditionFilter] = React.useState<string>("all");
-  const [warrantyStatusFilter, setWarrantyStatusFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [editingProduct, setEditingProduct] = React.useState<PhysicalProductWithRelations | null>(null);
   const [showBulkWarrantyUpdate, setShowBulkWarrantyUpdate] = React.useState(false);
 
@@ -124,7 +122,7 @@ export function ProductInventoryTable() {
     const f: {
       virtual_warehouse_id?: string;
       condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
-      warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
+      status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
       search?: string;
       limit?: number;
       offset?: number;
@@ -136,8 +134,8 @@ export function ProductInventoryTable() {
     if (conditionFilter && conditionFilter !== "all") {
       f.condition = conditionFilter as typeof f.condition;
     }
-    if (warrantyStatusFilter && warrantyStatusFilter !== "all") {
-      f.warranty_status = warrantyStatusFilter as typeof f.warranty_status;
+    if (statusFilter && statusFilter !== "all") {
+      f.status = statusFilter as typeof f.status;
     }
     if (searchQuery && searchQuery.trim()) {
       f.search = searchQuery.trim();
@@ -148,14 +146,14 @@ export function ProductInventoryTable() {
     f.offset = pagination.pageIndex * pagination.pageSize;
 
     return f;
-  }, [warehouseFilter, conditionFilter, warrantyStatusFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
+  }, [warehouseFilter, conditionFilter, statusFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
 
   const { products, total, isLoading } = usePhysicalProducts(filters);
 
   // Reset to page 1 when filters change
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [warehouseFilter, conditionFilter, warrantyStatusFilter, searchQuery]);
+  }, [warehouseFilter, conditionFilter, statusFilter, searchQuery]);
 
   const router = useRouter();
 
@@ -249,16 +247,16 @@ export function ProductInventoryTable() {
         </div>
 
         {/* Filters Row */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             placeholder="Tìm kiếm theo số serial, tên sản phẩm, hoặc SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full"
+            className="max-w-sm"
           />
 
           <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger size="sm">
+            <SelectTrigger size="sm" className="w-40">
               <SelectValue placeholder="Tất cả kho ảo" />
             </SelectTrigger>
             <SelectContent>
@@ -272,7 +270,7 @@ export function ProductInventoryTable() {
           </Select>
 
           <Select value={conditionFilter} onValueChange={setConditionFilter}>
-            <SelectTrigger size="sm">
+            <SelectTrigger size="sm" className="w-40">
               <SelectValue placeholder="Tất cả tình trạng" />
             </SelectTrigger>
             <SelectContent>
@@ -285,24 +283,19 @@ export function ProductInventoryTable() {
             </SelectContent>
           </Select>
 
-          <Select value={warrantyStatusFilter} onValueChange={setWarrantyStatusFilter}>
-            <SelectTrigger size="sm">
-              <SelectValue placeholder="Tất cả trạng thái BH" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger size="sm" className="w-40">
+              <SelectValue placeholder="Tất cả trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái BH</SelectItem>
-              {WARRANTY_STATUS_OPTIONS.map((opt) => (
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              {STATUS_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        {/* Results count */}
-        <div className="text-sm text-muted-foreground">
-          Hiển thị {table.getRowModel().rows.length} / {total} sản phẩm
         </div>
 
         {/* Table */}
@@ -315,7 +308,7 @@ export function ProductInventoryTable() {
             {searchQuery ||
              warehouseFilter !== "all" ||
              conditionFilter !== "all" ||
-             warrantyStatusFilter !== "all"
+             statusFilter !== "all"
               ? "Không tìm thấy sản phẩm phù hợp"
               : "Chưa có sản phẩm nào"}
           </div>

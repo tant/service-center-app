@@ -53,6 +53,7 @@ const listProductsSchema = z.object({
   product_id: z.string().uuid("Product ID must be a valid UUID").optional(),
   virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
+  status: z.enum(["draft", "active", "transferring", "issued", "disposed"]).optional(),
   warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
   search: z.string().optional(),
   limit: z.number().min(1).max(100).default(50),
@@ -270,6 +271,10 @@ export const inventoryRouter = router({
 
       if (input.condition) {
         query = query.eq("condition", input.condition);
+      }
+
+      if (input.status) {
+        query = query.eq("status", input.status);
       }
 
       if (input.search) {

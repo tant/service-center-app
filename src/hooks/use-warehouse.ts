@@ -188,6 +188,7 @@ export function usePhysicalProducts(filters?: {
   physical_warehouse_id?: string;
   virtual_warehouse_id?: string;
   condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
+  status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
   warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
   search?: string;
   limit?: number;

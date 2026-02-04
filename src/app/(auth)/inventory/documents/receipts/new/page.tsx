@@ -15,15 +15,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { toast } from "sonner";
+import type { StockReceiptReason } from "@/types/inventory";
 
 // REDESIGNED: Only 2 receipt types
 const RECEIPT_TYPES = [
   { value: "normal", label: "Phiếu nhập bình thường" },
   { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+];
+
+// Receipt reason labels
+const RECEIPT_REASONS: { value: StockReceiptReason; label: string; description: string }[] = [
+  { value: "purchase", label: "Nhập mua hàng", description: "Nhập hàng mới từ nhà cung cấp/nhà sản xuất" },
+  { value: "customer_return", label: "Nhập hàng trả lại", description: "Khách hàng trả lại sản phẩm đã mua" },
+  { value: "rma_return", label: "Nhập RMA về", description: "Hàng RMA trả về từ nhà cung cấp" },
 ];
 
 interface ProductItem {
@@ -34,6 +42,9 @@ interface ProductItem {
 export default function CreateReceiptPage() {
   const router = useRouter();
   const [receiptType, setReceiptType] = useState<"normal" | "adjustment">("normal"); // REDESIGNED
+  const [reason, setReason] = useState<StockReceiptReason>("purchase");
+  const [customerId, setCustomerId] = useState("");
+  const [rmaReference, setRmaReference] = useState("");
   const [virtualWarehouseId, setVirtualWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
@@ -42,6 +53,7 @@ export default function CreateReceiptPage() {
   const createReceipt = trpc.inventory.receipts.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
   const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
+  const { data: customers } = trpc.customers.getCustomers.useQuery();
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", declaredQuantity: 1 }]);
@@ -60,6 +72,12 @@ export default function CreateReceiptPage() {
   const handleSubmit = async () => {
     if (!receiptType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    // Validate customer required for customer_return
+    if (reason === "customer_return" && !customerId) {
+      toast.error("Vui lòng chọn khách hàng khi nhập hàng trả lại");
       return;
     }
 
@@ -82,6 +100,9 @@ export default function CreateReceiptPage() {
     try {
       const receipt = await createReceipt.mutateAsync({
         receiptType,
+        reason,
+        customerId: customerId || undefined,
+        rmaReference: rmaReference || undefined,
         virtualWarehouseId, // REDESIGNED: Use warehouse ID
         receiptDate,
         notes: notes || undefined,
@@ -139,6 +160,22 @@ export default function CreateReceiptPage() {
                     </div>
 
                     <div className="grid gap-2">
+                      <Label>Lý do nhập kho *</Label>
+                      <Select value={reason} onValueChange={(v) => setReason(v as StockReceiptReason)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn lý do" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RECEIPT_REASONS.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
                       <Label>Kho nhập *</Label>
                       <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
                         <SelectTrigger>
@@ -158,7 +195,57 @@ export default function CreateReceiptPage() {
                       <Label>Ngày nhập *</Label>
                       <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
                     </div>
+
+                    {/* Conditional: Customer for customer_return */}
+                    {reason === "customer_return" && (
+                      <div className="grid gap-2">
+                        <Label className="text-primary">Khách hàng trả lại *</Label>
+                        <Select value={customerId} onValueChange={setCustomerId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn khách hàng" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers?.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Conditional: RMA Reference for rma_return */}
+                    {reason === "rma_return" && (
+                      <div className="grid gap-2">
+                        <Label>Mã tham chiếu RMA</Label>
+                        <Input
+                          placeholder="VD: RMA-2024-001"
+                          value={rmaReference}
+                          onChange={(e) => setRmaReference(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
+
+                  {/* Info alert based on reason */}
+                  {reason === "customer_return" && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Nhập hàng trả lại:</strong> Serial phải là hàng đã bán cho khách (đang ở kho customer_installed).
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {reason === "rma_return" && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Nhập RMA về:</strong> Serial đang ở kho RMA hoặc serial mới (hàng thay thế từ NCC).
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   {/* REDESIGNED: Show alert for adjustment type */}
                   {receiptType === "adjustment" && (

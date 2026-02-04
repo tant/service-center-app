@@ -25,6 +25,11 @@ export type StockIssueReason =
   | 'damage'               // Hàng hỏng/mất
   | 'other';               // Khác
 
+export type StockReceiptReason =
+  | 'purchase'        // Nhập mua hàng từ NCC/NSX
+  | 'customer_return' // Nhập hàng trả lại từ khách hàng
+  | 'rma_return';     // Nhập RMA về từ NCC
+
 export type TransferStatus = 'completed';
 
 export type StockStatus = 'ok' | 'warning' | 'critical';
@@ -48,6 +53,9 @@ export interface StockReceipt {
   receipt_number: string;
   receipt_type: StockReceiptType;
   status: StockDocumentStatus;
+  reason: StockReceiptReason | null; // Lý do nhập kho
+  customer_id: string | null;        // Khách hàng trả lại (cho customer_return)
+  rma_reference: string | null;      // Mã tham chiếu RMA (cho rma_return)
   virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   receipt_date: string;
   expected_date: string | null;
@@ -101,6 +109,15 @@ export interface StockReceiptWithRelations extends StockReceipt {
   completed_by?: {
     id: string;
     full_name: string;
+  };
+  customer?: {
+    id: string;
+    name: string;
+    phone: string | null;
+  } | null;
+  virtual_warehouse?: {
+    id: string;
+    name: string;
   };
   attachments: StockDocumentAttachment[];
 }

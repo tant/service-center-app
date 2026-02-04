@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../../trpc";
 import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockReceipt, StockReceiptWithRelations } from "@/types/inventory";
+import type { StockReceipt, StockReceiptWithRelations, StockReceiptReason } from "@/types/inventory";
 
 export const receiptsRouter = router({
   /**
@@ -17,6 +17,9 @@ export const receiptsRouter = router({
         receiptType: z
           .enum(["normal", "adjustment"])
           .optional(),
+        reason: z
+          .enum(["purchase", "customer_return", "rma_return"])
+          .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
       })
@@ -27,13 +30,18 @@ export const receiptsRouter = router({
         .select(
           `
           *,
-          created_by:profiles!created_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name),
+          customer:customers!customer_id(id, name, phone)
         `,
           { count: "exact" }
         );
 
       if (input.receiptType) {
         query = query.eq("receipt_type", input.receiptType);
+      }
+
+      if (input.reason) {
+        query = query.eq("reason", input.reason);
       }
 
       const { data, error, count } = await query
@@ -99,7 +107,8 @@ export const receiptsRouter = router({
             serials:stock_receipt_serials(*)
           ),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
-          created_by:profiles!created_by_id(id, full_name)
+          created_by:profiles!created_by_id(id, full_name),
+          customer:customers!customer_id(id, name, phone)
         `
         )
         .eq("id", input.id)
@@ -132,6 +141,9 @@ export const receiptsRouter = router({
     .input(
       z.object({
         receiptType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
+        reason: z.enum(["purchase", "customer_return", "rma_return"]).optional().default("purchase"),
+        customerId: z.string().optional(), // Required for customer_return
+        rmaReference: z.string().optional(), // Optional for rma_return
         virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
         receiptDate: z.string(),
         expectedDate: z.string().optional(),
@@ -159,6 +171,17 @@ export const receiptsRouter = router({
         {
           message: "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
         }
+      ).refine(
+        (data) => {
+          // Validate: customer_return requires customerId
+          if (data.reason === "customer_return" && !data.customerId) {
+            return false;
+          }
+          return true;
+        },
+        {
+          message: "Vui lòng chọn khách hàng khi nhập hàng trả lại",
+        }
       )
     )
     .mutation(async ({ ctx, input }) => {
@@ -178,6 +201,9 @@ export const receiptsRouter = router({
         .from("stock_receipts")
         .insert({
           receipt_type: input.receiptType,
+          reason: input.reason,
+          customer_id: input.customerId || null,
+          rma_reference: input.rmaReference || null,
           virtual_warehouse_id: input.virtualWarehouseId, // REDESIGNED: Direct warehouse reference
           receipt_date: input.receiptDate,
           expected_date: input.expectedDate,
@@ -278,6 +304,10 @@ export const receiptsRouter = router({
 
   /**
    * Add serials to receipt item
+   * Validates serials based on receipt reason:
+   * - purchase: Serial must NOT exist (new goods)
+   * - customer_return: Serial must be in customer_installed warehouse
+   * - rma_return: Serial must be in rma_staging OR not exist (replacement from supplier)
    */
   addSerials: publicProcedure.use(requireManagerOrAbove)
     .input(
@@ -293,37 +323,33 @@ export const receiptsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // VALIDATION CHECKPOINT #1: Ensure serials don't exist in system yet
       const serialNumbers = input.serials.map((s) => s.serialNumber);
 
-      // Get receipt_id to exclude current receipt from duplicate check
+      // Get receipt item with receipt details including reason and target warehouse
       const { data: receiptItem } = await ctx.supabaseAdmin
         .from("stock_receipt_items")
-        .select("receipt_id")
+        .select(`
+          receipt_id,
+          product_id,
+          receipt:stock_receipts(
+            id,
+            reason,
+            receipt_type,
+            virtual_warehouse_id
+          )
+        `)
         .eq("id", input.receiptItemId)
         .single();
 
-      if (!receiptItem) {
+      if (!receiptItem?.receipt) {
         throw new Error("Receipt item not found");
       }
 
-      // Check in physical_products (all products - simplified workflow has no draft)
-      const { data: existing, error: checkError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select("serial_number")
-        .in("serial_number", serialNumbers);
+      const receipt = Array.isArray(receiptItem.receipt) ? receiptItem.receipt[0] : receiptItem.receipt;
+      const reason = receipt.reason || "purchase";
+      const targetWarehouseId = receipt.virtual_warehouse_id;
 
-      if (checkError) {
-        throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
-      }
-
-      if (existing && existing.length > 0) {
-        const duplicates = existing.map((e) => e.serial_number).join(", ");
-        throw new Error(`Serial đã tồn tại trong hệ thống: ${duplicates}`);
-      }
-
-      // Also check in stock_receipt_serials (serials in OTHER receipts, not current receipt)
-      // First get all receipt_item_ids of current receipt
+      // Check for duplicates in other receipts first
       const { data: currentReceiptItems } = await ctx.supabaseAdmin
         .from("stock_receipt_items")
         .select("id")
@@ -331,13 +357,11 @@ export const receiptsRouter = router({
 
       const currentReceiptItemIds = currentReceiptItems?.map(item => item.id) || [];
 
-      // Check for duplicates in other receipts
       const { data: existingInReceipts } = await ctx.supabaseAdmin
         .from("stock_receipt_serials")
         .select("serial_number, receipt_item_id")
         .in("serial_number", serialNumbers);
 
-      // Filter out serials from current receipt
       const duplicatesInOtherReceipts = existingInReceipts?.filter(
         serial => !currentReceiptItemIds.includes(serial.receipt_item_id)
       ) || [];
@@ -347,7 +371,102 @@ export const receiptsRouter = router({
         throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
       }
 
-      // Insert serials
+      // Check existing physical products with warehouse info
+      // Note: Must specify FK with !virtual_warehouse_id because physical_products has 2 FKs to virtual_warehouses
+      const { data: existingProducts, error: checkError } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(`
+          id,
+          serial_number,
+          virtual_warehouse_id,
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type)
+        `)
+        .in("serial_number", serialNumbers);
+
+      if (checkError) {
+        throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
+      }
+
+      // Validate serials based on reason
+      const validationErrors: string[] = [];
+      const serialsToCreate: string[] = [];
+      const serialsToTransfer: { id: string; serialNumber: string }[] = [];
+
+      for (const serialNumber of serialNumbers) {
+        const existing = existingProducts?.find(p => p.serial_number === serialNumber);
+        // Handle Supabase join result type
+        const warehouse = existing?.virtual_warehouse as { id: string; name: string; warehouse_type: string } | { id: string; name: string; warehouse_type: string }[] | null;
+        const warehouseType = Array.isArray(warehouse) ? warehouse[0]?.warehouse_type : warehouse?.warehouse_type;
+        const warehouseName = Array.isArray(warehouse) ? warehouse[0]?.name : warehouse?.name;
+
+        switch (reason) {
+          case "purchase":
+            // Purchase: Serial must NOT exist
+            if (existing) {
+              validationErrors.push(
+                `Serial "${serialNumber}" đã tồn tại trong "${warehouseName}". Không thể nhập mua hàng với serial đã có.`
+              );
+            } else {
+              serialsToCreate.push(serialNumber);
+            }
+            break;
+
+          case "customer_return":
+            // Customer return: Serial must be in customer_installed warehouse
+            if (!existing) {
+              validationErrors.push(
+                `Serial "${serialNumber}" không tồn tại trong hệ thống. Không thể nhập hàng trả lại.`
+              );
+            } else if (warehouseType === "customer_installed") {
+              serialsToTransfer.push({ id: existing.id, serialNumber });
+            } else {
+              validationErrors.push(
+                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng đã bán. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`
+              );
+            }
+            break;
+
+          case "rma_return":
+            // RMA return: Serial must be in rma_staging OR not exist (replacement from supplier)
+            if (!existing) {
+              // New serial from supplier replacement
+              serialsToCreate.push(serialNumber);
+            } else if (warehouseType === "rma_staging") {
+              serialsToTransfer.push({ id: existing.id, serialNumber });
+            } else {
+              validationErrors.push(
+                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng chờ RMA. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`
+              );
+            }
+            break;
+
+          default:
+            // For adjustment receipts, allow both new and existing serials
+            if (existing) {
+              serialsToTransfer.push({ id: existing.id, serialNumber });
+            } else {
+              serialsToCreate.push(serialNumber);
+            }
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join("\n"));
+      }
+
+      // Transfer existing physical products to target warehouse
+      if (serialsToTransfer.length > 0) {
+        const { error: transferError } = await ctx.supabaseAdmin
+          .from("physical_products")
+          .update({ virtual_warehouse_id: targetWarehouseId })
+          .in("id", serialsToTransfer.map(s => s.id));
+
+        if (transferError) {
+          throw new Error(`Không thể chuyển kho cho serial: ${transferError.message}`);
+        }
+      }
+
+      // Insert receipt serials
       const serialsToInsert = input.serials.map((s) => ({
         receipt_item_id: input.receiptItemId,
         serial_number: s.serialNumber,
@@ -365,7 +484,8 @@ export const receiptsRouter = router({
       }
 
       // Note: In simplified workflow, stock is updated immediately via trigger
-      // when serial is inserted. No auto-complete needed.
+      // when serial is inserted for new products. For transferred products,
+      // warehouse is already updated above.
 
       return data;
     }),

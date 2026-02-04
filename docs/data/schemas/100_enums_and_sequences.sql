@@ -220,6 +220,15 @@ CREATE TYPE public.transfer_status AS ENUM (
 );
 COMMENT ON TYPE public.transfer_status IS 'Simplified: all transfers are completed immediately';
 
+-- Stock Receipt Reason (for tracking origin of goods)
+DROP TYPE IF EXISTS public.stock_receipt_reason CASCADE;
+CREATE TYPE public.stock_receipt_reason AS ENUM (
+  'purchase',         -- Nhập mua hàng từ NCC/NSX
+  'customer_return',  -- Nhập hàng trả lại từ khách hàng
+  'rma_return'        -- Nhập RMA về từ NCC
+);
+COMMENT ON TYPE public.stock_receipt_reason IS 'Lý do nhập kho: mua hàng, khách trả lại, RMA về';
+
 -- Ticket Outcome Enum (Added 2025-12-15 - Story 01.22)
 DROP TYPE IF EXISTS public.ticket_outcome CASCADE;
 CREATE TYPE public.ticket_outcome AS ENUM (
@@ -260,4 +269,5 @@ GRANT USAGE ON TYPE public.stock_receipt_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_issue_type TO authenticated;
 GRANT USAGE ON TYPE public.stock_issue_reason TO authenticated;
 GRANT USAGE ON TYPE public.transfer_status TO authenticated;
+GRANT USAGE ON TYPE public.stock_receipt_reason TO authenticated;
 GRANT USAGE ON TYPE public.ticket_outcome TO authenticated;

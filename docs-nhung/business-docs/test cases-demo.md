@@ -29,6 +29,7 @@
 | 1 | UI | Remove "Phiếu nhập kho / Phiếu điều chỉnh (kiểm kê)" | Medium | Open |
 | 2 | UI | Hide Workflows module | Medium | Open |
 | 3 | UI | Bỏ "Danh mục linh kiện" trên menu (liên quan đến bỏ trường Linh kiện) | Medium | Open |
+| 4 | UI | Remove "Phiếu xuất điều chỉnh (kiểm kê)" | Medium | Open |
 
 ---
 
@@ -54,11 +55,11 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 |-----------|------------------|------------------------|------------|------------|-------------|
 | Sau Test 0 | 0 | 0 | 0 | 0 | 0 | *(Sản phẩm đã có trong catalog, chưa nhập kho)* |
 | Sau Test 1 | 100 | 0 | 0 | 0 | 0 |
-| Sau Test 2 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 3 | 40 | 59 | 1 | 0 | 0 |
-| Sau Test 4 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 5 | 39 | 60 | 0 | 0 | 1 |
-| Sau Test 6 | 40 | 60 | 0 | 0 | 0 |
+| Sau Test 2 | 39 | 61 | 0 | 0 | 0 |
+| Sau Test 3 | 39 | 60 | 1 | 0 | 0 |
+| Sau Test 4 | 39 | 61 | 0 | 0 | 0 |
+| Sau Test 5 | 38 | 61 | 0 | 0 | 1 |
+| Sau Test 6 | 39 | 61 | 0 | 0 | 0 |
 
 ---
 
@@ -140,8 +141,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 #### 📝 ISSUES (Bước 3)
 | # | Loại | Mô tả | Mức độ | Status |
 |---|------|-------|--------|--------|
-| 1 | Feature | Cần thêm trường "Loại bảo hành" | Medium | Open |
-| 2 | UI | Bỏ trường "Linh kiện liên quan" | Low | Open |
+| 1 | UI | Bỏ trường "Linh kiện liên quan" | Low | Open |
 
 ---
 
@@ -310,6 +310,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | 2 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | Open |
 | 3 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | Open |
 | 4 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | Open |
+| 5 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho (nhập ngày bắt đầu - ngày kết thúc theo thông tin trên sản phẩm/phiếu từ hãng) | **Critical** | Open |
 
 ---
 
@@ -489,6 +490,12 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 - ✅ Dropdown "Loại xuất kho" hiển thị: Sales, Transfer, RMA, etc.
 - ✅ Loại "Sales" được chọn
 
+#### 📝 ISSUES (Bước 1)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Validation | Ngày xuất: Block future date, chỉ cho phép back date tối đa 7 ngày (như phiếu nhập) | Medium | Open |
+| 2 | UI | Bỏ "Nhập CSV" trong chọn Serial - Phiếu xuất (như phiếu nhập) | Low | Open |
+
 ---
 
 ### BƯỚC 2: Nhập Thông tin Khách hàng
@@ -521,7 +528,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 1. Click **"Thêm Sản phẩm"**
 2. Chọn **Kho nguồn**: Kho Công ty → Main (Kho Chính)
 3. Chọn **Sản phẩm**: ZOTAC RTX 4090 24GB
-4. Nhập **Số lượng**: 60
+4. Nhập **Số lượng**: 61
 5. Hệ thống hiển thị **Số lượng khả dụng**: 100 cái ✅
 6. Click **"Thêm"**
 
@@ -529,10 +536,10 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 - ✅ Sản phẩm được thêm vào đơn hàng:
   - ZOTAC RTX 4090 24GB
-  - Số lượng: 60 / 100 khả dụng
+  - Số lượng: 61 / 100 khả dụng
   - Kho: Main (Kho Chính)
   - Trạng thái: ⏳ Chờ chọn serials
-- ✅ Hiển thị cảnh báo: "Cần chọn 60 serial numbers"
+- ✅ Hiển thị cảnh báo: "Cần chọn 61 serial numbers"
 - ✅ Nút "Chọn Serials" được kích hoạt
 - ✅ Nút "Xác nhận bán" bị disable (chưa chọn đủ serials)
 
@@ -544,16 +551,16 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 1. Click **"Chọn Serials"**
 2. Hệ thống hiển thị danh sách 100 serials khả dụng trong Main
-3. **Cách 1:** Click checkbox chọn từng serial (60 serials đầu: 701-760)
+3. **Cách 1:** Click checkbox chọn từng serial (61 serials đầu: 701-761)
    **HOẶC**
-   **Cách 2:** Click **"Chọn tự động 60 đầu tiên"**
-4. Kiểm tra: Đã chọn đủ 60/60 serials
+   **Cách 2:** Click **"Chọn tự động 61 đầu tiên"**
+4. Kiểm tra: Đã chọn đủ 61/61 serials
 5. Click **"Xác nhận chọn serials"**
 
 **Expected Outcome:**
 
-- ✅ Danh sách 60 serials được chọn: ABC123456701 đến ABC123456760
-- ✅ Hiển thị: "✅ Đã chọn 60/60 serials"
+- ✅ Danh sách 61 serials được chọn: ABC123456701 đến ABC123456761
+- ✅ Hiển thị: "✅ Đã chọn 61/61 serials"
 - ✅ Preview danh sách serials đã chọn
 - ✅ Nút "Xác nhận bán" được kích hoạt (enable)
 - ✅ Có thể xem/in danh sách serials trước khi xác nhận
@@ -566,9 +573,8 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 1. Kiểm tra lại thông tin tổng quan:
    - Khách hàng: Nguyễn Văn A (0912345678)
-   - Sản phẩm: ZOTAC RTX 4090 24GB × 60
-   - Serials: ABC123456701 → ABC123456760
-   - Thành tiền: 1,500,000,000 VNĐ
+   - Sản phẩm: ZOTAC RTX 4090 24GB × 61
+   - Serials: ABC123456701 → ABC123456761
 2. Chọn **Phương thức thanh toán**: Tiền mặt / Chuyển khoản
 3. Click **"Xác nhận Xuất Kho & Bán Hàng"**
 4. Chờ hệ thống xử lý
@@ -581,47 +587,38 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | Bước | Hành động | Kết quả |
 |------|-----------|---------|
 | A | Tạo Stock Issue (Phiếu xuất kho) | Mã phiếu: SO-2026-001 |
-| B | Di chuyển kho TỰ ĐỘNG (Quy tắc #7) | 60 serials: Main → Customer Installed |
+| B | Di chuyển kho TỰ ĐỘNG (Quy tắc #7) | 61 serials: Main → Customer Installed |
 | C | Cập nhật thông tin sản phẩm | Trạng thái: Đã bán, Chủ sở hữu: Nguyễn Văn A |
-| D | Cập nhật tồn kho | Main: 100 → 40, Customer Installed: 0 → 60 |
-| E | Ghi log | "04/02/2026 - Xuất bán 60 RTX 4090 cho KH Nguyễn Văn A" |
+| D | Cập nhật tồn kho | Main: 100 → 39, Customer Installed: 0 → 61 |
+| E | Ghi log | "04/02/2026 - Xuất bán 61 RTX 4090 cho KH Nguyễn Văn A" |
 
 - ✅ Hiển thị: "✅ Bán hàng thành công! Mã đơn: SO-2026-001"
-- ✅ Popup in hóa đơn tự động hiện ra
+
+#### 📝 ISSUES (Bước 5)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua kho "Hàng đã Bán" (Customer Installed). Hiện chỉ đang thay status là "Đã Xuất" - cần auto di chuyển kho theo Quy tắc #7 | High | Open |
 
 ---
 
-### BƯỚC 6: In Hóa đơn và Kiểm tra Kết quả
+### BƯỚC 6: Kiểm tra Kết quả
 
 **Thao tác:**
 
-1. Click **"In Hóa đơn"** và kiểm tra nội dung
-2. Vào **"Quản lý Kho"** → **"Xem Tồn Kho"** kiểm tra kho Main
-3. Kiểm tra kho Customer Installed
-4. Tra cứu serial **ABC123456701**
+1. Vào **"Quản lý Kho"** → **"Xem Tồn Kho"** kiểm tra kho Main
+2. Kiểm tra kho Customer Installed
+3. Tra cứu serial **ABC123456701**
 
 **Expected Outcome:**
 
-**A) Hóa đơn bán hàng:**
-
-| Mục | Nội dung |
-|-----|----------|
-| Mã đơn | SO-2026-001 |
-| Ngày | 04/02/2026 |
-| Khách hàng | Nguyễn Văn A, 0912345678, nguyenvana@email.com |
-| Sản phẩm | ZOTAC RTX 4090 24GB × 60 |
-| Thành tiền | 1,500,000,000 VNĐ |
-| Danh sách Serial | ABC123456701 → ABC123456760 |
-| Thông tin BH | Hãng: 36 tháng (đến 04/02/2029), Công ty: 48 tháng (đến 04/02/2030) |
-
-**B) Tồn kho sau khi bán:**
+**A) Tồn kho sau khi bán:**
 
 | Kho | Số lượng | Serials |
 |-----|----------|---------|
-| Main (Kho Chính) | **40 cái** ✅ | ABC123456761 → ABC123456800 |
-| Customer Installed (Hàng Đã Bán) | **60 cái** ✅ | ABC123456701 → ABC123456760 |
+| Main (Kho Chính) | **39 cái** ✅ | ABC123456762 → ABC123456800 |
+| Customer Installed (Hàng Đã Bán) | **61 cái** ✅ | ABC123456701 → ABC123456761 |
 
-**C) Serial ABC123456701:**
+**B) Serial ABC123456701:**
 
 | Thông tin | Giá trị |
 |-----------|---------|
@@ -631,51 +628,43 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | Ngày mua | 04/02/2026 |
 | Lịch sử | Nhập kho (SR-2026-001) → Bán cho KH (SO-2026-001) |
 
+#### 📝 ISSUES (Bước 6)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Bug | Inventory cập nhật không đúng (xem chi tiết bên dưới) | **Critical** | Open |
+
+**Chi tiết Critical Bug #1:**
+- **Hiện tại:** Kho Chính = 39, Customer Installed = 0, các kho khác = 0
+- **Mong đợi:** Kho Chính = 39, Customer Installed = 61 (sau khi bán 61 từ 100)
+- **Vấn đề:**
+  1. 61 items đã xuất không được ghi nhận vào kho Customer Installed
+  2. Quy tắc #7 (Auto di chuyển Main → Customer Installed khi bán) không hoạt động
+- **Impact:** Mất tracking 61 sản phẩm, inventory không khớp, ảnh hưởng báo cáo tồn kho
+
 ---
 
 ## 8.5. Luồng Test 3: Tạo yêu cầu bảo hành từ serial đã bán
 
-**Mục tiêu:** Kiểm tra quy trình khách hàng tạo yêu cầu dịch vụ và xác minh bảo hành tự động
+**Mục tiêu:** Kiểm tra quy trình tạo yêu cầu dịch vụ và xác minh bảo hành tự động
 
 **Tham khảo:**
 
-- [Section 2.2 - Khách hàng Tạo Yêu cầu](./03-quy-trinh-nghiep-vu-chinh.md#22-bước-1-khách-hàng-tạo-yêu-cầu-dịch-vụ-service-request)
 - [Section 2.3 - Lễ tân Chuyển đổi](./03-quy-trinh-nghiep-vu-chinh.md#23-bước-2-lễ-tân-xem-xét-và-chuyển-đổi-yêu-cầu)
 - [Section 3.2 - Xác minh Bảo hành](./03-quy-trinh-nghiep-vu-chinh.md#32-quy-trình-xác-minh-bảo-hành)
 
-**Vai trò thực hiện:** Khách hàng (Portal công khai), Reception (Nội bộ)
+**Vai trò thực hiện:** Customer Reps / Reception (Nội bộ)
 
 **Tự động hóa:** Xác minh bảo hành tự động, Di chuyển kho tự động khi tạo ticket - [Quy tắc #1](./03-quy-trinh-nghiep-vu-chinh.md#461-quy-tắc-di-chuyển-kho-tự-động)
 
 ---
 
-### BƯỚC 1: Khách hàng Truy cập Portal Công khai
+### BƯỚC 1: Tạo Phiếu Dịch vụ và Xác minh Bảo hành (Tự động)
 
 **Thao tác:**
 
-1. Mở trình duyệt web
-2. Truy cập: **https://warranty.sstc.vn** (Portal công khai)
-3. Không cần đăng nhập, đăng ký
-4. Click nút **"Tạo Yêu cầu Dịch vụ"** hoặc **"Kiểm tra Bảo hành"**
-
-**Expected Outcome:**
-
-- ✅ Trang Portal công khai hiển thị với các nút:
-  - [Tạo Yêu cầu Dịch vụ]
-  - [Kiểm tra Bảo hành]
-  - [Tra cứu Tiến độ]
-- ✅ Giao diện thân thiện, dễ sử dụng
-- ✅ Không yêu cầu login (24/7 access)
-- ✅ Có hướng dẫn sử dụng rõ ràng
-
----
-
-### BƯỚC 2: Xác minh Bảo hành (Tự động)
-
-**Thao tác:**
-
-1. Click **"Tạo Yêu cầu Dịch vụ"**
-2. Tại trường **"Serial Number"**, nhập: **ABC123456701**
+1. Đăng nhập hệ thống với vai trò **Customer Reps / Reception**
+2. Vào menu **"Phiếu Dịch vụ"** → **"Tạo Phiếu Mới"**
+3. Tại trường **"Serial Number"**, nhập: **ABC123456701**
    *(Serial đã bán cho khách Nguyễn Văn A ở Test 2)*
 3. Click **"Kiểm tra"**
 4. Chờ hệ thống xác minh (1-2 giây)
@@ -703,166 +692,80 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 ---
 
-### BƯỚC 3: Điền Thông tin Yêu cầu
+### BƯỚC 2: Điền Thông tin Yêu cầu
 
 **Thao tác:**
 
-1. Sau khi xác minh thành công, click **"Tiếp tục tạo yêu cầu"**
-2. Form tạo yêu cầu hiển thị với thông tin **TỰ ĐỘNG ĐIỀN SẴN**:
+1. Sau khi xác minh thành công, hệ thống hiển thị form với thông tin **TỰ ĐỘNG ĐIỀN SẴN**:
    - Họ tên: Nguyễn Văn A *(từ dữ liệu mua hàng)*
    - Số điện thoại: 0912345678
    - Email: nguyenvana@email.com
-3. Nhập thông tin bắt buộc:
+2. Nhập thông tin bắt buộc:
    - **Mô tả lỗi**: "Card không lên màn hình, có tiếng beep 3 lần liên tiếp khi khởi động"
    - **Loại dịch vụ**: Tự động chọn "Warranty (Bảo hành)" *(vì còn BH)*
-4. Tùy chọn:
+3. Tùy chọn:
    - Upload ảnh: card-khong-hoat-dong.jpg, error-screen.jpg
-   - Địa chỉ giao/nhận hàng (nếu muốn giao tận nơi)
-5. Tick: ☑ "Tôi đồng ý với điều khoản bảo hành"
 
 **Expected Outcome:**
 
 - ✅ Form điền sẵn thông tin khách hàng (từ database khi mua hàng)
-- ✅ Khách chỉ cần nhập mô tả lỗi
+- ✅ Chỉ cần nhập mô tả lỗi
 - ✅ Upload ảnh thành công (tối đa 5 ảnh, mỗi ảnh < 5MB)
 - ✅ Preview ảnh hiển thị sau khi upload
-- ✅ Validation form pass, nút "Gửi yêu cầu" enable
+- ✅ Validation form pass, nút "Tạo phiếu" enable
 
 ---
 
-### BƯỚC 4: Gửi Yêu cầu
+### BƯỚC 3: Tạo Phiếu Dịch vụ
 
 **Thao tác:**
 
 1. Kiểm tra lại toàn bộ thông tin
-2. Click nút **"Gửi Yêu cầu Dịch vụ"**
+2. Click nút **"Tạo Phiếu Dịch vụ"**
 3. Chờ hệ thống xử lý (2-3 giây)
 
 **Expected Outcome:**
 
-- ✅ **Hệ thống TỰ ĐỘNG tạo Service Request:**
-
-| Thông tin | Giá trị |
-|-----------|---------|
-| Mã yêu cầu | **SR-20260204-00001** |
-| Khách hàng | Nguyễn Văn A |
-| Sản phẩm | ZOTAC RTX 4090 (ABC123456701) |
-| Loại | Warranty (Bảo hành) |
-| Trạng thái | Submitted (Đã gửi) |
-
-- ✅ Hiển thị thông báo thành công với mã tracking
-- ✅ **Email tự động gửi đến nguyenvana@email.com:**
-  - Subject: [SSTC] Yêu cầu bảo hành SR-20260204-00001
-  - Nội dung: Mã yêu cầu, sản phẩm, serial, mô tả lỗi
-  - Link theo dõi: https://warranty.sstc.vn/track/SR-20260204-00001
-- ✅ Khách có thể: In mã tracking, theo dõi tiến độ realtime
-
----
-
-### BƯỚC 5: Lễ tân Xem xét Yêu cầu (Nội bộ)
-
-**Thao tác:**
-
-1. Đăng nhập hệ thống với vai trò **"Reception"**
-2. Vào menu **"Yêu cầu Dịch vụ"** → **"Danh sách Mới"**
-3. Thấy yêu cầu mới: SR-20260204-00001 | Nguyễn Văn A | RTX 4090 | [Submitted]
-4. Click vào mã **SR-20260204-00001** để xem chi tiết
-5. Gọi điện xác nhận khách: **0912345678**
-   - Xác nhận thông tin
-   - Hẹn lịch: "Ngày mai 05/02/2026 lúc 9:00 mang sản phẩm đến"
-6. Cập nhật trạng thái:
-   - Click **"Đánh dấu Đã tiếp nhận"**
-   - Chọn trạng thái: **"Received"**
-   - Nhập ghi chú: "Đã gọi điện xác nhận, hẹn 05/02 9:00"
-   - Click **"Lưu"**
-
-**Expected Outcome:**
-
-- ✅ Danh sách yêu cầu mới hiển thị đầy đủ (Mã SR, Khách hàng, Sản phẩm, Ngày tạo, Trạng thái)
-- ✅ Có filter theo: ngày, trạng thái, loại dịch vụ
-- ✅ Chi tiết yêu cầu hiển thị đầy đủ thông tin từ khách
-- ✅ Thông tin BH tự động hiển thị (không cần kiểm tra lại)
-- ✅ Ảnh minh họa hiển thị inline, có thể zoom
-- ✅ Sau khi cập nhật trạng thái:
-  - SR-20260204-00001 chuyển: Submitted → **Received**
-  - Email tự động gửi khách: "Yêu cầu đã được tiếp nhận"
-  - Ghi chú được lưu vào timeline
-
----
-
-### BƯỚC 6: Chuyển đổi thành Service Ticket (Khi khách đến)
-
-**Thao tác:**
-
-1. Ngày 05/02/2026, khách mang sản phẩm đến trung tâm
-2. Reception vào yêu cầu **SR-20260204-00001**
-3. Kiểm tra sản phẩm thực tế:
-   - Serial: ABC123456701 ✅ (khớp với yêu cầu)
-   - Bao bì: Nguyên vẹn
-   - Phụ kiện: Đầy đủ
-4. Click nút **"Chuyển đổi thành Phiếu Bảo hành"**
-5. Form tạo Service Ticket hiển thị với thông tin **TỰ ĐỘNG ĐIỀN SẴN**
-6. Chọn thông tin bổ sung:
-   - **Workflow**: "Bảo hành ZOTAC RTX 4090" (8 tasks)
-   - **Kỹ thuật viên**: Để trống (Manager gán sau)
-   - **Priority**: Normal
-7. Click **"Tạo Phiếu Bảo hành"**
-8. In phiếu tiếp nhận cho khách ký
-
-**Expected Outcome:**
-
-- ✅ Service Ticket được tạo thành công:
+- ✅ **Hệ thống TỰ ĐỘNG tạo Service Ticket:**
 
 | Thông tin | Giá trị |
 |-----------|---------|
 | Mã phiếu | **SV-2026-001** |
+| Khách hàng | Nguyễn Văn A |
+| Sản phẩm | ZOTAC RTX 4090 (ABC123456701) |
+| Loại | Warranty (Bảo hành) |
 | Trạng thái | Pending (Chờ xử lý) |
-| Link với SR | SR-20260204-00001 |
 
+- ✅ Hiển thị thông báo thành công với mã phiếu
 - ✅ **Hệ thống TỰ ĐỘNG (Quy tắc #1):**
 
 | Hành động | Chi tiết |
 |-----------|----------|
 | Di chuyển kho | Serial ABC123456701: Customer Installed → **In-Service** |
-| Tạo workflow tasks | 8 tasks theo template "Bảo hành ZOTAC RTX 4090" |
 | Gửi email | "Đã tiếp nhận sản phẩm - Phiếu SV-2026-001" |
 
-- ✅ Workflow tasks tự động được tạo:
-
-| Task | Tên | Thời gian | Trạng thái |
-|------|-----|-----------|------------|
-| 1 | Kiểm tra bao bì và phụ kiện | 5 phút | Pending |
-| 2 | Chụp ảnh tình trạng ban đầu | 5 phút | Blocked |
-| 3 | Kiểm tra nguồn card | 10 phút | Blocked |
-| 4 | Test stress GPU | 35 phút | Blocked |
-| 5 | Vệ sinh card | 20 phút | Blocked |
-| 6 | Chụp ảnh sau sửa chữa | 5 phút | Blocked |
-| 7 | Test cuối cùng | 15 phút | Blocked |
-| 8 | Đóng gói sản phẩm | 5 phút | Blocked |
-
-- ✅ Phiếu tiếp nhận in ra cho khách ký (có mã SV-2026-001, thông tin khách hàng, sản phẩm, serial, mô tả lỗi)
+- ✅ In phiếu tiếp nhận cho khách ký
 
 ---
 
-### BƯỚC 7: Kiểm tra Kết quả
+### BƯỚC 4: Kiểm tra Kết quả
 
 **Thao tác:**
 
-1. Vào **"Quản lý Phiếu Bảo hành"** → Xem phiếu **SV-2026-001**
+1. Vào **"Quản lý Phiếu Dịch vụ"** → Xem phiếu **SV-2026-001**
 2. Vào **"Tra cứu Serial"** → Nhập **ABC123456701**
 3. Vào **"Quản lý Kho"** → Xem tồn kho **In-Service**
 
 **Expected Outcome:**
 
-**A) Phiếu Bảo hành SV-2026-001:**
+**A) Phiếu Dịch vụ SV-2026-001:**
 
 | Thông tin | Giá trị |
 |-----------|---------|
+| Mã phiếu | **SV-2026-001** |
 | Trạng thái | Pending (Chờ xử lý) |
 | Khách hàng | Nguyễn Văn A |
 | Sản phẩm | ZOTAC RTX 4090 (ABC123456701) |
-| Workflow | Bảo hành ZOTAC RTX 4090 (8 tasks) |
-| Kỹ thuật viên | Chờ Manager gán |
 
 **B) Serial ABC123456701:**
 
@@ -870,20 +773,13 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 |-----------|---------|
 | Vị trí hiện tại | **In-Service** (Kho Đang Sửa Chữa) ✅ |
 | Link với phiếu | SV-2026-001 |
-| Lịch sử | Nhập kho → Bán cho KH → Tạo SR → Nhận BH → **Chuyển vào In-Service** |
+| Lịch sử | Nhập kho → Bán cho KH → **Chuyển vào In-Service** |
 
-**C) Service Request SR-20260204-00001:**
-
-| Thông tin | Giá trị |
-|-----------|---------|
-| Trạng thái | **Completed** (Đã hoàn tất) |
-| Link sang | Service Ticket SV-2026-001 |
-
-**D) Tồn kho:**
+**C) Tồn kho:**
 
 | Kho | Trước | Sau |
 |-----|-------|-----|
-| Customer Installed | 60 | **59** |
+| Customer Installed | 61 | **60** |
 | In-Service | 0 | **1** (ABC123456701) |
 
 ---

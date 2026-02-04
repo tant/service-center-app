@@ -349,26 +349,29 @@ export const receiptsRouter = router({
       const reason = receipt.reason || "purchase";
       const targetWarehouseId = receipt.virtual_warehouse_id;
 
-      // Check for duplicates in other receipts first
-      const { data: currentReceiptItems } = await ctx.supabaseAdmin
-        .from("stock_receipt_items")
-        .select("id")
-        .eq("receipt_id", receiptItem.receipt_id);
+      // Check for duplicates in other receipts (only for purchase - new goods)
+      // For customer_return and rma_return, serials already exist in previous receipts (e.g., original purchase)
+      if (reason === "purchase") {
+        const { data: currentReceiptItems } = await ctx.supabaseAdmin
+          .from("stock_receipt_items")
+          .select("id")
+          .eq("receipt_id", receiptItem.receipt_id);
 
-      const currentReceiptItemIds = currentReceiptItems?.map(item => item.id) || [];
+        const currentReceiptItemIds = currentReceiptItems?.map(item => item.id) || [];
 
-      const { data: existingInReceipts } = await ctx.supabaseAdmin
-        .from("stock_receipt_serials")
-        .select("serial_number, receipt_item_id")
-        .in("serial_number", serialNumbers);
+        const { data: existingInReceipts } = await ctx.supabaseAdmin
+          .from("stock_receipt_serials")
+          .select("serial_number, receipt_item_id")
+          .in("serial_number", serialNumbers);
 
-      const duplicatesInOtherReceipts = existingInReceipts?.filter(
-        serial => !currentReceiptItemIds.includes(serial.receipt_item_id)
-      ) || [];
+        const duplicatesInOtherReceipts = existingInReceipts?.filter(
+          serial => !currentReceiptItemIds.includes(serial.receipt_item_id)
+        ) || [];
 
-      if (duplicatesInOtherReceipts.length > 0) {
-        const duplicates = duplicatesInOtherReceipts.map((e) => e.serial_number).join(", ");
-        throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
+        if (duplicatesInOtherReceipts.length > 0) {
+          const duplicates = duplicatesInOtherReceipts.map((e) => e.serial_number).join(", ");
+          throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
+        }
       }
 
       // Check existing physical products with warehouse info

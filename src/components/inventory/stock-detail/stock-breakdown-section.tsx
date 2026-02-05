@@ -18,7 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StockStatusBadge } from "../shared/stock-status-badge";
 
 interface StockBreakdownSectionProps {
   productId: string;
@@ -117,15 +116,10 @@ export function StockBreakdownSection({
         <CardContent>
           <div className="space-y-4">
             {Object.entries(byPhysical).map(([warehouseName, items]) => {
-              const totalDeclared = items.reduce(
-                (sum, item) => sum + item.declared_quantity,
-                0,
-              );
               const totalActual = items.reduce(
                 (sum, item) => sum + item.actual_serial_count,
                 0,
               );
-              const gap = totalActual - totalDeclared;
 
               return (
                 <div key={warehouseName} className="border rounded-lg p-4">
@@ -133,33 +127,12 @@ export function StockBreakdownSection({
                     <h4 className="font-medium">{warehouseName}</h4>
                     <Badge variant="outline">{items.length} kho ảo</Badge>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Khai báo:</span>
-                      <span className="ml-2 font-medium">
-                        {totalDeclared.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Thực tế:</span>
-                      <span className="ml-2 font-medium">
-                        {totalActual.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Chênh:</span>
-                      <span
-                        className={`ml-2 font-medium ${
-                          gap > 0
-                            ? "text-yellow-600"
-                            : gap < 0
-                              ? "text-red-600"
-                              : ""
-                        }`}
-                      >
-                        {gap > 0 ? `+${gap}` : gap}
-                      </span>
-                    </div>
+                  {/* Simplified - only show total stock */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Tồn kho:</span>
+                    <span className="ml-2 text-lg font-bold">
+                      {totalActual.toLocaleString()}
+                    </span>
                   </div>
                   {/* Virtual warehouses within this physical warehouse */}
                   <div className="mt-3 space-y-1">
@@ -171,13 +144,9 @@ export function StockBreakdownSection({
                         <span className="text-muted-foreground">
                           {item.virtual_warehouse_name}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {item.declared_quantity} /{" "}
-                            {item.actual_serial_count}
-                          </span>
-                          <StockStatusBadge status={item.stock_status} />
-                        </div>
+                        <span className="font-medium">
+                          {item.actual_serial_count}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -197,18 +166,16 @@ export function StockBreakdownSection({
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Simplified table - only show warehouse type and stock */}
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Loại kho</TableHead>
-                <TableHead className="text-right">Khai báo</TableHead>
-                <TableHead className="text-right">Thực tế</TableHead>
-                <TableHead className="text-right">Chênh lệch</TableHead>
+                <TableHead className="text-right">Tồn kho</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {Object.values(byVirtual).map((item) => {
-                const gap = item.total_actual - item.total_declared;
                 return (
                   <TableRow key={item.type}>
                     <TableCell className="font-medium">
@@ -219,24 +186,8 @@ export function StockBreakdownSection({
                         {item.name}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      {item.total_declared.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right font-medium">
                       {item.total_actual.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={
-                          gap > 0
-                            ? "text-yellow-600"
-                            : gap < 0
-                              ? "text-red-600"
-                              : ""
-                        }
-                      >
-                        {gap > 0 ? `+${gap}` : gap}
-                      </span>
                     </TableCell>
                   </TableRow>
                 );

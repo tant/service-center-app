@@ -69,6 +69,7 @@ DECLARE
   v_virtual_warehouse_id UUID;
   v_physical_product_id UUID;
   v_old_warehouse_id UUID;
+  v_old_warehouse_type TEXT;
 BEGIN
   -- Get info from receipt
   SELECT sri.product_id, sr.virtual_warehouse_id
@@ -98,8 +99,20 @@ BEGIN
     NEW.physical_product_id := v_physical_product_id;
 
     -- Update stock: -1 from old warehouse, +1 to new warehouse
+    -- IMPORTANT: Only deduct from warehouses that track physical stock
+    -- Skip customer_installed, dead_stock, rma_staging (these track location only, not physical inventory)
     IF v_old_warehouse_id IS DISTINCT FROM v_virtual_warehouse_id THEN
-      PERFORM public.upsert_product_stock(v_product_id, v_old_warehouse_id, -1);
+      -- Get old warehouse type
+      SELECT warehouse_type INTO v_old_warehouse_type
+      FROM public.virtual_warehouses
+      WHERE id = v_old_warehouse_id;
+
+      -- Only deduct from warehouses that track physical stock
+      IF v_old_warehouse_type IN ('main', 'warranty_stock', 'in_service') THEN
+        PERFORM public.upsert_product_stock(v_product_id, v_old_warehouse_id, -1);
+      END IF;
+
+      -- Always add to new warehouse (all receipts increase stock)
       PERFORM public.upsert_product_stock(v_product_id, v_virtual_warehouse_id, 1);
     END IF;
   ELSE

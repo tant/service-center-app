@@ -73,12 +73,12 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
   const hasLowStockWarning =
     minimumQuantity > 0 && currentStock < minimumQuantity;
 
-  // Available stock (excluding faulty, for_parts, in_service)
+  // Available stock = total - in_service - dead_stock
+  // Chỉ tính sản phẩm active ở các kho khác (main, warranty_stock, parts, etc.)
   const availableStock =
-    (breakdown?.by_condition.new || 0) +
-    (breakdown?.by_condition.refurbished || 0) +
-    (breakdown?.by_condition.used || 0) -
-    (breakdown?.by_status.in_service || 0);
+    currentStock -
+    (breakdown?.by_warehouse.in_service || 0) -
+    (breakdown?.by_warehouse.dead_stock || 0);
 
   return (
     <Card>
@@ -143,7 +143,7 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
               <p className="text-xs text-muted-foreground">Đang Bảo Hành</p>
             </div>
             <p className="text-2xl font-bold text-blue-600">
-              {breakdown?.by_status.in_service || 0}
+              {breakdown?.by_warehouse.in_service || 0}
             </p>
           </div>
 
@@ -154,8 +154,7 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
               <p className="text-xs text-muted-foreground">Lỗi/Hỏng</p>
             </div>
             <p className="text-2xl font-bold text-red-600">
-              {(breakdown?.by_condition.faulty || 0) +
-                (breakdown?.by_condition.for_parts || 0)}
+              {breakdown?.by_warehouse.dead_stock || 0}
             </p>
           </div>
         </div>

@@ -1934,11 +1934,17 @@ export const inventoryRouter = router({
   getProductConditionBreakdown: publicProcedure
     .input(z.object({ product_id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      // Get all physical products for this product_id
+      // Get all physical products for this product_id with warehouse info
       const { data: products, error } = await ctx.supabaseAdmin
         .from("physical_products")
         .select(
-          "condition, manufacturer_warranty_end_date, user_warranty_end_date, status",
+          `
+          condition,
+          manufacturer_warranty_end_date,
+          user_warranty_end_date,
+          status,
+          virtual_warehouse:virtual_warehouses!virtual_warehouse_id(warehouse_type)
+        `,
         )
         .eq("product_id", input.product_id);
 
@@ -1964,16 +1970,14 @@ export const inventoryRouter = router({
           expired: 0,
           no_warranty: 0,
         },
-        by_status: {
-          active: 0,
-          in_service: 0,
-          issued: 0,
-          disposed: 0,
+        by_warehouse: {
+          in_service: 0, // Đang bảo hành = active + in_service warehouse
+          dead_stock: 0, // Lỗi/hỏng = active + dead_stock warehouse
         },
         total: products?.length || 0,
       };
 
-      // Count by condition, warranty, and status
+      // Count by condition, warranty, and warehouse
       for (const product of products || []) {
         // Count by condition
         if (product.condition && product.condition in breakdown.by_condition) {
@@ -1993,11 +1997,16 @@ export const inventoryRouter = router({
           ]++;
         }
 
-        // Count by status
-        if (product.status && product.status in breakdown.by_status) {
-          breakdown.by_status[
-            product.status as keyof typeof breakdown.by_status
-          ]++;
+        // Count by warehouse type (only active products)
+        if (product.status === "active") {
+          const warehouseType = (product.virtual_warehouse as any)
+            ?.warehouse_type;
+
+          if (warehouseType === "in_service") {
+            breakdown.by_warehouse.in_service++;
+          } else if (warehouseType === "dead_stock") {
+            breakdown.by_warehouse.dead_stock++;
+          }
         }
       }
 

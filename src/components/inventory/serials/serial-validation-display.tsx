@@ -3,7 +3,7 @@
  * Shows validation results with visual feedback
  */
 
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ValidationResult {
@@ -28,7 +28,10 @@ interface SerialValidationDisplayProps {
   className?: string;
 }
 
-export function SerialValidationDisplay({ validation, className = "" }: SerialValidationDisplayProps) {
+export function SerialValidationDisplay({
+  validation,
+  className = "",
+}: SerialValidationDisplayProps) {
   const { results, summary } = validation;
 
   return (
@@ -37,9 +40,12 @@ export function SerialValidationDisplay({ validation, className = "" }: SerialVa
       {summary.allValid ? (
         <Alert className="border-green-200 bg-green-50 dark:bg-green-950">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertTitle className="text-green-800 dark:text-green-300">Tất cả số serial hợp lệ</AlertTitle>
+          <AlertTitle className="text-green-800 dark:text-green-300">
+            Tất cả số serial hợp lệ
+          </AlertTitle>
           <AlertDescription className="text-green-700 dark:text-green-400">
-            {summary.total} số serial đã được xác thực thành công. Sẵn sàng để thêm!
+            {summary.total} số serial đã được xác thực thành công. Sẵn sàng để
+            thêm!
           </AlertDescription>
         </Alert>
       ) : (
@@ -65,7 +71,9 @@ export function SerialValidationDisplay({ validation, className = "" }: SerialVa
                 <div
                   key={index}
                   className={`flex items-start gap-2 px-4 py-2 ${
-                    result.isValid ? "bg-green-50 dark:bg-green-950/20" : "bg-red-50 dark:bg-red-950/20"
+                    result.isValid
+                      ? "bg-green-50 dark:bg-green-950/20"
+                      : "bg-red-50 dark:bg-red-950/20"
                   }`}
                 >
                   {result.isValid ? (
@@ -74,9 +82,13 @@ export function SerialValidationDisplay({ validation, className = "" }: SerialVa
                     <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono truncate">{result.serialNumber}</p>
+                    <p className="text-sm font-mono truncate">
+                      {result.serialNumber}
+                    </p>
                     {result.message && (
-                      <p className="text-xs text-muted-foreground mt-1">{result.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {result.message}
+                      </p>
                     )}
                   </div>
                 </div>

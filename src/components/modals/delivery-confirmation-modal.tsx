@@ -1,21 +1,27 @@
 // Delivery Confirmation Modal
 // Story 1.14: Customer Delivery Confirmation Workflow
 
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
+import {
+  IconCheck,
+  IconLoader,
+  IconPackage,
+  IconPhone,
+  IconUser,
+} from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useConfirmDelivery } from '@/hooks/use-delivery';
-import { toast } from 'sonner';
-import { IconCheck, IconLoader, IconPackage, IconUser, IconPhone } from '@tabler/icons-react';
+} from "@/components/ui/dialog";
+import { useConfirmDelivery } from "@/hooks/use-delivery";
 
 interface DeliveryConfirmationModalProps {
   open: boolean;
@@ -52,11 +58,11 @@ export function DeliveryConfirmationModal({
       handleClose();
       router.refresh();
     } catch (error) {
-      console.error('Delivery confirmation error:', error);
+      console.error("Delivery confirmation error:", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Có lỗi xảy ra khi xác nhận giao hàng'
+          : "Có lỗi xảy ra khi xác nhận giao hàng",
       );
     }
   };
@@ -71,7 +77,8 @@ export function DeliveryConfirmationModal({
         <DialogHeader>
           <DialogTitle>Xác nhận giao hàng</DialogTitle>
           <DialogDescription>
-            Xác nhận đã giao sản phẩm cho khách hàng - Phiếu {ticket.ticket_number}
+            Xác nhận đã giao sản phẩm cho khách hàng - Phiếu{" "}
+            {ticket.ticket_number}
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +109,8 @@ export function DeliveryConfirmationModal({
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">
-                Xác nhận đã bàn giao sản phẩm cho khách hàng. Hành động này sẽ đóng phiếu (chuyển sang trạng thái hoàn thành).
+                Xác nhận đã bàn giao sản phẩm cho khách hàng. Hành động này sẽ
+                đóng phiếu (chuyển sang trạng thái hoàn thành).
               </p>
             </CardContent>
           </Card>

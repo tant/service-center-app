@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -21,10 +21,16 @@ const updateStaffSchema = z.object({
 });
 
 // Helper function to get current user's role
-async function getCurrentUserRole(): Promise<{ role: string; userId: string } | null> {
+async function getCurrentUserRole(): Promise<{
+  role: string;
+  userId: string;
+} | null> {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return null;
@@ -63,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only Admin and Manager can create users
-    if (!['admin', 'manager'].includes(currentUser.role)) {
+    if (!["admin", "manager"].includes(currentUser.role)) {
       return NextResponse.json(
         { error: "Không có quyền tạo tài khoản người dùng." },
         { status: 403 },
@@ -71,7 +77,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Manager can only create Technician and Reception roles
-    if (currentUser.role === 'manager' && !['technician', 'reception'].includes(validatedData.role)) {
+    if (
+      currentUser.role === "manager" &&
+      !["technician", "reception"].includes(validatedData.role)
+    ) {
       return NextResponse.json(
         { error: "Quản lý chỉ có thể tạo tài khoản Kỹ thuật viên và Lễ tân." },
         { status: 403 },
@@ -175,7 +184,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Only Admin and Manager can update users
-    if (!['admin', 'manager'].includes(currentUser.role)) {
+    if (!["admin", "manager"].includes(currentUser.role)) {
       return NextResponse.json(
         { error: "Không có quyền cập nhật tài khoản người dùng." },
         { status: 403 },
@@ -190,30 +199,30 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (fetchError || !existingProfile) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Role change validation for Managers
-    if (updateFields.role && currentUser.role === 'manager') {
+    if (updateFields.role && currentUser.role === "manager") {
       const oldRole = existingProfile.role;
       const newRole = updateFields.role;
 
       // Manager can only change between technician ↔ reception
       const allowedChanges = [
-        { from: 'technician', to: 'reception' },
-        { from: 'reception', to: 'technician' },
+        { from: "technician", to: "reception" },
+        { from: "reception", to: "technician" },
       ];
 
       const isAllowedChange = allowedChanges.some(
-        rule => rule.from === oldRole && rule.to === newRole
+        (rule) => rule.from === oldRole && rule.to === newRole,
       );
 
       if (!isAllowedChange) {
         return NextResponse.json(
-          { error: "Quản lý chỉ có thể thay đổi vai trò giữa Kỹ thuật viên và Lễ tân." },
+          {
+            error:
+              "Quản lý chỉ có thể thay đổi vai trò giữa Kỹ thuật viên và Lễ tân.",
+          },
           { status: 403 },
         );
       }

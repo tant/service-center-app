@@ -9,10 +9,16 @@ const resetPasswordSchema = z.object({
 });
 
 // Helper function to get current user's role
-async function getCurrentUserRole(): Promise<{ role: string; userId: string } | null> {
+async function getCurrentUserRole(): Promise<{
+  role: string;
+  userId: string;
+} | null> {
   try {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return null;
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only Admin and Manager can reset passwords
-    if (!['admin', 'manager'].includes(currentUser.role)) {
+    if (!["admin", "manager"].includes(currentUser.role)) {
       return NextResponse.json(
         { error: "Không có quyền đặt lại mật khẩu." },
         { status: 403 },
@@ -73,35 +79,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Permission validation based on roles
-    const canResetPassword = (actorRole: string, targetRole: string): boolean => {
-      if (actorRole === 'admin') {
+    const canResetPassword = (
+      actorRole: string,
+      targetRole: string,
+    ): boolean => {
+      if (actorRole === "admin") {
         // Admin can reset passwords for Manager, Technician, and Reception
-        return ['manager', 'technician', 'reception'].includes(targetRole);
+        return ["manager", "technician", "reception"].includes(targetRole);
       }
 
-      if (actorRole === 'manager') {
+      if (actorRole === "manager") {
         // Manager can only reset passwords for Technician and Reception
-        return ['technician', 'reception'].includes(targetRole);
+        return ["technician", "reception"].includes(targetRole);
       }
 
       return false;
     };
 
     if (!canResetPassword(currentUser.role, targetProfile.role)) {
-      const errorMessage = currentUser.role === 'manager'
-        ? "Quản lý chỉ có thể đặt lại mật khẩu cho Kỹ thuật viên và Lễ tân."
-        : "Không có quyền đặt lại mật khẩu cho người dùng này.";
+      const errorMessage =
+        currentUser.role === "manager"
+          ? "Quản lý chỉ có thể đặt lại mật khẩu cho Kỹ thuật viên và Lễ tân."
+          : "Không có quyền đặt lại mật khẩu cho người dùng này.";
 
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
 
     // Reset password using Supabase Admin
     const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
       validatedData.user_id,
-      { password: validatedData.new_password }
+      { password: validatedData.new_password },
     );
 
     if (resetError) {

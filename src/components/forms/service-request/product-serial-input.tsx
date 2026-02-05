@@ -13,16 +13,16 @@
 
 "use client";
 
+import { IconTrash } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { IconTrash } from "@tabler/icons-react";
-import { trpc } from "@/components/providers/trpc-provider";
 import { useDebounce } from "@/hooks/useDebounce";
 import { SerialLookupResult } from "./serial-lookup-result";
 
-type LookupStatus = 'idle' | 'checking' | 'found' | 'not_found' | 'error';
+type LookupStatus = "idle" | "checking" | "found" | "not_found" | "error";
 
 interface ProductSerialInputProps {
   index: number;
@@ -43,32 +43,36 @@ export function ProductSerialInput({
   disabled = false,
   totalProducts,
 }: ProductSerialInputProps) {
-  const [lookupStatus, setLookupStatus] = useState<LookupStatus>('idle');
+  const [lookupStatus, setLookupStatus] = useState<LookupStatus>("idle");
   const debouncedSerial = useDebounce(serial, 500);
 
   // tRPC query for serial lookup
-  const { data: lookupResult, isLoading, error } = trpc.serviceRequest.lookupSerial.useQuery(
+  const {
+    data: lookupResult,
+    isLoading,
+    error,
+  } = trpc.serviceRequest.lookupSerial.useQuery(
     { serial_number: debouncedSerial },
     {
       enabled: debouncedSerial.length >= 5, // Only lookup if serial is at least 5 chars
       retry: 1,
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    }
+    },
   );
 
   // Update lookup status based on query state
   useEffect(() => {
     if (debouncedSerial.length < 5) {
-      setLookupStatus('idle');
+      setLookupStatus("idle");
       return;
     }
 
     if (isLoading) {
-      setLookupStatus('checking');
+      setLookupStatus("checking");
     } else if (error) {
-      setLookupStatus('error');
+      setLookupStatus("error");
     } else if (lookupResult) {
-      setLookupStatus(lookupResult.found ? 'found' : 'not_found');
+      setLookupStatus(lookupResult.found ? "found" : "not_found");
     }
   }, [debouncedSerial, isLoading, error, lookupResult]);
 
@@ -114,7 +118,12 @@ export function ProductSerialInput({
       <SerialLookupResult
         status={lookupStatus}
         product={lookupResult?.product || null}
-        error={error?.message || (lookupResult && 'error' in lookupResult ? lookupResult.error : undefined)}
+        error={
+          error?.message ||
+          (lookupResult && "error" in lookupResult
+            ? lookupResult.error
+            : undefined)
+        }
       />
     </div>
   );

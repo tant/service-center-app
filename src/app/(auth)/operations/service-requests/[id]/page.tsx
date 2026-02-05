@@ -6,26 +6,54 @@
 
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconLoader2, IconCheck, IconX, IconUser, IconPackage, IconFileText, IconTrash, IconTruck, IconEdit } from "@tabler/icons-react";
-import { useRequestDetails, useUpdateRequestStatus, useRejectRequest } from "@/hooks/use-service-request";
+import {
+  IconCheck,
+  IconEdit,
+  IconFileText,
+  IconLoader2,
+  IconPackage,
+  IconTrash,
+  IconTruck,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import { toast } from "sonner";
-import { useState } from "react";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { trpc } from "@/components/providers/trpc-provider";
-import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
-import { TaskCard } from "@/components/tasks/task-card";
-import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
 import { ListTodo } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  BlockTaskDialog,
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
+import { TaskCard } from "@/components/tasks/task-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
+import {
+  useRejectRequest,
+  useRequestDetails,
+  useUpdateRequestStatus,
+} from "@/hooks/use-service-request";
 
 // Status mapping using existing Badge variants
 const STATUS_MAP = {
@@ -43,11 +71,17 @@ export default function ServiceRequestDetailPage() {
   const router = useRouter();
   const requestId = params.id as string;
 
-  const { data: request, isLoading, error, refetch } = useRequestDetails(requestId);
-  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
-    { entityType: "service_request", entityId: requestId },
-    { refetchInterval: 30000 }
-  );
+  const {
+    data: request,
+    isLoading,
+    error,
+    refetch,
+  } = useRequestDetails(requestId);
+  const { data: taskData, refetch: refetchTasks } =
+    trpc.tasks.getEntityTasks.useQuery(
+      { entityType: "service_request", entityId: requestId },
+      { refetchInterval: 30000 },
+    );
   const tasks = taskData?.tasks || [];
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
   const { rejectRequest, isRejecting } = useRejectRequest();
@@ -67,12 +101,20 @@ export default function ServiceRequestDetailPage() {
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
 
   // Task action dialog state
-  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
-  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
@@ -93,15 +135,17 @@ export default function ServiceRequestDetailPage() {
         { request_id: requestId, status: "received" },
         {
           onSuccess: () => {
-            toast.success(request.status === "pickingup"
-              ? "Đã xác nhận đã lấy hàng từ khách hàng"
-              : "Đã xác nhận tiếp nhận hàng");
+            toast.success(
+              request.status === "pickingup"
+                ? "Đã xác nhận đã lấy hàng từ khách hàng"
+                : "Đã xác nhận tiếp nhận hàng",
+            );
             refetch();
           },
           onError: (error: any) => {
             toast.error(`Lỗi: ${error.message}`);
           },
-        }
+        },
       );
     }
   };
@@ -124,12 +168,16 @@ export default function ServiceRequestDetailPage() {
         onError: (error: any) => {
           toast.error(`Lỗi: ${error.message}`);
         },
-      }
+      },
     );
   };
 
   const handleDeleteDraft = () => {
-    if (confirm("Bạn có chắc muốn xóa bản nháp này? Hành động này không thể hoàn tác.")) {
+    if (
+      confirm(
+        "Bạn có chắc muốn xóa bản nháp này? Hành động này không thể hoàn tác.",
+      )
+    ) {
       deleteDraft.mutate({ request_id: requestId });
     }
   };
@@ -202,7 +250,10 @@ export default function ServiceRequestDetailPage() {
   if (isLoading) {
     return (
       <>
-        <PageHeader title="Chi tiết yêu cầu" backHref="/operations/service-requests" />
+        <PageHeader
+          title="Chi tiết yêu cầu"
+          backHref="/operations/service-requests"
+        />
         <div className="flex flex-1 items-center justify-center">
           <IconLoader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -213,11 +264,16 @@ export default function ServiceRequestDetailPage() {
   if (error || !request) {
     return (
       <>
-        <PageHeader title="Chi tiết yêu cầu" backHref="/operations/service-requests" />
+        <PageHeader
+          title="Chi tiết yêu cầu"
+          backHref="/operations/service-requests"
+        />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <p className="text-lg font-semibold">Không tìm thấy yêu cầu</p>
-            <p className="text-sm text-muted-foreground">Yêu cầu không tồn tại hoặc đã bị xóa</p>
+            <p className="text-sm text-muted-foreground">
+              Yêu cầu không tồn tại hoặc đã bị xóa
+            </p>
           </div>
         </div>
       </>
@@ -229,7 +285,10 @@ export default function ServiceRequestDetailPage() {
 
   return (
     <>
-      <PageHeader title={`Yêu cầu ${request.tracking_token}`} backHref="/operations/service-requests" />
+      <PageHeader
+        title={`Yêu cầu ${request.tracking_token}`}
+        backHref="/operations/service-requests"
+      />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 px-4 md:gap-6 md:py-6 lg:px-6">
@@ -240,13 +299,16 @@ export default function ServiceRequestDetailPage() {
                   <div>
                     <CardTitle>Trạng thái</CardTitle>
                     <CardDescription>
-                      Tạo {formatDistanceToNow(new Date(request.created_at), {
+                      Tạo{" "}
+                      {formatDistanceToNow(new Date(request.created_at), {
                         addSuffix: true,
                         locale: vi,
                       })}
                     </CardDescription>
                   </div>
-                  <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                  <Badge variant={statusConfig.variant}>
+                    {statusConfig.label}
+                  </Badge>
                 </div>
               </CardHeader>
             </Card>
@@ -261,7 +323,12 @@ export default function ServiceRequestDetailPage() {
                       Công việc
                       {tasks.length > 0 && (
                         <span className="text-muted-foreground">
-                          ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                          (
+                          {
+                            tasks.filter((t: any) => t.status === "completed")
+                              .length
+                          }
+                          /{tasks.length})
                         </span>
                       )}
                     </CardTitle>
@@ -279,7 +346,11 @@ export default function ServiceRequestDetailPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setIsWorkflowDialogOpen(true)}
-                            disabled={!!(request.workflow && (request.workflow as any).id)}
+                            disabled={
+                              !!(
+                                request.workflow && (request.workflow as any).id
+                              )
+                            }
                           >
                             <ListTodo className="h-4 w-4 mr-2" />
                             Tạo công việc
@@ -296,7 +367,8 @@ export default function ServiceRequestDetailPage() {
                 </div>
                 {tasks.length === 0 && !request.workflow && (
                   <CardDescription>
-                    Chưa có công việc nào. Nhấn "Tạo công việc" để thêm công việc từ quy trình.
+                    Chưa có công việc nào. Nhấn "Tạo công việc" để thêm công
+                    việc từ quy trình.
                   </CardDescription>
                 )}
               </CardHeader>
@@ -307,8 +379,12 @@ export default function ServiceRequestDetailPage() {
                       key={task.id}
                       task={task}
                       onStartTask={handleStartTask}
-                      onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
-                      onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                      onCompleteTask={(taskId) =>
+                        handleCompleteTask(taskId, task.name)
+                      }
+                      onBlockTask={(taskId) =>
+                        handleBlockTask(taskId, task.name)
+                      }
                       onUnblockTask={handleUnblockTask}
                       isLoading={
                         startTaskMutation.isPending ||
@@ -344,7 +420,9 @@ export default function ServiceRequestDetailPage() {
                 )}
                 {request.customer_phone && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Số điện thoại</p>
+                    <p className="text-sm text-muted-foreground">
+                      Số điện thoại
+                    </p>
                     <p className="font-medium">{request.customer_phone}</p>
                   </div>
                 )}
@@ -369,21 +447,32 @@ export default function ServiceRequestDetailPage() {
                 {request.items && request.items.length > 0 ? (
                   <div className="space-y-4">
                     {request.items.map((item: any, index: number) => (
-                      <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                      <div
+                        key={item.id}
+                        className="border rounded-lg p-3 space-y-2"
+                      >
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">Sản phẩm #{index + 1}</p>
+                          <p className="text-sm font-medium">
+                            Sản phẩm #{index + 1}
+                          </p>
                           {item.ticket && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => router.push(`/operations/tickets/${item.ticket.id}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/operations/tickets/${item.ticket.id}`,
+                                )
+                              }
                             >
                               Xem phiếu {item.ticket.ticket_number}
                             </Button>
                           )}
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Serial Number</p>
+                          <p className="text-sm text-muted-foreground">
+                            Serial Number
+                          </p>
                           {item.serial_number ? (
                             <Link
                               href={`/inventory/products/${item.serial_number}`}
@@ -397,7 +486,9 @@ export default function ServiceRequestDetailPage() {
                         </div>
                         {item.issue_description && (
                           <div>
-                            <p className="text-sm text-muted-foreground">Mô tả vấn đề</p>
+                            <p className="text-sm text-muted-foreground">
+                              Mô tả vấn đề
+                            </p>
                             <p className="text-sm">{item.issue_description}</p>
                           </div>
                         )}
@@ -405,7 +496,9 @@ export default function ServiceRequestDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Chưa có sản phẩm nào</p>
+                  <p className="text-sm text-muted-foreground">
+                    Chưa có sản phẩm nào
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -419,7 +512,9 @@ export default function ServiceRequestDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{request.issue_description}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {request.issue_description}
+                </p>
               </CardContent>
             </Card>
 
@@ -436,15 +531,20 @@ export default function ServiceRequestDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Phương thức</p>
                     <p className="font-medium">
-                      {request.delivery_method === "pickup" ? "Tự đến lấy" : "Giao hàng"}
+                      {request.delivery_method === "pickup"
+                        ? "Tự đến lấy"
+                        : "Giao hàng"}
                     </p>
                   </div>
-                  {request.delivery_method === "delivery" && request.delivery_address && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Địa chỉ giao hàng</p>
-                      <p className="text-sm">{request.delivery_address}</p>
-                    </div>
-                  )}
+                  {request.delivery_method === "delivery" &&
+                    request.delivery_address && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Địa chỉ giao hàng
+                        </p>
+                        <p className="text-sm">{request.delivery_address}</p>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             )}
@@ -453,7 +553,9 @@ export default function ServiceRequestDetailPage() {
             {showRejectForm && (
               <Card className="border-destructive">
                 <CardHeader>
-                  <CardTitle className="text-sm text-destructive">Từ chối yêu cầu</CardTitle>
+                  <CardTitle className="text-sm text-destructive">
+                    Từ chối yêu cầu
+                  </CardTitle>
                   <CardDescription>
                     Vui lòng nhập lý do từ chối (tối thiểu 10 ký tự)
                   </CardDescription>
@@ -468,7 +570,9 @@ export default function ServiceRequestDetailPage() {
                       placeholder="Nhập lý do từ chối..."
                       rows={3}
                     />
-                    <p className="text-xs text-muted-foreground">{rejectReason.length}/10 ký tự</p>
+                    <p className="text-xs text-muted-foreground">
+                      {rejectReason.length}/10 ký tự
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -524,7 +628,9 @@ export default function ServiceRequestDetailPage() {
             )}
           </Button>
           <Button
-            onClick={() => router.push(`/operations/service-requests/${requestId}/edit`)}
+            onClick={() =>
+              router.push(`/operations/service-requests/${requestId}/edit`)
+            }
             disabled={deleteDraft.isPending}
           >
             <IconEdit className="h-4 w-4 mr-2" />
@@ -532,7 +638,9 @@ export default function ServiceRequestDetailPage() {
           </Button>
         </div>
       )}
-      {(request.status === "submitted" || request.status === "received" || request.status === "pickingup") && (
+      {(request.status === "submitted" ||
+        request.status === "received" ||
+        request.status === "pickingup") && (
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-background p-4">
           {!showRejectForm && (
             <>
@@ -544,7 +652,8 @@ export default function ServiceRequestDetailPage() {
                 <IconX className="h-4 w-4 mr-2" />
                 Từ chối
               </Button>
-              {(request.status === "submitted" || request.status === "pickingup") && (
+              {(request.status === "submitted" ||
+                request.status === "pickingup") && (
                 <Button
                   onClick={handleAccept}
                   disabled={isUpdating || isRejecting}
@@ -557,7 +666,9 @@ export default function ServiceRequestDetailPage() {
                   ) : (
                     <>
                       <IconCheck className="h-4 w-4 mr-2" />
-                      {request.status === "pickingup" ? "Xác nhận đã lấy hàng" : "Xác nhận tiếp nhận"}
+                      {request.status === "pickingup"
+                        ? "Xác nhận đã lấy hàng"
+                        : "Xác nhận tiếp nhận"}
                     </>
                   )}
                 </Button>
@@ -583,7 +694,8 @@ export default function ServiceRequestDetailPage() {
       <CompleteTaskDialog
         open={completeTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleCompleteTaskConfirm}
         taskName={completeTaskDialog.taskName}
@@ -593,7 +705,8 @@ export default function ServiceRequestDetailPage() {
       <BlockTaskDialog
         open={blockTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleBlockTaskConfirm}
         taskName={blockTaskDialog.taskName}

@@ -38,51 +38,47 @@ export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  const client = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          getAllCallCount++;
-          cookieStoreCallCount++;
-          const cookies = cookieStore.getAll();
-          console.log(
-            `🍪 [SERVER-${clientId}] getAll() call #${getAllCallCount} - returned ${cookies.length} cookies`,
-          );
-          console.log(
-            `🍪 [SERVER-${clientId}] Cookie names:`,
-            cookies.map((c) => c.name),
-          );
-          return cookies;
-        },
-        setAll(cookiesToSet) {
-          setAllCallCount++;
-          console.log(
-            `🍪 [SERVER-${clientId}] setAll() call #${setAllCallCount} - setting ${cookiesToSet.length} cookies`,
-          );
-          console.log(
-            `🍪 [SERVER-${clientId}] Cookie names to set:`,
-            cookiesToSet.map((c) => c.name),
-          );
+  const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        getAllCallCount++;
+        cookieStoreCallCount++;
+        const cookies = cookieStore.getAll();
+        console.log(
+          `🍪 [SERVER-${clientId}] getAll() call #${getAllCallCount} - returned ${cookies.length} cookies`,
+        );
+        console.log(
+          `🍪 [SERVER-${clientId}] Cookie names:`,
+          cookies.map((c) => c.name),
+        );
+        return cookies;
+      },
+      setAll(cookiesToSet) {
+        setAllCallCount++;
+        console.log(
+          `🍪 [SERVER-${clientId}] setAll() call #${setAllCallCount} - setting ${cookiesToSet.length} cookies`,
+        );
+        console.log(
+          `🍪 [SERVER-${clientId}] Cookie names to set:`,
+          cookiesToSet.map((c) => c.name),
+        );
 
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-            console.log(
-              `✅ [SERVER-${clientId}] Successfully set ${cookiesToSet.length} cookies`,
-            );
-          } catch (error) {
-            console.log(
-              `⚠️ [SERVER-${clientId}] Cookie setting failed (Server Component context):`,
-              error,
-            );
-          }
-        },
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+          console.log(
+            `✅ [SERVER-${clientId}] Successfully set ${cookiesToSet.length} cookies`,
+          );
+        } catch (error) {
+          console.log(
+            `⚠️ [SERVER-${clientId}] Cookie setting failed (Server Component context):`,
+            error,
+          );
+        }
       },
     },
-  );
+  });
 
   const endTime = performance.now();
   console.log(

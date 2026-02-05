@@ -8,10 +8,6 @@
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
-import { requireAnyAuthenticated } from "../middleware/requireRole";
-import { TaskService } from "../services/task-service";
-import { getProfileIdFromUserId } from "../utils/profile-helpers";
 import {
   TASK_ATTACHMENT_IMAGE_MIME_TYPES,
   TASK_ATTACHMENT_MAX_SIZE_BYTES,
@@ -20,6 +16,10 @@ import {
   TASK_VIDEO_BUCKET,
   TASK_VIDEO_MAX_SIZE_BYTES,
 } from "@/constants/task-attachments";
+import { requireAnyAuthenticated } from "../middleware/requireRole";
+import { TaskService } from "../services/task-service";
+import { publicProcedure, router } from "../trpc";
+import { getProfileIdFromUserId } from "../utils/profile-helpers";
 
 const taskAttachmentMimeTypes = [
   ...TASK_ATTACHMENT_IMAGE_MIME_TYPES,
@@ -27,10 +27,10 @@ const taskAttachmentMimeTypes = [
 ] as const;
 
 const isVideoMimeType = (
-  mime: (typeof taskAttachmentMimeTypes)[number]
+  mime: (typeof taskAttachmentMimeTypes)[number],
 ): mime is (typeof TASK_ATTACHMENT_VIDEO_MIME_TYPES)[number] => {
   return TASK_ATTACHMENT_VIDEO_MIME_TYPES.includes(
-    mime as (typeof TASK_ATTACHMENT_VIDEO_MIME_TYPES)[number]
+    mime as (typeof TASK_ATTACHMENT_VIDEO_MIME_TYPES)[number],
   );
 };
 
@@ -61,9 +61,7 @@ const taskStatusSchema = z.enum([
  */
 const taskFiltersSchema = z.object({
   assignedToId: z.string().uuid().nullable().optional(),
-  status: z
-    .union([taskStatusSchema, z.array(taskStatusSchema)])
-    .optional(),
+  status: z.union([taskStatusSchema, z.array(taskStatusSchema)]).optional(),
   entityType: entityTypeSchema.optional(),
   entityId: z.string().uuid().optional(),
   workflowId: z.string().uuid().optional(),
@@ -219,10 +217,7 @@ export const tasksRouter = router({
     .input(getEntityTasksSchema)
     .query(async ({ input, ctx }) => {
       const taskService = new TaskService(ctx);
-      return taskService.getEntityTasks(
-        input.entityType,
-        input.entityId
-      );
+      return taskService.getEntityTasks(input.entityType, input.entityId);
     }),
 
   /**
@@ -316,10 +311,7 @@ export const tasksRouter = router({
       }
 
       // Get profile ID (task_notes uses profiles.id, not auth.users.id)
-      const profileId = await getProfileIdFromUserId(
-        ctx.supabaseAdmin,
-        userId
-      );
+      const profileId = await getProfileIdFromUserId(ctx.supabaseAdmin, userId);
 
       const taskService = new TaskService(ctx);
       return await taskService.addTaskNotes({
@@ -515,12 +507,12 @@ export const tasksRouter = router({
         "get_serial_entry_progress",
         {
           p_receipt_id: input.receiptId,
-        }
+        },
       );
 
       if (error) {
         throw new Error(
-          `Failed to get serial entry progress: ${error.message}`
+          `Failed to get serial entry progress: ${error.message}`,
         );
       }
 
@@ -541,7 +533,7 @@ export const tasksRouter = router({
         taskId: z.string().uuid(),
         newAssigneeId: z.string().uuid(),
         reason: z.string().min(10, "Reason must be at least 10 characters"),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
@@ -561,7 +553,8 @@ export const tasksRouter = router({
         .eq("id", user.id)
         .single();
 
-      const isAdminOrManager = profile?.role === "admin" || profile?.role === "manager";
+      const isAdminOrManager =
+        profile?.role === "admin" || profile?.role === "manager";
       const isCurrentAssignee = task.assigned_to_id === user.id;
 
       if (!isAdminOrManager && !isCurrentAssignee) {
@@ -607,8 +600,10 @@ export const tasksRouter = router({
     .use(requireAnyAuthenticated)
     .input(
       z.object({
-        taskIds: z.array(z.string().uuid()).max(100, "Maximum 100 tasks at once"),
-      })
+        taskIds: z
+          .array(z.string().uuid())
+          .max(100, "Maximum 100 tasks at once"),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const taskService = new TaskService(ctx);
@@ -653,7 +648,7 @@ export const tasksRouter = router({
       z.object({
         taskId: z.string().uuid(),
         comment: z.string().min(1).max(5000),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
@@ -691,7 +686,7 @@ export const tasksRouter = router({
         taskId: z.string().uuid(),
         limit: z.number().int().positive().max(100).default(50),
         offset: z.number().int().nonnegative().default(0),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       const { data, error } = await ctx.supabaseAdmin
@@ -700,7 +695,7 @@ export const tasksRouter = router({
           `
           *,
           user:profiles(id, full_name, email)
-        `
+        `,
         )
         .eq("task_id", input.taskId)
         .order("created_at", { ascending: false })
@@ -724,7 +719,7 @@ export const tasksRouter = router({
     .input(
       z.object({
         taskId: z.string().uuid(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       const { data, error } = await ctx.supabaseAdmin
@@ -759,7 +754,7 @@ export const tasksRouter = router({
         fileSize: z.number().int().positive().max(TASK_VIDEO_MAX_SIZE_BYTES),
         mimeType: z.enum(taskAttachmentMimeTypes),
         storageBucket: z.enum([TASK_MEDIA_BUCKET, TASK_VIDEO_BUCKET]),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx;
@@ -769,7 +764,9 @@ export const tasksRouter = router({
 
       const isVideo = isVideoMimeType(input.mimeType);
       const expectedBucket = isVideo ? TASK_VIDEO_BUCKET : TASK_MEDIA_BUCKET;
-      const allowedSize = isVideo ? TASK_VIDEO_MAX_SIZE_BYTES : TASK_ATTACHMENT_MAX_SIZE_BYTES;
+      const allowedSize = isVideo
+        ? TASK_VIDEO_MAX_SIZE_BYTES
+        : TASK_ATTACHMENT_MAX_SIZE_BYTES;
 
       if (input.storageBucket !== expectedBucket) {
         throw new Error("Invalid storage bucket for provided mime type");
@@ -782,7 +779,7 @@ export const tasksRouter = router({
       // Convert auth.users.id to profiles.id (uploaded_by references profiles table)
       const profileId = await getProfileIdFromUserId(
         ctx.supabaseAdmin,
-        user.id
+        user.id,
       );
 
       const { data, error } = await ctx.supabaseAdmin
@@ -816,7 +813,7 @@ export const tasksRouter = router({
     .input(
       z.object({
         attachmentId: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { error } = await ctx.supabaseAdmin

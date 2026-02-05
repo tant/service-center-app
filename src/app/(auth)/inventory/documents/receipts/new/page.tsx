@@ -5,20 +5,26 @@
  * Form for creating new stock receipt (simplified types + virtual warehouse IDs)
  */
 
-import { useState } from "react";
+import { AlertCircle, ArrowLeft, Info, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle, Info } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
-import { toast } from "sonner";
 import type { StockReceiptReason } from "@/types/inventory";
 
 // Issue #1: Hide adjustment type - only normal receipts allowed
@@ -28,10 +34,26 @@ import type { StockReceiptReason } from "@/types/inventory";
 // ];
 
 // Receipt reason labels
-const RECEIPT_REASONS: { value: StockReceiptReason; label: string; description: string }[] = [
-  { value: "purchase", label: "Nhập mua hàng", description: "Nhập hàng mới từ nhà cung cấp/nhà sản xuất" },
-  { value: "customer_return", label: "Nhập hàng trả lại", description: "Khách hàng trả lại sản phẩm đã mua" },
-  { value: "rma_return", label: "Nhập RMA về", description: "Hàng RMA trả về từ nhà cung cấp" },
+const RECEIPT_REASONS: {
+  value: StockReceiptReason;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "purchase",
+    label: "Nhập mua hàng",
+    description: "Nhập hàng mới từ nhà cung cấp/nhà sản xuất",
+  },
+  {
+    value: "customer_return",
+    label: "Nhập hàng trả lại",
+    description: "Khách hàng trả lại sản phẩm đã mua",
+  },
+  {
+    value: "rma_return",
+    label: "Nhập RMA về",
+    description: "Hàng RMA trả về từ nhà cung cấp",
+  },
 ];
 
 interface ProductItem {
@@ -47,13 +69,16 @@ export default function CreateReceiptPage() {
   const [customerId, setCustomerId] = useState("");
   const [rmaReference, setRmaReference] = useState("");
   const [virtualWarehouseId, setVirtualWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
-  const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split("T")[0]);
+  const [receiptDate, setReceiptDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createReceipt = trpc.inventory.receipts.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery(); // REDESIGNED: Fetch warehouses
   const { data: customers } = trpc.customers.getCustomers.useQuery();
 
   const handleAddItem = () => {
@@ -64,7 +89,11 @@ export default function CreateReceiptPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof ProductItem, value: any) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof ProductItem,
+    value: any,
+  ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
@@ -83,7 +112,9 @@ export default function CreateReceiptPage() {
     }
 
     // Issue #1: Always require positive quantity (adjustment type hidden)
-    const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
+    const invalidItems = items.filter(
+      (item) => !item.productId || item.declaredQuantity <= 0,
+    );
     if (invalidItems.length > 0) {
       toast.error("Số lượng phải lớn hơn 0");
       return;
@@ -139,7 +170,12 @@ export default function CreateReceiptPage() {
 
                     <div className="grid gap-2">
                       <Label>Lý do nhập kho *</Label>
-                      <Select value={reason} onValueChange={(v) => setReason(v as StockReceiptReason)}>
+                      <Select
+                        value={reason}
+                        onValueChange={(v) =>
+                          setReason(v as StockReceiptReason)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn lý do" />
                         </SelectTrigger>
@@ -155,7 +191,10 @@ export default function CreateReceiptPage() {
 
                     <div className="grid gap-2">
                       <Label>Kho nhập *</Label>
-                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
+                      <Select
+                        value={virtualWarehouseId}
+                        onValueChange={setVirtualWarehouseId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
@@ -171,21 +210,31 @@ export default function CreateReceiptPage() {
 
                     <div className="grid gap-2">
                       <Label>Ngày nhập *</Label>
-                      <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
+                      <Input
+                        type="date"
+                        value={receiptDate}
+                        onChange={(e) => setReceiptDate(e.target.value)}
+                      />
                     </div>
 
                     {/* Conditional: Customer for customer_return */}
                     {reason === "customer_return" && (
                       <div className="grid gap-2">
-                        <Label className="text-primary">Khách hàng trả lại *</Label>
-                        <Select value={customerId} onValueChange={setCustomerId}>
+                        <Label className="text-primary">
+                          Khách hàng trả lại *
+                        </Label>
+                        <Select
+                          value={customerId}
+                          onValueChange={setCustomerId}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Chọn khách hàng" />
                           </SelectTrigger>
                           <SelectContent>
                             {customers?.map((customer) => (
                               <SelectItem key={customer.id} value={customer.id}>
-                                {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                                {customer.name}{" "}
+                                {customer.phone ? `(${customer.phone})` : ""}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -211,7 +260,8 @@ export default function CreateReceiptPage() {
                     <Alert>
                       <Info className="h-4 w-4" />
                       <AlertDescription>
-                        <strong>Nhập hàng trả lại:</strong> Serial phải là hàng đã bán cho khách (đang ở kho customer_installed).
+                        <strong>Nhập hàng trả lại:</strong> Serial phải là hàng
+                        đã bán cho khách (đang ở kho customer_installed).
                       </AlertDescription>
                     </Alert>
                   )}
@@ -220,7 +270,8 @@ export default function CreateReceiptPage() {
                     <Alert>
                       <Info className="h-4 w-4" />
                       <AlertDescription>
-                        <strong>Nhập RMA về:</strong> Serial đang ở kho RMA hoặc serial mới (hàng thay thế từ NCC).
+                        <strong>Nhập RMA về:</strong> Serial đang ở kho RMA hoặc
+                        serial mới (hàng thay thế từ NCC).
                       </AlertDescription>
                     </Alert>
                   )}
@@ -263,15 +314,21 @@ export default function CreateReceiptPage() {
                             <Label>Sản phẩm</Label>
                             <Select
                               value={item.productId}
-                              onValueChange={(value) => handleItemChange(index, "productId", value)}
+                              onValueChange={(value) =>
+                                handleItemChange(index, "productId", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Chọn sản phẩm" />
                               </SelectTrigger>
                               <SelectContent>
                                 {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} {product.sku ? `(${product.sku})` : ""}
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.name}{" "}
+                                    {product.sku ? `(${product.sku})` : ""}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -284,11 +341,23 @@ export default function CreateReceiptPage() {
                               type="number"
                               min="1"
                               value={item.declaredQuantity}
-                              onChange={(e) => handleItemChange(index, "declaredQuantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "declaredQuantity",
+                                  e.target.value === ""
+                                    ? 0
+                                    : Number.parseInt(e.target.value),
+                                )
+                              }
                             />
                           </div>
 
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -303,7 +372,10 @@ export default function CreateReceiptPage() {
                 <Link href="/inventory/documents">
                   <Button variant="outline">Hủy</Button>
                 </Link>
-                <Button onClick={handleSubmit} disabled={createReceipt.isPending}>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={createReceipt.isPending}
+                >
                   <Save className="h-4 w-4" />
                   Tạo phiếu nhập
                 </Button>

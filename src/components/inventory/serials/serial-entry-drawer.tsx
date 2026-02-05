@@ -6,24 +6,24 @@
  * Features: bulk entry, validation, progress tracking, CSV import
  */
 
+import { FileText, Loader2, Upload } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { SerialValidationDisplay } from "./serial-validation-display";
 import { SerialProgressBar } from "./serial-progress-bar";
-import { Upload, FileText, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { SerialValidationDisplay } from "./serial-validation-display";
 
 interface SerialEntryDrawerProps {
   open: boolean;
@@ -68,12 +68,16 @@ export function SerialEntryDrawer({
       .filter(Boolean);
 
     if (serials.length > remaining) {
-      toast.error(`You can only add ${remaining} more serial(s). You entered ${serials.length}.`);
+      toast.error(
+        `You can only add ${remaining} more serial(s). You entered ${serials.length}.`,
+      );
       return;
     }
 
     try {
-      const result = await validateMutation.mutateAsync({ serialNumbers: serials });
+      const result = await validateMutation.mutateAsync({
+        serialNumbers: serials,
+      });
       setValidationResult(result);
 
       if (result.summary.allValid) {
@@ -108,7 +112,9 @@ export function SerialEntryDrawer({
     }
   };
 
-  const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCsvUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -155,7 +161,10 @@ export function SerialEntryDrawer({
 
         <div className="space-y-6 py-6">
           {/* Progress Bar */}
-          <SerialProgressBar current={currentSerialCount} total={declaredQuantity} />
+          <SerialProgressBar
+            current={currentSerialCount}
+            total={declaredQuantity}
+          />
 
           {remaining === 0 && (
             <div className="rounded-md bg-green-50 dark:bg-green-950 p-4 text-sm text-green-800 dark:text-green-300">
@@ -194,8 +203,14 @@ export function SerialEntryDrawer({
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
                         1
                       </div>
-                      <Label htmlFor="serials" className="text-base font-medium">
-                        Nhập số serial <span className="text-muted-foreground font-normal">(mỗi dòng một số)</span>
+                      <Label
+                        htmlFor="serials"
+                        className="text-base font-medium"
+                      >
+                        Nhập số serial{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (mỗi dòng một số)
+                        </span>
                       </Label>
                     </div>
                     <Textarea
@@ -215,9 +230,13 @@ export function SerialEntryDrawer({
                   {/* Step 2: Validate */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                        validationResult ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
+                      <div
+                        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                          validationResult
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         2
                       </div>
                       <Label className="text-base font-medium">
@@ -228,28 +247,40 @@ export function SerialEntryDrawer({
                       onClick={handleValidate}
                       disabled={!serialInput.trim() || isProcessing}
                       className="w-full"
-                      variant={validationResult?.summary.allValid ? "outline" : "default"}
+                      variant={
+                        validationResult?.summary.allValid
+                          ? "outline"
+                          : "default"
+                      }
                     >
                       {validateMutation.isPending ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Đang kiểm tra...
                         </>
+                      ) : validationResult ? (
+                        "Kiểm tra lại"
                       ) : (
-                        validationResult ? "Kiểm tra lại" : "Kiểm tra Serial"
+                        "Kiểm tra Serial"
                       )}
                     </Button>
                   </div>
 
-                  {validationResult && <SerialValidationDisplay validation={validationResult} />}
+                  {validationResult && (
+                    <SerialValidationDisplay validation={validationResult} />
+                  )}
 
                   {/* Step 3: Save (only shown after validation) */}
                   {validationResult && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                          validationResult.summary.allValid ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                        }`}>
+                        <div
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                            validationResult.summary.allValid
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
                           3
                         </div>
                         <Label className="text-base font-medium">
@@ -258,7 +289,9 @@ export function SerialEntryDrawer({
                       </div>
                       <Button
                         onClick={handleAdd}
-                        disabled={!validationResult.summary.allValid || isProcessing}
+                        disabled={
+                          !validationResult.summary.allValid || isProcessing
+                        }
                         variant="default"
                         className="w-full"
                       >
@@ -319,13 +352,14 @@ export function SerialEntryDrawer({
                   <div className="rounded-md bg-muted p-4 text-sm">
                     <p className="font-medium mb-2">CSV Format Example:</p>
                     <pre className="font-mono text-xs bg-background p-2 rounded overflow-x-auto">
-{`serial_number
+                      {`serial_number
 SN001
 SN002
 SN003`}
                     </pre>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Note: Warranty information will be managed separately in the Products page
+                      Note: Warranty information will be managed separately in
+                      the Products page
                     </p>
                   </div>
                 </div>

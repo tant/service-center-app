@@ -1,17 +1,14 @@
 "use client";
 
-import * as React from "react";
 import {
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import * as React from "react";
 import type { TaskItem } from "./sortable-task-item";
 
 /**
@@ -25,7 +22,7 @@ export function useTemplateTasks(initialTasks: TaskItem[] = []) {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = React.useCallback((event: DragEndEvent) => {
@@ -59,7 +56,7 @@ export function useTemplateTasks(initialTasks: TaskItem[] = []) {
 
   const handleUpdateTask = React.useCallback((updatedTask: TaskItem) => {
     setTasks((current) =>
-      current.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      current.map((t) => (t.id === updatedTask.id ? updatedTask : t)),
     );
   }, []);
 

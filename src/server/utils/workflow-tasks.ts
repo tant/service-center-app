@@ -16,11 +16,11 @@ import type { TRPCContext } from "../trpc";
 export async function createTasksFromWorkflow(
   ctx: TRPCContext,
   ticketId: string,
-  workflowId: string
+  workflowId: string,
 ): Promise<number> {
   // 1. Fetch workflow with all its tasks
   const { data: workflow, error: workflowError } = await ctx.supabaseAdmin
-    .from('workflows')
+    .from("workflows")
     .select(`
       id,
       name,
@@ -42,8 +42,8 @@ export async function createTasksFromWorkflow(
         )
       )
     `)
-    .eq('id', workflowId)
-    .eq('is_active', true)
+    .eq("id", workflowId)
+    .eq("is_active", true)
     .single();
 
   if (workflowError || !workflow) {
@@ -56,7 +56,7 @@ export async function createTasksFromWorkflow(
 
   // 2. Sort tasks by sequence_order
   const sortedTasks = [...workflow.tasks].sort(
-    (a, b) => a.sequence_order - b.sequence_order
+    (a, b) => a.sequence_order - b.sequence_order,
   );
 
   // 3. Prepare entity tasks for insertion (using polymorphic entity_tasks table)
@@ -65,7 +65,7 @@ export async function createTasksFromWorkflow(
     const task = Array.isArray(wt.task) ? wt.task[0] : wt.task;
 
     return {
-      entity_type: 'service_ticket',
+      entity_type: "service_ticket",
       entity_id: ticketId,
       task_id: wt.task_id,
       workflow_task_id: wt.id,
@@ -73,7 +73,7 @@ export async function createTasksFromWorkflow(
       name: task.name,
       description: wt.custom_instructions || task.description,
       sequence_order: wt.sequence_order,
-      status: 'pending' as const,
+      status: "pending" as const,
       is_required: wt.is_required,
       estimated_duration_minutes: task.estimated_duration_minutes,
     };
@@ -81,7 +81,7 @@ export async function createTasksFromWorkflow(
 
   // 4. Insert tasks into entity_tasks table
   const { error: insertError } = await ctx.supabaseAdmin
-    .from('entity_tasks')
+    .from("entity_tasks")
     .insert(entityTasks);
 
   if (insertError) {
@@ -100,18 +100,18 @@ export async function createTasksFromWorkflow(
  */
 export async function getTicketTasksWithProgress(
   ctx: TRPCContext,
-  ticketId: string
+  ticketId: string,
 ) {
   const { data: tasks, error } = await ctx.supabaseAdmin
-    .from('entity_tasks')
+    .from("entity_tasks")
     .select(`
       *,
       task:tasks!task_id(*),
       assigned_to:profiles!assigned_to_id(id, full_name, email, avatar_url)
     `)
-    .eq('entity_type', 'service_ticket')
-    .eq('entity_id', ticketId)
-    .order('sequence_order', { ascending: true });
+    .eq("entity_type", "service_ticket")
+    .eq("entity_id", ticketId)
+    .order("sequence_order", { ascending: true });
 
   if (error) {
     throw new Error(`Failed to fetch ticket tasks: ${error.message}`);
@@ -119,10 +119,12 @@ export async function getTicketTasksWithProgress(
 
   // Calculate progress statistics
   const totalTasks = tasks?.length || 0;
-  const completedTasks = tasks?.filter(t => t.status === 'completed').length || 0;
-  const inProgressTasks = tasks?.filter(t => t.status === 'in_progress').length || 0;
-  const blockedTasks = tasks?.filter(t => t.status === 'blocked').length || 0;
-  const pendingTasks = tasks?.filter(t => t.status === 'pending').length || 0;
+  const completedTasks =
+    tasks?.filter((t) => t.status === "completed").length || 0;
+  const inProgressTasks =
+    tasks?.filter((t) => t.status === "in_progress").length || 0;
+  const blockedTasks = tasks?.filter((t) => t.status === "blocked").length || 0;
+  const pendingTasks = tasks?.filter((t) => t.status === "pending").length || 0;
 
   return {
     tasks: tasks || [],
@@ -132,7 +134,8 @@ export async function getTicketTasksWithProgress(
       in_progress: inProgressTasks,
       blocked: blockedTasks,
       pending: pendingTasks,
-      completion_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+      completion_percentage:
+        totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
     },
   };
 }
@@ -146,11 +149,11 @@ export async function getTicketTasksWithProgress(
  */
 export async function canStartTask(
   ctx: TRPCContext,
-  taskId: string
+  taskId: string,
 ): Promise<{ canStart: boolean; reason?: string }> {
   // 1. Get task details
   const { data: task, error: taskError } = await ctx.supabaseAdmin
-    .from('entity_tasks')
+    .from("entity_tasks")
     .select(`
       id,
       entity_id,
@@ -158,19 +161,19 @@ export async function canStartTask(
       status,
       workflow_id
     `)
-    .eq('id', taskId)
+    .eq("id", taskId)
     .single();
 
   if (taskError || !task) {
-    return { canStart: false, reason: 'Task not found' };
+    return { canStart: false, reason: "Task not found" };
   }
 
   // 2. Check if task is already completed or in progress
-  if (task.status === 'completed') {
-    return { canStart: false, reason: 'Task is already completed' };
+  if (task.status === "completed") {
+    return { canStart: false, reason: "Task is already completed" };
   }
 
-  if (task.status === 'in_progress') {
+  if (task.status === "in_progress") {
     return { canStart: true }; // Already started
   }
 
@@ -181,9 +184,9 @@ export async function canStartTask(
   }
 
   const { data: workflow } = await ctx.supabaseAdmin
-    .from('workflows')
-    .select('strict_sequence')
-    .eq('id', task.workflow_id)
+    .from("workflows")
+    .select("strict_sequence")
+    .eq("id", task.workflow_id)
     .single();
 
   const enforceSequence = workflow?.strict_sequence ?? false;
@@ -195,21 +198,21 @@ export async function canStartTask(
 
   // 5. Check if all previous tasks are completed
   const { data: previousTasks } = await ctx.supabaseAdmin
-    .from('entity_tasks')
-    .select('id, name, status, is_required')
-    .eq('entity_type', 'service_ticket')
-    .eq('entity_id', task.entity_id)
-    .lt('sequence_order', task.sequence_order)
-    .neq('status', 'skipped');
+    .from("entity_tasks")
+    .select("id, name, status, is_required")
+    .eq("entity_type", "service_ticket")
+    .eq("entity_id", task.entity_id)
+    .lt("sequence_order", task.sequence_order)
+    .neq("status", "skipped");
 
-  const incompleteTasks = previousTasks?.filter(
-    t => t.status !== 'completed' && t.is_required
-  ) || [];
+  const incompleteTasks =
+    previousTasks?.filter((t) => t.status !== "completed" && t.is_required) ||
+    [];
 
   if (incompleteTasks.length > 0) {
     return {
       canStart: false,
-      reason: `Phải hoàn thành ${incompleteTasks.length} công việc trước đó: ${incompleteTasks.map(t => t.name).join(', ')}`,
+      reason: `Phải hoàn thành ${incompleteTasks.length} công việc trước đó: ${incompleteTasks.map((t) => t.name).join(", ")}`,
     };
   }
 

@@ -1,22 +1,22 @@
 import { router } from "../trpc";
 import { adminRouter } from "./admin";
-import { profileRouter } from "./profile";
-import { productsRouter } from "./products";
-import { partsRouter } from "./parts";
-import { customersRouter } from "./customers";
-import { ticketsRouter } from "./tickets";
-import { revenueRouter } from "./revenue";
-import { brandsRouter } from "./brands";
-import { workflowRouter } from "./workflow";
-import { warehouseRouter } from "./warehouse";
-import { inventoryRouter } from "./inventory";
-import { inventoryRouter as physicalProductsRouter } from "./physical-products";
-import { serviceRequestRouter } from "./service-request";
-import { notificationsRouter } from "./notifications";
-import { tasksRouter } from "./tasks";
 import { analyticsRouter } from "./analytics";
-import { assignmentsRouter } from "./assignments";
 import { appSettingsRouter } from "./app-settings";
+import { assignmentsRouter } from "./assignments";
+import { brandsRouter } from "./brands";
+import { customersRouter } from "./customers";
+import { inventoryRouter } from "./inventory";
+import { notificationsRouter } from "./notifications";
+import { partsRouter } from "./parts";
+import { inventoryRouter as physicalProductsRouter } from "./physical-products";
+import { productsRouter } from "./products";
+import { profileRouter } from "./profile";
+import { revenueRouter } from "./revenue";
+import { serviceRequestRouter } from "./service-request";
+import { tasksRouter } from "./tasks";
+import { ticketsRouter } from "./tickets";
+import { warehouseRouter } from "./warehouse";
+import { workflowRouter } from "./workflow";
 
 export const appRouter = router({
   admin: adminRouter,

@@ -6,16 +6,15 @@
 
 "use client";
 
-import * as React from "react";
 import {
-  IconPlus,
-  IconEdit,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconEdit,
   IconLayoutColumns,
+  IconPlus,
   IconToggleLeft,
   IconToggleRight,
 } from "@tabler/icons-react";
@@ -33,10 +32,19 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import * as React from "react";
+import { TaskTypeForm } from "@/components/forms/task-type-form";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -45,12 +53,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Table,
   TableBody,
   TableCell,
@@ -58,26 +60,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FormDrawer } from "@/components/ui/form-drawer";
-import { useTaskTypes, useToggleTaskType, useCreateTaskType, useUpdateTaskType } from "@/hooks/use-workflow";
+  useCreateTaskType,
+  useTaskTypes,
+  useToggleTaskType,
+  useUpdateTaskType,
+} from "@/hooks/use-workflow";
 import type { Task } from "@/types/workflow";
-import { TaskTypeForm } from "@/components/forms/task-type-form";
 
 // Category color mappings for visual differentiation
 const CATEGORY_COLORS = {
-  "Kiểm tra": "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
-  "Sửa chữa": "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
-  "Thay thế": "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
-  "Vệ sinh": "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
-  "Cài đặt": "bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700",
-  "Kiểm tra cuối": "bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700",
-  "Khác": "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600",
+  "Kiểm tra":
+    "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+  "Sửa chữa":
+    "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
+  "Thay thế":
+    "bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
+  "Vệ sinh":
+    "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
+  "Cài đặt":
+    "bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700",
+  "Kiểm tra cuối":
+    "bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700",
+  Khác: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600",
 } as const;
 
 // Category icons for visual recognition
@@ -88,7 +94,7 @@ const CATEGORY_ICONS = {
   "Vệ sinh": "✨",
   "Cài đặt": "⚙️",
   "Kiểm tra cuối": "✅",
-  "Khác": "📋",
+  Khác: "📋",
 } as const;
 
 const columns: ColumnDef<Task>[] = [
@@ -114,7 +120,8 @@ const columns: ColumnDef<Task>[] = [
     header: "Danh Mục",
     cell: ({ row }) => {
       const category = row.original.category || "Khác";
-      const colorClass = CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS];
+      const colorClass =
+        CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS];
       return (
         <Badge variant="outline" className={colorClass}>
           {category}
@@ -126,9 +133,7 @@ const columns: ColumnDef<Task>[] = [
     accessorKey: "description",
     header: "Mô Tả",
     cell: ({ row }) => (
-      <div className="max-w-md truncate">
-        {row.original.description || "-"}
-      </div>
+      <div className="max-w-md truncate">{row.original.description || "-"}</div>
     ),
   },
   {
@@ -141,11 +146,14 @@ const columns: ColumnDef<Task>[] = [
       }
 
       // Color coding based on duration
-      let colorClass = "bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700";
+      let colorClass =
+        "bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700";
       if (duration > 60) {
-        colorClass = "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
+        colorClass =
+          "bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700";
       } else if (duration > 30) {
-        colorClass = "bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700";
+        colorClass =
+          "bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700";
       }
 
       return (
@@ -161,9 +169,10 @@ const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => (
       <Badge
         variant={row.original.requires_notes ? "default" : "secondary"}
-        className={row.original.requires_notes
-          ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
-          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+        className={
+          row.original.requires_notes
+            ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700"
+            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
         }
       >
         {row.original.requires_notes ? "✓ Có" : "○ Không"}
@@ -176,9 +185,10 @@ const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => (
       <Badge
         variant={row.original.requires_photo ? "default" : "secondary"}
-        className={row.original.requires_photo
-          ? "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
-          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+        className={
+          row.original.requires_photo
+            ? "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
+            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
         }
       >
         {row.original.requires_photo ? "📷 Có" : "○ Không"}
@@ -191,15 +201,24 @@ const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => (
       <Badge
         variant={row.original.is_active ? "default" : "destructive"}
-        className={row.original.is_active
-          ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-300 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300 dark:border-green-700"
-          : "bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-red-300 dark:from-red-900/30 dark:to-rose-900/30 dark:text-red-300 dark:border-red-700"
+        className={
+          row.original.is_active
+            ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-300 dark:from-green-900/30 dark:to-emerald-900/30 dark:text-green-300 dark:border-green-700"
+            : "bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-red-300 dark:from-red-900/30 dark:to-rose-900/30 dark:text-red-300 dark:border-red-700"
         }
       >
-        <span className={row.original.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+        <span
+          className={
+            row.original.is_active
+              ? "text-green-600 dark:text-green-400"
+              : "text-red-600 dark:text-red-400"
+          }
+        >
           {row.original.is_active ? "●" : "○"}
         </span>
-        <span className="ml-1">{row.original.is_active ? "Hoạt động" : "Vô hiệu"}</span>
+        <span className="ml-1">
+          {row.original.is_active ? "Hoạt động" : "Vô hiệu"}
+        </span>
       </Badge>
     ),
   },
@@ -252,17 +271,21 @@ export function TaskTypesTable() {
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<Task | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
 
   // Query with filter based on status
-  const filterParam = statusFilter === "all"
-    ? undefined
-    : { is_active: statusFilter === "active" };
+  const filterParam =
+    statusFilter === "all"
+      ? undefined
+      : { is_active: statusFilter === "active" };
 
   const { taskTypes: tasks, isLoading } = useTaskTypes(filterParam);
   const { toggleTaskType, isToggling } = useToggleTaskType();
@@ -289,11 +312,13 @@ export function TaskTypesTable() {
   };
 
   const handleToggle = (task: Task) => {
-    if (window.confirm(
-      task.is_active
-        ? `Bạn có chắc muốn vô hiệu hóa loại công việc "${task.name}"?`
-        : `Bạn có chắc muốn kích hoạt loại công việc "${task.name}"?`
-    )) {
+    if (
+      window.confirm(
+        task.is_active
+          ? `Bạn có chắc muốn vô hiệu hóa loại công việc "${task.name}"?`
+          : `Bạn có chắc muốn kích hoạt loại công việc "${task.name}"?`,
+      )
+    ) {
       toggleTaskType({
         id: task.id,
         is_active: !task.is_active,
@@ -366,7 +391,11 @@ export function TaskTypesTable() {
           {/* Column Visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="Tùy chỉnh cột hiển thị">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Tùy chỉnh cột hiển thị"
+              >
                 <IconLayoutColumns className="h-4 w-4" />
                 <span className="hidden lg:inline ml-2">Tùy chỉnh cột</span>
                 <IconChevronDown className="ml-2 h-4 w-4" />
@@ -400,10 +429,14 @@ export function TaskTypesTable() {
             trigger={
               <Button variant="outline" size="sm">
                 <IconPlus className="h-4 w-4" />
-                <span className="hidden lg:inline ml-2">Thêm Loại Công Việc</span>
+                <span className="hidden lg:inline ml-2">
+                  Thêm Loại Công Việc
+                </span>
               </Button>
             }
-            title={editingTask ? "Chỉnh sửa Loại Công Việc" : "Thêm Loại Công Việc"}
+            title={
+              editingTask ? "Chỉnh sửa Loại Công Việc" : "Thêm Loại Công Việc"
+            }
             description={
               editingTask
                 ? "Cập nhật thông tin loại công việc."
@@ -422,7 +455,10 @@ export function TaskTypesTable() {
       </div>
 
       {/* Tab Content */}
-      <TabsContent value={statusFilter} className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value={statusFilter}
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         {/* Search Bar */}
         <Input
           placeholder="Tìm kiếm theo tên, danh mục hoặc mô tả..."
@@ -438,7 +474,9 @@ export function TaskTypesTable() {
           </div>
         ) : table.getRowModel().rows?.length === 0 ? (
           <div className="rounded-lg border py-8 text-center text-muted-foreground">
-            {searchQuery ? "Không tìm thấy loại công việc phù hợp" : "Chưa có loại công việc nào"}
+            {searchQuery
+              ? "Không tìm thấy loại công việc phù hợp"
+              : "Chưa có loại công việc nào"}
           </div>
         ) : (
           <>
@@ -454,15 +492,15 @@ export function TaskTypesTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === headerGroup.headers.length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                         </TableHead>
                       ))}
@@ -483,13 +521,13 @@ export function TaskTypesTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === row.getVisibleCells().length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -511,15 +549,24 @@ export function TaskTypesTable() {
               <div className="flex items-center gap-8">
                 {/* Page Size Selector */}
                 <div className="ml-8 hidden items-center gap-2 lg:flex">
-                  <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                  <Label
+                    htmlFor="rows-per-page"
+                    className="text-sm font-medium"
+                  >
                     Số dòng mỗi trang
                   </Label>
                   <Select
                     value={`${table.getState().pagination.pageSize}`}
                     onValueChange={(value) => table.setPageSize(Number(value))}
                   >
-                    <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                      <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    <SelectTrigger
+                      size="sm"
+                      className="w-20"
+                      id="rows-per-page"
+                    >
+                      <SelectValue
+                        placeholder={table.getState().pagination.pageSize}
+                      />
                     </SelectTrigger>
                     <SelectContent side="top">
                       {[10, 20, 30, 40, 50].map((pageSize) => (

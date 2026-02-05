@@ -158,13 +158,18 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/settings/account")}>
+              <DropdownMenuItem
+                onClick={() => router.push("/settings/account")}
+              >
                 <IconUserCircle />
                 Tài khoản
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} data-testid="logout-button">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              data-testid="logout-button"
+            >
               <IconLogout />
               Đăng xuất
             </DropdownMenuItem>

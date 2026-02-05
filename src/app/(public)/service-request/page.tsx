@@ -6,18 +6,27 @@
 
 "use client";
 
-import { useState } from "react";
+import { IconAlertCircle, IconCheck, IconShield } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useVerifyWarranty, useSubmitServiceRequest } from "@/hooks/use-service-request";
-import { toast } from "sonner";
-import { IconAlertCircle, IconCheck, IconShield } from "@tabler/icons-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  useSubmitServiceRequest,
+  useVerifyWarranty,
+} from "@/hooks/use-service-request";
 
 export default function ServiceRequestPage() {
   const router = useRouter();
@@ -25,14 +34,20 @@ export default function ServiceRequestPage() {
 
   // Step 1: Serial verification
   const [serial, setSerial] = useState("");
-  const { verifyWarranty, isVerifying, data: verificationResult } = useVerifyWarranty();
+  const {
+    verifyWarranty,
+    isVerifying,
+    data: verificationResult,
+  } = useVerifyWarranty();
 
   // Step 2: Customer details
   const [customerName, setCustomerName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [problemDescription, setProblemDescription] = useState("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">(
+    "pickup",
+  );
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [honeypot, setHoneypot] = useState(""); // AC 12: Spam protection
 
@@ -50,7 +65,7 @@ export default function ServiceRequestPage() {
         onError: () => {
           toast.error("Failed to verify serial number");
         },
-      }
+      },
     );
   };
 
@@ -90,17 +105,20 @@ export default function ServiceRequestPage() {
         ],
         receipt_status: "pending_receipt", // Customers request service first, send product later
         preferred_delivery_method: deliveryMethod,
-        delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
+        delivery_address:
+          deliveryMethod === "delivery" ? deliveryAddress : undefined,
         honeypot, // AC 12: Spam protection
       },
       {
         onSuccess: (result) => {
-          router.push(`/service-request/success?token=${result.tracking_token}`);
+          router.push(
+            `/service-request/success?token=${result.tracking_token}`,
+          );
         },
         onError: (error: any) => {
           toast.error(error.message || "Failed to submit request");
         },
-      }
+      },
     );
   };
 
@@ -109,7 +127,9 @@ export default function ServiceRequestPage() {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold">Yêu cầu dịch vụ bảo hành</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            Yêu cầu dịch vụ bảo hành
+          </h1>
           <p className="text-muted-foreground">
             Gửi yêu cầu dịch vụ trực tuyến
           </p>
@@ -135,7 +155,10 @@ export default function ServiceRequestPage() {
                     onChange={(e) => setSerial(e.target.value.toUpperCase())}
                     onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   />
-                  <Button onClick={handleVerify} disabled={!serial || isVerifying}>
+                  <Button
+                    onClick={handleVerify}
+                    disabled={!serial || isVerifying}
+                  >
                     {isVerifying ? "Đang xác thực..." : "Xác thực"}
                   </Button>
                 </div>
@@ -146,27 +169,42 @@ export default function ServiceRequestPage() {
                   {!verificationResult.found ? (
                     <Alert variant="destructive">
                       <IconAlertCircle className="h-4 w-4" />
-                      <AlertDescription>{verificationResult.message}</AlertDescription>
+                      <AlertDescription>
+                        {verificationResult.message}
+                      </AlertDescription>
                     </Alert>
                   ) : (
-                    "product" in verificationResult && "warranty" in verificationResult && (
+                    "product" in verificationResult &&
+                    "warranty" in verificationResult && (
                       <div className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold">{verificationResult.product.name}</h3>
+                            <h3 className="font-semibold">
+                              {verificationResult.product.name}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
-                              {verificationResult.product.brand} - {verificationResult.product.serial}
+                              {verificationResult.product.brand} -{" "}
+                              {verificationResult.product.serial}
                             </p>
                           </div>
-                          <IconShield className={`h-6 w-6 ${verificationResult.eligible ? "text-green-500" : "text-orange-500"}`} />
+                          <IconShield
+                            className={`h-6 w-6 ${verificationResult.eligible ? "text-green-500" : "text-orange-500"}`}
+                          />
                         </div>
 
-                        <Alert variant={verificationResult.eligible ? "default" : "default"}>
+                        <Alert
+                          variant={
+                            verificationResult.eligible ? "default" : "default"
+                          }
+                        >
                           <AlertDescription>
-                            <strong>Trạng thái:</strong> {verificationResult.message}
-                            {verificationResult.warranty.daysRemaining !== null && (
+                            <strong>Trạng thái:</strong>{" "}
+                            {verificationResult.message}
+                            {verificationResult.warranty.daysRemaining !==
+                              null && (
                               <span className="block mt-1 text-sm">
-                                Còn {verificationResult.warranty.daysRemaining} ngày bảo hành
+                                Còn {verificationResult.warranty.daysRemaining}{" "}
+                                ngày bảo hành
                               </span>
                             )}
                           </AlertDescription>
@@ -237,23 +275,31 @@ export default function ServiceRequestPage() {
                   rows={4}
                   required
                 />
-                {problemDescription.length > 0 && problemDescription.length < 20 && (
-                  <p className="text-sm text-destructive mt-1">
-                    Tối thiểu 20 ký tự ({problemDescription.length}/20)
-                  </p>
-                )}
+                {problemDescription.length > 0 &&
+                  problemDescription.length < 20 && (
+                    <p className="text-sm text-destructive mt-1">
+                      Tối thiểu 20 ký tự ({problemDescription.length}/20)
+                    </p>
+                  )}
               </div>
 
               <div>
                 <Label>Phương thức nhận hàng *</Label>
-                <RadioGroup value={deliveryMethod} onValueChange={(v: any) => setDeliveryMethod(v)}>
+                <RadioGroup
+                  value={deliveryMethod}
+                  onValueChange={(v: any) => setDeliveryMethod(v)}
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pickup" id="pickup" />
-                    <Label htmlFor="pickup" className="font-normal">Tôi sẽ đến lấy tại trung tâm</Label>
+                    <Label htmlFor="pickup" className="font-normal">
+                      Tôi sẽ đến lấy tại trung tâm
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="delivery" id="delivery" />
-                    <Label htmlFor="delivery" className="font-normal">Giao đến địa chỉ của tôi</Label>
+                    <Label htmlFor="delivery" className="font-normal">
+                      Giao đến địa chỉ của tôi
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>

@@ -5,47 +5,65 @@
  * Allows viewing and editing stock transfer details
  */
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
-import { PageHeader } from "@/components/page-header";
-import { TransferDetailHeader } from "@/components/inventory/documents/transfer-detail-header";
-import { TransferItemsTable } from "@/components/inventory/documents/transfer-items-table";
-import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
-import { TaskCard } from "@/components/tasks/task-card";
-import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ListTodo } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useState } from "react";
 import { toast } from "sonner";
+import { TransferDetailHeader } from "@/components/inventory/documents/transfer-detail-header";
+import { TransferItemsTable } from "@/components/inventory/documents/transfer-items-table";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  BlockTaskDialog,
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
+import { TaskCard } from "@/components/tasks/task-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
 
 interface TransferDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function TransferDetailPage({ params }: TransferDetailPageProps) {
+export default function TransferDetailPage({
+  params,
+}: TransferDetailPageProps) {
   const router = useRouter();
   const { id } = use(params);
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
 
   // Task action dialog state
-  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
-  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
 
-  const { data: transfer, isLoading, refetch } = trpc.inventory.transfers.getById.useQuery({ id });
-  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
-    { entityType: "inventory_transfer", entityId: id },
-    { refetchInterval: 30000 }
-  );
+  const {
+    data: transfer,
+    isLoading,
+    refetch,
+  } = trpc.inventory.transfers.getById.useQuery({ id });
+  const { data: taskData, refetch: refetchTasks } =
+    trpc.tasks.getEntityTasks.useQuery(
+      { entityType: "inventory_transfer", entityId: id },
+      { refetchInterval: 30000 },
+    );
   const tasks = taskData?.tasks || [];
 
   // Task mutations
@@ -159,7 +177,7 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
 
   // Check if all items have complete serials
   const allItemsComplete = transfer.items?.every(
-    (item: any) => (item.serials?.length || 0) === item.quantity
+    (item: any) => (item.serials?.length || 0) === item.quantity,
   );
 
   return (
@@ -199,7 +217,12 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <ListTodo className="h-4 w-4" />
-                      Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                      Công việc (
+                      {
+                        tasks.filter((t: any) => t.status === "completed")
+                          .length
+                      }
+                      /{tasks.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -208,8 +231,12 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                         key={task.id}
                         task={task}
                         onStartTask={handleStartTask}
-                        onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
-                        onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                        onCompleteTask={(taskId) =>
+                          handleCompleteTask(taskId, task.name)
+                        }
+                        onBlockTask={(taskId) =>
+                          handleBlockTask(taskId, task.name)
+                        }
                         onUnblockTask={handleUnblockTask}
                         isLoading={
                           startTaskMutation.isPending ||
@@ -223,17 +250,22 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
                 </Card>
               )}
 
-              <TransferItemsTable transfer={transfer} onSerialsSelected={() => refetch()} />
+              <TransferItemsTable
+                transfer={transfer}
+                onSerialsSelected={() => refetch()}
+              />
 
-              {!allItemsComplete && (transfer.status === "draft" || transfer.status === "in_transit") && (
-                <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700 p-4">
-                  <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                    {transfer.status === "draft"
-                      ? "Vui lòng chọn đầy đủ số serial cho tất cả sản phẩm trước khi gửi duyệt"
-                      : "Vui lòng chọn đầy đủ số serial cho tất cả sản phẩm trước khi xác nhận nhận hàng"}
+              {!allItemsComplete &&
+                (transfer.status === "draft" ||
+                  transfer.status === "in_transit") && (
+                  <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700 p-4">
+                    <div className="text-sm text-yellow-800 dark:text-yellow-300">
+                      {transfer.status === "draft"
+                        ? "Vui lòng chọn đầy đủ số serial cho tất cả sản phẩm trước khi gửi duyệt"
+                        : "Vui lòng chọn đầy đủ số serial cho tất cả sản phẩm trước khi xác nhận nhận hàng"}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>
@@ -255,7 +287,8 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
       <CompleteTaskDialog
         open={completeTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleCompleteTaskConfirm}
         taskName={completeTaskDialog.taskName}
@@ -265,7 +298,8 @@ export default function TransferDetailPage({ params }: TransferDetailPageProps) 
       <BlockTaskDialog
         open={blockTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleBlockTaskConfirm}
         taskName={blockTaskDialog.taskName}

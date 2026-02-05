@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
+import { z } from "zod";
+import { getRemainingDays, getWarrantyStatus } from "@/utils/warranty";
+import { publicProcedure, router } from "../trpc";
 
 /**
  * Story 1.7: Physical Product Master Data with Serial Tracking
@@ -13,10 +13,15 @@ const createProductSchema = z.object({
   serial_number: z
     .string()
     .min(5, "Serial number must be at least 5 characters")
-    .regex(/^[A-Z0-9_-]+$/, "Serial number must be alphanumeric (A-Z, 0-9, dash, underscore)")
+    .regex(
+      /^[A-Z0-9_-]+$/,
+      "Serial number must be alphanumeric (A-Z, 0-9, dash, underscore)",
+    )
     .transform((val) => val.toUpperCase()),
   product_id: z.string().uuid("Product ID must be a valid UUID"),
-  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID"),
+  virtual_warehouse_id: z
+    .string()
+    .uuid("Virtual Warehouse ID must be a valid UUID"),
   condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]),
   manufacturer_warranty_end_date: z.string().optional(),
   user_warranty_end_date: z.string().optional(),
@@ -37,8 +42,13 @@ const updateProductSchema = z.object({
     .transform((val) => val.toUpperCase())
     .optional(),
   product_id: z.string().uuid().optional(),
-  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
-  condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
+  virtual_warehouse_id: z
+    .string()
+    .uuid("Virtual Warehouse ID must be a valid UUID")
+    .optional(),
+  condition: z
+    .enum(["new", "refurbished", "used", "faulty", "for_parts"])
+    .optional(),
   manufacturer_warranty_end_date: z.string().nullable().optional(),
   user_warranty_end_date: z.string().nullable().optional(),
   purchase_date: z.string().nullable().optional(),
@@ -51,10 +61,19 @@ const updateProductSchema = z.object({
 
 const listProductsSchema = z.object({
   product_id: z.string().uuid("Product ID must be a valid UUID").optional(),
-  virtual_warehouse_id: z.string().uuid("Virtual Warehouse ID must be a valid UUID").optional(),
-  condition: z.enum(["new", "refurbished", "used", "faulty", "for_parts"]).optional(),
-  status: z.enum(["draft", "active", "transferring", "issued", "disposed"]).optional(),
-  warranty_status: z.enum(["active", "expired", "expiring_soon", "no_warranty"]).optional(),
+  virtual_warehouse_id: z
+    .string()
+    .uuid("Virtual Warehouse ID must be a valid UUID")
+    .optional(),
+  condition: z
+    .enum(["new", "refurbished", "used", "faulty", "for_parts"])
+    .optional(),
+  status: z
+    .enum(["draft", "active", "transferring", "issued", "disposed"])
+    .optional(),
+  warranty_status: z
+    .enum(["active", "expired", "expiring_soon", "no_warranty"])
+    .optional(),
   search: z.string().optional(),
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0),
@@ -164,11 +183,21 @@ export const inventoryRouter = router({
         updates: z.array(
           z.object({
             serial_number: z.string().min(1, "Serial number is required"),
-            manufacturer_warranty_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Manufacturer warranty date must be in YYYY-MM-DD format"),
-            user_warranty_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "User warranty date must be in YYYY-MM-DD format"),
-          })
+            manufacturer_warranty_end_date: z
+              .string()
+              .regex(
+                /^\d{4}-\d{2}-\d{2}$/,
+                "Manufacturer warranty date must be in YYYY-MM-DD format",
+              ),
+            user_warranty_end_date: z
+              .string()
+              .regex(
+                /^\d{4}-\d{2}-\d{2}$/,
+                "User warranty date must be in YYYY-MM-DD format",
+              ),
+          }),
         ),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const results = {
@@ -199,7 +228,8 @@ export const inventoryRouter = router({
           const { error: updateError } = await ctx.supabaseAdmin
             .from("physical_products")
             .update({
-              manufacturer_warranty_end_date: update.manufacturer_warranty_end_date,
+              manufacturer_warranty_end_date:
+                update.manufacturer_warranty_end_date,
               user_warranty_end_date: update.user_warranty_end_date,
             })
             .eq("id", product.id);
@@ -219,7 +249,8 @@ export const inventoryRouter = router({
         } catch (error) {
           results.errors.push({
             serial_number: update.serial_number,
-            error: error instanceof Error ? error.message : "Lỗi không xác định",
+            error:
+              error instanceof Error ? error.message : "Lỗi không xác định",
           });
         }
       }
@@ -247,18 +278,16 @@ export const inventoryRouter = router({
           .select("id")
           .or(`name.ilike.%${input.search}%,sku.ilike.%${input.search}%`);
 
-        matchingProductIds = matchingProducts?.map(p => p.id) || [];
+        matchingProductIds = matchingProducts?.map((p) => p.id) || [];
       }
 
-      let query = ctx.supabaseAdmin
-        .from("physical_products")
-        .select(
-          `
+      let query = ctx.supabaseAdmin.from("physical_products").select(
+        `
           *,
           product:products!inner(id, name, sku, brand:brands(name)),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
-        `
-        );
+        `,
+      );
 
       // Apply filters
       if (input.product_id) {
@@ -280,7 +309,9 @@ export const inventoryRouter = router({
       if (input.search) {
         // Search by serial number OR product_id in matching products
         if (matchingProductIds && matchingProductIds.length > 0) {
-          query = query.or(`serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(',')})`);
+          query = query.or(
+            `serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(",")})`,
+          );
         } else {
           // Only search by serial if no products matched
           query = query.ilike("serial_number", `%${input.search}%`);
@@ -308,7 +339,10 @@ export const inventoryRouter = router({
         countQuery = countQuery.eq("product_id", input.product_id);
       }
       if (input.virtual_warehouse_id) {
-        countQuery = countQuery.eq("virtual_warehouse_id", input.virtual_warehouse_id);
+        countQuery = countQuery.eq(
+          "virtual_warehouse_id",
+          input.virtual_warehouse_id,
+        );
       }
       if (input.condition) {
         countQuery = countQuery.eq("condition", input.condition);
@@ -316,7 +350,9 @@ export const inventoryRouter = router({
       if (input.search) {
         // Same search logic for count
         if (matchingProductIds && matchingProductIds.length > 0) {
-          countQuery = countQuery.or(`serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(',')})`);
+          countQuery = countQuery.or(
+            `serial_number.ilike.%${input.search}%,product_id.in.(${matchingProductIds.join(",")})`,
+          );
         } else {
           countQuery = countQuery.ilike("serial_number", `%${input.search}%`);
         }
@@ -333,17 +369,17 @@ export const inventoryRouter = router({
   /**
    * AC 2.4: Get single product by ID or serial number
    */
-  getProduct: publicProcedure.input(getProductSchema).query(async ({ ctx, input }) => {
-    if (!input.id && !input.serial_number) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Must provide either id or serial_number",
-      });
-    }
+  getProduct: publicProcedure
+    .input(getProductSchema)
+    .query(async ({ ctx, input }) => {
+      if (!input.id && !input.serial_number) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Must provide either id or serial_number",
+        });
+      }
 
-    let query = ctx.supabaseAdmin
-      .from("physical_products")
-      .select(
+      let query = ctx.supabaseAdmin.from("physical_products").select(
         `
         *,
         product:products(
@@ -369,32 +405,32 @@ export const inventoryRouter = router({
           ticket_number,
           status
         )
-      `
+      `,
       );
 
-    if (input.id) {
-      query = query.eq("id", input.id);
-    } else if (input.serial_number) {
-      query = query.eq("serial_number", input.serial_number);
-    }
+      if (input.id) {
+        query = query.eq("id", input.id);
+      } else if (input.serial_number) {
+        query = query.eq("serial_number", input.serial_number);
+      }
 
-    const { data, error } = await query.single();
+      const { data, error } = await query.single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
+      if (error) {
+        if (error.code === "PGRST116") {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Product not found",
+          });
+        }
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Product not found",
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
         });
       }
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error.message,
-      });
-    }
 
-    return data;
-  }),
+      return data;
+    }),
 
   /**
    * AC 2.5: Bulk import products from CSV
@@ -403,7 +439,7 @@ export const inventoryRouter = router({
     .input(
       z.object({
         products: z.array(createProductSchema),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const results = {
@@ -429,7 +465,9 @@ export const inventoryRouter = router({
         .select("serial_number")
         .in("serial_number", serialNumbers);
 
-      const existingSerials = new Set(existingProducts?.map((p) => p.serial_number) || []);
+      const existingSerials = new Set(
+        existingProducts?.map((p) => p.serial_number) || [],
+      );
 
       // Process each product
       for (let i = 0; i < input.products.length; i++) {
@@ -438,15 +476,21 @@ export const inventoryRouter = router({
         try {
           // Check for duplicate serial in database
           if (existingSerials.has(productData.serial_number)) {
-            throw new Error(`Serial number already exists in database: ${productData.serial_number}`);
+            throw new Error(
+              `Serial number already exists in database: ${productData.serial_number}`,
+            );
           }
 
           // Check for duplicate serial in current batch
           if (duplicatesInBatch.has(productData.serial_number)) {
             // Only report error on second occurrence
-            const firstOccurrence = serialNumbers.indexOf(productData.serial_number);
+            const firstOccurrence = serialNumbers.indexOf(
+              productData.serial_number,
+            );
             if (firstOccurrence !== i) {
-              throw new Error(`Duplicate serial number in batch: ${productData.serial_number}`);
+              throw new Error(
+                `Duplicate serial number in batch: ${productData.serial_number}`,
+              );
             }
           }
 
@@ -457,7 +501,8 @@ export const inventoryRouter = router({
               product_id: productData.product_id,
               virtual_warehouse_id: productData.virtual_warehouse_id,
               condition: productData.condition,
-              manufacturer_warranty_end_date: productData.manufacturer_warranty_end_date,
+              manufacturer_warranty_end_date:
+                productData.manufacturer_warranty_end_date,
               user_warranty_end_date: productData.user_warranty_end_date,
               purchase_date: productData.purchase_date,
               supplier_id: productData.supplier_id,
@@ -499,7 +544,7 @@ export const inventoryRouter = router({
   verifySerial: publicProcedure
     .input(z.object({ serial_number: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const { data: product, error} = await ctx.supabaseAdmin
+      const { data: product, error } = await ctx.supabaseAdmin
         .from("physical_products")
         .select(
           `
@@ -507,7 +552,7 @@ export const inventoryRouter = router({
           product:products(*),
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(*, physical_warehouse:physical_warehouses(*)),
           current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
-        `
+        `,
         )
         .eq("serial_number", input.serial_number.toUpperCase())
         .single();
@@ -526,7 +571,10 @@ export const inventoryRouter = router({
       }
 
       // Calculate warranty status - prioritize user warranty, fallback to manufacturer
-      const warrantyEndDate = product.user_warranty_end_date || product.manufacturer_warranty_end_date || null;
+      const warrantyEndDate =
+        product.user_warranty_end_date ||
+        product.manufacturer_warranty_end_date ||
+        null;
       const warrantyStatus = getWarrantyStatus(warrantyEndDate);
       const daysRemaining = warrantyEndDate
         ? getRemainingDays(warrantyEndDate)
@@ -544,7 +592,8 @@ export const inventoryRouter = router({
           endDate: warrantyEndDate,
         },
         location: {
-          physical: (product.virtual_warehouse as any)?.physical_warehouse || null,
+          physical:
+            (product.virtual_warehouse as any)?.physical_warehouse || null,
           virtual: product.virtual_warehouse,
         },
         inService: product.current_ticket
@@ -560,7 +609,13 @@ export const inventoryRouter = router({
     .input(
       z.object({
         product_id: z.string().uuid(),
-        movement_type: z.enum(["receipt", "transfer", "assignment", "return", "disposal"]),
+        movement_type: z.enum([
+          "receipt",
+          "transfer",
+          "assignment",
+          "return",
+          "disposal",
+        ]),
         from_physical_warehouse_id: z.string().uuid().optional(),
         to_physical_warehouse_id: z.string().uuid().optional(),
         from_virtual_warehouse_id: z.string().uuid().optional(),
@@ -568,7 +623,7 @@ export const inventoryRouter = router({
         reference_ticket_id: z.string().uuid().optional(),
         notes: z.string().optional(),
         force: z.boolean().default(false),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Check if product is in service
@@ -578,7 +633,7 @@ export const inventoryRouter = router({
           `
           *,
           current_ticket:service_tickets!current_ticket_id(id, ticket_number, status)
-        `
+        `,
         )
         .eq("id", input.product_id)
         .single();
@@ -655,7 +710,7 @@ export const inventoryRouter = router({
         product_id: z.string().uuid(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const { data, error, count } = await ctx.supabaseAdmin
@@ -668,7 +723,7 @@ export const inventoryRouter = router({
           ticket:service_tickets(ticket_number),
           moved_by:profiles(id, full_name)
         `,
-          { count: "exact" }
+          { count: "exact" },
         )
         .eq("physical_product_id", input.product_id)
         .order("created_at", { ascending: false })
@@ -694,7 +749,7 @@ export const inventoryRouter = router({
       z.object({
         serial_number: z.string(),
         ticket_id: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Find product
@@ -761,7 +816,7 @@ export const inventoryRouter = router({
         shipping_date: z.string().optional(),
         tracking_number: z.string().optional(),
         notes: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get authenticated user
@@ -832,17 +887,23 @@ export const inventoryRouter = router({
       } = await ctx.supabaseClient.auth.getUser();
 
       if (authError || !user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in",
+        });
       }
 
       const { data, error } = await ctx.supabaseAdmin
-        .from('system_settings')
-        .select('value')
-        .eq('key', input.key)
+        .from("system_settings")
+        .select("value")
+        .eq("key", input.key)
         .single();
 
       if (error) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to fetch setting: ${error.message}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch setting: ${error.message}`,
+        });
       }
 
       return data?.value || null;
@@ -857,30 +918,49 @@ export const inventoryRouter = router({
       } = await ctx.supabaseClient.auth.getUser();
 
       if (authError || !user) {
-        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'You must be logged in' });
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in",
+        });
       }
 
       // Check profile and role
       const { data: profile, error: profileError } = await ctx.supabaseAdmin
-        .from('profiles')
-        .select('id, role')
-        .eq('user_id', user.id)
+        .from("profiles")
+        .select("id, role")
+        .eq("user_id", user.id)
         .single();
 
       if (profileError || !profile) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch user profile' });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch user profile",
+        });
       }
 
       if (!["admin", "manager"].includes(profile.role)) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins and managers can update settings' });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins and managers can update settings",
+        });
       }
 
       const { error } = await ctx.supabaseAdmin
-        .from('system_settings')
-        .upsert({ key: input.key, value: input.value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        .from("system_settings")
+        .upsert(
+          {
+            key: input.key,
+            value: input.value,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" },
+        );
 
       if (error) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to update setting: ${error.message}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to update setting: ${error.message}`,
+        });
       }
 
       return { success: true };
@@ -891,7 +971,7 @@ export const inventoryRouter = router({
     .input(
       z.object({
         serial_numbers: z.array(z.string()),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get authenticated user
@@ -930,7 +1010,7 @@ export const inventoryRouter = router({
 
       // Remove duplicates from input
       const uniqueSerials = Array.from(new Set(input.serial_numbers));
-      
+
       // Query all serials at once
       const { data: products, error: queryError } = await ctx.supabaseAdmin
         .from("physical_products")
@@ -957,7 +1037,7 @@ export const inventoryRouter = router({
 
       // Create a map of serial -> product
       const productMap = new Map(
-        products?.map((p) => [p.serial_number, p]) || []
+        products?.map((p) => [p.serial_number, p]) || [],
       );
 
       // Check for duplicates in input
@@ -1027,7 +1107,7 @@ export const inventoryRouter = router({
       z.object({
         batch_id: z.string().uuid(),
         product_ids: z.array(z.string().uuid()),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get authenticated user
@@ -1106,7 +1186,9 @@ export const inventoryRouter = router({
       // Fetch all products at once
       const { data: products, error: productsError } = await ctx.supabaseAdmin
         .from("physical_products")
-        .select("id, serial_number, product_id, rma_batch_id, virtual_warehouse_id")
+        .select(
+          "id, serial_number, product_id, rma_batch_id, virtual_warehouse_id",
+        )
         .in("id", input.product_ids);
 
       if (productsError) {
@@ -1117,8 +1199,12 @@ export const inventoryRouter = router({
       }
 
       // Validate and collect valid products
-      const validProducts: Array<{ id: string; serial_number: string; product_id: string }> = [];
-      const productIdSet = new Set(products?.map(p => p.id) || []);
+      const validProducts: Array<{
+        id: string;
+        serial_number: string;
+        product_id: string;
+      }> = [];
+      const productIdSet = new Set(products?.map((p) => p.id) || []);
 
       for (const productId of input.product_ids) {
         if (!productIdSet.has(productId)) {
@@ -1126,16 +1212,20 @@ export const inventoryRouter = router({
           continue;
         }
 
-        const product = products?.find(p => p.id === productId);
+        const product = products?.find((p) => p.id === productId);
         if (!product) continue;
 
         if (product.rma_batch_id) {
-          errors.push(`Product ${product.serial_number} already in another RMA batch`);
+          errors.push(
+            `Product ${product.serial_number} already in another RMA batch`,
+          );
           continue;
         }
 
         if (product.virtual_warehouse_id !== deadStockWarehouse.id) {
-          errors.push(`Product ${product.serial_number} must be in dead_stock warehouse`);
+          errors.push(
+            `Product ${product.serial_number} must be in dead_stock warehouse`,
+          );
           continue;
         }
 
@@ -1155,7 +1245,7 @@ export const inventoryRouter = router({
       }
 
       // Update rma_batch_id, rma_date for valid products (no transfer yet - transfer happens at complete)
-      const validProductIds = validProducts.map(p => p.id);
+      const validProductIds = validProducts.map((p) => p.id);
       const { error: updateError } = await ctx.supabaseAdmin
         .from("physical_products")
         .update({
@@ -1182,7 +1272,7 @@ export const inventoryRouter = router({
         batch_id: z.string().uuid(),
         shipping_date: z.string().optional(),
         tracking_number: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get authenticated user
@@ -1278,7 +1368,7 @@ export const inventoryRouter = router({
         shipping_date: z.string().optional(),
         tracking_number: z.string().optional(),
         notes: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const {
@@ -1335,10 +1425,11 @@ export const inventoryRouter = router({
       }
 
       // Get all products in batch
-      const { data: batchProducts, error: productsError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select("id, serial_number, product_id, virtual_warehouse_id")
-        .eq("rma_batch_id", input.batch_id);
+      const { data: batchProducts, error: productsError } =
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .select("id, serial_number, product_id, virtual_warehouse_id")
+          .eq("rma_batch_id", input.batch_id);
 
       if (productsError || !batchProducts || batchProducts.length === 0) {
         throw new TRPCError({
@@ -1362,7 +1453,10 @@ export const inventoryRouter = router({
         });
       }
 
-      const shippingDate = input.shipping_date || batch.shipping_date || new Date().toISOString().split("T")[0];
+      const shippingDate =
+        input.shipping_date ||
+        batch.shipping_date ||
+        new Date().toISOString().split("T")[0];
 
       // Group products by product_id
       const productGroups = new Map<string, typeof batchProducts>();
@@ -1408,12 +1502,15 @@ export const inventoryRouter = router({
           .single();
 
         if (itemError || !issueItem) {
-          console.error(`Failed to create issue item for product ${productId}:`, itemError);
+          console.error(
+            `Failed to create issue item for product ${productId}:`,
+            itemError,
+          );
           continue;
         }
 
         // Insert issue serials (trigger will update stock - mark as issued)
-        const serialsToInsert = groupProducts.map(p => ({
+        const serialsToInsert = groupProducts.map((p) => ({
           issue_item_id: issueItem.id,
           physical_product_id: p.id,
           serial_number: p.serial_number,
@@ -1433,7 +1530,8 @@ export const inventoryRouter = router({
         status: "completed",
       };
       if (input.shipping_date) updateData.shipping_date = input.shipping_date;
-      if (input.tracking_number) updateData.tracking_number = input.tracking_number;
+      if (input.tracking_number)
+        updateData.tracking_number = input.tracking_number;
       if (input.notes) updateData.notes = input.notes;
 
       const { data, error } = await ctx.supabaseAdmin
@@ -1459,7 +1557,7 @@ export const inventoryRouter = router({
       z.object({
         batch_id: z.string().uuid(),
         product_id: z.string().uuid(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get authenticated user
@@ -1493,7 +1591,8 @@ export const inventoryRouter = router({
       if (!["admin", "manager"].includes(profile.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only admins and managers can remove products from RMA batches",
+          message:
+            "Only admins and managers can remove products from RMA batches",
         });
       }
 
@@ -1564,7 +1663,7 @@ export const inventoryRouter = router({
       z.object({
         batch_id: z.string().uuid(),
         reason: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const {
@@ -1665,10 +1764,12 @@ export const inventoryRouter = router({
   getRMABatches: publicProcedure
     .input(
       z.object({
-        status: z.enum(["draft", "submitted", "completed", "cancelled"]).optional(),
+        status: z
+          .enum(["draft", "submitted", "completed", "cancelled"])
+          .optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       // Get authenticated user
@@ -1706,15 +1807,13 @@ export const inventoryRouter = router({
         });
       }
 
-      let query = ctx.supabaseAdmin
-        .from("rma_batches")
-        .select(
-          `
+      let query = ctx.supabaseAdmin.from("rma_batches").select(
+        `
           *,
           created_by:profiles!rma_batches_created_by_id_fkey(full_name)
         `,
-          { count: "exact" }
-        );
+        { count: "exact" },
+      );
 
       if (input.status) {
         query = query.eq("status", input.status);
@@ -1743,7 +1842,7 @@ export const inventoryRouter = router({
             ...batch,
             product_count: productCount || 0,
           };
-        })
+        }),
       );
 
       return {
@@ -1776,7 +1875,7 @@ export const inventoryRouter = router({
           `
           *,
           created_by:profiles!rma_batches_created_by_id_fkey(full_name)
-        `
+        `,
         )
         .eq("id", input.batch_id)
         .single();
@@ -1796,10 +1895,11 @@ export const inventoryRouter = router({
       }
 
       // Get products in batch - query directly from physical_products
-      const { data: batchProducts, error: productsError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select(
-          `
+      const { data: batchProducts, error: productsError } =
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .select(
+            `
           id,
           serial_number,
           condition,
@@ -1812,9 +1912,9 @@ export const inventoryRouter = router({
             sku,
             type
           )
-        `
-        )
-        .eq("rma_batch_id", input.batch_id);
+        `,
+          )
+          .eq("rma_batch_id", input.batch_id);
 
       if (productsError) {
         throw new TRPCError({

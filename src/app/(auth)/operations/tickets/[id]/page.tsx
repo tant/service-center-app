@@ -1,5 +1,24 @@
+import {
+  IconCalendar,
+  IconCircleCheck,
+  IconClipboardText,
+  IconCurrencyDollar,
+  IconEdit,
+  IconMail,
+  IconPackage,
+  IconPhone,
+  IconRefresh,
+  IconTool,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { TaskListAccordion } from "@/components/shared/task-list-accordion";
+import { TicketActions } from "@/components/ticket-actions";
+import { TicketComments } from "@/components/ticket-comments";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,26 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/server";
-import {
-  IconEdit,
-  IconUser,
-  IconPhone,
-  IconMail,
-  IconPackage,
-  IconCalendar,
-  IconClipboardText,
-  IconTool,
-  IconCurrencyDollar,
-  IconCircleCheck,
-  IconRefresh,
-  IconX,
-} from "@tabler/icons-react";
-import Link from "next/link";
-import { TicketComments } from "@/components/ticket-comments";
-import { TaskListAccordion } from "@/components/shared/task-list-accordion";
-import { TicketActions } from "@/components/ticket-actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;

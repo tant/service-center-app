@@ -5,6 +5,9 @@
 
 "use client";
 
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 
 interface EmailContentModalProps {
   email: any;
@@ -32,19 +32,17 @@ export function EmailContentModal({
     email.status === "sent"
       ? "bg-green-500"
       : email.status === "failed"
-      ? "bg-red-500"
-      : email.status === "pending"
-      ? "bg-yellow-500"
-      : "bg-gray-500";
+        ? "bg-red-500"
+        : email.status === "pending"
+          ? "bg-yellow-500"
+          : "bg-gray-500";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Chi tiết email</DialogTitle>
-          <DialogDescription>
-            ID: {email.id}
-          </DialogDescription>
+          <DialogDescription>ID: {email.id}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -80,9 +78,7 @@ export function EmailContentModal({
             </div>
             {email.error_message && (
               <div className="col-span-2">
-                <div className="text-sm font-medium mb-1 text-red-600">
-                  Lỗi
-                </div>
+                <div className="text-sm font-medium mb-1 text-red-600">Lỗi</div>
                 <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
                   {email.error_message}
                 </div>
@@ -99,9 +95,7 @@ export function EmailContentModal({
           {/* Email Content */}
           <div>
             <div className="text-sm font-medium mb-2">Chủ đề</div>
-            <div className="p-3 bg-muted rounded-lg">
-              {email.subject}
-            </div>
+            <div className="p-3 bg-muted rounded-lg">{email.subject}</div>
           </div>
 
           <Tabs defaultValue="html" className="w-full">

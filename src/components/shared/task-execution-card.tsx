@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  Play,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useUpdateTaskStatus, useTaskDependencies } from "@/hooks/use-workflow";
-import { TaskStatusBadge } from "./task-status-badge";
+import { useState } from "react";
 import { TaskCompletionModal } from "@/components/modals/task-completion-modal";
-import { TaskDependencyIndicator } from "./task-dependency-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, Play, CheckCircle, XCircle, AlertCircle, ChevronRight } from "lucide-react";
+import { useTaskDependencies, useUpdateTaskStatus } from "@/hooks/use-workflow";
+import { TaskDependencyIndicator } from "./task-dependency-indicator";
+import { TaskStatusBadge } from "./task-status-badge";
 
-type TaskStatus = "pending" | "in_progress" | "completed" | "blocked" | "skipped";
+type TaskStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "blocked"
+  | "skipped";
 
 interface Task {
   id: string;
@@ -56,9 +68,10 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
   const { dependencies } = useTaskDependencies(task.id);
 
   // Calculate if task is locked or has warning
-  const incompleteTasks = dependencies?.prerequisites?.filter(
-    (prereq) => prereq.status !== "completed" && prereq.status !== "skipped"
-  ) || [];
+  const incompleteTasks =
+    dependencies?.prerequisites?.filter(
+      (prereq) => prereq.status !== "completed" && prereq.status !== "skipped",
+    ) || [];
 
   const enforceSequence = dependencies?.enforce_sequence ?? true;
   const isLocked = enforceSequence && incompleteTasks.length > 0;
@@ -152,17 +165,13 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
             {task.estimated_duration_minutes && (
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                <span>
-                  Ước tính: {task.estimated_duration_minutes} phút
-                </span>
+                <span>Ước tính: {task.estimated_duration_minutes} phút</span>
               </div>
             )}
             {task.actual_duration_minutes && (
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                <span>
-                  Thực tế: {task.actual_duration_minutes} phút
-                </span>
+                <span>Thực tế: {task.actual_duration_minutes} phút</span>
               </div>
             )}
           </div>
@@ -180,12 +189,16 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
           {/* Assigned to */}
           {task.assigned_to && (
             <div className="text-sm text-muted-foreground">
-              Phân công cho: <span className="font-medium">{task.assigned_to.full_name}</span>
+              Phân công cho:{" "}
+              <span className="font-medium">{task.assigned_to.full_name}</span>
             </div>
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-2 pt-2"
+            onClick={(e) => e.stopPropagation()}
+          >
             {task.status === "pending" && (
               <Button
                 onClick={handleStartTask}
@@ -205,7 +218,11 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
                   disabled={isUpdating || isLocked}
                   size="sm"
                   className="flex-1"
-                  title={isLocked ? "Hoàn thành các công việc trước đó để mở khóa" : ""}
+                  title={
+                    isLocked
+                      ? "Hoàn thành các công việc trước đó để mở khóa"
+                      : ""
+                  }
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Hoàn thành
@@ -237,7 +254,9 @@ export function TaskExecutionCard({ task }: TaskExecutionCardProps) {
 
             {task.status === "completed" && (
               <div className="text-sm text-muted-foreground italic">
-                Đã hoàn thành {task.completed_at && `vào ${new Date(task.completed_at).toLocaleString('vi-VN')}`}
+                Đã hoàn thành{" "}
+                {task.completed_at &&
+                  `vào ${new Date(task.completed_at).toLocaleString("vi-VN")}`}
               </div>
             )}
           </div>

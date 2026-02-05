@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { useRouter } from "next/navigation";
+import * as React from "react";
 import { PageHeader } from "@/components/page-header";
 import { TemplateListTable } from "@/components/tables/template-list-table";
 import { useTaskTemplates } from "@/hooks/use-workflow";
@@ -9,7 +9,9 @@ import { useTaskTemplates } from "@/hooks/use-workflow";
 export default function TemplatesPage() {
   const router = useRouter();
 
-  const { templates: workflows, isLoading } = useTaskTemplates({ is_active: true });
+  const { templates: workflows, isLoading } = useTaskTemplates({
+    is_active: true,
+  });
 
   const handleCreateNew = () => {
     router.push("/workflows/new");

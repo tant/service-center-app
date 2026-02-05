@@ -5,16 +5,16 @@
  * AC 5.3: Warehouse form drawer for creating/editing physical warehouses
  */
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { FormDrawer } from "@/components/ui/form-drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useCreatePhysicalWarehouse,
   useUpdatePhysicalWarehouse,
 } from "@/hooks/use-warehouse";
-import { FormDrawer } from "@/components/ui/form-drawer";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import type { PhysicalWarehouse } from "@/types/warehouse";
 
 interface WarehouseFormModalProps {
@@ -104,7 +104,7 @@ export function WarehouseFormModal({
           onSuccess: () => {
             onClose();
           },
-        }
+        },
       );
     } else {
       createWarehouse(
@@ -119,7 +119,7 @@ export function WarehouseFormModal({
           onSuccess: () => {
             onClose();
           },
-        }
+        },
       );
     }
   };
@@ -141,115 +141,111 @@ export function WarehouseFormModal({
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
       submitLabel={
-        isSubmitting
-          ? "Đang xử lý..."
-          : isEditMode
-            ? "Cập Nhật"
-            : "Tạo Kho"
+        isSubmitting ? "Đang xử lý..." : isEditMode ? "Cập Nhật" : "Tạo Kho"
       }
       cancelLabel="Hủy"
     >
       <div className="flex flex-col gap-4">
-          {/* Name Field */}
-          <div className="grid gap-2">
-            <Label htmlFor="name">
-              Tên Kho <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({ ...formData, name: e.target.value });
-                if (errors.name) setErrors({ ...errors, name: "" });
-              }}
-              placeholder="Ví dụ: Kho Tầng 1, Kho Chính..."
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Code Field */}
-          <div className="grid gap-2">
-            <Label htmlFor="code">
-              Mã Kho <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="code"
-              value={formData.code}
-              onChange={(e) => {
-                setFormData({ ...formData, code: e.target.value.toUpperCase() });
-                if (errors.code) setErrors({ ...errors, code: "" });
-              }}
-              placeholder="Ví dụ: WH-01, MAIN, T1..."
-              maxLength={20}
-              className={errors.code ? "border-destructive" : ""}
-              disabled={isEditMode}
-            />
-            {errors.code && (
-              <p className="text-sm text-destructive">{errors.code}</p>
-            )}
-            {isEditMode && (
-              <p className="text-xs text-muted-foreground">
-                Mã kho không thể thay đổi sau khi tạo
-              </p>
-            )}
-          </div>
-
-          {/* Location Field */}
-          <div className="grid gap-2">
-            <Label htmlFor="location">
-              Địa Điểm <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => {
-                setFormData({ ...formData, location: e.target.value });
-                if (errors.location) setErrors({ ...errors, location: "" });
-              }}
-              placeholder="Ví dụ: Tầng 1 - Toà nhà A, Số 123 Đường XYZ..."
-              className={errors.location ? "border-destructive" : ""}
-            />
-            {errors.location && (
-              <p className="text-sm text-destructive">{errors.location}</p>
-            )}
-          </div>
-
-          {/* Description Field */}
-          <div className="grid gap-2">
-            <Label htmlFor="description">Mô Tả</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              placeholder="Mô tả về kho, mục đích sử dụng..."
-              rows={3}
-            />
-          </div>
-
-          {/* Active Status */}
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="is_active">Trạng Thái Hoạt Động</Label>
-              <p className="text-sm text-muted-foreground">
-                {formData.is_active
-                  ? "Kho đang hoạt động và có thể sử dụng"
-                  : "Kho tạm ngừng hoạt động"}
-              </p>
-            </div>
-            <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, is_active: checked })
-              }
-            />
-          </div>
+        {/* Name Field */}
+        <div className="grid gap-2">
+          <Label htmlFor="name">
+            Tên Kho <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value });
+              if (errors.name) setErrors({ ...errors, name: "" });
+            }}
+            placeholder="Ví dụ: Kho Tầng 1, Kho Chính..."
+            className={errors.name ? "border-destructive" : ""}
+          />
+          {errors.name && (
+            <p className="text-sm text-destructive">{errors.name}</p>
+          )}
         </div>
+
+        {/* Code Field */}
+        <div className="grid gap-2">
+          <Label htmlFor="code">
+            Mã Kho <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="code"
+            value={formData.code}
+            onChange={(e) => {
+              setFormData({ ...formData, code: e.target.value.toUpperCase() });
+              if (errors.code) setErrors({ ...errors, code: "" });
+            }}
+            placeholder="Ví dụ: WH-01, MAIN, T1..."
+            maxLength={20}
+            className={errors.code ? "border-destructive" : ""}
+            disabled={isEditMode}
+          />
+          {errors.code && (
+            <p className="text-sm text-destructive">{errors.code}</p>
+          )}
+          {isEditMode && (
+            <p className="text-xs text-muted-foreground">
+              Mã kho không thể thay đổi sau khi tạo
+            </p>
+          )}
+        </div>
+
+        {/* Location Field */}
+        <div className="grid gap-2">
+          <Label htmlFor="location">
+            Địa Điểm <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="location"
+            value={formData.location}
+            onChange={(e) => {
+              setFormData({ ...formData, location: e.target.value });
+              if (errors.location) setErrors({ ...errors, location: "" });
+            }}
+            placeholder="Ví dụ: Tầng 1 - Toà nhà A, Số 123 Đường XYZ..."
+            className={errors.location ? "border-destructive" : ""}
+          />
+          {errors.location && (
+            <p className="text-sm text-destructive">{errors.location}</p>
+          )}
+        </div>
+
+        {/* Description Field */}
+        <div className="grid gap-2">
+          <Label htmlFor="description">Mô Tả</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            placeholder="Mô tả về kho, mục đích sử dụng..."
+            rows={3}
+          />
+        </div>
+
+        {/* Active Status */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="is_active">Trạng Thái Hoạt Động</Label>
+            <p className="text-sm text-muted-foreground">
+              {formData.is_active
+                ? "Kho đang hoạt động và có thể sử dụng"
+                : "Kho tạm ngừng hoạt động"}
+            </p>
+          </div>
+          <Switch
+            id="is_active"
+            checked={formData.is_active}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, is_active: checked })
+            }
+          />
+        </div>
+      </div>
     </FormDrawer>
   );
 }

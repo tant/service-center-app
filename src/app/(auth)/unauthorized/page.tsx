@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, Home } from 'lucide-react';
+import { ArrowLeft, Home, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 /**
  * Unauthorized Page (403)
@@ -42,7 +42,11 @@ export default function UnauthorizedPage() {
             </Link>
           </Button>
 
-          <Button asChild variant="outline" onClick={() => window.history.back()}>
+          <Button
+            asChild
+            variant="outline"
+            onClick={() => window.history.back()}
+          >
             <a>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Quay lại
@@ -68,6 +72,6 @@ export default function UnauthorizedPage() {
  * Metadata for the unauthorized page
  */
 export const metadata = {
-  title: '403 - Không có quyền truy cập',
-  description: 'Bạn không có quyền truy cập trang này',
+  title: "403 - Không có quyền truy cập",
+  description: "Bạn không có quyền truy cập trang này",
 };

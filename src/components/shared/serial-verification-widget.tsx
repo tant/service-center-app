@@ -5,20 +5,27 @@
 
 "use client";
 
+import {
+  IconAlertCircle,
+  IconMapPin,
+  IconPackage,
+  IconSearch,
+} from "@tabler/icons-react";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useSerialVerification } from "@/hooks/use-warehouse";
 import { WarrantyStatusBadge } from "../inventory/warranty-status-badge";
-import { IconSearch, IconPackage, IconMapPin, IconAlertCircle } from "@tabler/icons-react";
 
 interface SerialVerificationWidgetProps {
   onVerified?: (productId: string, serialNumber: string) => void;
 }
 
-export function SerialVerificationWidget({ onVerified }: SerialVerificationWidgetProps) {
+export function SerialVerificationWidget({
+  onVerified,
+}: SerialVerificationWidgetProps) {
   const [serial, setSerial] = useState("");
   const { verifySerial, isVerifying, data, reset } = useSerialVerification();
 
@@ -29,11 +36,16 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
       { serial_number: serial },
       {
         onSuccess: (result: any) => {
-          if (result.found && "product" in result && result.product && onVerified) {
+          if (
+            result.found &&
+            "product" in result &&
+            result.product &&
+            onVerified
+          ) {
             onVerified(result.product.product_id, result.product.serial_number);
           }
         },
-      }
+      },
     );
   };
 
@@ -70,7 +82,9 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
           {!data.found || !("product" in data) ? (
             <Alert variant="destructive">
               <IconAlertCircle className="h-4 w-4" />
-              <AlertDescription>{"message" in data ? data.message : "Lỗi không xác định"}</AlertDescription>
+              <AlertDescription>
+                {"message" in data ? data.message : "Lỗi không xác định"}
+              </AlertDescription>
             </Alert>
           ) : (
             <div className="border rounded-lg p-4 space-y-3">
@@ -78,7 +92,9 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
                 <div className="flex items-center gap-3">
                   <IconPackage className="h-10 w-10 text-muted-foreground" />
                   <div>
-                    <h3 className="font-semibold">{data.product.product?.name}</h3>
+                    <h3 className="font-semibold">
+                      {data.product.product?.name}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {data.product.serial_number}
                     </p>
@@ -86,7 +102,9 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
                 </div>
                 <WarrantyStatusBadge
                   userWarrantyEndDate={data.product.user_warranty_end_date}
-                  manufacturerWarrantyEndDate={data.product.manufacturer_warranty_end_date}
+                  manufacturerWarrantyEndDate={
+                    data.product.manufacturer_warranty_end_date
+                  }
                 />
               </div>
 
@@ -105,29 +123,41 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
                   <p className="text-muted-foreground mb-1">Vị trí</p>
                   <div className="flex items-center gap-1">
                     <IconMapPin className="h-3 w-3" />
-                    <span>{data.location.virtual?.display_name || "Không xác định"}</span>
+                    <span>
+                      {data.location.virtual?.display_name || "Không xác định"}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {(data.warranty.manufacturerEndDate || data.warranty.userEndDate) && (
+              {(data.warranty.manufacturerEndDate ||
+                data.warranty.userEndDate) && (
                 <div className="text-sm">
-                  <p className="text-muted-foreground mb-1">Thông tin bảo hành</p>
+                  <p className="text-muted-foreground mb-1">
+                    Thông tin bảo hành
+                  </p>
                   <div className="space-y-1">
                     {data.warranty.manufacturerEndDate && (
                       <p>
-                        BH Nhà máy: {new Date(data.warranty.manufacturerEndDate).toLocaleDateString("vi-VN")}
+                        BH Nhà máy:{" "}
+                        {new Date(
+                          data.warranty.manufacturerEndDate,
+                        ).toLocaleDateString("vi-VN")}
                       </p>
                     )}
                     {data.warranty.userEndDate && (
                       <p>
-                        BH User: {new Date(data.warranty.userEndDate).toLocaleDateString("vi-VN")}
-                        {data.warranty.daysRemaining !== null && data.warranty.daysRemaining > 0 && (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            (còn {data.warranty.daysRemaining} ngày)
-                          </span>
+                        BH User:{" "}
+                        {new Date(data.warranty.userEndDate).toLocaleDateString(
+                          "vi-VN",
                         )}
+                        {data.warranty.daysRemaining !== null &&
+                          data.warranty.daysRemaining > 0 && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              (còn {data.warranty.daysRemaining} ngày)
+                            </span>
+                          )}
                       </p>
                     )}
                   </div>
@@ -135,7 +165,10 @@ export function SerialVerificationWidget({ onVerified }: SerialVerificationWidge
               )}
 
               {data.inService && data.product.current_ticket && (
-                <Alert variant="default" className="bg-yellow-50 border-yellow-200">
+                <Alert
+                  variant="default"
+                  className="bg-yellow-50 border-yellow-200"
+                >
                   <IconAlertCircle className="h-4 w-4 text-yellow-600" />
                   <AlertDescription>
                     Sản phẩm này đang trong quá trình sửa chữa (Phiếu:{" "}

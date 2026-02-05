@@ -7,12 +7,12 @@
  * @module entity-adapters/init
  */
 
-import { adapterRegistry } from "./registry";
-import { ServiceTicketAdapter } from "./service-ticket-adapter";
-import { InventoryReceiptAdapter } from "./inventory-receipt-adapter";
 import { InventoryIssueAdapter } from "./inventory-issue-adapter";
+import { InventoryReceiptAdapter } from "./inventory-receipt-adapter";
 import { InventoryTransferAdapter } from "./inventory-transfer-adapter";
+import { adapterRegistry } from "./registry";
 import { ServiceRequestAdapter } from "./service-request-adapter";
+import { ServiceTicketAdapter } from "./service-ticket-adapter";
 
 /**
  * Initialize and register all entity adapters
@@ -42,7 +42,7 @@ export function initializeEntityAdapters(): void {
   console.log(
     `[EntityAdapters] Registered ${adapterRegistry.size} adapters: ${adapterRegistry
       .getRegisteredTypes()
-      .join(", ")}`
+      .join(", ")}`,
   );
 }
 

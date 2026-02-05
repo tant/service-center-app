@@ -18,10 +18,10 @@
 // =====================================================
 
 export const ROLES = {
-	ADMIN: "admin",
-	MANAGER: "manager",
-	TECHNICIAN: "technician",
-	RECEPTION: "reception",
+  ADMIN: "admin",
+  MANAGER: "manager",
+  TECHNICIAN: "technician",
+  RECEPTION: "reception",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -35,10 +35,10 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
  * Higher number = more privileged
  */
 export const ROLE_HIERARCHY: Record<Role, number> = {
-	admin: 4,
-	manager: 3,
-	technician: 2,
-	reception: 1,
+  admin: 4,
+  manager: 3,
+  technician: 2,
+  reception: 1,
 };
 
 /**
@@ -52,7 +52,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
  * hasHigherRole('technician', 'manager') // false
  */
 export function hasHigherRole(userRole: Role, requiredRole: Role): boolean {
-	return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
 }
 
 // =====================================================
@@ -60,47 +60,47 @@ export function hasHigherRole(userRole: Role, requiredRole: Role): boolean {
 // =====================================================
 
 export interface RolePermissions {
-	tickets: {
-		viewAll: boolean;
-		create: boolean;
-		update: boolean;
-		delete: boolean;
-		assignTechnician: boolean;
-		switchTemplate: boolean;
-	};
-	customers: {
-		viewAll: boolean;
-		create: boolean;
-		update: boolean;
-		delete: boolean;
-	};
-	products: {
-		viewCatalog: boolean;
-		create: boolean;
-		update: boolean;
-		delete: boolean;
-	};
-	warehouse: {
-		viewStock: boolean;
-		createMovement: boolean;
-		createRMA: boolean;
-	};
-	team: {
-		viewAll: boolean;
-		createUser: boolean;
-		updateUser: boolean;
-		deleteUser: boolean;
-	};
-	reports: {
-		viewAll: boolean;
-		exportData: boolean;
-	};
-	templates: {
-		view: boolean;
-		create: boolean;
-		update: boolean;
-		delete: boolean;
-	};
+  tickets: {
+    viewAll: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+    assignTechnician: boolean;
+    switchTemplate: boolean;
+  };
+  customers: {
+    viewAll: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+  };
+  products: {
+    viewCatalog: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+  };
+  warehouse: {
+    viewStock: boolean;
+    createMovement: boolean;
+    createRMA: boolean;
+  };
+  team: {
+    viewAll: boolean;
+    createUser: boolean;
+    updateUser: boolean;
+    deleteUser: boolean;
+  };
+  reports: {
+    viewAll: boolean;
+    exportData: boolean;
+  };
+  templates: {
+    view: boolean;
+    create: boolean;
+    update: boolean;
+    delete: boolean;
+  };
 }
 
 /**
@@ -109,178 +109,178 @@ export interface RolePermissions {
  * Reference: docs/ROLES-AND-PERMISSIONS.md Section 3
  */
 export const PERMISSIONS: Record<Role, RolePermissions> = {
-	admin: {
-		tickets: {
-			viewAll: true,
-			create: true,
-			update: true,
-			delete: true,
-			assignTechnician: true,
-			switchTemplate: true,
-		},
-		customers: {
-			viewAll: true,
-			create: true,
-			update: true,
-			delete: true,
-		},
-		products: {
-			viewCatalog: true,
-			create: true,
-			update: true,
-			delete: true,
-		},
-		warehouse: {
-			viewStock: true,
-			createMovement: true,
-			createRMA: true,
-		},
-		team: {
-			viewAll: true,
-			createUser: true,
-			updateUser: true,
-			deleteUser: true,
-		},
-		reports: {
-			viewAll: true,
-			exportData: true,
-		},
-		templates: {
-			view: true,
-			create: true,
-			update: true,
-			delete: true,
-		},
-	},
-	manager: {
-		tickets: {
-			viewAll: true,
-			create: true,
-			update: true,
-			delete: false, // Can cancel but not delete
-			assignTechnician: true,
-			switchTemplate: true, // With audit trail
-		},
-		customers: {
-			viewAll: true,
-			create: true,
-			update: true,
-			delete: false,
-		},
-		products: {
-			viewCatalog: true,
-			create: true,
-			update: true,
-			delete: false,
-		},
-		warehouse: {
-			viewStock: true,
-			createMovement: true,
-			createRMA: true,
-		},
-		team: {
-			viewAll: true,
-			createUser: false, // Only admin can create users
-			updateUser: false,
-			deleteUser: false,
-		},
-		reports: {
-			viewAll: true,
-			exportData: true,
-		},
-		templates: {
-			view: true,
-			create: true,
-			update: true,
-			delete: false,
-		},
-	},
-	technician: {
-		tickets: {
-			viewAll: false, // Only assigned tickets
-			create: false,
-			update: false, // Can update tasks, not tickets
-			delete: false,
-			assignTechnician: false,
-			switchTemplate: false,
-		},
-		customers: {
-			viewAll: false, // Only customers from assigned tickets
-			create: false,
-			update: false,
-			delete: false,
-		},
-		products: {
-			viewCatalog: true, // Read-only
-			create: false,
-			update: false,
-			delete: false,
-		},
-		warehouse: {
-			viewStock: true, // Read-only
-			createMovement: false,
-			createRMA: false,
-		},
-		team: {
-			viewAll: false,
-			createUser: false,
-			updateUser: false,
-			deleteUser: false,
-		},
-		reports: {
-			viewAll: false, // No analytics/revenue data
-			exportData: false,
-		},
-		templates: {
-			view: false,
-			create: false,
-			update: false,
-			delete: false,
-		},
-	},
-	reception: {
-		tickets: {
-			viewAll: true, // Can see all tickets to answer customer questions
-			create: true,
-			update: false, // Only basic info during creation
-			delete: false,
-			assignTechnician: false, // Auto-assign or manager does it
-			switchTemplate: false,
-		},
-		customers: {
-			viewAll: true,
-			create: true,
-			update: true,
-			delete: false,
-		},
-		products: {
-			viewCatalog: true, // For warranty checks
-			create: false,
-			update: false,
-			delete: false,
-		},
-		warehouse: {
-			viewStock: false,
-			createMovement: false,
-			createRMA: false,
-		},
-		team: {
-			viewAll: false,
-			createUser: false,
-			updateUser: false,
-			deleteUser: false,
-		},
-		reports: {
-			viewAll: false,
-			exportData: false,
-		},
-		templates: {
-			view: false,
-			create: false,
-			update: false,
-			delete: false,
-		},
-	},
+  admin: {
+    tickets: {
+      viewAll: true,
+      create: true,
+      update: true,
+      delete: true,
+      assignTechnician: true,
+      switchTemplate: true,
+    },
+    customers: {
+      viewAll: true,
+      create: true,
+      update: true,
+      delete: true,
+    },
+    products: {
+      viewCatalog: true,
+      create: true,
+      update: true,
+      delete: true,
+    },
+    warehouse: {
+      viewStock: true,
+      createMovement: true,
+      createRMA: true,
+    },
+    team: {
+      viewAll: true,
+      createUser: true,
+      updateUser: true,
+      deleteUser: true,
+    },
+    reports: {
+      viewAll: true,
+      exportData: true,
+    },
+    templates: {
+      view: true,
+      create: true,
+      update: true,
+      delete: true,
+    },
+  },
+  manager: {
+    tickets: {
+      viewAll: true,
+      create: true,
+      update: true,
+      delete: false, // Can cancel but not delete
+      assignTechnician: true,
+      switchTemplate: true, // With audit trail
+    },
+    customers: {
+      viewAll: true,
+      create: true,
+      update: true,
+      delete: false,
+    },
+    products: {
+      viewCatalog: true,
+      create: true,
+      update: true,
+      delete: false,
+    },
+    warehouse: {
+      viewStock: true,
+      createMovement: true,
+      createRMA: true,
+    },
+    team: {
+      viewAll: true,
+      createUser: false, // Only admin can create users
+      updateUser: false,
+      deleteUser: false,
+    },
+    reports: {
+      viewAll: true,
+      exportData: true,
+    },
+    templates: {
+      view: true,
+      create: true,
+      update: true,
+      delete: false,
+    },
+  },
+  technician: {
+    tickets: {
+      viewAll: false, // Only assigned tickets
+      create: false,
+      update: false, // Can update tasks, not tickets
+      delete: false,
+      assignTechnician: false,
+      switchTemplate: false,
+    },
+    customers: {
+      viewAll: false, // Only customers from assigned tickets
+      create: false,
+      update: false,
+      delete: false,
+    },
+    products: {
+      viewCatalog: true, // Read-only
+      create: false,
+      update: false,
+      delete: false,
+    },
+    warehouse: {
+      viewStock: true, // Read-only
+      createMovement: false,
+      createRMA: false,
+    },
+    team: {
+      viewAll: false,
+      createUser: false,
+      updateUser: false,
+      deleteUser: false,
+    },
+    reports: {
+      viewAll: false, // No analytics/revenue data
+      exportData: false,
+    },
+    templates: {
+      view: false,
+      create: false,
+      update: false,
+      delete: false,
+    },
+  },
+  reception: {
+    tickets: {
+      viewAll: true, // Can see all tickets to answer customer questions
+      create: true,
+      update: false, // Only basic info during creation
+      delete: false,
+      assignTechnician: false, // Auto-assign or manager does it
+      switchTemplate: false,
+    },
+    customers: {
+      viewAll: true,
+      create: true,
+      update: true,
+      delete: false,
+    },
+    products: {
+      viewCatalog: true, // For warranty checks
+      create: false,
+      update: false,
+      delete: false,
+    },
+    warehouse: {
+      viewStock: false,
+      createMovement: false,
+      createRMA: false,
+    },
+    team: {
+      viewAll: false,
+      createUser: false,
+      updateUser: false,
+      deleteUser: false,
+    },
+    reports: {
+      viewAll: false,
+      exportData: false,
+    },
+    templates: {
+      view: false,
+      create: false,
+      update: false,
+      delete: false,
+    },
+  },
 };
 
 // =====================================================
@@ -293,7 +293,7 @@ export const PERMISSIONS: Record<Role, RolePermissions> = {
  * @returns Complete permission set for the role
  */
 export function getPermissionsForRole(role: Role): RolePermissions {
-	return PERMISSIONS[role];
+  return PERMISSIONS[role];
 }
 
 /**
@@ -308,13 +308,13 @@ export function getPermissionsForRole(role: Role): RolePermissions {
  * hasPermission('manager', 'tickets', 'create') // true
  */
 export function hasPermission(
-	role: Role,
-	category: keyof RolePermissions,
-	action: string,
+  role: Role,
+  category: keyof RolePermissions,
+  action: string,
 ): boolean {
-	const permissions = PERMISSIONS[role];
-	const categoryPerms = permissions[category] as Record<string, boolean>;
-	return categoryPerms[action] ?? false;
+  const permissions = PERMISSIONS[role];
+  const categoryPerms = permissions[category] as Record<string, boolean>;
+  return categoryPerms[action] ?? false;
 }
 
 /**
@@ -323,13 +323,13 @@ export function hasPermission(
  * @returns Display name for the role
  */
 export function getRoleDisplayName(role: Role): string {
-	const displayNames: Record<Role, string> = {
-		admin: "Administrator",
-		manager: "Manager",
-		technician: "Technician",
-		reception: "Reception",
-	};
-	return displayNames[role];
+  const displayNames: Record<Role, string> = {
+    admin: "Administrator",
+    manager: "Manager",
+    technician: "Technician",
+    reception: "Reception",
+  };
+  return displayNames[role];
 }
 
 /**
@@ -338,13 +338,13 @@ export function getRoleDisplayName(role: Role): string {
  * @returns Vietnamese display name
  */
 export function getRoleDisplayNameVi(role: Role): string {
-	const displayNamesVi: Record<Role, string> = {
-		admin: "Quản trị viên",
-		manager: "Quản lý",
-		technician: "Kỹ thuật viên",
-		reception: "Lễ tân",
-	};
-	return displayNamesVi[role];
+  const displayNamesVi: Record<Role, string> = {
+    admin: "Quản trị viên",
+    manager: "Quản lý",
+    technician: "Kỹ thuật viên",
+    reception: "Lễ tân",
+  };
+  return displayNamesVi[role];
 }
 
 // =====================================================
@@ -355,11 +355,11 @@ export function getRoleDisplayNameVi(role: Role): string {
  * Actions that require audit trail with reason
  */
 export const AUDITED_ACTIONS = [
-	"template_switch",
-	"role_change",
-	"stock_movement",
-	"rma_create",
-	"high_value_approval",
+  "template_switch",
+  "role_change",
+  "stock_movement",
+  "rma_create",
+  "high_value_approval",
 ] as const;
 
 export type AuditedAction = (typeof AUDITED_ACTIONS)[number];
@@ -375,5 +375,5 @@ export const MIN_AUDIT_REASON_LENGTH = 10;
  * @returns true if action requires audit logging with reason
  */
 export function requiresAudit(action: string): action is AuditedAction {
-	return AUDITED_ACTIONS.includes(action as AuditedAction);
+  return AUDITED_ACTIONS.includes(action as AuditedAction);
 }

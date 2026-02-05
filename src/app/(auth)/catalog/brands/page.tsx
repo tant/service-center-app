@@ -1,6 +1,6 @@
 import type { z } from "zod";
-import { PageHeader } from "@/components/page-header";
 import { BrandsTable, type brandSchema } from "@/components/brands-table";
+import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/utils/supabase/server";
 
 async function getBrandsData(): Promise<z.infer<typeof brandSchema>[]> {

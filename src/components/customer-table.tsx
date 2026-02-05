@@ -45,6 +45,7 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,9 +65,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -74,7 +75,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -83,9 +83,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FormDrawer } from "@/components/ui/form-drawer";
-import { trpc } from "@/components/providers/trpc-provider";
+import { Textarea } from "@/components/ui/textarea";
 
 export const customerSchema = z.object({
   id: z.string(),
@@ -725,7 +725,11 @@ function CustomerModal({
       open={open}
       onOpenChange={setOpen}
       trigger={trigger}
-      title={mode === "add" ? "Thêm khách hàng mới" : customer?.name || "Chỉnh sửa khách hàng"}
+      title={
+        mode === "add"
+          ? "Thêm khách hàng mới"
+          : customer?.name || "Chỉnh sửa khách hàng"
+      }
       description={
         mode === "add"
           ? "Tạo khách hàng mới với thông tin bắt buộc."
@@ -753,9 +757,7 @@ function CustomerModal({
           <Input
             id="name"
             value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Nhập tên khách hàng"
             required
           />
@@ -801,9 +803,7 @@ function CustomerModal({
             <div className="border-t pt-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">
-                    ID Khách hàng
-                  </Label>
+                  <Label className="text-muted-foreground">ID Khách hàng</Label>
                   <div className="font-mono text-xs">{customer.id}</div>
                 </div>
                 <div className="space-y-1">

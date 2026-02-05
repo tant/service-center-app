@@ -1,16 +1,24 @@
 "use client";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
+  IconDotsVertical,
+  IconEdit,
+  IconEye,
   IconPlus,
   IconSearch,
-  IconDotsVertical,
-  IconEye,
-  IconEdit,
   IconTrash,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { CreateRMABatchDrawer } from "@/components/drawers/create-rma-batch-drawer";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,22 +35,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RMA_STATUS_COLORS, RMA_STATUS_LABELS } from "@/constants/warehouse";
 import { useRMABatches } from "@/hooks/use-warehouse";
-import { RMA_STATUS_LABELS, RMA_STATUS_COLORS } from "@/constants/warehouse";
-import { CreateRMABatchDrawer } from "@/components/drawers/create-rma-batch-drawer";
 
 type RMAStatus = "draft" | "submitted" | "completed" | "cancelled";
 
@@ -62,7 +57,9 @@ interface RMABatch {
 
 export function RMABatchesTable() {
   const router = useRouter();
-  const [activeStatus, setActiveStatus] = React.useState<RMAStatus | "all">("all");
+  const [activeStatus, setActiveStatus] = React.useState<RMAStatus | "all">(
+    "all",
+  );
   const [searchQuery, setSearchQuery] = React.useState("");
   const [page, setPage] = React.useState(0);
   const [pageSize, setPageSize] = React.useState(20);
@@ -84,10 +81,11 @@ export function RMABatchesTable() {
   const filteredBatches = React.useMemo(() => {
     if (!searchQuery) return batches;
     const query = searchQuery.toLowerCase();
-    return batches.filter((batch: RMABatch) =>
-      batch.batch_number?.toLowerCase().includes(query) ||
-      batch.supplier_name?.toLowerCase().includes(query) ||
-      batch.tracking_number?.toLowerCase().includes(query)
+    return batches.filter(
+      (batch: RMABatch) =>
+        batch.batch_number?.toLowerCase().includes(query) ||
+        batch.supplier_name?.toLowerCase().includes(query) ||
+        batch.tracking_number?.toLowerCase().includes(query),
     );
   }, [batches, searchQuery]);
 
@@ -201,20 +199,30 @@ export function RMABatchesTable() {
                 <TableHead>Mã vận đơn</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Người tạo</TableHead>
-                <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
+                <TableHead className="text-right pr-4 lg:pr-6">
+                  Thao tác
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={8}
+                    className="h-32 text-center text-muted-foreground"
+                  >
                     Đang tải dữ liệu...
                   </TableCell>
                 </TableRow>
               ) : filteredBatches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                    {searchQuery ? "Không tìm thấy lô RMA phù hợp" : "Chưa có lô RMA nào"}
+                  <TableCell
+                    colSpan={8}
+                    className="h-32 text-center text-muted-foreground"
+                  >
+                    {searchQuery
+                      ? "Không tìm thấy lô RMA phù hợp"
+                      : "Chưa có lô RMA nào"}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -227,31 +235,48 @@ export function RMABatchesTable() {
                     <TableCell className="font-medium text-sm pl-4 lg:pl-6">
                       {batch.batch_number || `RMA-${batch.id.slice(0, 8)}`}
                     </TableCell>
-                    <TableCell className="text-sm">{batch.supplier_name}</TableCell>
+                    <TableCell className="text-sm">
+                      {batch.supplier_name}
+                    </TableCell>
                     <TableCell className="text-center text-sm">
                       {batch.product_count || 0}
                     </TableCell>
-                    <TableCell className="text-sm">{formatDate(batch.shipping_date)}</TableCell>
-                    <TableCell className="text-sm">{batch.tracking_number || "—"}</TableCell>
+                    <TableCell className="text-sm">
+                      {formatDate(batch.shipping_date)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {batch.tracking_number || "—"}
+                    </TableCell>
                     <TableCell>{getStatusBadge(batch.status)}</TableCell>
                     <TableCell className="text-sm">
                       {batch.created_by?.full_name || "—"}
                     </TableCell>
                     <TableCell className="text-right pr-4 lg:pr-6">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <DropdownMenuTrigger
+                          asChild
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
                             <IconDotsVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleRowClick(batch.id)}>
+                          <DropdownMenuItem
+                            onClick={() => handleRowClick(batch.id)}
+                          >
                             <IconEye className="mr-2 h-4 w-4" />
                             Xem chi tiết
                           </DropdownMenuItem>
                           {batch.status === "draft" && (
                             <>
-                              <DropdownMenuItem onClick={() => handleRowClick(batch.id)}>
+                              <DropdownMenuItem
+                                onClick={() => handleRowClick(batch.id)}
+                              >
                                 <IconEdit className="mr-2 h-4 w-4" />
                                 Chỉnh sửa
                               </DropdownMenuItem>
@@ -274,7 +299,8 @@ export function RMABatchesTable() {
         {/* Pagination */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
           <div className="text-muted-foreground">
-            Hiển thị {page * pageSize + 1} - {Math.min((page + 1) * pageSize, total)} trong tổng số {total} lô
+            Hiển thị {page * pageSize + 1} -{" "}
+            {Math.min((page + 1) * pageSize, total)} trong tổng số {total} lô
           </div>
           <div className="flex items-center gap-2">
             <Select

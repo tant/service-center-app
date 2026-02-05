@@ -3,7 +3,13 @@
  * AC 8: Status-specific messages and next steps for customer
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const STATUS_MESSAGES: Record<
   string,
@@ -15,7 +21,8 @@ const STATUS_MESSAGES: Record<
 > = {
   submitted: {
     title: "Đã gửi yêu cầu",
-    message: "Chúng tôi đã nhận được yêu cầu dịch vụ của bạn. Đội ngũ sẽ xem xét trong vòng 24 giờ.",
+    message:
+      "Chúng tôi đã nhận được yêu cầu dịch vụ của bạn. Đội ngũ sẽ xem xét trong vòng 24 giờ.",
     nextSteps: [
       "Kiểm tra email để nhận xác nhận",
       "Lưu mã theo dõi để tra cứu sau",
@@ -24,7 +31,8 @@ const STATUS_MESSAGES: Record<
   },
   received: {
     title: "Đã tiếp nhận",
-    message: "Đội ngũ của chúng tôi đang xem xét yêu cầu và sẽ bắt đầu xử lý sớm.",
+    message:
+      "Đội ngũ của chúng tôi đang xem xét yêu cầu và sẽ bắt đầu xử lý sớm.",
     nextSteps: [
       "Không cần thực hiện thêm bước nào",
       "Chúng tôi sẽ cập nhật khi bắt đầu xử lý",

@@ -48,7 +48,7 @@
 | 9 | TC-CAT-001 (Test 0) | Bước 3 | UI | Bỏ trường "Linh kiện liên quan" | Low | **DONE** |
 | 10 | TC-CAT-001 (Test 0) | Bước 5 | Feature | Cần thêm cảnh báo khi trùng tên sản phẩm (warning) và trùng SKU (block) | Medium | Open |
 | 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | Open |
-| 12 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | Open |
+| 12 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | **DONE** |
 | 13 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | Open |
 | 14 | TC-INV-001 (Test 1) | Bước 1 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | Open |
 | 15 | TC-INV-001 (Test 1) | Bước 1 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho | **Critical** | **DONE** |
@@ -58,7 +58,7 @@
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
 | 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
 
-> **Tổng:** 20 issues (7 DONE, 13 Open)
+> **Tổng:** 20 issues (8 DONE, 12 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---

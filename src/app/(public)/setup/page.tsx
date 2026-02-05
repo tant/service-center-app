@@ -31,7 +31,7 @@ export default function SetupPage() {
         alert("Setup completed successfully! Admin account created.");
       }
 
-  router.push("/login"); // Redirect to login after successful setup
+      router.push("/login"); // Redirect to login after successful setup
     },
     onError: (error, variables) => {
       console.error("❌ CLIENT: Setup mutation failed");

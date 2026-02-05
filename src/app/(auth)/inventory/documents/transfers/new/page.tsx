@@ -5,20 +5,31 @@
  * Form for creating new stock transfer (using virtual warehouse IDs)
  */
 
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Ban, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, ArrowRight, Ban } from "lucide-react";
-import Link from "next/link";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProductItem {
   productId: string;
@@ -29,13 +40,16 @@ export default function CreateTransferPage() {
   const router = useRouter();
   const [fromWarehouseId, setFromWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
   const [toWarehouseId, setToWarehouseId] = useState(""); // REDESIGNED: Use warehouse ID
-  const [transferDate, setTransferDate] = useState(new Date().toISOString().split("T")[0]);
+  const [transferDate, setTransferDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
   const createTransfer = trpc.inventory.transfers.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
 
   const handleAddItem = () => {
     setItems([...items, { productId: "", quantity: 1 }]);
@@ -45,7 +59,11 @@ export default function CreateTransferPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof ProductItem, value: any) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof ProductItem,
+    value: any,
+  ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
@@ -62,7 +80,9 @@ export default function CreateTransferPage() {
       return;
     }
 
-    const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
+    const invalidItems = items.filter(
+      (item) => !item.productId || item.quantity <= 0,
+    );
     if (invalidItems.length > 0) {
       toast.error("Vui lòng chọn sản phẩm và số lượng hợp lệ cho tất cả dòng");
       return;
@@ -113,13 +133,17 @@ export default function CreateTransferPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Từ kho *</Label>
-                      <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>
+                      <Select
+                        value={fromWarehouseId}
+                        onValueChange={setFromWarehouseId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho nguồn" />
                         </SelectTrigger>
                         <SelectContent>
                           {virtualWarehouses?.map((wh) => {
-                            const isCustomerInstalled = wh.warehouse_type === "customer_installed";
+                            const isCustomerInstalled =
+                              wh.warehouse_type === "customer_installed";
                             if (isCustomerInstalled) {
                               return (
                                 <TooltipProvider key={wh.id}>
@@ -130,12 +154,21 @@ export default function CreateTransferPage() {
                                         {wh.name}
                                       </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right" className="max-w-xs">
-                                      <p className="font-medium">Không thể chuyển kho từ "Hàng Đã Bán"</p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        Hàng đã giao cho khách. Nếu khách trả lại, vui lòng sử dụng Phiếu nhập kho.
+                                    <TooltipContent
+                                      side="right"
+                                      className="max-w-xs"
+                                    >
+                                      <p className="font-medium">
+                                        Không thể chuyển kho từ "Hàng Đã Bán"
                                       </p>
-                                      <Link href="/inventory/documents/receipts/new" className="text-xs text-primary hover:underline mt-1 block">
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Hàng đã giao cho khách. Nếu khách trả
+                                        lại, vui lòng sử dụng Phiếu nhập kho.
+                                      </p>
+                                      <Link
+                                        href="/inventory/documents/receipts/new"
+                                        className="text-xs text-primary hover:underline mt-1 block"
+                                      >
                                         → Tạo phiếu nhập kho
                                       </Link>
                                     </TooltipContent>
@@ -155,13 +188,17 @@ export default function CreateTransferPage() {
 
                     <div className="grid gap-2">
                       <Label>Đến kho *</Label>
-                      <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
+                      <Select
+                        value={toWarehouseId}
+                        onValueChange={setToWarehouseId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho đích" />
                         </SelectTrigger>
                         <SelectContent>
                           {virtualWarehouses?.map((wh) => {
-                            const isCustomerInstalled = wh.warehouse_type === "customer_installed";
+                            const isCustomerInstalled =
+                              wh.warehouse_type === "customer_installed";
                             if (isCustomerInstalled) {
                               return (
                                 <TooltipProvider key={wh.id}>
@@ -172,12 +209,22 @@ export default function CreateTransferPage() {
                                         {wh.name}
                                       </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right" className="max-w-xs">
-                                      <p className="font-medium">Không thể chuyển kho vào "Hàng Đã Bán"</p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        Để xuất hàng cho khách, vui lòng sử dụng Phiếu xuất kho với lý do "Bán hàng" hoặc "Đổi bảo hành".
+                                    <TooltipContent
+                                      side="right"
+                                      className="max-w-xs"
+                                    >
+                                      <p className="font-medium">
+                                        Không thể chuyển kho vào "Hàng Đã Bán"
                                       </p>
-                                      <Link href="/inventory/documents/issues/new" className="text-xs text-primary hover:underline mt-1 block">
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Để xuất hàng cho khách, vui lòng sử dụng
+                                        Phiếu xuất kho với lý do "Bán hàng" hoặc
+                                        "Đổi bảo hành".
+                                      </p>
+                                      <Link
+                                        href="/inventory/documents/issues/new"
+                                        className="text-xs text-primary hover:underline mt-1 block"
+                                      >
                                         → Tạo phiếu xuất kho
                                       </Link>
                                     </TooltipContent>
@@ -197,18 +244,29 @@ export default function CreateTransferPage() {
 
                     <div className="grid gap-2">
                       <Label>Ngày chuyển *</Label>
-                      <Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} />
+                      <Input
+                        type="date"
+                        value={transferDate}
+                        onChange={(e) => setTransferDate(e.target.value)}
+                      />
                     </div>
                   </div>
 
                   {fromWarehouseId && toWarehouseId && (
                     <div className="rounded-md bg-muted p-4 flex items-center gap-2">
                       <span className="text-sm font-medium">
-                        {virtualWarehouses?.find((w) => w.id === fromWarehouseId)?.name}
+                        {
+                          virtualWarehouses?.find(
+                            (w) => w.id === fromWarehouseId,
+                          )?.name
+                        }
                       </span>
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">
-                        {virtualWarehouses?.find((w) => w.id === toWarehouseId)?.name}
+                        {
+                          virtualWarehouses?.find((w) => w.id === toWarehouseId)
+                            ?.name
+                        }
                       </span>
                     </div>
                   )}
@@ -249,15 +307,21 @@ export default function CreateTransferPage() {
                             <Label>Sản phẩm</Label>
                             <Select
                               value={item.productId}
-                              onValueChange={(value) => handleItemChange(index, "productId", value)}
+                              onValueChange={(value) =>
+                                handleItemChange(index, "productId", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Chọn sản phẩm" />
                               </SelectTrigger>
                               <SelectContent>
                                 {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} {product.sku ? `(${product.sku})` : ""}
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.name}{" "}
+                                    {product.sku ? `(${product.sku})` : ""}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -271,13 +335,21 @@ export default function CreateTransferPage() {
                               min="1"
                               value={item.quantity}
                               onChange={(e) => {
-                              const val = Number.parseInt(e.target.value);
-                              handleItemChange(index, "quantity", Number.isNaN(val) ? 0 : val);
-                            }}
+                                const val = Number.parseInt(e.target.value);
+                                handleItemChange(
+                                  index,
+                                  "quantity",
+                                  Number.isNaN(val) ? 0 : val,
+                                );
+                              }}
                             />
                           </div>
 
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -292,7 +364,10 @@ export default function CreateTransferPage() {
                 <Link href="/inventory/documents">
                   <Button variant="outline">Hủy</Button>
                 </Link>
-                <Button onClick={handleSubmit} disabled={createTransfer.isPending}>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={createTransfer.isPending}
+                >
                   <Save className="h-4 w-4" />
                   Tạo phiếu chuyển
                 </Button>

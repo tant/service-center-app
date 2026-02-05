@@ -1,8 +1,6 @@
 "use client";
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
 import { trpc } from "@/components/providers/trpc-provider";
-
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 /**
  * Format a date to a readable string

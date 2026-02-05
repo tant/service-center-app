@@ -5,9 +5,9 @@
 
 import { Badge } from "@/components/ui/badge";
 import {
-  getWarrantyStatus,
   formatWarrantyStatus,
   getRemainingDays,
+  getWarrantyStatus,
   type WarrantyStatus,
 } from "@/utils/warranty";
 
@@ -25,7 +25,8 @@ export function WarrantyStatusBadge({
   className,
 }: WarrantyStatusBadgeProps) {
   // Prioritize user warranty, fallback to manufacturer warranty
-  const warrantyEndDate = userWarrantyEndDate || manufacturerWarrantyEndDate || null;
+  const warrantyEndDate =
+    userWarrantyEndDate || manufacturerWarrantyEndDate || null;
 
   const status = getWarrantyStatus(warrantyEndDate);
   const label = formatWarrantyStatus(status);
@@ -35,7 +36,11 @@ export function WarrantyStatusBadge({
 
   // Calculate remaining days if warranty is active or expiring soon
   let remainingText = label;
-  if (warrantyEndDate && showRemainingDays && (status === "active" || status === "expiring_soon")) {
+  if (
+    warrantyEndDate &&
+    showRemainingDays &&
+    (status === "active" || status === "expiring_soon")
+  ) {
     const days = getRemainingDays(warrantyEndDate);
     if (days >= 0) {
       remainingText = `${label} (${days} ngày)`;
@@ -49,7 +54,9 @@ export function WarrantyStatusBadge({
   );
 }
 
-function getStatusVariant(status: WarrantyStatus): "default" | "destructive" | "secondary" | "outline" {
+function getStatusVariant(
+  status: WarrantyStatus,
+): "default" | "destructive" | "secondary" | "outline" {
   switch (status) {
     case "active":
       return "default"; // Green/primary color

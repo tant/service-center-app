@@ -1,20 +1,13 @@
 "use client";
 
-import * as React from "react";
 import {
-  IconGripVertical,
-  IconPlus,
-  IconTrash,
-  IconX,
-} from "@tabler/icons-react";
-import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -24,8 +17,17 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
+import {
+  IconGripVertical,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
+import * as React from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -43,15 +45,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  useTaskTypes,
-  useTaskTemplate,
   useCreateTemplate,
+  useTaskTemplate,
+  useTaskTypes,
   useUpdateTemplate,
 } from "@/hooks/use-workflow";
 
@@ -180,7 +179,8 @@ export function TemplateEditorModal({
   templateId,
 }: TemplateEditorModalInterface) {
   const { taskTypes } = useTaskTypes();
-  const { template: workflow, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
+  const { template: workflow, isLoading: isLoadingTemplate } =
+    useTaskTemplate(templateId);
   const { createTemplate, isCreating } = useCreateTemplate();
   const { updateTemplate, isUpdating } = useUpdateTemplate();
 
@@ -197,7 +197,7 @@ export function TemplateEditorModal({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Load template data when editing
@@ -305,7 +305,7 @@ export function TemplateEditorModal({
           onSuccess: () => {
             onClose();
           },
-        }
+        },
       );
     } else {
       createTemplate(templateData, {
@@ -334,150 +334,154 @@ export function TemplateEditorModal({
           <div className="flex items-center justify-center py-12">
             <div className="text-center space-y-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-              <p className="text-sm text-muted-foreground">Loading template...</p>
+              <p className="text-sm text-muted-foreground">
+                Loading template...
+              </p>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Template Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="e.g., VGA Warranty Repair"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="Optional description"
-                rows={2}
-              />
-            </div>
-
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="service_type">Service Type *</Label>
-                <Select
-                  value={formData.service_type}
-                  onValueChange={(value: any) =>
-                    setFormData({ ...formData, service_type: value })
+                <Label htmlFor="name">Template Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
                   }
-                >
-                  <SelectTrigger id="service_type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warranty">Warranty</SelectItem>
-                    <SelectItem value="paid">Paid Service</SelectItem>
-                    <SelectItem value="replacement">Replacement</SelectItem>
-                  </SelectContent>
-                </Select>
+                  placeholder="e.g., VGA Warranty Repair"
+                  required
+                />
               </div>
 
-              {/* Story 1.5: Enforce Sequential Execution Toggle */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="enforce_sequence" className="text-base">
-                      Enforce Sequential Execution
-                    </Label>
-                    <div className="text-sm text-muted-foreground">
-                      {formData.enforce_sequence
-                        ? "Tasks must be completed in order (strict mode)"
-                        : "Tasks can be completed in any order (flexible mode)"}
-                    </div>
-                  </div>
-                  <Switch
-                    id="enforce_sequence"
-                    checked={formData.enforce_sequence}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, enforce_sequence: checked })
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Optional description"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service_type">Service Type *</Label>
+                  <Select
+                    value={formData.service_type}
+                    onValueChange={(value: any) =>
+                      setFormData({ ...formData, service_type: value })
                     }
-                  />
+                  >
+                    <SelectTrigger id="service_type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="warranty">Warranty</SelectItem>
+                      <SelectItem value="paid">Paid Service</SelectItem>
+                      <SelectItem value="replacement">Replacement</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Warning when flexible mode is enabled */}
-                {!formData.enforce_sequence && (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      <strong>Warning:</strong> Flexible mode allows technicians to complete tasks out of order.
-                      The UI will display warnings but will not block completion. Use this mode only when task order is not critical.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Tasks ({tasks.length})</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddTask}
-              >
-                <IconPlus className="h-4 w-4 mr-2" />
-                Add Task
-              </Button>
-            </div>
-
-            {tasks.length === 0 ? (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-                No tasks added yet. Click "Add Task" to begin.
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={tasks.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-3">
-                    {tasks.map((task) => (
-                      <SortableTaskItem
-                        key={task.id}
-                        task={task}
-                        taskTypes={taskTypes}
-                        onUpdate={handleUpdateTask}
-                        onRemove={() => handleRemoveTask(task.id)}
-                      />
-                    ))}
+                {/* Story 1.5: Enforce Sequential Execution Toggle */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="enforce_sequence" className="text-base">
+                        Enforce Sequential Execution
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        {formData.enforce_sequence
+                          ? "Tasks must be completed in order (strict mode)"
+                          : "Tasks can be completed in any order (flexible mode)"}
+                      </div>
+                    </div>
+                    <Switch
+                      id="enforce_sequence"
+                      checked={formData.enforce_sequence}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, enforce_sequence: checked })
+                      }
+                    />
                   </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Saving..."
-                : templateId
-                  ? "Update Template"
-                  : "Create Template"}
-            </Button>
-          </DialogFooter>
-        </form>
+                  {/* Warning when flexible mode is enabled */}
+                  {!formData.enforce_sequence && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        <strong>Warning:</strong> Flexible mode allows
+                        technicians to complete tasks out of order. The UI will
+                        display warnings but will not block completion. Use this
+                        mode only when task order is not critical.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Tasks ({tasks.length})</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddTask}
+                >
+                  <IconPlus className="h-4 w-4 mr-2" />
+                  Add Task
+                </Button>
+              </div>
+
+              {tasks.length === 0 ? (
+                <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  No tasks added yet. Click "Add Task" to begin.
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={tasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {tasks.map((task) => (
+                        <SortableTaskItem
+                          key={task.id}
+                          task={task}
+                          taskTypes={taskTypes}
+                          onUpdate={handleUpdateTask}
+                          onRemove={() => handleRemoveTask(task.id)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : templateId
+                    ? "Update Template"
+                    : "Create Template"}
+              </Button>
+            </DialogFooter>
+          </form>
         )}
       </DialogContent>
     </Dialog>

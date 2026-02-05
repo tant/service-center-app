@@ -5,25 +5,40 @@
 
 "use client";
 
+import {
+  IconCopy,
+  IconFile,
+  IconLoader2,
+  IconPhoto,
+  IconTrash,
+  IconUpload,
+  IconVideo,
+  IconX,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IconUpload, IconX, IconPhoto, IconFile, IconTrash, IconLoader2, IconVideo, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { createClient } from "@/utils/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   TASK_ATTACHMENT_IMAGE_MIME_TYPES,
+  TASK_ATTACHMENT_IMAGE_PATH_PREFIX,
   TASK_ATTACHMENT_MAX_SIZE_BYTES,
   TASK_ATTACHMENT_VIDEO_MIME_TYPES,
   TASK_ATTACHMENT_VIDEO_PATH_PREFIX,
-  TASK_ATTACHMENT_IMAGE_PATH_PREFIX,
   TASK_MEDIA_BUCKET,
   TASK_VIDEO_BUCKET,
   TASK_VIDEO_MAX_SIZE_BYTES,
 } from "@/constants/task-attachments";
+import { createClient } from "@/utils/supabase/client";
 
 interface TaskAttachmentUploadProps {
   taskId: string;
@@ -32,14 +47,20 @@ interface TaskAttachmentUploadProps {
 
 export function TaskAttachmentUpload({
   taskId,
-  onUploadComplete
+  onUploadComplete,
 }: TaskAttachmentUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [uploadingVideos, setUploadingVideos] = useState(false);
-  const [fileProgress, setFileProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
-  const [videoProgress, setVideoProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
+  const [fileProgress, setFileProgress] = useState<{
+    total: number;
+    done: number;
+  }>({ total: 0, done: 0 });
+  const [videoProgress, setVideoProgress] = useState<{
+    total: number;
+    done: number;
+  }>({ total: 0, done: 0 });
 
   const supabase = useMemo(() => createClient(), []);
   const uploadMutation = trpc.tasks.uploadAttachment.useMutation();
@@ -65,47 +86,55 @@ export function TaskAttachmentUpload({
     const files = Array.from(e.target.files || []);
 
     // Validate file types (images and PDFs only)
-    const validFiles = files.filter(file => {
-      const isValid = TASK_ATTACHMENT_IMAGE_MIME_TYPES.includes(file.type as any);
+    const validFiles = files.filter((file) => {
+      const isValid = TASK_ATTACHMENT_IMAGE_MIME_TYPES.includes(
+        file.type as any,
+      );
       const isUnderLimit = file.size <= TASK_ATTACHMENT_MAX_SIZE_BYTES; // 5MB limit
 
       if (!isValid) {
         toast.error(`${file.name} không phải là file hình ảnh hoặc PDF`);
       }
       if (!isUnderLimit) {
-        toast.error(`${file.name} vượt quá ${(TASK_ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`);
+        toast.error(
+          `${file.name} vượt quá ${(TASK_ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`,
+        );
       }
       return isValid && isUnderLimit;
     });
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
+    setSelectedFiles((prev) => [...prev, ...validFiles]);
   };
 
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    const validVideos = files.filter(file => {
-      const isValid = TASK_ATTACHMENT_VIDEO_MIME_TYPES.includes(file.type as any);
+    const validVideos = files.filter((file) => {
+      const isValid = TASK_ATTACHMENT_VIDEO_MIME_TYPES.includes(
+        file.type as any,
+      );
       const isUnderLimit = file.size <= TASK_VIDEO_MAX_SIZE_BYTES;
 
       if (!isValid) {
         toast.error(`${file.name} không phải là định dạng video được hỗ trợ`);
       }
       if (!isUnderLimit) {
-        toast.error(`${file.name} vượt quá ${(TASK_VIDEO_MAX_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`);
+        toast.error(
+          `${file.name} vượt quá ${(TASK_VIDEO_MAX_SIZE_BYTES / (1024 * 1024)).toFixed(0)}MB`,
+        );
       }
       return isValid && isUnderLimit;
     });
 
-    setSelectedVideos(prev => [...prev, ...validVideos]);
+    setSelectedVideos((prev) => [...prev, ...validVideos]);
   };
 
   const handleRemoveFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveVideo = (index: number) => {
-    setSelectedVideos(prev => prev.filter((_, i) => i !== index));
+    setSelectedVideos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUploadFiles = async () => {
@@ -119,7 +148,7 @@ export function TaskAttachmentUpload({
 
     try {
       for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split(".").pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${TASK_ATTACHMENT_IMAGE_PATH_PREFIX}/${taskId}/${fileName}`;
 
@@ -128,7 +157,9 @@ export function TaskAttachmentUpload({
           .upload(filePath, file);
 
         if (storageError) {
-          throw new Error(`Failed to upload ${file.name}: ${storageError.message}`);
+          throw new Error(
+            `Failed to upload ${file.name}: ${storageError.message}`,
+          );
         }
 
         // Record in database
@@ -149,7 +180,9 @@ export function TaskAttachmentUpload({
       attachmentsQuery.refetch();
       onUploadComplete?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Lỗi khi tải file lên");
+      toast.error(
+        error instanceof Error ? error.message : "Lỗi khi tải file lên",
+      );
       console.error(error);
     } finally {
       setUploadingFiles(false);
@@ -168,7 +201,7 @@ export function TaskAttachmentUpload({
 
     try {
       for (const file of selectedVideos) {
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split(".").pop();
         const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${TASK_ATTACHMENT_VIDEO_PATH_PREFIX}/${taskId}/${fileName}`;
 
@@ -177,7 +210,9 @@ export function TaskAttachmentUpload({
           .upload(filePath, file);
 
         if (storageError) {
-          throw new Error(`Failed to upload ${file.name}: ${storageError.message}`);
+          throw new Error(
+            `Failed to upload ${file.name}: ${storageError.message}`,
+          );
         }
 
         await uploadMutation.mutateAsync({
@@ -197,7 +232,9 @@ export function TaskAttachmentUpload({
       attachmentsQuery.refetch();
       onUploadComplete?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Lỗi khi tải video lên");
+      toast.error(
+        error instanceof Error ? error.message : "Lỗi khi tải video lên",
+      );
       console.error(error);
     } finally {
       setUploadingVideos(false);
@@ -205,7 +242,11 @@ export function TaskAttachmentUpload({
     }
   };
 
-  const handleDelete = async (attachmentId: string, filePath: string, mimeType: string) => {
+  const handleDelete = async (
+    attachmentId: string,
+    filePath: string,
+    mimeType: string,
+  ) => {
     try {
       const isVideo = mimeType?.startsWith("video/");
       const bucket = isVideo ? TASK_VIDEO_BUCKET : TASK_MEDIA_BUCKET;
@@ -216,7 +257,7 @@ export function TaskAttachmentUpload({
         .remove([filePath]);
 
       if (storageError) {
-        console.error('Storage delete error:', storageError);
+        console.error("Storage delete error:", storageError);
       }
 
       // Delete from database
@@ -247,10 +288,10 @@ export function TaskAttachmentUpload({
 
   const attachments = attachmentsQuery.data || [];
   const mediaAttachments = attachments.filter(
-    (attachment: any) => !attachment.mime_type?.startsWith("video/")
+    (attachment: any) => !attachment.mime_type?.startsWith("video/"),
   );
-  const videoAttachments = attachments.filter(
-    (attachment: any) => attachment.mime_type?.startsWith("video/")
+  const videoAttachments = attachments.filter((attachment: any) =>
+    attachment.mime_type?.startsWith("video/"),
   );
 
   return (
@@ -287,14 +328,12 @@ export function TaskAttachmentUpload({
                       className="flex items-center justify-between p-2 border rounded-md"
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {file.type.startsWith('image/') ? (
+                        {file.type.startsWith("image/") ? (
                           <IconPhoto className="h-4 w-4 text-blue-500 shrink-0" />
                         ) : (
                           <IconFile className="h-4 w-4 text-gray-500 shrink-0" />
                         )}
-                        <span className="text-sm truncate">
-                          {file.name}
-                        </span>
+                        <span className="text-sm truncate">{file.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
                           ({(file.size / 1024).toFixed(1)} KB)
                         </span>
@@ -322,7 +361,8 @@ export function TaskAttachmentUpload({
               {uploadingFiles ? (
                 <>
                   <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang tải ảnh/tài liệu... {fileProgress.done}/{fileProgress.total}
+                  Đang tải ảnh/tài liệu... {fileProgress.done}/
+                  {fileProgress.total}
                 </>
               ) : (
                 <>
@@ -336,7 +376,9 @@ export function TaskAttachmentUpload({
           {/* Video upload */}
           <div className="flex-1 space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="video-upload">Video (mp4/mov/webm, tối đa 200MB)</Label>
+              <Label htmlFor="video-upload">
+                Video (mp4/mov/webm, tối đa 200MB)
+              </Label>
               <Input
                 id="video-upload"
                 type="file"
@@ -358,9 +400,7 @@ export function TaskAttachmentUpload({
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <IconVideo className="h-4 w-4 text-indigo-500 shrink-0" />
-                        <span className="text-sm truncate">
-                          {file.name}
-                        </span>
+                        <span className="text-sm truncate">{file.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
                           ({(file.size / (1024 * 1024)).toFixed(1)} MB)
                         </span>
@@ -418,12 +458,15 @@ export function TaskAttachmentUpload({
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <a
-                      href={getPublicUrl(TASK_MEDIA_BUCKET, attachment.file_path)}
+                      href={getPublicUrl(
+                        TASK_MEDIA_BUCKET,
+                        attachment.file_path,
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 flex-1 min-w-0 hover:underline"
                     >
-                      {attachment.mime_type.startsWith('image/') ? (
+                      {attachment.mime_type.startsWith("image/") ? (
                         <IconPhoto className="h-4 w-4 text-blue-500 shrink-0" />
                       ) : (
                         <IconFile className="h-4 w-4 text-gray-500 shrink-0" />
@@ -439,7 +482,11 @@ export function TaskAttachmentUpload({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCopyLink(getPublicUrl(TASK_MEDIA_BUCKET, attachment.file_path))}
+                      onClick={() =>
+                        handleCopyLink(
+                          getPublicUrl(TASK_MEDIA_BUCKET, attachment.file_path),
+                        )
+                      }
                       className="shrink-0"
                     >
                       <IconCopy className="h-4 w-4" />
@@ -449,7 +496,13 @@ export function TaskAttachmentUpload({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(attachment.id, attachment.file_path, attachment.mime_type)}
+                    onClick={() =>
+                      handleDelete(
+                        attachment.id,
+                        attachment.file_path,
+                        attachment.mime_type,
+                      )
+                    }
                     disabled={deleteMutation.isPending}
                   >
                     <IconTrash className="h-4 w-4 text-destructive" />
@@ -465,7 +518,10 @@ export function TaskAttachmentUpload({
             <Label>Video đã tải lên ({videoAttachments.length})</Label>
             <div className="grid grid-cols-1 gap-2">
               {videoAttachments.map((attachment: any) => {
-                const videoUrl = getPublicUrl(TASK_VIDEO_BUCKET, attachment.file_path);
+                const videoUrl = getPublicUrl(
+                  TASK_VIDEO_BUCKET,
+                  attachment.file_path,
+                );
                 return (
                   <div
                     key={attachment.id}
@@ -478,7 +534,11 @@ export function TaskAttachmentUpload({
                           {attachment.file_name}
                         </span>
                         <span className="text-xs text-muted-foreground shrink-0">
-                          ({(attachment.file_size_bytes / (1024 * 1024)).toFixed(1)} MB)
+                          (
+                          {(attachment.file_size_bytes / (1024 * 1024)).toFixed(
+                            1,
+                          )}{" "}
+                          MB)
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -495,7 +555,13 @@ export function TaskAttachmentUpload({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(attachment.id, attachment.file_path, attachment.mime_type)}
+                          onClick={() =>
+                            handleDelete(
+                              attachment.id,
+                              attachment.file_path,
+                              attachment.mime_type,
+                            )
+                          }
                           disabled={deleteMutation.isPending}
                         >
                           <IconTrash className="h-4 w-4 text-destructive" />

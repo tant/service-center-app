@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,13 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
-import { IconUpload, IconX, IconPhoto } from "@tabler/icons-react";
 import { createClient } from "@/utils/supabase/client";
 
 interface QuickUploadImagesModalProps {
@@ -66,24 +66,79 @@ export function QuickUploadImagesModal({
   const sanitizeFilename = (filename: string): string => {
     // Get file extension
     const lastDotIndex = filename.lastIndexOf(".");
-    const name = lastDotIndex !== -1 ? filename.slice(0, lastDotIndex) : filename;
+    const name =
+      lastDotIndex !== -1 ? filename.slice(0, lastDotIndex) : filename;
     const ext = lastDotIndex !== -1 ? filename.slice(lastDotIndex) : "";
 
     // Vietnamese character mapping
     const vietnameseMap: Record<string, string> = {
-      à: "a", á: "a", ả: "a", ã: "a", ạ: "a",
-      ă: "a", ằ: "a", ắ: "a", ẳ: "a", ẵ: "a", ặ: "a",
-      â: "a", ầ: "a", ấ: "a", ẩ: "a", ẫ: "a", ậ: "a",
+      à: "a",
+      á: "a",
+      ả: "a",
+      ã: "a",
+      ạ: "a",
+      ă: "a",
+      ằ: "a",
+      ắ: "a",
+      ẳ: "a",
+      ẵ: "a",
+      ặ: "a",
+      â: "a",
+      ầ: "a",
+      ấ: "a",
+      ẩ: "a",
+      ẫ: "a",
+      ậ: "a",
       đ: "d",
-      è: "e", é: "e", ẻ: "e", ẽ: "e", ẹ: "e",
-      ê: "e", ề: "e", ế: "e", ể: "e", ễ: "e", ệ: "e",
-      ì: "i", í: "i", ỉ: "i", ĩ: "i", ị: "i",
-      ò: "o", ó: "o", ỏ: "o", õ: "o", ọ: "o",
-      ô: "o", ồ: "o", ố: "o", ổ: "o", ỗ: "o", ộ: "o",
-      ơ: "o", ờ: "o", ớ: "o", ở: "o", ỡ: "o", ợ: "o",
-      ù: "u", ú: "u", ủ: "u", ũ: "u", ụ: "u",
-      ư: "u", ừ: "u", ứ: "u", ử: "u", ữ: "u", ự: "u",
-      ỳ: "y", ý: "y", ỷ: "y", ỹ: "y", ỵ: "y",
+      è: "e",
+      é: "e",
+      ẻ: "e",
+      ẽ: "e",
+      ẹ: "e",
+      ê: "e",
+      ề: "e",
+      ế: "e",
+      ể: "e",
+      ễ: "e",
+      ệ: "e",
+      ì: "i",
+      í: "i",
+      ỉ: "i",
+      ĩ: "i",
+      ị: "i",
+      ò: "o",
+      ó: "o",
+      ỏ: "o",
+      õ: "o",
+      ọ: "o",
+      ô: "o",
+      ồ: "o",
+      ố: "o",
+      ổ: "o",
+      ỗ: "o",
+      ộ: "o",
+      ơ: "o",
+      ờ: "o",
+      ớ: "o",
+      ở: "o",
+      ỡ: "o",
+      ợ: "o",
+      ù: "u",
+      ú: "u",
+      ủ: "u",
+      ũ: "u",
+      ụ: "u",
+      ư: "u",
+      ừ: "u",
+      ứ: "u",
+      ử: "u",
+      ữ: "u",
+      ự: "u",
+      ỳ: "y",
+      ý: "y",
+      ỷ: "y",
+      ỹ: "y",
+      ỵ: "y",
     };
 
     // Convert to lowercase and replace Vietnamese chars
@@ -121,7 +176,9 @@ export function QuickUploadImagesModal({
         const sanitizedFilename = sanitizeFilename(file.name);
         const filePath = `${ticketId}/${timestamp}_${randomString}_${sanitizedFilename}`;
 
-        console.log(`[Upload] Original: ${file.name}, Sanitized: ${sanitizedFilename}, Path: ${filePath}`);
+        console.log(
+          `[Upload] Original: ${file.name}, Sanitized: ${sanitizedFilename}, Path: ${filePath}`,
+        );
 
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -179,7 +236,7 @@ export function QuickUploadImagesModal({
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+    return Math.round((bytes / k ** i) * 100) / 100 + " " + sizes[i];
   };
 
   return (

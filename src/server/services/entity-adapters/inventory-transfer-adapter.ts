@@ -10,9 +10,9 @@
 import type { TRPCContext } from "../../trpc";
 import {
   BaseEntityAdapter,
-  type TaskContext,
-  type CanStartResult,
   type CanAssignWorkflowResult,
+  type CanStartResult,
+  type TaskContext,
 } from "./base-adapter";
 
 /**
@@ -44,7 +44,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
    */
   async canStartTask(
     ctx: TRPCContext,
-    taskId: string
+    taskId: string,
   ): Promise<CanStartResult> {
     const task = await this.getTask(ctx, taskId);
 
@@ -61,7 +61,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
         warehouse_id,
         workflow_id,
         workflows(strict_sequence)
-      `
+      `,
       )
       .eq("id", task.entity_id)
       .eq("document_type", "transfer")
@@ -86,7 +86,8 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
     if (transfer.status !== "approved" && transfer.status !== "completed") {
       return {
         canStart: false,
-        reason: "Phải duyệt phiếu chuyển kho trước khi thực hiện task. Stock sẽ được cập nhật sau khi duyệt.",
+        reason:
+          "Phải duyệt phiếu chuyển kho trước khi thực hiện task. Stock sẽ được cập nhật sau khi duyệt.",
       };
     }
 
@@ -116,9 +117,8 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
       .neq("status", "skipped");
 
     const incompleteTasks =
-      previousTasks?.filter(
-        (t) => t.status !== "completed" && t.is_required
-      ) || [];
+      previousTasks?.filter((t) => t.status !== "completed" && t.is_required) ||
+      [];
 
     if (incompleteTasks.length > 0) {
       return {
@@ -141,7 +141,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
     const task = await this.getTask(ctx, taskId);
 
     console.log(
-      `[InventoryTransfer] Task started: ${task.name} for transfer ${task.entity_id}`
+      `[InventoryTransfer] Task started: ${task.name} for transfer ${task.entity_id}`,
     );
   }
 
@@ -159,7 +159,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
     // Check if all required tasks are complete
     const allComplete = await this.areAllRequiredTasksComplete(
       ctx,
-      task.entity_id
+      task.entity_id,
     );
 
     if (allComplete) {
@@ -194,7 +194,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
         });
 
         console.log(
-          `[InventoryTransfer] Auto-completed transfer ${transfer.document_number}`
+          `[InventoryTransfer] Auto-completed transfer ${transfer.document_number}`,
         );
       }
     }
@@ -209,7 +209,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
   async onTaskBlock(
     ctx: TRPCContext,
     taskId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const task = await this.getTask(ctx, taskId);
 
@@ -227,7 +227,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
     });
 
     console.log(
-      `[InventoryTransfer] Task blocked: ${task.name} - Reason: ${reason}`
+      `[InventoryTransfer] Task blocked: ${task.name} - Reason: ${reason}`,
     );
   }
 
@@ -238,7 +238,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
    */
   async getEntityContext(
     ctx: TRPCContext,
-    entityId: string
+    entityId: string,
   ): Promise<TaskContext> {
     const { data: transfer, error } = await ctx.supabaseAdmin
       .from("inventory_documents")
@@ -259,7 +259,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
           name,
           code
         )
-      `
+      `,
       )
       .eq("id", entityId)
       .eq("document_type", "transfer")
@@ -308,7 +308,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
   async canAssignWorkflow(
     ctx: TRPCContext,
     entityId: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<CanAssignWorkflowResult> {
     const { data: transfer } = await ctx.supabaseAdmin
       .from("inventory_documents")
@@ -346,10 +346,7 @@ export class InventoryTransferAdapter extends BaseEntityAdapter {
     }
 
     // Check entity_type matches
-    if (
-      workflow.entity_type &&
-      workflow.entity_type !== "inventory_transfer"
-    ) {
+    if (workflow.entity_type && workflow.entity_type !== "inventory_transfer") {
       return {
         canAssign: false,
         reason: `Quy trình này dành cho ${workflow.entity_type}, không phù hợp với phiếu chuyển kho`,

@@ -40,7 +40,9 @@ export default async function Page() {
   const productData = await getProductData();
 
   // Get current user's role for permission checks
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   let userRole: "admin" | "manager" | "technician" | "reception" = "reception";
 
   if (user) {
@@ -51,7 +53,11 @@ export default async function Page() {
       .single();
 
     if (profile?.role) {
-      userRole = profile.role as "admin" | "manager" | "technician" | "reception";
+      userRole = profile.role as
+        | "admin"
+        | "manager"
+        | "technician"
+        | "reception";
     }
   }
 

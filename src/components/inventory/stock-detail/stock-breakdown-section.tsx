@@ -5,7 +5,9 @@
  * Displays stock distribution across physical and virtual warehouses
  */
 
+import { Box, Warehouse } from "lucide-react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,18 +18,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Warehouse, Box } from "lucide-react";
 import { StockStatusBadge } from "../shared/stock-status-badge";
 
 interface StockBreakdownSectionProps {
   productId: string;
 }
 
-export function StockBreakdownSection({ productId }: StockBreakdownSectionProps) {
-  const { data: stockDetail, isLoading } = trpc.inventory.stock.getProductStockDetail.useQuery({
-    productId,
-  });
+export function StockBreakdownSection({
+  productId,
+}: StockBreakdownSectionProps) {
+  const { data: stockDetail, isLoading } =
+    trpc.inventory.stock.getProductStockDetail.useQuery({
+      productId,
+    });
 
   if (isLoading) {
     return (
@@ -73,7 +76,7 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
       acc[key].push(item);
       return acc;
     },
-    {}
+    {},
   );
 
   // Group by virtual warehouse type
@@ -98,7 +101,7 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
       acc[key].total_actual += item.actual_serial_count;
       return acc;
     },
-    {}
+    {},
   );
 
   return (
@@ -114,8 +117,14 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
         <CardContent>
           <div className="space-y-4">
             {Object.entries(byPhysical).map(([warehouseName, items]) => {
-              const totalDeclared = items.reduce((sum, item) => sum + item.declared_quantity, 0);
-              const totalActual = items.reduce((sum, item) => sum + item.actual_serial_count, 0);
+              const totalDeclared = items.reduce(
+                (sum, item) => sum + item.declared_quantity,
+                0,
+              );
+              const totalActual = items.reduce(
+                (sum, item) => sum + item.actual_serial_count,
+                0,
+              );
               const gap = totalActual - totalDeclared;
 
               return (
@@ -127,17 +136,25 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Khai báo:</span>
-                      <span className="ml-2 font-medium">{totalDeclared.toLocaleString()}</span>
+                      <span className="ml-2 font-medium">
+                        {totalDeclared.toLocaleString()}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Thực tế:</span>
-                      <span className="ml-2 font-medium">{totalActual.toLocaleString()}</span>
+                      <span className="ml-2 font-medium">
+                        {totalActual.toLocaleString()}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Chênh:</span>
                       <span
                         className={`ml-2 font-medium ${
-                          gap > 0 ? "text-yellow-600" : gap < 0 ? "text-red-600" : ""
+                          gap > 0
+                            ? "text-yellow-600"
+                            : gap < 0
+                              ? "text-red-600"
+                              : ""
                         }`}
                       >
                         {gap > 0 ? `+${gap}` : gap}
@@ -151,10 +168,13 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
                         key={item.virtual_warehouse_id}
                         className="flex items-center justify-between text-xs pl-4 py-1 border-l-2"
                       >
-                        <span className="text-muted-foreground">{item.virtual_warehouse_name}</span>
+                        <span className="text-muted-foreground">
+                          {item.virtual_warehouse_name}
+                        </span>
                         <div className="flex items-center gap-2">
                           <span>
-                            {item.declared_quantity} / {item.actual_serial_count}
+                            {item.declared_quantity} /{" "}
+                            {item.actual_serial_count}
                           </span>
                           <StockStatusBadge status={item.stock_status} />
                         </div>
@@ -192,14 +212,29 @@ export function StockBreakdownSection({ productId }: StockBreakdownSectionProps)
                 return (
                   <TableRow key={item.type}>
                     <TableCell className="font-medium">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 border-blue-200"
+                      >
                         {item.name}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{item.total_declared.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{item.total_actual.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      <span className={gap > 0 ? "text-yellow-600" : gap < 0 ? "text-red-600" : ""}>
+                      {item.total_declared.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.total_actual.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span
+                        className={
+                          gap > 0
+                            ? "text-yellow-600"
+                            : gap < 0
+                              ? "text-red-600"
+                              : ""
+                        }
+                      >
                         {gap > 0 ? `+${gap}` : gap}
                       </span>
                     </TableCell>

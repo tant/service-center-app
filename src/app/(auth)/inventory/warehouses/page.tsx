@@ -13,17 +13,20 @@
 
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { createClient } from "@/utils/supabase/server";
 import { WarehouseContent } from "@/components/warehouse/warehouse-content";
+import { createClient } from "@/utils/supabase/server";
 
 // Force dynamic rendering for authenticated pages
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function WarehousesPage() {
   // Route guard: Only Admin and Manager can access warehouse management
   const supabase = await createClient();
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     redirect("/login");
@@ -41,7 +44,7 @@ export default async function WarehousesPage() {
   }
 
   // Only admin and manager roles can access warehouse management
-  if (!['admin', 'manager'].includes(profile.role)) {
+  if (!["admin", "manager"].includes(profile.role)) {
     redirect("/unauthorized");
   }
 

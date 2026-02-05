@@ -1,9 +1,9 @@
 // Delivery Tracking Hooks
 // Story 1.14: Customer Delivery Confirmation Workflow
 
-'use client';
+"use client";
 
-import { trpc } from '@/components/providers/trpc-provider';
+import { trpc } from "@/components/providers/trpc-provider";
 
 /**
  * Story 1.14: Hook for confirming delivery

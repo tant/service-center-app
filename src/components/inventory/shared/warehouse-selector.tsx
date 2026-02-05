@@ -27,7 +27,8 @@ export function VirtualWarehouseSelector({
   disabled = false,
   className,
 }: VirtualWarehouseSelectorProps) {
-  const { data: warehouses, isLoading } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: warehouses, isLoading } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
 
   const options = (warehouses || []).map((w: any) => ({
     value: w.id,
@@ -99,7 +100,8 @@ export function PhysicalWarehouseSelector({
   disabled = false,
   className,
 }: PhysicalWarehouseSelectorProps) {
-  const { data: warehouses, isLoading } = trpc.warehouse.listPhysicalWarehouses.useQuery();
+  const { data: warehouses, isLoading } =
+    trpc.warehouse.listPhysicalWarehouses.useQuery();
 
   const options = (warehouses || []).map((w: any) => ({
     value: w.id,

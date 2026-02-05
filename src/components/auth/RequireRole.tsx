@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useRole } from '@/hooks/use-role';
-import { useRouter } from 'next/navigation';
-import type { Role } from '@/types/roles';
-import { useEffect } from 'react';
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRole } from "@/hooks/use-role";
+import type { Role } from "@/types/roles";
 
 interface RequireRoleProps {
   allowedRoles: Role[];
@@ -39,7 +39,7 @@ export function RequireRole({
   allowedRoles,
   children,
   fallback = null,
-  redirectTo = '/unauthorized'
+  redirectTo = "/unauthorized",
 }: RequireRoleProps) {
   const { role, isLoading, hasAnyRole } = useRole();
   const router = useRouter();

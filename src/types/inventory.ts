@@ -4,35 +4,35 @@
 
 // ==================== Enums ====================
 
-export type StockDocumentStatus = 'completed';
+export type StockDocumentStatus = "completed";
 
 export type StockReceiptType =
-  | 'normal'      // Phiếu nhập bình thường (mặc định)
-  | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
+  | "normal" // Phiếu nhập bình thường (mặc định)
+  | "adjustment"; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
 export type StockIssueType =
-  | 'normal'      // Phiếu xuất bình thường (mặc định)
-  | 'adjustment'; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
+  | "normal" // Phiếu xuất bình thường (mặc định)
+  | "adjustment"; // Phiếu điều chỉnh (kiểm kê/sửa sai sót)
 
 export type StockIssueReason =
-  | 'sale'                 // Bán hàng
-  | 'warranty_replacement' // Đổi bảo hành
-  | 'repair'               // Sửa chữa (linh kiện cho ticket)
-  | 'internal_use'         // Sử dụng nội bộ
-  | 'sample'               // Hàng mẫu
-  | 'gift'                 // Quà tặng
-  | 'return_to_supplier'   // Trả nhà cung cấp
-  | 'damage'               // Hàng hỏng/mất
-  | 'other';               // Khác
+  | "sale" // Bán hàng
+  | "warranty_replacement" // Đổi bảo hành
+  | "repair" // Sửa chữa (linh kiện cho ticket)
+  | "internal_use" // Sử dụng nội bộ
+  | "sample" // Hàng mẫu
+  | "gift" // Quà tặng
+  | "return_to_supplier" // Trả nhà cung cấp
+  | "damage" // Hàng hỏng/mất
+  | "other"; // Khác
 
 export type StockReceiptReason =
-  | 'purchase'        // Nhập mua hàng từ NCC/NSX
-  | 'customer_return' // Nhập hàng trả lại từ khách hàng
-  | 'rma_return';     // Nhập RMA về từ NCC
+  | "purchase" // Nhập mua hàng từ NCC/NSX
+  | "customer_return" // Nhập hàng trả lại từ khách hàng
+  | "rma_return"; // Nhập RMA về từ NCC
 
-export type TransferStatus = 'completed';
+export type TransferStatus = "completed";
 
-export type StockStatus = 'ok' | 'warning' | 'critical';
+export type StockStatus = "ok" | "warning" | "critical";
 
 // ==================== Base Interfaces ====================
 
@@ -54,8 +54,8 @@ export interface StockReceipt {
   receipt_type: StockReceiptType;
   status: StockDocumentStatus;
   reason: StockReceiptReason | null; // Lý do nhập kho
-  customer_id: string | null;        // Khách hàng trả lại (cho customer_return)
-  rma_reference: string | null;      // Mã tham chiếu RMA (cho rma_return)
+  customer_id: string | null; // Khách hàng trả lại (cho customer_return)
+  rma_reference: string | null; // Mã tham chiếu RMA (cho rma_return)
   virtual_warehouse_id: string; // REDESIGNED: Direct reference to virtual warehouse
   receipt_date: string;
   expected_date: string | null;
@@ -203,7 +203,7 @@ export interface StockTransfer {
   transfer_number: string;
   status: TransferStatus;
   from_virtual_warehouse_id: string; // REDESIGNED: Direct reference to source warehouse
-  to_virtual_warehouse_id: string;   // REDESIGNED: Direct reference to destination warehouse
+  to_virtual_warehouse_id: string; // REDESIGNED: Direct reference to destination warehouse
   transfer_date: string;
   expected_delivery_date: string | null;
   completed_at: string | null;
@@ -277,7 +277,7 @@ export interface StockTransferWithRelations extends StockTransfer {
 
 export interface StockDocumentAttachment {
   id: string;
-  document_type: 'receipt' | 'issue' | 'transfer';
+  document_type: "receipt" | "issue" | "transfer";
   document_id: string;
   file_name: string;
   file_path: string;
@@ -293,9 +293,9 @@ export interface StockSummary {
   product_id: string;
   product_name: string;
   sku: string | null;
-  virtual_warehouse_id: string;        // REDESIGNED: Virtual warehouse reference
-  virtual_warehouse_name: string;      // REDESIGNED: Virtual warehouse name
-  warehouse_type: string;              // Warehouse type (from virtual warehouse)
+  virtual_warehouse_id: string; // REDESIGNED: Virtual warehouse reference
+  virtual_warehouse_name: string; // REDESIGNED: Virtual warehouse name
+  warehouse_type: string; // Warehouse type (from virtual warehouse)
   physical_warehouse_id: string | null;
   physical_warehouse_name: string | null;
   declared_quantity: number;
@@ -326,4 +326,3 @@ export interface InventoryStats {
   critical_count: number;
   warning_count: number;
 }
-

@@ -10,9 +10,9 @@
 import type { TRPCContext } from "../../trpc";
 import {
   BaseEntityAdapter,
-  type TaskContext,
-  type CanStartResult,
   type CanAssignWorkflowResult,
+  type CanStartResult,
+  type TaskContext,
 } from "./base-adapter";
 
 /**
@@ -43,14 +43,16 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
    */
   async canStartTask(
     ctx: TRPCContext,
-    taskId: string
+    taskId: string,
   ): Promise<CanStartResult> {
     const task = await this.getTask(ctx, taskId);
 
     // Get issue details
     const { data: issue } = await ctx.supabaseAdmin
       .from("inventory_documents")
-      .select("id, document_number, status, document_type, target_entity_type, target_entity_id")
+      .select(
+        "id, document_number, status, document_type, target_entity_type, target_entity_id",
+      )
       .eq("id", task.entity_id)
       .eq("document_type", "issue")
       .single();
@@ -79,7 +81,8 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
       if (issue.status !== "approved" && issue.status !== "completed") {
         return {
           canStart: false,
-          reason: "Phải duyệt phiếu xuất kho trước khi chọn sản phẩm. Stock sẽ được cập nhật sau khi duyệt.",
+          reason:
+            "Phải duyệt phiếu xuất kho trước khi chọn sản phẩm. Stock sẽ được cập nhật sau khi duyệt.",
         };
       }
     }
@@ -101,7 +104,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
     const task = await this.getTask(ctx, taskId);
 
     console.log(
-      `[InventoryIssue] Task started: ${task.name} for issue ${task.entity_id}`
+      `[InventoryIssue] Task started: ${task.name} for issue ${task.entity_id}`,
     );
   }
 
@@ -118,7 +121,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
     // Check if all required tasks are complete
     const allComplete = await this.areAllRequiredTasksComplete(
       ctx,
-      task.entity_id
+      task.entity_id,
     );
 
     if (allComplete) {
@@ -151,7 +154,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
         });
 
         console.log(
-          `[InventoryIssue] Auto-completed issue ${issue.document_number}`
+          `[InventoryIssue] Auto-completed issue ${issue.document_number}`,
         );
       }
     }
@@ -165,7 +168,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
   async onTaskBlock(
     ctx: TRPCContext,
     taskId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const task = await this.getTask(ctx, taskId);
 
@@ -183,7 +186,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
     });
 
     console.log(
-      `[InventoryIssue] Task blocked: ${task.name} - Reason: ${reason}`
+      `[InventoryIssue] Task blocked: ${task.name} - Reason: ${reason}`,
     );
   }
 
@@ -194,7 +197,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
    */
   async getEntityContext(
     ctx: TRPCContext,
-    entityId: string
+    entityId: string,
   ): Promise<TaskContext> {
     const { data: issue, error } = await ctx.supabaseAdmin
       .from("inventory_documents")
@@ -212,7 +215,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
           name,
           code
         )
-      `
+      `,
       )
       .eq("id", entityId)
       .eq("document_type", "issue")
@@ -262,7 +265,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
   async canAssignWorkflow(
     ctx: TRPCContext,
     entityId: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<CanAssignWorkflowResult> {
     const { data: issue } = await ctx.supabaseAdmin
       .from("inventory_documents")
@@ -300,10 +303,7 @@ export class InventoryIssueAdapter extends BaseEntityAdapter {
     }
 
     // Check entity_type matches
-    if (
-      workflow.entity_type &&
-      workflow.entity_type !== "inventory_issue"
-    ) {
+    if (workflow.entity_type && workflow.entity_type !== "inventory_issue") {
       return {
         canAssign: false,
         reason: `Quy trình này dành cho ${workflow.entity_type}, không phù hợp với phiếu xuất kho`,

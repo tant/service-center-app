@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { trpc } from "@/components/providers/trpc-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { IconNotes, IconPlus } from "@tabler/icons-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 interface TaskNotesSectionProps {
   taskId: string;
@@ -59,9 +59,7 @@ export function TaskNotesSection({
           <div className="flex items-center gap-2">
             <IconNotes className="h-5 w-5" />
             <CardTitle className="text-base">Ghi chú công việc</CardTitle>
-            {isRequired && (
-              <Badge variant="destructive">Bắt buộc</Badge>
-            )}
+            {isRequired && <Badge variant="destructive">Bắt buộc</Badge>}
           </div>
           {!isCompleted && !isAdding && (
             <Button
@@ -80,7 +78,7 @@ export function TaskNotesSection({
         {/* Existing Notes */}
         {currentNotes && (
           <div className="space-y-4">
-            {currentNotes.split('\n\n').map((entry, idx) => {
+            {currentNotes.split("\n\n").map((entry, idx) => {
               // Parse format: [timestamp] username: note
               // Use [\s\S]* instead of /s flag for compatibility
               const match = entry.match(/^\[(.*?)\]\s+(.*?):\s+([\s\S]*)$/);
@@ -111,7 +109,9 @@ export function TaskNotesSection({
                     </span>
                   </div>
                   {/* Note content */}
-                  <p className="text-sm text-foreground leading-relaxed">{note}</p>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {note}
+                  </p>
                 </div>
               );
             })}
@@ -143,7 +143,9 @@ export function TaskNotesSection({
               <Button
                 size="sm"
                 onClick={handleAddNote}
-                disabled={addNotesMutation.isPending || newNote.trim().length === 0}
+                disabled={
+                  addNotesMutation.isPending || newNote.trim().length === 0
+                }
               >
                 {addNotesMutation.isPending ? "Đang lưu..." : "Lưu ghi chú"}
               </Button>

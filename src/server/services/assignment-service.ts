@@ -80,7 +80,7 @@ export class AssignmentService {
           workload: activeCount || 0,
           avgCompletionTime: avgHours,
         };
-      })
+      }),
     );
 
     // Sort by workload (lowest first)

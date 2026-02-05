@@ -1,35 +1,33 @@
 "use client";
 
 import {
+  IconAdjustments,
+  IconBuildingWarehouse,
+  IconChecklist,
   IconClipboardList,
   IconComponents,
   IconDashboard,
   IconDevices,
+  IconFileText,
   IconHelp,
+  IconInbox,
   IconInnerShadowTop,
+  IconPackage,
   IconPhone,
   IconReport,
   IconSettings,
+  IconTruckDelivery,
   IconUser,
   IconUsers,
-  IconChecklist,
-  IconBuildingWarehouse,
-  IconPackage,
-  IconInbox,
-  IconFileText,
-  IconAdjustments,
-  IconTruckDelivery,
 } from "@tabler/icons-react";
 import type * as React from "react";
-
-import { NavSection } from "@/components/nav-section";
 import { NavOverview } from "@/components/nav-overview";
 import { NavSecondary } from "@/components/nav-secondary";
+import { NavSection } from "@/components/nav-section";
 import { NavUser } from "@/components/nav-user";
 import { NavWorkflows } from "@/components/nav-workflows";
-import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import { trpc } from "@/components/providers/trpc-provider";
-import { usePendingCount } from "@/hooks/use-service-request";
+import { SidebarSkeleton } from "@/components/sidebar-skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +37,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { usePendingCount } from "@/hooks/use-service-request";
 
 type UserRole = "admin" | "manager" | "technician" | "reception";
 
@@ -66,7 +65,12 @@ const baseData = {
       title: "Phiếu dịch vụ",
       url: "/operations/tickets",
       icon: IconClipboardList,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      allowedRoles: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+      ] as UserRole[],
     },
     {
       title: "Yêu cầu dịch vụ",
@@ -122,7 +126,12 @@ const baseData = {
       title: "Danh mục sản phẩm",
       url: "/catalog/products",
       icon: IconDevices,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      allowedRoles: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+      ] as UserRole[],
       readOnly: ["technician", "reception"] as UserRole[],
     },
     // Issue #9: Hidden - Parts feature is disabled for MVP
@@ -137,7 +146,12 @@ const baseData = {
       title: "Nhãn hàng",
       url: "/catalog/brands",
       icon: IconComponents,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      allowedRoles: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+      ] as UserRole[],
       readOnly: ["technician", "reception"] as UserRole[],
     },
   ],
@@ -181,7 +195,12 @@ const baseData = {
       title: "Tài khoản",
       url: "/settings/account",
       icon: IconSettings,
-      allowedRoles: ["admin", "manager", "technician", "reception"] as UserRole[],
+      allowedRoles: [
+        "admin",
+        "manager",
+        "technician",
+        "reception",
+      ] as UserRole[],
     },
     {
       title: "Cài đặt ứng dụng",
@@ -279,9 +298,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         ) : (
           <>
             {/* Overview - Dashboard */}
-            {data.overview.length > 0 && (
-              <NavOverview items={data.overview} />
-            )}
+            {data.overview.length > 0 && <NavOverview items={data.overview} />}
 
             {/* Operations */}
             {data.operations.length > 0 && (
@@ -291,7 +308,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
                   name: item.title,
                   url: item.url,
                   icon: item.icon,
-                  badge: 'badge' in item ? item.badge : undefined,
+                  badge: "badge" in item ? item.badge : undefined,
                 }))}
               />
             )}

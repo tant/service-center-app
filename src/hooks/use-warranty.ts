@@ -2,14 +2,14 @@
 // Custom hooks for warranty management and expiration tracking
 // TODO: Implement alongside Story 1.3 (Warehouse Management)
 
-'use client';
+"use client";
 
-import { useCallback } from 'react';
+import { useCallback } from "react";
 import type {
-  WarrantyExpiringSoon,
   WarrantyAnalytics,
   WarrantyCalculation,
-} from '@/types/warranty';
+  WarrantyExpiringSoon,
+} from "@/types/warranty";
 
 /**
  * Hook for products with expiring warranties
@@ -50,28 +50,30 @@ export function useWarrantyAnalytics() {
  * TODO: Implement warranty date calculations
  */
 export function useWarrantyCalculation() {
-  const calculateWarranty = useCallback((
-    startDate: string,
-    months: number
-  ): WarrantyCalculation => {
-    // TODO: Implement accurate date calculation
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setMonth(end.getMonth() + months);
+  const calculateWarranty = useCallback(
+    (startDate: string, months: number): WarrantyCalculation => {
+      // TODO: Implement accurate date calculation
+      const start = new Date(startDate);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + months);
 
-    const now = new Date();
-    const daysRemaining = Math.floor((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const now = new Date();
+      const daysRemaining = Math.floor(
+        (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
-    return {
-      start_date: startDate,
-      months,
-      end_date: end.toISOString().split('T')[0],
-      days_remaining: daysRemaining,
-      is_active: daysRemaining > 30,
-      is_expiring_soon: daysRemaining > 0 && daysRemaining <= 30,
-      is_expired: daysRemaining <= 0,
-    };
-  }, []);
+      return {
+        start_date: startDate,
+        months,
+        end_date: end.toISOString().split("T")[0],
+        days_remaining: daysRemaining,
+        is_active: daysRemaining > 30,
+        is_expiring_soon: daysRemaining > 0 && daysRemaining <= 30,
+        is_expired: daysRemaining <= 0,
+      };
+    },
+    [],
+  );
 
   return {
     calculateWarranty,
@@ -85,10 +87,10 @@ export function useWarrantyCalculation() {
 export function useWarrantyCheck() {
   const checkWarranty = useCallback(async (serialNumber: string) => {
     // TODO: Implement tRPC query
-    console.log('Checking warranty for serial:', serialNumber);
+    console.log("Checking warranty for serial:", serialNumber);
     return {
       hasWarranty: false,
-      status: 'unknown' as const,
+      status: "unknown" as const,
       daysRemaining: null,
     };
   }, []);

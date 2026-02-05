@@ -3,10 +3,7 @@
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { TemplateForm } from "@/components/templates/template-form";
-import {
-  useTaskTypes,
-  useCreateTemplate,
-} from "@/hooks/use-workflow";
+import { useCreateTemplate, useTaskTypes } from "@/hooks/use-workflow";
 
 export default function NewTemplatePage() {
   const router = useRouter();
@@ -27,10 +24,7 @@ export default function NewTemplatePage() {
 
   return (
     <>
-      <PageHeader
-        title="Tạo mẫu quy trình mới"
-        backHref="/workflows"
-      />
+      <PageHeader title="Tạo mẫu quy trình mới" backHref="/workflows" />
 
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

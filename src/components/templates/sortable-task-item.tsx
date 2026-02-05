@@ -3,8 +3,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { IconGripVertical, IconTrash } from "@tabler/icons-react";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,8 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
 export interface TaskItem {
   id: string; // Temporary ID for UI
@@ -72,7 +71,9 @@ export function SortableTaskItem({
 
       <div className="flex-1 space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Badge variant="outline" className="w-fit">{task.sequence_order}</Badge>
+          <Badge variant="outline" className="w-fit">
+            {task.sequence_order}
+          </Badge>
           <Select
             value={task.task_type_id}
             onValueChange={(value) =>

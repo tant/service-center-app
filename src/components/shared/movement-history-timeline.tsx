@@ -5,11 +5,16 @@
 
 "use client";
 
-import { useMovementHistory } from "@/hooks/use-warehouse";
-import { IconArrowRight, IconPackage, IconUser, IconCalendar } from "@tabler/icons-react";
+import {
+  IconArrowRight,
+  IconCalendar,
+  IconPackage,
+  IconUser,
+} from "@tabler/icons-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { useMovementHistory } from "@/hooks/use-warehouse";
 
 interface MovementHistoryTimelineProps {
   productId: string;
@@ -31,11 +36,19 @@ const MOVEMENT_TYPE_COLORS: Record<string, string> = {
   disposal: "bg-red-100 text-red-800",
 };
 
-export function MovementHistoryTimeline({ productId }: MovementHistoryTimelineProps) {
-  const { movements, isLoading, total } = useMovementHistory({ product_id: productId });
+export function MovementHistoryTimeline({
+  productId,
+}: MovementHistoryTimelineProps) {
+  const { movements, isLoading, total } = useMovementHistory({
+    product_id: productId,
+  });
 
   if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Đang tải lịch sử...</div>;
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Đang tải lịch sử...
+      </div>
+    );
   }
 
   if (total === 0) {
@@ -68,7 +81,8 @@ export function MovementHistoryTimeline({ productId }: MovementHistoryTimelinePr
                 variant="outline"
                 className={MOVEMENT_TYPE_COLORS[movement.movement_type] || ""}
               >
-                {MOVEMENT_TYPE_LABELS[movement.movement_type] || movement.movement_type}
+                {MOVEMENT_TYPE_LABELS[movement.movement_type] ||
+                  movement.movement_type}
               </Badge>
               {movement.ticket && (
                 <span className="text-sm text-muted-foreground">
@@ -82,28 +96,32 @@ export function MovementHistoryTimeline({ productId }: MovementHistoryTimelinePr
               <span className="font-medium">
                 {getLocationName(
                   movement.from_physical,
-                  movement.from_virtual_warehouse
+                  movement.from_virtual_warehouse,
                 )}
               </span>
               <IconArrowRight className="h-3 w-3 text-muted-foreground" />
               <span className="font-medium">
                 {getLocationName(
                   movement.to_physical,
-                  movement.to_virtual_warehouse
+                  movement.to_virtual_warehouse,
                 )}
               </span>
             </div>
 
             {/* Notes */}
             {movement.notes && (
-              <p className="text-sm text-muted-foreground mb-2">{movement.notes}</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                {movement.notes}
+              </p>
             )}
 
             {/* Metadata */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <IconCalendar className="h-3 w-3" />
-                {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", { locale: vi })}
+                {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", {
+                  locale: vi,
+                })}
               </div>
               {movement.moved_by && (
                 <div className="flex items-center gap-1">
@@ -122,7 +140,7 @@ export function MovementHistoryTimeline({ productId }: MovementHistoryTimelinePr
 // Helper to get location name from physical or virtual warehouse
 function getLocationName(
   physicalWarehouse: any,
-  virtualWarehouseType: string | null
+  virtualWarehouseType: string | null,
 ): string {
   if (physicalWarehouse) {
     return `${physicalWarehouse.name} (${physicalWarehouse.code})`;
@@ -136,7 +154,9 @@ function getLocationName(
       in_service: "Đang Sử Dụng",
       parts: "Kho Linh Kiện",
     };
-    return VIRTUAL_WAREHOUSE_LABELS[virtualWarehouseType] || virtualWarehouseType;
+    return (
+      VIRTUAL_WAREHOUSE_LABELS[virtualWarehouseType] || virtualWarehouseType
+    );
   }
 
   return "Không xác định";

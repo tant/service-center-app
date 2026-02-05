@@ -1,19 +1,18 @@
 "use client";
 
-import * as React from "react";
 import {
-  IconEdit,
-  IconTrash,
-  IconFileText,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconDots,
+  IconEdit,
+  IconEye,
+  IconFileText,
   IconLayoutColumns,
   IconPlus,
-  IconDots,
-  IconEye,
+  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -29,9 +28,20 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import * as React from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,25 +59,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useDeleteTemplate } from "@/hooks/use-workflow";
-import { toast } from "sonner";
-import { trpc } from "@/components/providers/trpc-provider";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDeleteTemplate } from "@/hooks/use-workflow";
 
 interface Workflow {
   id: string;
   name: string;
   description?: string;
-  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
+  entity_type?:
+    | "service_ticket"
+    | "inventory_receipt"
+    | "inventory_issue"
+    | "inventory_transfer"
+    | "service_request";
   enforce_sequence: boolean; // API field (mapped from DB's strict_sequence)
   is_active: boolean;
   created_at: string;
@@ -115,8 +120,11 @@ export function TemplateListTable({
   onCreateNew,
 }: TemplateListTableInterface) {
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
@@ -136,7 +144,9 @@ export function TemplateListTable({
                 table.getIsAllPageRowsSelected() ||
                 (table.getIsSomePageRowsSelected() && "indeterminate")
               }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+              onCheckedChange={(value) =>
+                table.toggleAllPageRowsSelected(!!value)
+              }
               aria-label="Chọn tất cả"
             />
           </div>
@@ -251,7 +261,7 @@ export function TemplateListTable({
         ),
       },
     ],
-    [onEdit, onView, deleteTemplate, isDeleting]
+    [onEdit, onView, deleteTemplate, isDeleting],
   );
 
   const table = useReactTable({
@@ -335,7 +345,7 @@ export function TemplateListTable({
                 .filter(
                   (column) =>
                     typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
+                    column.getCanHide(),
                 )
                 .map((column) => {
                   const columnDisplayNames: Record<string, string> = {
@@ -392,7 +402,7 @@ export function TemplateListTable({
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   ))}
@@ -407,7 +417,7 @@ export function TemplateListTable({
                       <TableCell key={cell.id}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

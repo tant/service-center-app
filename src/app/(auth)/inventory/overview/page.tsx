@@ -1,6 +1,6 @@
-import { PageHeader } from "@/components/page-header";
 import { InventoryStatCards } from "@/components/inventory/overview/inventory-stat-cards";
 import { InventoryTabs } from "@/components/inventory/overview/inventory-tabs";
+import { PageHeader } from "@/components/page-header";
 
 export default function InventoryOverviewPage() {
   return (

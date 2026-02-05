@@ -29,7 +29,10 @@ export function WorkflowTaskItemCard({ task, index }: WorkflowTaskItemProps) {
             </Badge>
           )}
           {task.is_required && (
-            <Badge variant="secondary" className="text-xs flex items-center gap-1">
+            <Badge
+              variant="secondary"
+              className="text-xs flex items-center gap-1"
+            >
               <IconCheck className="h-3 w-3" />
               Bắt buộc
             </Badge>

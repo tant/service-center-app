@@ -8,8 +8,8 @@
  */
 
 import type { TRPCContext } from "../trpc";
-import { adapterRegistry } from "./entity-adapters/registry";
 import type { EntityType, TaskStatus } from "./entity-adapters/base-adapter";
+import { adapterRegistry } from "./entity-adapters/registry";
 
 /**
  * Task data from database
@@ -161,7 +161,7 @@ export class TaskService {
           email,
           avatar_url
         )
-      `
+      `,
       )
       .order("due_date", { ascending: true, nullsFirst: false })
       .order("sequence_order", { ascending: true });
@@ -222,7 +222,7 @@ export class TaskService {
 
     // Enrich tasks with entity context
     const tasksWithContext = await Promise.all(
-      tasks.map((task) => this.enrichTaskWithContext(task))
+      tasks.map((task) => this.enrichTaskWithContext(task)),
     );
 
     return tasksWithContext;
@@ -246,7 +246,7 @@ export class TaskService {
           email,
           avatar_url
         )
-      `
+      `,
       )
       .eq("id", taskId)
       .single();
@@ -277,7 +277,7 @@ export class TaskService {
           email,
           avatar_url
         )
-      `
+      `,
       )
       .eq("entity_type", entityType)
       .eq("entity_id", entityId)
@@ -289,19 +289,23 @@ export class TaskService {
 
     // Enrich tasks with entity context
     const tasksWithContext = await Promise.all(
-      (tasks || []).map((task) => this.enrichTaskWithContext(task))
+      (tasks || []).map((task) => this.enrichTaskWithContext(task)),
     );
 
     // Calculate progress statistics
     const totalTasks = tasksWithContext.length;
-    const completedTasks =
-      tasksWithContext.filter((t) => t.status === "completed").length;
-    const inProgressTasks =
-      tasksWithContext.filter((t) => t.status === "in_progress").length;
-    const blockedTasks =
-      tasksWithContext.filter((t) => t.status === "blocked").length;
-    const pendingTasks =
-      tasksWithContext.filter((t) => t.status === "pending").length;
+    const completedTasks = tasksWithContext.filter(
+      (t) => t.status === "completed",
+    ).length;
+    const inProgressTasks = tasksWithContext.filter(
+      (t) => t.status === "in_progress",
+    ).length;
+    const blockedTasks = tasksWithContext.filter(
+      (t) => t.status === "blocked",
+    ).length;
+    const pendingTasks = tasksWithContext.filter(
+      (t) => t.status === "pending",
+    ).length;
 
     return {
       tasks: tasksWithContext,
@@ -335,19 +339,14 @@ export class TaskService {
     }
 
     if (task.status === "completed" || task.status === "skipped") {
-      throw new Error(
-        `Cannot start task that is already ${task.status}`
-      );
+      throw new Error(`Cannot start task that is already ${task.status}`);
     }
 
     // Check if user can start this task
     const adapter = adapterRegistry.get(task.entity_type);
 
     if (adapter.canStartTask) {
-      const { canStart, reason } = await adapter.canStartTask(
-        this.ctx,
-        taskId
-      );
+      const { canStart, reason } = await adapter.canStartTask(this.ctx, taskId);
 
       if (!canStart) {
         throw new Error(reason || "Cannot start this task");
@@ -409,7 +408,7 @@ export class TaskService {
           requires_notes,
           requires_photo
         )
-      `
+      `,
       )
       .eq("id", taskId)
       .single();
@@ -459,7 +458,7 @@ export class TaskService {
     // Prevent editing completed/skipped tasks
     if (task.status === "completed" || task.status === "skipped") {
       throw new Error(
-        "Không thể thêm ghi chú vào công việc đã hoàn thành hoặc đã bỏ qua"
+        "Không thể thêm ghi chú vào công việc đã hoàn thành hoặc đã bỏ qua",
       );
     }
 
@@ -522,7 +521,7 @@ export class TaskService {
       const dependenciesMet = await this.areDependenciesMet(taskId);
       if (!dependenciesMet) {
         throw new Error(
-          "Không thể hoàn thành công việc này. Vui lòng hoàn thành các công việc trước đó theo đúng thứ tự."
+          "Không thể hoàn thành công việc này. Vui lòng hoàn thành các công việc trước đó theo đúng thứ tự.",
         );
       }
     }
@@ -544,9 +543,7 @@ export class TaskService {
         .single();
 
       if (!taskData?.task_notes || taskData.task_notes.trim().length === 0) {
-        throw new Error(
-          "Ghi chú công việc là bắt buộc cho loại công việc này"
-        );
+        throw new Error("Ghi chú công việc là bắt buộc cho loại công việc này");
       }
     }
 
@@ -563,7 +560,7 @@ export class TaskService {
 
       if (!count || count === 0) {
         throw new Error(
-          "Phải upload ít nhất 1 ảnh/tài liệu cho loại công việc này"
+          "Phải upload ít nhất 1 ảnh/tài liệu cho loại công việc này",
         );
       }
     }
@@ -716,7 +713,7 @@ export class TaskService {
    * @returns Number of tasks created
    */
   async createTasksFromWorkflow(
-    input: CreateTasksFromWorkflowInput
+    input: CreateTasksFromWorkflowInput,
   ): Promise<number> {
     const { entityType, entityId, workflowId, createdById } = input;
 
@@ -726,13 +723,11 @@ export class TaskService {
       const { canAssign, reason } = await adapter.canAssignWorkflow(
         this.ctx,
         entityId,
-        workflowId
+        workflowId,
       );
 
       if (!canAssign) {
-        throw new Error(
-          reason || "Cannot assign this workflow to the entity"
-        );
+        throw new Error(reason || "Cannot assign this workflow to the entity");
       }
     }
 
@@ -762,7 +757,7 @@ export class TaskService {
               requires_photo
             )
           )
-        `
+        `,
         )
         .eq("id", workflowId)
         .eq("is_active", true)
@@ -779,7 +774,7 @@ export class TaskService {
     // Validate entity_type matches (if workflow specifies)
     if (workflow.entity_type && workflow.entity_type !== entityType) {
       throw new Error(
-        `Workflow is for ${workflow.entity_type}, but entity is ${entityType}`
+        `Workflow is for ${workflow.entity_type}, but entity is ${entityType}`,
       );
     }
 
@@ -837,7 +832,7 @@ export class TaskService {
 
     // Sort tasks by sequence_order
     const sortedTasks = [...workflow.tasks].sort(
-      (a, b) => a.sequence_order - b.sequence_order
+      (a, b) => a.sequence_order - b.sequence_order,
     );
 
     // Prepare entity tasks for insertion
@@ -867,9 +862,7 @@ export class TaskService {
       .insert(entityTasks);
 
     if (insertError) {
-      throw new Error(
-        `Failed to create entity tasks: ${insertError.message}`
-      );
+      throw new Error(`Failed to create entity tasks: ${insertError.message}`);
     }
 
     return entityTasks.length;
@@ -895,11 +888,12 @@ export class TaskService {
     }
 
     // Check if workflow is strict sequence
-    const { data: workflow, error: workflowError } = await this.ctx.supabaseAdmin
-      .from("workflows")
-      .select("strict_sequence")
-      .eq("id", task.workflow_id)
-      .single();
+    const { data: workflow, error: workflowError } =
+      await this.ctx.supabaseAdmin
+        .from("workflows")
+        .select("strict_sequence")
+        .eq("id", task.workflow_id)
+        .single();
 
     if (workflowError || !workflow?.strict_sequence) {
       // Not a strict sequence workflow, dependencies always met
@@ -921,8 +915,8 @@ export class TaskService {
     }
 
     // All previous required tasks must be completed or skipped
-    return previousTasks.every((t) =>
-      t.status === "completed" || t.status === "skipped"
+    return previousTasks.every(
+      (t) => t.status === "completed" || t.status === "skipped",
     );
   }
 
@@ -932,10 +926,7 @@ export class TaskService {
   private async enrichTaskWithContext(task: any): Promise<TaskWithContext> {
     try {
       const adapter = adapterRegistry.get(task.entity_type);
-      const context = await adapter.getEntityContext(
-        this.ctx,
-        task.entity_id
-      );
+      const context = await adapter.getEntityContext(this.ctx, task.entity_id);
 
       return {
         ...task,
@@ -943,10 +934,7 @@ export class TaskService {
       };
     } catch (error) {
       // If adapter fails, return task with minimal context
-      console.error(
-        `Failed to get entity context for task ${task.id}:`,
-        error
-      );
+      console.error(`Failed to get entity context for task ${task.id}:`, error);
       return {
         ...task,
         entity_context: {

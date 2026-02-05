@@ -3,7 +3,7 @@
 import type { Icon } from "@tabler/icons-react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
-import * as React from "react";
+import type * as React from "react";
 
 import {
   Collapsible,
@@ -49,7 +49,9 @@ export function NavWorkflows({
           <Collapsible
             key={item.title}
             asChild
-            defaultOpen={item.items.some((subItem) => pathname.startsWith(subItem.url))}
+            defaultOpen={item.items.some((subItem) =>
+              pathname.startsWith(subItem.url),
+            )}
             className="group/collapsible"
           >
             <SidebarMenuItem>
@@ -68,7 +70,10 @@ export function NavWorkflows({
                         asChild
                         isActive={pathname === subItem.url}
                       >
-                        <a href={subItem.url} onClick={(e) => handleClick(e, subItem.url)}>
+                        <a
+                          href={subItem.url}
+                          onClick={(e) => handleClick(e, subItem.url)}
+                        >
                           <span>{subItem.title}</span>
                         </a>
                       </SidebarMenuSubButton>

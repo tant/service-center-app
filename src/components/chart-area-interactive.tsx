@@ -1,5 +1,7 @@
 "use client";
 
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import {
@@ -25,8 +27,6 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 
 export const description = "An interactive area chart";
 
@@ -185,7 +185,9 @@ export function ChartAreaInteractive() {
                   content={
                     <ChartTooltipContent
                       labelFormatter={(value) => {
-                        return format(new Date(value), "dd/MM/yyyy", { locale: vi });
+                        return format(new Date(value), "dd/MM/yyyy", {
+                          locale: vi,
+                        });
                       }}
                       indicator="dot"
                     />
@@ -204,27 +206,35 @@ export function ChartAreaInteractive() {
             {/* Summary Statistics */}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t px-4">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Tổng doanh thu</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Tổng doanh thu
+                </span>
                 <span className="text-xl md:text-2xl font-bold">
-                  {stats.total.toLocaleString('vi-VN')} đ
+                  {stats.total.toLocaleString("vi-VN")} đ
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Trung bình/ngày</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Trung bình/ngày
+                </span>
                 <span className="text-xl md:text-2xl font-bold">
-                  {Math.round(stats.average).toLocaleString('vi-VN')} đ
+                  {Math.round(stats.average).toLocaleString("vi-VN")} đ
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Cao nhất</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Cao nhất
+                </span>
                 <span className="text-xl md:text-2xl font-bold text-green-600">
-                  {stats.highest.toLocaleString('vi-VN')} đ
+                  {stats.highest.toLocaleString("vi-VN")} đ
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Thấp nhất</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Thấp nhất
+                </span>
                 <span className="text-xl md:text-2xl font-bold text-orange-600">
-                  {stats.lowest.toLocaleString('vi-VN')} đ
+                  {stats.lowest.toLocaleString("vi-VN")} đ
                 </span>
               </div>
             </div>

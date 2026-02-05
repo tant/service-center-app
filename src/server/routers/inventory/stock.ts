@@ -3,55 +3,70 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockSummary, AggregatedStock, InventoryStats } from "@/types/inventory";
+import type {
+  AggregatedStock,
+  InventoryStats,
+  StockSummary,
+} from "@/types/inventory";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+} from "../../middleware/requireRole";
+import { publicProcedure, router } from "../../trpc";
 
 export const stockRouter = router({
   /**
    * Get inventory stats for dashboard cards
    */
-  getStats: publicProcedure.use(requireAnyAuthenticated).query(async ({ ctx }): Promise<InventoryStats> => {
-    const { data, error } = await ctx.supabaseAdmin.rpc("get_inventory_stats");
+  getStats: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }): Promise<InventoryStats> => {
+      const { data, error } = await ctx.supabaseAdmin.rpc(
+        "get_inventory_stats",
+      );
 
-    if (error) {
-      throw new Error(`Failed to get inventory stats: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to get inventory stats: ${error.message}`);
+      }
 
-    if (!data || data.length === 0) {
+      if (!data || data.length === 0) {
+        return {
+          total_skus: 0,
+          total_declared: 0,
+          total_actual: 0,
+          critical_count: 0,
+          warning_count: 0,
+        };
+      }
+
+      const stats = data[0];
       return {
-        total_skus: 0,
-        total_declared: 0,
-        total_actual: 0,
-        critical_count: 0,
-        warning_count: 0,
+        total_skus: Number(stats.total_skus || 0),
+        total_declared: Number(stats.total_declared || 0),
+        total_actual: Number(stats.total_actual || 0),
+        critical_count: Number(stats.critical_count || 0),
+        warning_count: Number(stats.warning_count || 0),
       };
-    }
-
-    const stats = data[0];
-    return {
-      total_skus: Number(stats.total_skus || 0),
-      total_declared: Number(stats.total_declared || 0),
-      total_actual: Number(stats.total_actual || 0),
-      critical_count: Number(stats.critical_count || 0),
-      warning_count: Number(stats.warning_count || 0),
-    };
-  }),
+    }),
 
   /**
    * Get aggregated stock (for "All Warehouses" tab)
    */
-  getAggregated: publicProcedure.use(requireAnyAuthenticated)
+  getAggregated: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         search: z.string().optional(),
         status: z.enum(["ok", "warning", "critical"]).optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }): Promise<AggregatedStock[]> => {
-      const { data, error } = await ctx.supabaseAdmin.rpc("get_aggregated_stock", {
-        search_term: input.search || null,
-      });
+      const { data, error } = await ctx.supabaseAdmin.rpc(
+        "get_aggregated_stock",
+        {
+          search_term: input.search || null,
+        },
+      );
 
       if (error) {
         throw new Error(`Failed to get aggregated stock: ${error.message}`);
@@ -70,7 +85,8 @@ export const stockRouter = router({
   /**
    * Get detailed stock summary from view
    */
-  getSummary: publicProcedure.use(requireAnyAuthenticated)
+  getSummary: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         virtualWarehouseType: z.string().optional(),
@@ -78,7 +94,7 @@ export const stockRouter = router({
         productId: z.string().optional(),
         status: z.enum(["ok", "warning", "critical"]).optional(),
         search: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }): Promise<StockSummary[]> => {
       let query = ctx.supabaseAdmin.from("v_stock_summary").select("*");
@@ -102,11 +118,13 @@ export const stockRouter = router({
 
       if (input.search) {
         query = query.or(
-          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`
+          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`,
         );
       }
 
-      const { data, error } = await query.order("product_name", { ascending: true });
+      const { data, error } = await query.order("product_name", {
+        ascending: true,
+      });
 
       if (error) {
         throw new Error(`Failed to get stock summary: ${error.message}`);
@@ -118,12 +136,13 @@ export const stockRouter = router({
   /**
    * Get stock by physical warehouse
    */
-  getByPhysicalWarehouse: publicProcedure.use(requireAnyAuthenticated)
+  getByPhysicalWarehouse: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         warehouseId: z.string(),
         search: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }): Promise<StockSummary[]> => {
       let query = ctx.supabaseAdmin
@@ -133,14 +152,18 @@ export const stockRouter = router({
 
       if (input.search) {
         query = query.or(
-          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`
+          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`,
         );
       }
 
-      const { data, error } = await query.order("product_name", { ascending: true });
+      const { data, error } = await query.order("product_name", {
+        ascending: true,
+      });
 
       if (error) {
-        throw new Error(`Failed to get stock by physical warehouse: ${error.message}`);
+        throw new Error(
+          `Failed to get stock by physical warehouse: ${error.message}`,
+        );
       }
 
       return (data || []) as StockSummary[];
@@ -149,12 +172,13 @@ export const stockRouter = router({
   /**
    * Get stock by virtual warehouse
    */
-  getByVirtualWarehouse: publicProcedure.use(requireAnyAuthenticated)
+  getByVirtualWarehouse: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         warehouseType: z.string(),
         search: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }): Promise<StockSummary[]> => {
       let query = ctx.supabaseAdmin
@@ -164,14 +188,18 @@ export const stockRouter = router({
 
       if (input.search) {
         query = query.or(
-          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`
+          `product_name.ilike.%${input.search}%,sku.ilike.%${input.search}%`,
         );
       }
 
-      const { data, error } = await query.order("product_name", { ascending: true });
+      const { data, error } = await query.order("product_name", {
+        ascending: true,
+      });
 
       if (error) {
-        throw new Error(`Failed to get stock by virtual warehouse: ${error.message}`);
+        throw new Error(
+          `Failed to get stock by virtual warehouse: ${error.message}`,
+        );
       }
 
       return (data || []) as StockSummary[];
@@ -180,7 +208,8 @@ export const stockRouter = router({
   /**
    * Get stock for specific product with warehouse breakdown
    */
-  getProductStockDetail: publicProcedure.use(requireAnyAuthenticated)
+  getProductStockDetail: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(z.object({ productId: z.string() }))
     .query(async ({ ctx, input }) => {
       const { data, error } = await ctx.supabaseAdmin
@@ -199,13 +228,14 @@ export const stockRouter = router({
   /**
    * Update product warehouse stock (Admin/Manager only)
    */
-  updateStock: publicProcedure.use(requireManagerOrAbove)
+  updateStock: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         id: z.string(),
         declaredQuantity: z.number().int().min(0).optional(),
         initialStockEntry: z.number().int().min(0).optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Check role
@@ -216,7 +246,9 @@ export const stockRouter = router({
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
-        throw new Error("Unauthorized: Only admin and manager can update stock");
+        throw new Error(
+          "Unauthorized: Only admin and manager can update stock",
+        );
       }
 
       // Admin can update initial_stock_entry, manager cannot
@@ -246,12 +278,13 @@ export const stockRouter = router({
    * Get stock trend history for a product
    * Returns time-series data showing stock changes over time
    */
-  getStockTrend: publicProcedure.use(requireAnyAuthenticated)
+  getStockTrend: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         productId: z.string(),
         days: z.number().min(7).max(365).default(30),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       // Get all receipts for this product
@@ -288,7 +321,7 @@ export const stockRouter = router({
       type StockEvent = {
         date: string;
         change: number;
-        type: 'receipt' | 'issue';
+        type: "receipt" | "issue";
       };
 
       const events: StockEvent[] = [];
@@ -299,7 +332,7 @@ export const stockRouter = router({
           events.push({
             date: r.receipt.completed_at,
             change: r.declared_quantity,
-            type: 'receipt',
+            type: "receipt",
           });
         }
       });
@@ -310,20 +343,22 @@ export const stockRouter = router({
           events.push({
             date: i.issue.completed_at,
             change: -i.quantity,
-            type: 'issue',
+            type: "issue",
           });
         }
       });
 
       // Sort by date
-      events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      events.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      );
 
       // Calculate cumulative stock
       let cumulativeStock = 0;
       const trendData = events.map((event) => {
         cumulativeStock += event.change;
         return {
-          date: new Date(event.date).toISOString().split('T')[0], // YYYY-MM-DD
+          date: new Date(event.date).toISOString().split("T")[0], // YYYY-MM-DD
           stock: cumulativeStock,
           change: event.change,
           type: event.type,
@@ -331,7 +366,9 @@ export const stockRouter = router({
       });
 
       // Group by day and take the last value of each day
-      const dailyData = trendData.reduce<Record<string, { date: string; stock: number }>>((acc, item) => {
+      const dailyData = trendData.reduce<
+        Record<string, { date: string; stock: number }>
+      >((acc, item) => {
         acc[item.date] = {
           date: item.date,
           stock: item.stock,
@@ -345,7 +382,9 @@ export const stockRouter = router({
 
       const filteredData = Object.values(dailyData)
         .filter((item) => new Date(item.date) >= cutoffDate)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        .sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        );
 
       return filteredData;
     }),

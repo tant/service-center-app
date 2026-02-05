@@ -1,10 +1,14 @@
 "use client";
 
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconUpload,
+  IconX,
+} from "@tabler/icons-react";
 import * as React from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Drawer,
   DrawerClose,
@@ -15,6 +19,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -23,9 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IconUpload, IconX, IconAlertCircle, IconCheck } from "@tabler/icons-react";
-import { useAddProductsToRMA, useValidateRMASerials } from "@/hooks/use-warehouse";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  useAddProductsToRMA,
+  useValidateRMASerials,
+} from "@/hooks/use-warehouse";
 
 interface AddProductsToRMADrawerProps {
   batchId: string;
@@ -49,7 +57,9 @@ export function AddProductsToRMADrawer({
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [serialInput, setSerialInput] = React.useState("");
-  const [validationResults, setValidationResults] = React.useState<ValidationResult[]>([]);
+  const [validationResults, setValidationResults] = React.useState<
+    ValidationResult[]
+  >([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { validateAsync, isValidating } = useValidateRMASerials();
@@ -79,12 +89,12 @@ export function AddProductsToRMADrawer({
   const handleValidate = async () => {
     const serialNumbers = parseSerialNumbers(serialInput);
     if (serialNumbers.length === 0) return;
-    
+
     try {
       const results = await validateAsync({
         serial_numbers: serialNumbers,
       });
-      
+
       setValidationResults(results);
     } catch (error) {
       console.error("Validation error:", error);
@@ -111,7 +121,7 @@ export function AddProductsToRMADrawer({
           setValidationResults([]);
           onSuccess?.();
         },
-      }
+      },
     );
   };
 
@@ -120,17 +130,26 @@ export function AddProductsToRMADrawer({
     setValidationResults([]);
   };
 
-  const validCount = validationResults.filter((r) => r.status === "valid").length;
-  const invalidCount = validationResults.filter((r) => r.status !== "valid").length;
+  const validCount = validationResults.filter(
+    (r) => r.status === "valid",
+  ).length;
+  const invalidCount = validationResults.filter(
+    (r) => r.status !== "valid",
+  ).length;
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} direction={isMobile ? "bottom" : "right"}>
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent className={isMobile ? "max-h-[90vh]" : "max-w-2xl"}>
         <DrawerHeader>
           <DrawerTitle>Thêm sản phẩm vào lô RMA</DrawerTitle>
           <DrawerDescription>
-            Nhập danh sách serial number (mỗi dòng 1 serial) hoặc upload file text
+            Nhập danh sách serial number (mỗi dòng 1 serial) hoặc upload file
+            text
           </DrawerDescription>
         </DrawerHeader>
 
@@ -189,7 +208,9 @@ export function AddProductsToRMADrawer({
                 type="button"
                 size="sm"
                 onClick={handleValidate}
-                disabled={serialInput.trim().length === 0 || isValidating || isAdding}
+                disabled={
+                  serialInput.trim().length === 0 || isValidating || isAdding
+                }
               >
                 {isValidating ? "Đang kiểm tra..." : "Kiểm tra"}
               </Button>
@@ -247,11 +268,15 @@ export function AddProductsToRMADrawer({
                             {result.status === "valid" ? (
                               <span className="text-green-600">Hợp lệ</span>
                             ) : result.status === "not_found" ? (
-                              <span className="text-destructive">Không tìm thấy</span>
+                              <span className="text-destructive">
+                                Không tìm thấy
+                              </span>
                             ) : result.status === "duplicate" ? (
                               <span className="text-amber-600">Trùng lặp</span>
                             ) : (
-                              <span className="text-destructive">{result.message}</span>
+                              <span className="text-destructive">
+                                {result.message}
+                              </span>
                             )}
                           </TableCell>
                         </TableRow>

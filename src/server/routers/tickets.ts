@@ -424,20 +424,28 @@ export async function createBatchReceipt(
       physical_product_id: serial.physicalProductId,
     }));
 
-    console.log(`[BATCH RECEIPT] Inserting ${serialInserts.length} serials:`, serialInserts);
+    console.log(
+      `[BATCH RECEIPT] Inserting ${serialInserts.length} serials:`,
+      serialInserts,
+    );
 
     const { error: serialError } = await supabaseAdmin
       .from("stock_receipt_serials")
       .insert(serialInserts);
 
     if (serialError) {
-      console.error(`[BATCH RECEIPT ERROR] Failed to insert serials:`, serialError);
+      console.error(
+        `[BATCH RECEIPT ERROR] Failed to insert serials:`,
+        serialError,
+      );
       throw new Error(
         `Lỗi thêm serial vào phiếu nhập kho: ${serialError.message}`,
       );
     }
 
-    console.log(`[BATCH RECEIPT] Successfully inserted ${serialInserts.length} serials`);
+    console.log(
+      `[BATCH RECEIPT] Successfully inserted ${serialInserts.length} serials`,
+    );
   }
 
   return {

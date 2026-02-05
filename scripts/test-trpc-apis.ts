@@ -7,8 +7,8 @@
  * 2. Logged in user session (for auth)
  */
 
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
 config();
 
@@ -79,7 +79,10 @@ async function setupTestData() {
     return { warrantyWarehouse, product: newPhysical };
   }
 
-  console.log("✅ Found product in warranty_stock:", availableProduct.serial_number);
+  console.log(
+    "✅ Found product in warranty_stock:",
+    availableProduct.serial_number,
+  );
   return { warrantyWarehouse, product: availableProduct };
 }
 
@@ -136,7 +139,7 @@ async function testConstraint(ticketId: string) {
 async function testCompleteTicketDirect(
   ticketId: string,
   outcome: string,
-  replacementProductId?: string
+  replacementProductId?: string,
 ) {
   console.log(`\n=== Test: Complete ticket with outcome='${outcome}' ===`);
 
@@ -172,7 +175,7 @@ async function testCompleteTicketDirect(
 async function testWarrantyReplacementFlow(
   ticketId: string,
   replacementProductId: string,
-  customerId: string
+  customerId: string,
 ) {
   console.log("\n=== Test: Warranty Replacement Flow ===");
 
@@ -289,7 +292,10 @@ async function main() {
   }
 
   // Create test ticket
-  const ticket = await createTestTicket(testData.product.product_id, customer.id);
+  const ticket = await createTestTicket(
+    testData.product.product_id,
+    customer.id,
+  );
   if (!ticket) return;
 
   try {
@@ -303,7 +309,7 @@ async function main() {
     await testWarrantyReplacementFlow(
       ticket.id,
       testData.product.id,
-      customer.id
+      customer.id,
     );
 
     console.log("\n" + "=".repeat(50));

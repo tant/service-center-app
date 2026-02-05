@@ -5,17 +5,17 @@
  * Contains badges and action buttons (toggle, edit, delete)
  */
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   IconEdit,
-  IconTrash,
   IconToggleLeft,
   IconToggleRight,
+  IconTrash,
 } from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useDeleteTemplate, useToggleTemplate } from "@/hooks/use-workflow";
 import { ENTITY_TYPE_LABELS } from "@/lib/constants/workflow";
 import type { WorkflowDetailData } from "./types";
@@ -24,7 +24,9 @@ interface WorkflowHeaderActionsProps {
   workflow: WorkflowDetailData;
 }
 
-export function WorkflowHeaderActions({ workflow }: WorkflowHeaderActionsProps) {
+export function WorkflowHeaderActions({
+  workflow,
+}: WorkflowHeaderActionsProps) {
   const router = useRouter();
   const { deleteTemplate, isDeleting } = useDeleteTemplate();
   const { toggleTemplate, isToggling } = useToggleTemplate();
@@ -44,7 +46,7 @@ export function WorkflowHeaderActions({ workflow }: WorkflowHeaderActionsProps) 
           setShowDeleteDialog(false);
           router.push("/workflows");
         },
-      }
+      },
     );
   };
 
@@ -58,7 +60,7 @@ export function WorkflowHeaderActions({ workflow }: WorkflowHeaderActionsProps) 
         onSuccess: () => {
           setShowToggleDialog(false);
         },
-      }
+      },
     );
   };
 

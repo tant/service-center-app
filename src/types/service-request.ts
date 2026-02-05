@@ -1,17 +1,23 @@
 // Service Request Types
 // Types for public service request portal
 
-import type { Database } from './database.types';
-import type { RequestStatus, ServiceType, DeliveryMethod } from './enums';
+import type { Database } from "./database.types";
+import type { DeliveryMethod, RequestStatus, ServiceType } from "./enums";
 
 // Database table types
-export type ServiceRequest = Database['public']['Tables']['service_requests']['Row'];
-export type ServiceRequestInsert = Database['public']['Tables']['service_requests']['Insert'];
-export type ServiceRequestUpdate = Database['public']['Tables']['service_requests']['Update'];
+export type ServiceRequest =
+  Database["public"]["Tables"]["service_requests"]["Row"];
+export type ServiceRequestInsert =
+  Database["public"]["Tables"]["service_requests"]["Insert"];
+export type ServiceRequestUpdate =
+  Database["public"]["Tables"]["service_requests"]["Update"];
 
-export type EmailNotification = Database['public']['Tables']['email_notifications']['Row'];
-export type EmailNotificationInsert = Database['public']['Tables']['email_notifications']['Insert'];
-export type EmailNotificationUpdate = Database['public']['Tables']['email_notifications']['Update'];
+export type EmailNotification =
+  Database["public"]["Tables"]["email_notifications"]["Row"];
+export type EmailNotificationInsert =
+  Database["public"]["Tables"]["email_notifications"]["Insert"];
+export type EmailNotificationUpdate =
+  Database["public"]["Tables"]["email_notifications"]["Update"];
 
 // View types
 // TODO: Re-enable when v_service_request_summary view is recreated in migrations
@@ -69,15 +75,15 @@ export interface ServiceRequestConversion {
 
 // Email notification types
 export type NotificationType =
-  | 'service_request_received'
-  | 'service_request_reviewed'
-  | 'service_request_approved'
-  | 'service_request_rejected'
-  | 'ticket_created_from_request'
-  | 'ticket_status_updated'
-  | 'task_completed'
-  | 'warranty_expiring_soon'
-  | 'low_stock_alert';
+  | "service_request_received"
+  | "service_request_reviewed"
+  | "service_request_approved"
+  | "service_request_rejected"
+  | "ticket_created_from_request"
+  | "ticket_status_updated"
+  | "task_completed"
+  | "warranty_expiring_soon"
+  | "low_stock_alert";
 
 export interface EmailNotificationData {
   recipient_email: string;
@@ -87,7 +93,10 @@ export interface EmailNotificationData {
   body_html?: string;
   template_name?: string;
   notification_type: NotificationType;
-  related_entity_type?: 'service_request' | 'service_ticket' | 'physical_product';
+  related_entity_type?:
+    | "service_request"
+    | "service_ticket"
+    | "physical_product";
   related_entity_id?: string;
 }
 
@@ -126,5 +135,5 @@ export interface PublicPortalConfig {
 // Constants
 export const MAX_ISSUE_PHOTOS = 5;
 export const MAX_PHOTO_SIZE_MB = 5;
-export const TRACKING_TOKEN_PREFIX = 'SR-';
+export const TRACKING_TOKEN_PREFIX = "SR-";
 export const TRACKING_TOKEN_LENGTH = 12; // Plus prefix = 15 total

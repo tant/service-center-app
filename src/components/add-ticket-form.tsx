@@ -1,17 +1,17 @@
 "use client";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
-  IconUser,
-  IconSettings,
+  IconCalculator,
   IconPackage,
   IconPlus,
+  IconSettings,
   IconTrash,
-  IconCalculator,
+  IconUser,
 } from "@tabler/icons-react";
-
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,19 +23,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@/components/ui/searchable-select";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  SearchableSelect,
-  type SearchableSelectOption,
-} from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { trpc } from "@/components/providers/trpc-provider";
 import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 // Types
@@ -103,7 +102,7 @@ export function AddTicketForm() {
     { enabled: !!ticketData.product_id },
   );
   const { data: workflows } = trpc.workflow.template.list.useQuery({
-    entity_type: 'service_ticket',
+    entity_type: "service_ticket",
     is_active: true,
   });
   const { defaults } = useDefaultWorkflowsSettings();
@@ -118,7 +117,9 @@ export function AddTicketForm() {
     if (exists) {
       setTicketData((prev) => ({ ...prev, workflow_id: defaultId }));
     } else if (!warnedMissingDefault.current) {
-      toast.error("Workflow mặc định cho phiếu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
+      toast.error(
+        "Workflow mặc định cho phiếu dịch vụ không tồn tại. Vui lòng chọn thủ công.",
+      );
       warnedMissingDefault.current = true;
     }
   }, [workflows, defaults, ticketData.workflow_id]);
@@ -155,9 +156,10 @@ export function AddTicketForm() {
         timestamp: new Date().toISOString(),
       });
       const taskCount = data.tasks?.length || 0;
-      const message = taskCount > 0
-        ? `Phiếu dịch vụ đã được tạo thành công với ${taskCount} tasks!`
-        : "Phiếu dịch vụ đã được tạo thành công!";
+      const message =
+        taskCount > 0
+          ? `Phiếu dịch vụ đã được tạo thành công với ${taskCount} tasks!`
+          : "Phiếu dịch vụ đã được tạo thành công!";
       toast.success(message);
       router.push(`/operations/tickets/${data.ticket.id}`);
     },
@@ -299,7 +301,8 @@ export function AddTicketForm() {
     if (!emailRegex.test(customerData.email)) {
       setErrors((prev) => ({
         ...prev,
-        email: "Email không hợp lệ. Vui lòng nhập đúng định dạng (ví dụ: example@domain.com)",
+        email:
+          "Email không hợp lệ. Vui lòng nhập đúng định dạng (ví dụ: example@domain.com)",
       }));
       return false;
     }
@@ -724,7 +727,10 @@ export function AddTicketForm() {
               <Select
                 value={ticketData.workflow_id || "none"}
                 onValueChange={(value) =>
-                  setTicketData((prev) => ({ ...prev, workflow_id: value === "none" ? "" : value }))
+                  setTicketData((prev) => ({
+                    ...prev,
+                    workflow_id: value === "none" ? "" : value,
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -733,7 +739,11 @@ export function AddTicketForm() {
                 <SelectContent>
                   <SelectItem value="none">Không sử dụng quy trình</SelectItem>
                   {workflows
-                    ?.filter((wf) => wf.service_type === ticketData.warranty_type || !wf.service_type)
+                    ?.filter(
+                      (wf) =>
+                        wf.service_type === ticketData.warranty_type ||
+                        !wf.service_type,
+                    )
                     ?.map((workflow) => (
                       <SelectItem key={workflow.id} value={workflow.id}>
                         {workflow.name} ({workflow.tasks?.length || 0} bước)
@@ -743,15 +753,24 @@ export function AddTicketForm() {
               </Select>
               {ticketData.workflow_id && workflows && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
-                  <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
+                  <p className="text-sm font-medium mb-2">
+                    Các bước trong quy trình:
+                  </p>
                   <ol className="list-decimal ml-4 space-y-1">
                     {workflows
                       ?.find((w) => w.id === ticketData.workflow_id)
-                      ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                      ?.tasks?.sort(
+                        (a: any, b: any) => a.sequence_order - b.sequence_order,
+                      )
                       ?.map((task: any) => (
-                        <li key={task.id} className="text-sm text-muted-foreground">
-                          {task.task_type?.name || 'Unknown task'}
-                          {task.is_required && <span className="text-red-500 ml-1">*</span>}
+                        <li
+                          key={task.id}
+                          className="text-sm text-muted-foreground"
+                        >
+                          {task.task_type?.name || "Unknown task"}
+                          {task.is_required && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
                         </li>
                       ))}
                   </ol>
@@ -784,7 +803,11 @@ export function AddTicketForm() {
             </div>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)} data-testid="back-step-2-button">
+              <Button
+                variant="outline"
+                onClick={() => setStep(1)}
+                data-testid="back-step-2-button"
+              >
                 Quay lại
               </Button>
               <Button
@@ -982,7 +1005,11 @@ export function AddTicketForm() {
             )}
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)} data-testid="back-step-3-button">
+              <Button
+                variant="outline"
+                onClick={() => setStep(2)}
+                data-testid="back-step-3-button"
+              >
                 Quay lại
               </Button>
               <Button
@@ -1129,10 +1156,18 @@ export function AddTicketForm() {
             </div>
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(3)} data-testid="back-step-4-button">
+              <Button
+                variant="outline"
+                onClick={() => setStep(3)}
+                data-testid="back-step-4-button"
+              >
                 Quay lại
               </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit || isLoading} data-testid="submit-ticket-button">
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isLoading}
+                data-testid="submit-ticket-button"
+              >
                 {isLoading ? "Đang tạo..." : "Tạo Phiếu Dịch Vụ"}
               </Button>
             </div>

@@ -6,7 +6,10 @@
  */
 
 import { trpc } from "@/components/providers/trpc-provider";
-import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
+import {
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@/components/ui/searchable-select";
 
 interface ProductSearchProps {
   value: string;
@@ -25,7 +28,7 @@ export function ProductSearch({
 }: ProductSearchProps) {
   const { data: products, isLoading } = trpc.products.getProducts.useQuery(
     undefined,
-    { refetchOnMount: false, staleTime: 60000 }
+    { refetchOnMount: false, staleTime: 60000 },
   );
 
   const options: SearchableSelectOption[] = (products || []).map((p: any) => ({
@@ -48,7 +51,9 @@ export function ProductSearch({
         <div className="flex flex-col">
           <span className="font-medium">{option.label}</span>
           {option.description && (
-            <span className="text-xs text-muted-foreground">{option.description}</span>
+            <span className="text-xs text-muted-foreground">
+              {option.description}
+            </span>
           )}
         </div>
       )}

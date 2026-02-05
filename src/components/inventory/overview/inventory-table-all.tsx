@@ -5,9 +5,19 @@
  * Displays aggregated stock across all warehouses
  */
 
+import { Search } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -16,26 +26,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { StockStatusBadge } from "../shared/stock-status-badge";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
-import Link from "next/link";
 
 export function InventoryTableAll() {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"ok" | "warning" | "critical" | undefined>();
+  const [status, setStatus] = useState<
+    "ok" | "warning" | "critical" | undefined
+  >();
 
-  const { data: stock, isLoading } = trpc.inventory.stock.getAggregated.useQuery({
-    search,
-    status,
-  });
+  const { data: stock, isLoading } =
+    trpc.inventory.stock.getAggregated.useQuery({
+      search,
+      status,
+    });
 
   return (
     <div className="space-y-4">
@@ -50,7 +53,10 @@ export function InventoryTableAll() {
             className="pl-8"
           />
         </div>
-        <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? undefined : v as any)}>
+        <Select
+          value={status || "all"}
+          onValueChange={(v) => setStatus(v === "all" ? undefined : (v as any))}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
@@ -74,36 +80,62 @@ export function InventoryTableAll() {
               <TableHead className="text-right">Thực tế</TableHead>
               <TableHead className="text-right">Chênh lệch</TableHead>
               <TableHead>Trạng thái</TableHead>
-              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">
+                Thao tác
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Đang tải...
                 </TableCell>
               </TableRow>
             ) : !stock || stock.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Không tìm thấy dữ liệu tồn kho nào.
                 </TableCell>
               </TableRow>
             ) : (
               stock.map((item) => (
                 <TableRow key={item.product_id}>
-                  <TableCell className="font-medium pl-4 lg:pl-6">{item.product_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.sku || "-"}</TableCell>
-                  <TableCell className="text-right">{item.total_declared.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{item.total_actual.toLocaleString()}</TableCell>
+                  <TableCell className="font-medium pl-4 lg:pl-6">
+                    {item.product_name}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {item.sku || "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {item.total_declared.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {item.total_actual.toLocaleString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     {item.serial_gap !== 0 && (
-                      <span className={item.serial_gap > 0 ? "text-yellow-600" : "text-red-600"}>
-                        {item.serial_gap > 0 ? `+${item.serial_gap}` : item.serial_gap}
+                      <span
+                        className={
+                          item.serial_gap > 0
+                            ? "text-yellow-600"
+                            : "text-red-600"
+                        }
+                      >
+                        {item.serial_gap > 0
+                          ? `+${item.serial_gap}`
+                          : item.serial_gap}
                       </span>
                     )}
-                    {item.serial_gap === 0 && <span className="text-muted-foreground">-</span>}
+                    {item.serial_gap === 0 && (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <StockStatusBadge status={item.stock_status} />

@@ -6,16 +6,12 @@
 
 "use client";
 
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
+import { Eye, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
-import { useEmailLog, useRetryEmail } from "@/hooks/use-notifications";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { toast } from "sonner";
+import { EmailContentModal } from "@/components/modals/email-content-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,11 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Eye, Search } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
-import { EmailContentModal } from "@/components/modals/email-content-modal";
-import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useEmailLog, useRetryEmail } from "@/hooks/use-notifications";
 
 const EMAIL_TYPE_LABELS: Record<string, string> = {
   request_submitted: "Yêu cầu đã gửi",
@@ -41,7 +41,17 @@ const EMAIL_TYPE_LABELS: Record<string, string> = {
   delivery_confirmed: "Xác nhận giao hàng",
 };
 
-const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline" | "pending" | "processing" | "resolved" | "closed"> = {
+const STATUS_COLORS: Record<
+  string,
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "pending"
+  | "processing"
+  | "resolved"
+  | "closed"
+> = {
   pending: "processing",
   sent: "resolved",
   failed: "destructive",
@@ -49,8 +59,18 @@ const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "o
 };
 
 export function EmailNotificationsTable() {
-  const [emailType, setEmailType] = useState<'request_submitted' | 'request_received' | 'request_rejected' | 'ticket_created' | 'service_completed' | 'delivery_confirmed' | "">("");
-  const [status, setStatus] = useState<'pending' | 'sent' | 'failed' | 'bounced' | "">("");
+  const [emailType, setEmailType] = useState<
+    | "request_submitted"
+    | "request_received"
+    | "request_rejected"
+    | "ticket_created"
+    | "service_completed"
+    | "delivery_confirmed"
+    | ""
+  >("");
+  const [status, setStatus] = useState<
+    "pending" | "sent" | "failed" | "bounced" | ""
+  >("");
   const [search, setSearch] = useState<string>("");
   const [offset, setOffset] = useState<number>(0);
   const [selectedEmail, setSelectedEmail] = useState<any | null>(null);
@@ -72,7 +92,9 @@ export function EmailNotificationsTable() {
       toast.success("Email đã được gửi lại");
       refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Không thể gửi lại email");
+      toast.error(
+        error instanceof Error ? error.message : "Không thể gửi lại email",
+      );
     }
   };
 
@@ -101,7 +123,10 @@ export function EmailNotificationsTable() {
             />
           </div>
         </div>
-        <Select value={emailType} onValueChange={(value) => setEmailType(value as typeof emailType)}>
+        <Select
+          value={emailType}
+          onValueChange={(value) => setEmailType(value as typeof emailType)}
+        >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Loại email" />
           </SelectTrigger>
@@ -114,7 +139,10 @@ export function EmailNotificationsTable() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+        <Select
+          value={status}
+          onValueChange={(value) => setStatus(value as typeof status)}
+        >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
@@ -159,7 +187,10 @@ export function EmailNotificationsTable() {
               </TableRow>
             ) : !data || data.emails.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Không có email nào
                 </TableCell>
               </TableRow>
@@ -217,7 +248,8 @@ export function EmailNotificationsTable() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {(email.status === "failed" || email.status === "pending") &&
+                      {(email.status === "failed" ||
+                        email.status === "pending") &&
                         email.retry_count < email.max_retries && (
                           <Button
                             variant="outline"
@@ -242,8 +274,8 @@ export function EmailNotificationsTable() {
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Hiển thị {offset + 1} - {Math.min(offset + limit, data.total)} trong tổng số{" "}
-            {data.total} email
+            Hiển thị {offset + 1} - {Math.min(offset + limit, data.total)} trong
+            tổng số {data.total} email
           </div>
           <div className="flex items-center gap-2">
             <Button

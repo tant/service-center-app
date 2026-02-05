@@ -1,23 +1,20 @@
 "use client";
 
 import {
+  IconCheck,
   IconChevronDown,
+  IconClock,
+  IconDotsVertical,
   IconEdit,
   IconEye,
   IconLayoutColumns,
-  IconPlus,
-  IconUserCheck,
-  IconDotsVertical,
-  IconRefresh,
-  IconCheck,
-  IconClock,
-  IconX,
   IconMessageCircle,
   IconPhoto,
+  IconPlus,
+  IconRefresh,
+  IconUserCheck,
+  IconX,
 } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
-import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import {
   type ColumnDef,
   flexRender,
@@ -28,9 +25,14 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trpc } from "@/components/providers/trpc-provider";
+import { QuickCommentModal } from "@/components/quick-comment-modal";
+import { QuickUploadImagesModal } from "@/components/quick-upload-images-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -54,7 +56,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -63,12 +64,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { QuickCommentModal } from "@/components/quick-comment-modal";
-import { QuickUploadImagesModal } from "@/components/quick-upload-images-modal";
-import Link from "next/link";
+import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 
-const ticketStatusEnum = z.enum(["open", "in_progress", "ready", "resolved", "closed"]);
+const ticketStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "ready",
+  "resolved",
+  "closed",
+]);
 const ticketPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
 
 export const ticketSchema = z.object({
@@ -119,7 +125,11 @@ const STATUS_ICONS = {
 const STATUS_OPTIONS = [
   { value: "pending" as const, icon: "pending", label: "Chờ xử lý" },
   { value: "in_progress" as const, icon: "in_progress", label: "Đang xử lý" },
-  { value: "ready_for_pickup" as const, icon: "ready_for_pickup", label: "Sẵn sàng bàn giao" },
+  {
+    value: "ready_for_pickup" as const,
+    icon: "ready_for_pickup",
+    label: "Sẵn sàng bàn giao",
+  },
   { value: "completed" as const, icon: "completed", label: "Hoàn thành" },
   { value: "cancelled" as const, icon: "cancelled", label: "Đã hủy" },
 ];
@@ -259,13 +269,23 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   const mapDatabaseStatusToUI = (
     dbStatus: string,
   ): "open" | "in_progress" | "ready" | "resolved" | "closed" => {
-    return (STATUS_DB_TO_UI[dbStatus] || "open") as "open" | "in_progress" | "ready" | "resolved" | "closed";
+    return (STATUS_DB_TO_UI[dbStatus] || "open") as
+      | "open"
+      | "in_progress"
+      | "ready"
+      | "resolved"
+      | "closed";
   };
 
   // Helper to map UI status to database status
   const mapUIStatusToDatabase = (
     uiStatus: string,
-  ): "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled" => {
+  ):
+    | "pending"
+    | "in_progress"
+    | "ready_for_pickup"
+    | "completed"
+    | "cancelled" => {
     return (STATUS_UI_TO_DB[uiStatus] || "pending") as
       | "pending"
       | "in_progress"
@@ -277,7 +297,9 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
   // Get valid next statuses for a ticket
   const getValidNextStatuses = (
     currentStatus: string,
-  ): Array<"pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled"> => {
+  ): Array<
+    "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled"
+  > => {
     const dbStatus = mapUIStatusToDatabase(currentStatus);
     const statusFlow = STATUS_FLOW[dbStatus as keyof typeof STATUS_FLOW];
     return [...(statusFlow?.next || [])] as Array<
@@ -298,7 +320,12 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
     ticketId: string,
     onStatusChange: (
       id: string,
-      status: "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled",
+      status:
+        | "pending"
+        | "in_progress"
+        | "ready_for_pickup"
+        | "completed"
+        | "cancelled",
     ) => void,
     getIcon: (status: string) => React.ReactNode,
   ) => {
@@ -391,7 +418,12 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
 
   const handleStatusChange = (
     ticketId: string,
-    newStatus: "pending" | "in_progress" | "ready_for_pickup" | "completed" | "cancelled",
+    newStatus:
+      | "pending"
+      | "in_progress"
+      | "ready_for_pickup"
+      | "completed"
+      | "cancelled",
   ) => {
     updateStatusMutation.mutate({
       id: ticketId,
@@ -518,7 +550,9 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push(`/operations/tickets/${ticket.id}/edit`)}
+                onClick={() =>
+                  router.push(`/operations/tickets/${ticket.id}/edit`)
+                }
                 className="h-8 w-8 p-0"
                 aria-label="Chỉnh sửa"
                 data-testid={`edit-ticket-${ticket.id}`}
@@ -567,8 +601,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                   <DropdownMenuItem
                     onClick={() => handleAssignToMe(ticket)}
                     disabled={
-                      !currentUser ||
-                      ticket.assigned_to === currentUser?.id
+                      !currentUser || ticket.assigned_to === currentUser?.id
                     }
                     data-testid={`assign-to-me-${ticket.id}`}
                   >
@@ -586,9 +619,7 @@ export function TicketTable({ data: initialData }: TicketTableProps) {
                           {allUsers.map((user) => (
                             <DropdownMenuItem
                               key={user.id}
-                              onClick={() =>
-                                handleAssignTo(ticket, user.id)
-                              }
+                              onClick={() => handleAssignTo(ticket, user.id)}
                               disabled={ticket.assigned_to === user.id}
                               data-testid={`assign-to-${user.id}`}
                             >

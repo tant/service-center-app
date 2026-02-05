@@ -16,15 +16,7 @@ const nextConfig: NextConfig = {
   // output: "standalone",  // Disabled for local development
   // Exclude volumes directory from Turbopack file system operations
   turbopack: {
-    resolveExtensions: [
-      ".mdx",
-      ".tsx",
-      ".ts",
-      ".jsx",
-      ".js",
-      ".mjs",
-      ".json",
-    ],
+    resolveExtensions: [".mdx", ".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"],
   },
   webpack: (config, { isServer }) => {
     // Exclude volumes directory from webpack watching

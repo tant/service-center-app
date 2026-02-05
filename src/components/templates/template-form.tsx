@@ -1,17 +1,29 @@
 "use client";
 
-import * as React from "react";
-import { IconPlus } from "@tabler/icons-react";
-import {
-  DndContext,
-  closestCenter,
-} from "@dnd-kit/core";
+import { closestCenter, DndContext } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-
+import { IconPlus } from "@tabler/icons-react";
+import { Eye } from "lucide-react";
+import * as React from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,29 +33,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { SortableTaskItem } from "./sortable-task-item";
-import { useTemplateTasks } from "./use-template-tasks";
-import { validateWorkflow, type WorkflowValidationResult } from "@/lib/workflow-validation";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { ValidationSummary } from "@/components/workflows/validation-summary";
 import { WorkflowPreview } from "@/components/workflows/workflow-preview";
-import { Eye } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  validateWorkflow,
+  type WorkflowValidationResult,
+} from "@/lib/workflow-validation";
+import { SortableTaskItem } from "./sortable-task-item";
+import { useTemplateTasks } from "./use-template-tasks";
 
 interface TemplateFormData {
   name: string;
   description: string;
-  entity_type: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
+  entity_type:
+    | "service_ticket"
+    | "inventory_receipt"
+    | "inventory_issue"
+    | "inventory_transfer"
+    | "service_request";
   enforce_sequence: boolean;
   notes?: string;
 }
@@ -192,10 +202,16 @@ export function TemplateForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="service_ticket">Phiếu sửa chữa</SelectItem>
-                <SelectItem value="service_request">Phiếu yêu cầu dịch vụ</SelectItem>
-                <SelectItem value="inventory_receipt">Phiếu nhập kho</SelectItem>
+                <SelectItem value="service_request">
+                  Phiếu yêu cầu dịch vụ
+                </SelectItem>
+                <SelectItem value="inventory_receipt">
+                  Phiếu nhập kho
+                </SelectItem>
                 <SelectItem value="inventory_issue">Phiếu xuất kho</SelectItem>
-                <SelectItem value="inventory_transfer">Phiếu chuyển kho</SelectItem>
+                <SelectItem value="inventory_transfer">
+                  Phiếu chuyển kho
+                </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
@@ -231,8 +247,10 @@ export function TemplateForm({
             {!formData.enforce_sequence && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <strong>Cảnh báo:</strong> Chế độ linh hoạt cho phép kỹ thuật viên hoàn thành công việc không theo thứ tự.
-                  Hệ thống sẽ hiển thị cảnh báo nhưng không chặn việc hoàn thành. Chỉ sử dụng chế độ này khi thứ tự công việc không quan trọng.
+                  <strong>Cảnh báo:</strong> Chế độ linh hoạt cho phép kỹ thuật
+                  viên hoàn thành công việc không theo thứ tự. Hệ thống sẽ hiển
+                  thị cảnh báo nhưng không chặn việc hoàn thành. Chỉ sử dụng chế
+                  độ này khi thứ tự công việc không quan trọng.
                 </AlertDescription>
               </Alert>
             )}
@@ -245,7 +263,9 @@ export function TemplateForm({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Danh sách công việc ({workflowTasks.length})</CardTitle>
+              <CardTitle>
+                Danh sách công việc ({workflowTasks.length})
+              </CardTitle>
               <CardDescription>
                 Kéo thả để sắp xếp thứ tự công việc
               </CardDescription>
@@ -321,9 +341,10 @@ export function TemplateForm({
               entity_type={formData.entity_type}
               enforce_sequence={formData.enforce_sequence}
               notes={formData.notes}
-              tasks={workflowTasks.map(t => ({
+              tasks={workflowTasks.map((t) => ({
                 ...t,
-                task_name: tasks.find(task => task.id === t.task_type_id)?.name,
+                task_name: tasks.find((task) => task.id === t.task_type_id)
+                  ?.name,
               }))}
             />
           </DialogContent>

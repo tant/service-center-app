@@ -5,8 +5,11 @@
  * Displays items in a receipt with serial entry functionality
  */
 
+import { Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import { StockReceiptWithRelations } from "@/types/inventory";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -15,19 +18,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2 } from "lucide-react";
-import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
+import type { StockReceiptWithRelations } from "@/types/inventory";
 import { SerialListAccordion } from "../serials/serial-list-accordion";
+import { UnifiedSerialInputDrawer } from "../serials/unified-serial-input-drawer";
 
 interface ReceiptItemsTableProps {
   receipt: StockReceiptWithRelations;
   onSerialsAdded: () => void;
 }
 
-export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTableProps) {
+export function ReceiptItemsTable({
+  receipt,
+  onSerialsAdded,
+}: ReceiptItemsTableProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -47,7 +50,9 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
     }
   };
 
-  const selectedItem = receipt.items?.find((item) => item.id === selectedItemId);
+  const selectedItem = receipt.items?.find(
+    (item) => item.id === selectedItemId,
+  );
 
   // Allow editing - status is always 'completed' now
   const canEdit = receipt.status === "completed";
@@ -70,13 +75,18 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                 <TableHead className="text-right">Số lượng khai báo</TableHead>
                 <TableHead className="text-right">Số serial đã nhập</TableHead>
                 <TableHead>Tiến độ</TableHead>
-                {canEdit && <TableHead className="text-right">Thao tác</TableHead>}
+                {canEdit && (
+                  <TableHead className="text-right">Thao tác</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {!receipt.items || receipt.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={canEdit ? 6 : 5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
                     Chưa có sản phẩm nào
                   </TableCell>
                 </TableRow>
@@ -97,12 +107,22 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                           {item.product?.sku || "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={item.declared_quantity < 0 ? "text-red-600 font-medium" : ""}>
+                          <span
+                            className={
+                              item.declared_quantity < 0
+                                ? "text-red-600 font-medium"
+                                : ""
+                            }
+                          >
                             {item.declared_quantity}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={isComplete ? "text-green-600 font-semibold" : ""}>
+                          <span
+                            className={
+                              isComplete ? "text-green-600 font-semibold" : ""
+                            }
+                          >
                             {serialCount}
                           </span>
                         </TableCell>
@@ -133,11 +153,16 @@ export function ReceiptItemsTable({ receipt, onSerialsAdded }: ReceiptItemsTable
                       {/* Serial List Row - Always visible when serials exist */}
                       {hasSerials && (
                         <TableRow key={`${item.id}-serials`}>
-                          <TableCell colSpan={canEdit ? 6 : 5} className="bg-muted/20 p-0">
+                          <TableCell
+                            colSpan={canEdit ? 6 : 5}
+                            className="bg-muted/20 p-0"
+                          >
                             <div className="px-4 py-2">
                               <SerialListAccordion
                                 serials={item.serials || []}
-                                productName={item.product?.name || "Unknown Product"}
+                                productName={
+                                  item.product?.name || "Unknown Product"
+                                }
                                 isDraft={isDraft}
                                 onSerialRemoved={onSerialsAdded}
                               />

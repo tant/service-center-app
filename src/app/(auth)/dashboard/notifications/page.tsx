@@ -5,9 +5,15 @@
  */
 
 import { Suspense } from "react";
-import { EmailNotificationsTable } from "@/components/tables/email-notifications-table";
 import { EmailStatsCards } from "@/components/email-stats-cards";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmailNotificationsTable } from "@/components/tables/email-notifications-table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function NotificationsPage() {
@@ -15,7 +21,9 @@ export default function NotificationsPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Email Notifications</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Email Notifications
+        </h1>
         <p className="text-muted-foreground">
           View and manage email notification logs
         </p>

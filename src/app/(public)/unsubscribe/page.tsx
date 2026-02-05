@@ -6,16 +6,25 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { CheckCircle, Loader2, Mail } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Mail, Loader2 } from "lucide-react";
-import { trpc } from "@/components/providers/trpc-provider";
 
-const EMAIL_TYPE_LABELS: Record<string, { label: string; description: string }> = {
+const EMAIL_TYPE_LABELS: Record<
+  string,
+  { label: string; description: string }
+> = {
   request_submitted: {
     label: "Xác nhận yêu cầu đã gửi",
     description: "Nhận email khi bạn gửi yêu cầu dịch vụ",
@@ -61,7 +70,7 @@ function UnsubscribeContent() {
   // Load customer's current preferences
   const { data: customer } = trpc.customers.getByEmail.useQuery(
     { email },
-    { enabled: !!email }
+    { enabled: !!email },
   );
 
   useEffect(() => {
@@ -77,7 +86,8 @@ function UnsubscribeContent() {
     }
   }, [type]);
 
-  const updatePreferencesMutation = trpc.customers.updateEmailPreferences.useMutation();
+  const updatePreferencesMutation =
+    trpc.customers.updateEmailPreferences.useMutation();
 
   const handleSave = async () => {
     if (!email) return;
@@ -168,23 +178,28 @@ function UnsubscribeContent() {
               </p>
             </div>
 
-            {Object.entries(EMAIL_TYPE_LABELS).map(([key, { label, description }]) => (
-              <div key={key} className="flex items-start space-x-3 p-3 hover:bg-muted rounded-lg">
-                <Checkbox
-                  id={key}
-                  checked={preferences[key]}
-                  onCheckedChange={() => handleToggle(key)}
-                />
-                <div className="flex-1">
-                  <Label htmlFor={key} className="cursor-pointer font-medium">
-                    {label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {description}
-                  </p>
+            {Object.entries(EMAIL_TYPE_LABELS).map(
+              ([key, { label, description }]) => (
+                <div
+                  key={key}
+                  className="flex items-start space-x-3 p-3 hover:bg-muted rounded-lg"
+                >
+                  <Checkbox
+                    id={key}
+                    checked={preferences[key]}
+                    onCheckedChange={() => handleToggle(key)}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor={key} className="cursor-pointer font-medium">
+                      {label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
 
           <div className="flex items-center gap-3 pt-4 border-t">
@@ -222,7 +237,10 @@ function UnsubscribeContent() {
             <p className="font-medium mb-2">Lưu ý:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Bạn có thể thay đổi cài đặt này bất cứ lúc nào</li>
-              <li>Một số email quan trọng có thể vẫn được gửi ngay cả khi bạn hủy đăng ký</li>
+              <li>
+                Một số email quan trọng có thể vẫn được gửi ngay cả khi bạn hủy
+                đăng ký
+              </li>
               <li>Thay đổi có hiệu lực ngay lập tức</li>
             </ul>
           </div>

@@ -42,7 +42,11 @@ export function NavSection({
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url} onClick={(e) => handleClick(e, item.url)} className="flex items-center gap-2">
+              <a
+                href={item.url}
+                onClick={(e) => handleClick(e, item.url)}
+                className="flex items-center gap-2"
+              >
                 <item.icon />
                 <span className="flex-1">{item.name}</span>
                 {item.badge !== undefined && item.badge !== 0 && (

@@ -5,15 +5,13 @@
 
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -21,22 +19,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateTaskType, useUpdateTaskType } from "@/hooks/use-workflow";
 import type { Task } from "@/types/workflow";
 
 // Schema for form validation
 const taskTypeSchema = z.object({
-  name: z.string()
-    .min(3, "Tên quá ngắn. Vui lòng nhập ít nhất 3 ký tự để mô tả rõ loại công việc")
+  name: z
+    .string()
+    .min(
+      3,
+      "Tên quá ngắn. Vui lòng nhập ít nhất 3 ký tự để mô tả rõ loại công việc",
+    )
     .max(255, "Tên quá dài. Vui lòng rút gọn xuống tối đa 255 ký tự"),
   description: z.string().optional(),
   category: z.string().optional(),
-  estimated_duration_minutes: z.string().optional().transform((val) => {
-    if (!val || val === "") return null;
-    const num = Number.parseInt(val, 10);
-    if (Number.isNaN(num)) return null;
-    return num;
-  }),
+  estimated_duration_minutes: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val === "") return null;
+      const num = Number.parseInt(val, 10);
+      if (Number.isNaN(num)) return null;
+      return num;
+    }),
   requires_notes: z.boolean(),
   requires_photo: z.boolean(),
   is_active: z.boolean(),
@@ -78,7 +85,8 @@ export function TaskTypeForm({ task, onSuccess }: TaskTypeFormProps) {
           name: task.name,
           description: task.description || "",
           category: task.category || "",
-          estimated_duration_minutes: task.estimated_duration_minutes?.toString() || "",
+          estimated_duration_minutes:
+            task.estimated_duration_minutes?.toString() || "",
           requires_notes: task.requires_notes,
           requires_photo: task.requires_photo,
           is_active: task.is_active,
@@ -96,14 +104,11 @@ export function TaskTypeForm({ task, onSuccess }: TaskTypeFormProps) {
 
   const onSubmit = (data: any) => {
     if (isEdit) {
-      updateTaskType(
-        { id: task.id, ...data } as any,
-        {
-          onSuccess: () => {
-            onSuccess?.();
-          },
-        }
-      );
+      updateTaskType({ id: task.id, ...data } as any, {
+        onSuccess: () => {
+          onSuccess?.();
+        },
+      });
     } else {
       createTaskType(data as any, {
         onSuccess: () => {
@@ -118,7 +123,11 @@ export function TaskTypeForm({ task, onSuccess }: TaskTypeFormProps) {
   const isActive = watch("is_active");
 
   return (
-    <form id="task-type-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      id="task-type-form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       {/* Name */}
       <div className="space-y-2">
         <Label htmlFor="name">

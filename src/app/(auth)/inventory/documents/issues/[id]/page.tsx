@@ -5,20 +5,23 @@
  * Allows viewing and editing stock issue details
  */
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
-import { PageHeader } from "@/components/page-header";
-import { IssueDetailHeader } from "@/components/inventory/documents/issue-detail-header";
-import { IssueItemsTable } from "@/components/inventory/documents/issue-items-table";
-import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
-import { TaskCard } from "@/components/tasks/task-card";
-import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ListTodo, Pencil } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useState } from "react";
 import { toast } from "sonner";
+import { IssueDetailHeader } from "@/components/inventory/documents/issue-detail-header";
+import { IssueItemsTable } from "@/components/inventory/documents/issue-items-table";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  BlockTaskDialog,
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
+import { TaskCard } from "@/components/tasks/task-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
 
 interface IssueDetailPageProps {
   params: Promise<{ id: string }>;
@@ -30,22 +33,35 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
 
   // Task action dialog state
-  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
-  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
 
-  const { data: issue, isLoading, refetch } = trpc.inventory.issues.getById.useQuery({ id });
-  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
-    { entityType: "inventory_issue", entityId: id },
-    { refetchInterval: 30000 }
-  );
+  const {
+    data: issue,
+    isLoading,
+    refetch,
+  } = trpc.inventory.issues.getById.useQuery({ id });
+  const { data: taskData, refetch: refetchTasks } =
+    trpc.tasks.getEntityTasks.useQuery(
+      { entityType: "inventory_issue", entityId: id },
+      { refetchInterval: 30000 },
+    );
   const tasks = taskData?.tasks || [];
 
   // Task mutations
@@ -159,7 +175,7 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
 
   // Check if all items have complete serials
   const allItemsComplete = issue.items?.every(
-    (item) => (item.serials?.length || 0) === item.quantity
+    (item) => (item.serials?.length || 0) === item.quantity,
   );
 
   return (
@@ -205,7 +221,12 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <ListTodo className="h-4 w-4" />
-                      Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                      Công việc (
+                      {
+                        tasks.filter((t: any) => t.status === "completed")
+                          .length
+                      }
+                      /{tasks.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -214,8 +235,12 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
                         key={task.id}
                         task={task}
                         onStartTask={handleStartTask}
-                        onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
-                        onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                        onCompleteTask={(taskId) =>
+                          handleCompleteTask(taskId, task.name)
+                        }
+                        onBlockTask={(taskId) =>
+                          handleBlockTask(taskId, task.name)
+                        }
                         onUnblockTask={handleUnblockTask}
                         isLoading={
                           startTaskMutation.isPending ||
@@ -229,7 +254,10 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
                 </Card>
               )}
 
-              <IssueItemsTable issue={issue} onSerialsSelected={() => refetch()} />
+              <IssueItemsTable
+                issue={issue}
+                onSerialsSelected={() => refetch()}
+              />
             </div>
           </div>
         </div>
@@ -251,7 +279,8 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
       <CompleteTaskDialog
         open={completeTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleCompleteTaskConfirm}
         taskName={completeTaskDialog.taskName}
@@ -261,13 +290,13 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
       <BlockTaskDialog
         open={blockTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleBlockTaskConfirm}
         taskName={blockTaskDialog.taskName}
         isLoading={blockTaskMutation.isPending}
       />
-
     </>
   );
 }

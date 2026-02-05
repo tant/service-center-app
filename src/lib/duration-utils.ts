@@ -4,15 +4,24 @@
  * Helper functions for calculating and formatting task durations
  */
 
-import { differenceInMinutes, differenceInHours, format, formatDistanceStrict } from "date-fns";
+import {
+  differenceInHours,
+  differenceInMinutes,
+  format,
+  formatDistanceStrict,
+} from "date-fns";
 import { vi } from "date-fns/locale";
 
 /**
  * Calculate duration between two dates in hours
  */
-export function calculateDurationInHours(startedAt: Date | string, completedAt: Date | string): number {
-  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
-  const end = typeof completedAt === 'string' ? new Date(completedAt) : completedAt;
+export function calculateDurationInHours(
+  startedAt: Date | string,
+  completedAt: Date | string,
+): number {
+  const start = typeof startedAt === "string" ? new Date(startedAt) : startedAt;
+  const end =
+    typeof completedAt === "string" ? new Date(completedAt) : completedAt;
 
   const minutes = differenceInMinutes(end, start);
   return Math.round((minutes / 60) * 100) / 100; // Round to 2 decimal places
@@ -22,13 +31,17 @@ export function calculateDurationInHours(startedAt: Date | string, completedAt: 
  * Format duration in human-readable format
  * Examples: "2h 30m", "45m", "1h"
  */
-export function formatDuration(startedAt: Date | string | null, completedAt: Date | string | null): string {
+export function formatDuration(
+  startedAt: Date | string | null,
+  completedAt: Date | string | null,
+): string {
   if (!startedAt || !completedAt) {
     return "—";
   }
 
-  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
-  const end = typeof completedAt === 'string' ? new Date(completedAt) : completedAt;
+  const start = typeof startedAt === "string" ? new Date(startedAt) : startedAt;
+  const end =
+    typeof completedAt === "string" ? new Date(completedAt) : completedAt;
 
   const totalMinutes = differenceInMinutes(end, start);
 
@@ -50,10 +63,15 @@ export function formatDuration(startedAt: Date | string | null, completedAt: Dat
  * Format duration with distance (relative time)
  * Example: "2 giờ trước"
  */
-export function formatDurationDistance(startedAt: Date | string, completedAt?: Date | string): string {
-  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
+export function formatDurationDistance(
+  startedAt: Date | string,
+  completedAt?: Date | string,
+): string {
+  const start = typeof startedAt === "string" ? new Date(startedAt) : startedAt;
   const end = completedAt
-    ? (typeof completedAt === 'string' ? new Date(completedAt) : completedAt)
+    ? typeof completedAt === "string"
+      ? new Date(completedAt)
+      : completedAt
     : new Date();
 
   return formatDistanceStrict(start, end, {
@@ -97,7 +115,7 @@ export function formatAverageDuration(avgHours: number | null): string {
  */
 export function getDurationColor(
   actualHours: number,
-  avgHours: number | null
+  avgHours: number | null,
 ): "green" | "yellow" | "red" | "gray" {
   if (!avgHours) {
     return "gray";
@@ -120,13 +138,13 @@ export function getDurationColor(
 export function isOvertime(
   startedAt: Date | string,
   estimatedMinutes: number | null,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): boolean {
   if (!estimatedMinutes) {
     return false;
   }
 
-  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
+  const start = typeof startedAt === "string" ? new Date(startedAt) : startedAt;
   const elapsed = differenceInMinutes(now, start);
 
   return elapsed > estimatedMinutes;
@@ -138,13 +156,13 @@ export function isOvertime(
 export function calculateProgress(
   startedAt: Date | string,
   estimatedMinutes: number | null,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): number {
   if (!estimatedMinutes) {
     return 0;
   }
 
-  const start = typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
+  const start = typeof startedAt === "string" ? new Date(startedAt) : startedAt;
   const elapsed = differenceInMinutes(now, start);
 
   const progress = Math.min((elapsed / estimatedMinutes) * 100, 100);

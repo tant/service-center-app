@@ -5,7 +5,10 @@ import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const StockDocumentsTable = dynamic(
-  () => import("@/components/inventory/documents/stock-documents-table").then((mod) => mod.StockDocumentsTable),
+  () =>
+    import("@/components/inventory/documents/stock-documents-table").then(
+      (mod) => mod.StockDocumentsTable,
+    ),
   {
     ssr: false,
     loading: () => (
@@ -14,7 +17,7 @@ const StockDocumentsTable = dynamic(
         <Skeleton className="h-[400px] w-full" />
       </div>
     ),
-  }
+  },
 );
 
 export default function StockDocumentsPage() {

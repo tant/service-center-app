@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { IconLock, IconSend } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -10,13 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
-import { IconSend, IconLock } from "@tabler/icons-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface QuickCommentModalProps {
   open: boolean;

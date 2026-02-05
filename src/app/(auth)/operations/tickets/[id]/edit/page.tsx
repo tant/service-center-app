@@ -1,10 +1,10 @@
-import { notFound, redirect } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
-import { createClient } from "@/utils/supabase/server";
-import { EditTicketForm } from "@/components/edit-ticket-form";
-import { Button } from "@/components/ui/button";
 import { IconEye } from "@tabler/icons-react";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { EditTicketForm } from "@/components/edit-ticket-form";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/server";
 
 interface PageProps {
   params: Promise<{ id: string }>;

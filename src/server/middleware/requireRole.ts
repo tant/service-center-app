@@ -19,16 +19,16 @@
  */
 
 import { TRPCError } from "@trpc/server";
-import { middleware } from "../trpc";
 import type { Role } from "@/types/roles";
 import type { TRPCContext } from "../trpc";
+import { middleware } from "../trpc";
 
 // =====================================================
 // EXTENDED CONTEXT TYPE WITH ROLE
 // =====================================================
 
 export interface RoleContext extends TRPCContext {
-	userRole: Role;
+  userRole: Role;
 }
 
 // =====================================================
@@ -52,58 +52,58 @@ export interface RoleContext extends TRPCContext {
  * .use(requireRole(['technician']))
  */
 export const requireRole = (allowedRoles: Role[]) => {
-	return middleware(async ({ ctx, next }) => {
-		// Check if user is authenticated
-		if (!ctx.user) {
-			throw new TRPCError({
-				code: "UNAUTHORIZED",
-				message: "You must be logged in to perform this action",
-			});
-		}
+  return middleware(async ({ ctx, next }) => {
+    // Check if user is authenticated
+    if (!ctx.user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "You must be logged in to perform this action",
+      });
+    }
 
-		// Get user profile with role from database
-		const { data: profile, error } = await ctx.supabaseAdmin
-			.from("profiles")
-			.select("role")
-			.eq("user_id", ctx.user.id)
-			.single();
+    // Get user profile with role from database
+    const { data: profile, error } = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", ctx.user.id)
+      .single();
 
-		if (error || !profile) {
-			console.error(
-				`[RBAC] Failed to fetch profile for user ${ctx.user.id}:`,
-				error,
-			);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to fetch user profile",
-			});
-		}
+    if (error || !profile) {
+      console.error(
+        `[RBAC] Failed to fetch profile for user ${ctx.user.id}:`,
+        error,
+      );
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch user profile",
+      });
+    }
 
-		const userRole = profile.role as Role;
+    const userRole = profile.role as Role;
 
-		// Check if user has required role
-		if (!allowedRoles.includes(userRole)) {
-			console.warn(
-				`[RBAC] User ${ctx.user.email} (${userRole}) attempted to access ${allowedRoles.join(", ")} only resource`,
-			);
-			throw new TRPCError({
-				code: "FORBIDDEN",
-				message: `This action requires one of these roles: ${allowedRoles.join(", ")}. Your role: ${userRole}`,
-			});
-		}
+    // Check if user has required role
+    if (!allowedRoles.includes(userRole)) {
+      console.warn(
+        `[RBAC] User ${ctx.user.email} (${userRole}) attempted to access ${allowedRoles.join(", ")} only resource`,
+      );
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `This action requires one of these roles: ${allowedRoles.join(", ")}. Your role: ${userRole}`,
+      });
+    }
 
-		console.log(
-			`✅ [RBAC] User ${ctx.user.email} (${userRole}) authorized for roles: ${allowedRoles.join(", ")}`,
-		);
+    console.log(
+      `✅ [RBAC] User ${ctx.user.email} (${userRole}) authorized for roles: ${allowedRoles.join(", ")}`,
+    );
 
-		// Add userRole to context for use in procedures
-		return next({
-			ctx: {
-				...ctx,
-				userRole,
-			},
-		});
-	});
+    // Add userRole to context for use in procedures
+    return next({
+      ctx: {
+        ...ctx,
+        userRole,
+      },
+    });
+  });
 };
 
 // =====================================================
@@ -126,17 +126,21 @@ export const requireManagerOrAbove = requireRole(["admin", "manager"]);
  * Middleware that requires technician role (or above)
  * @example .use(requireTechnician)
  */
-export const requireTechnician = requireRole(["admin", "manager", "technician"]);
+export const requireTechnician = requireRole([
+  "admin",
+  "manager",
+  "technician",
+]);
 
 /**
  * Middleware that requires any authenticated user
  * @example .use(requireAnyAuthenticated)
  */
 export const requireAnyAuthenticated = requireRole([
-	"admin",
-	"manager",
-	"technician",
-	"reception",
+  "admin",
+  "manager",
+  "technician",
+  "reception",
 ]);
 
 /**
@@ -145,9 +149,9 @@ export const requireAnyAuthenticated = requireRole([
  * @example .use(requireOperationsStaff)
  */
 export const requireOperationsStaff = requireRole([
-	"admin",
-	"manager",
-	"reception",
+  "admin",
+  "manager",
+  "reception",
 ]);
 
 // =====================================================
@@ -168,19 +172,16 @@ export const requireOperationsStaff = requireRole([
  * }
  * ```
  */
-export async function hasRole(
-	ctx: TRPCContext,
-	role: Role,
-): Promise<boolean> {
-	if (!ctx.user) return false;
+export async function hasRole(ctx: TRPCContext, role: Role): Promise<boolean> {
+  if (!ctx.user) return false;
 
-	const { data: profile } = await ctx.supabaseAdmin
-		.from("profiles")
-		.select("role")
-		.eq("user_id", ctx.user.id)
-		.single();
+  const { data: profile } = await ctx.supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("user_id", ctx.user.id)
+    .single();
 
-	return profile?.role === role;
+  return profile?.role === role;
 }
 
 /**
@@ -198,13 +199,13 @@ export async function hasRole(
  * ```
  */
 export async function getUserRole(ctx: TRPCContext): Promise<Role | null> {
-	if (!ctx.user) return null;
+  if (!ctx.user) return null;
 
-	const { data: profile } = await ctx.supabaseAdmin
-		.from("profiles")
-		.select("role")
-		.eq("user_id", ctx.user.id)
-		.single();
+  const { data: profile } = await ctx.supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("user_id", ctx.user.id)
+    .single();
 
-	return (profile?.role as Role) || null;
+  return (profile?.role as Role) || null;
 }

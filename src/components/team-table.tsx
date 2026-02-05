@@ -46,17 +46,20 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PasswordResetButton } from "@/components/team/password-reset-button";
+import { RoleChangeButton } from "@/components/team/role-change-button";
+import { ToggleActiveButton } from "@/components/team/toggle-active-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -66,7 +69,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -76,10 +78,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PasswordResetButton } from "@/components/team/password-reset-button";
-import { RoleChangeButton } from "@/components/team/role-change-button";
-import { ToggleActiveButton } from "@/components/team/toggle-active-button";
 import { useStaffApi } from "@/hooks/use-staff-api";
 import { getRoleLabel, type UserRole } from "@/lib/constants/roles";
 
@@ -154,7 +154,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
       return (
         <TeamMemberViewer
           member={row.original}
-          currentUserRole={meta?.currentUserRole || 'reception'}
+          currentUserRole={meta?.currentUserRole || "reception"}
         />
       );
     },
@@ -214,7 +214,7 @@ const columns: ColumnDef<z.infer<typeof teamSchema>>[] = [
         <QuickActions
           member={row.original}
           allMembers={table.options.data as z.infer<typeof teamSchema>[]}
-          currentUserRole={meta?.currentUserRole || 'reception'}
+          currentUserRole={meta?.currentUserRole || "reception"}
           onUpdate={(updatedMember) => {
             if (meta?.updateMember) {
               meta.updateMember(updatedMember);
@@ -233,7 +233,12 @@ interface QuickActionsProps {
   onUpdate: (updatedMember: z.infer<typeof teamSchema>) => void;
 }
 
-function QuickActions({ member, allMembers, currentUserRole, onUpdate }: QuickActionsProps) {
+function QuickActions({
+  member,
+  allMembers,
+  currentUserRole,
+  onUpdate,
+}: QuickActionsProps) {
   // Check if this member is the last active admin
   const isLastActiveAdmin = React.useMemo(() => {
     if (member.role !== "admin" || !member.is_active) {
@@ -838,9 +843,7 @@ function TeamMemberModal({
               <Separator />
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">
-                    ID Người dùng
-                  </Label>
+                  <Label className="text-muted-foreground">ID Người dùng</Label>
                   <div className="font-mono text-xs">{member.user_id}</div>
                 </div>
                 <div className="space-y-1">
@@ -849,17 +852,11 @@ function TeamMemberModal({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-muted-foreground">Ngày tạo</Label>
-                  <div>
-                    {new Date(member.created_at).toLocaleDateString()}
-                  </div>
+                  <div>{new Date(member.created_at).toLocaleDateString()}</div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-muted-foreground">
-                    Cập nhật lúc
-                  </Label>
-                  <div>
-                    {new Date(member.updated_at).toLocaleDateString()}
-                  </div>
+                  <Label className="text-muted-foreground">Cập nhật lúc</Label>
+                  <div>{new Date(member.updated_at).toLocaleDateString()}</div>
                 </div>
               </div>
             </>

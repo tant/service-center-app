@@ -33,12 +33,15 @@ async function getServiceRequestsData() {
   if (!data) return [];
 
   // Collect all serial numbers to lookup product info
-  const allSerials = data.flatMap(req =>
-    (req.items || []).map((item: any) => item.serial_number)
-  ).filter(Boolean);
+  const allSerials = data
+    .flatMap((req) => (req.items || []).map((item: any) => item.serial_number))
+    .filter(Boolean);
 
   // Lookup product info for all serials in one query
-  let productMap: Record<string, { product_name: string; brand_name: string | null }> = {};
+  const productMap: Record<
+    string,
+    { product_name: string; brand_name: string | null }
+  > = {};
 
   if (allSerials.length > 0) {
     const { data: physicalProducts } = await supabase
@@ -64,7 +67,7 @@ async function getServiceRequestsData() {
   }
 
   // Enrich items with product info
-  return data.map(req => ({
+  return data.map((req) => ({
     ...req,
     items: (req.items || []).map((item: any) => ({
       ...item,

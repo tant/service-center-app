@@ -7,6 +7,7 @@
 "use client";
 
 import * as React from "react";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,10 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FormDrawer } from "@/components/ui/form-drawer";
 import { useUpdatePhysicalProduct } from "@/hooks/use-warehouse";
-import type { PhysicalProduct } from "@/types/warehouse";
 import type { ProductCondition } from "@/types/enums";
+import type { PhysicalProduct } from "@/types/warehouse";
 
 const CONDITION_OPTIONS: { value: ProductCondition; label: string }[] = [
   { value: "new", label: "Mới" },
@@ -32,16 +32,22 @@ const CONDITION_OPTIONS: { value: ProductCondition; label: string }[] = [
 interface EditProductDrawerProps {
   open: boolean;
   onClose: () => void;
-  product: (PhysicalProduct & {
-    product?: {
-      id: string;
-      name: string;
-      sku: string | null;
-    };
-  }) | null;
+  product:
+    | (PhysicalProduct & {
+        product?: {
+          id: string;
+          name: string;
+          sku: string | null;
+        };
+      })
+    | null;
 }
 
-export function EditProductDrawer({ open, onClose, product }: EditProductDrawerProps) {
+export function EditProductDrawer({
+  open,
+  onClose,
+  product,
+}: EditProductDrawerProps) {
   const [formData, setFormData] = React.useState({
     serial_number: "",
     condition: "" as ProductCondition | "",
@@ -53,7 +59,9 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
   const { updateProduct, isUpdating } = useUpdatePhysicalProduct();
 
   // Helper function to format date for input[type="date"]
-  const formatDateForInput = (date: string | Date | null | undefined): string => {
+  const formatDateForInput = (
+    date: string | Date | null | undefined,
+  ): string => {
     if (!date) return "";
     try {
       const d = new Date(date);
@@ -71,8 +79,12 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
       setFormData({
         serial_number: product.serial_number || "",
         condition: product.condition || "",
-        manufacturer_warranty_end_date: formatDateForInput(product.manufacturer_warranty_end_date),
-        user_warranty_end_date: formatDateForInput(product.user_warranty_end_date),
+        manufacturer_warranty_end_date: formatDateForInput(
+          product.manufacturer_warranty_end_date,
+        ),
+        user_warranty_end_date: formatDateForInput(
+          product.user_warranty_end_date,
+        ),
       });
       setErrors({});
     }
@@ -85,7 +97,8 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
     if (!formData.serial_number.trim()) {
       newErrors.serial_number = "Vui lòng nhập số serial";
     } else if (!/^[A-Z0-9_-]+$/i.test(formData.serial_number)) {
-      newErrors.serial_number = "Số serial chỉ được chứa chữ cái, số, gạch ngang và gạch dưới";
+      newErrors.serial_number =
+        "Số serial chỉ được chứa chữ cái, số, gạch ngang và gạch dưới";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -101,7 +114,8 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
         id: product.id,
         serial_number: formData.serial_number.toUpperCase(),
         condition: formData.condition || undefined,
-        manufacturer_warranty_end_date: formData.manufacturer_warranty_end_date || null,
+        manufacturer_warranty_end_date:
+          formData.manufacturer_warranty_end_date || null,
         user_warranty_end_date: formData.user_warranty_end_date || null,
       },
       {
@@ -120,7 +134,7 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
             });
           }
         },
-      }
+      },
     );
   };
 
@@ -158,7 +172,9 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
         <div className="space-y-1">
           <p className="text-sm font-medium">{product.product?.name}</p>
           {product.product?.sku && (
-            <p className="text-xs text-muted-foreground">SKU: {product.product.sku}</p>
+            <p className="text-xs text-muted-foreground">
+              SKU: {product.product.sku}
+            </p>
           )}
         </div>
       </div>
@@ -206,13 +222,17 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
 
       {/* Manufacturer Warranty End Date */}
       <div className="space-y-2">
-        <Label htmlFor="manufacturer_warranty_end_date">Ngày Hết Hạn BH Nhà Máy</Label>
+        <Label htmlFor="manufacturer_warranty_end_date">
+          Ngày Hết Hạn BH Nhà Máy
+        </Label>
         <div className="relative">
           <Input
             id="manufacturer_warranty_end_date"
             type="date"
             value={formData.manufacturer_warranty_end_date}
-            onChange={(e) => handleChange("manufacturer_warranty_end_date", e.target.value)}
+            onChange={(e) =>
+              handleChange("manufacturer_warranty_end_date", e.target.value)
+            }
             className="w-full cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
             onClick={(e) => {
               // Ensure date picker opens on click
@@ -241,7 +261,9 @@ export function EditProductDrawer({ open, onClose, product }: EditProductDrawerP
             id="user_warranty_end_date"
             type="date"
             value={formData.user_warranty_end_date}
-            onChange={(e) => handleChange("user_warranty_end_date", e.target.value)}
+            onChange={(e) =>
+              handleChange("user_warranty_end_date", e.target.value)
+            }
             className="w-full cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
             onClick={(e) => {
               // Ensure date picker opens on click

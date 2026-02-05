@@ -5,11 +5,11 @@
  * Displays product information and key stock metrics
  */
 
+import { Package } from "lucide-react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Package } from "lucide-react";
 import { StockStatusBadge } from "../shared/stock-status-badge";
 
 interface StockDetailHeaderProps {
@@ -17,13 +17,17 @@ interface StockDetailHeaderProps {
 }
 
 export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
-  const { data: stockDetail, isLoading } = trpc.inventory.stock.getProductStockDetail.useQuery({
-    productId,
-  });
+  const { data: stockDetail, isLoading } =
+    trpc.inventory.stock.getProductStockDetail.useQuery({
+      productId,
+    });
 
   // Get aggregated stock info
-  const { data: aggregated, isLoading: isLoadingAggregated } = trpc.inventory.stock.getAggregated.useQuery({});
-  const productAggregated = aggregated?.find((item) => item.product_id === productId);
+  const { data: aggregated, isLoading: isLoadingAggregated } =
+    trpc.inventory.stock.getAggregated.useQuery({});
+  const productAggregated = aggregated?.find(
+    (item) => item.product_id === productId,
+  );
 
   // Get product info from first stock record
   const productInfo = stockDetail?.[0];
@@ -61,7 +65,9 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
               {productInfo.product_name}
             </CardTitle>
             {productInfo.sku && (
-              <p className="text-sm text-muted-foreground mt-1">SKU: {productInfo.sku}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                SKU: {productInfo.sku}
+              </p>
             )}
           </div>
         </div>
@@ -69,15 +75,25 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">Tổng đã khai báo</span>
-            <span className="text-2xl font-bold">{productAggregated?.total_declared.toLocaleString() || 0}</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Tổng đã khai báo
+            </span>
+            <span className="text-2xl font-bold">
+              {productAggregated?.total_declared.toLocaleString() || 0}
+            </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">Tổng thực tế</span>
-            <span className="text-2xl font-bold">{productAggregated?.total_actual.toLocaleString() || 0}</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Tổng thực tế
+            </span>
+            <span className="text-2xl font-bold">
+              {productAggregated?.total_actual.toLocaleString() || 0}
+            </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">Chênh lệch</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Chênh lệch
+            </span>
             <span
               className={`text-2xl font-bold ${
                 (productAggregated?.serial_gap || 0) > 0
@@ -93,9 +109,13 @@ export function StockDetailHeader({ productId }: StockDetailHeaderProps) {
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">Trạng thái</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Trạng thái
+            </span>
             <div className="mt-1">
-              <StockStatusBadge status={productAggregated?.stock_status || "ok"} />
+              <StockStatusBadge
+                status={productAggregated?.stock_status || "ok"}
+              />
             </div>
           </div>
         </div>

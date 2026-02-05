@@ -1,10 +1,14 @@
 // Notifications Router
 // Story 1.15: Email Notification System
 
-import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
-import { TRPCError } from '@trpc/server';
-import { getEmailTemplate, type EmailType, type EmailTemplateContext } from '@/lib/email-templates';
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import {
+  type EmailTemplateContext,
+  type EmailType,
+  getEmailTemplate,
+} from "@/lib/email-templates";
+import { publicProcedure, router } from "../trpc";
 
 /**
  * Send email notification
@@ -19,12 +23,12 @@ export const notificationsRouter = router({
     .input(
       z.object({
         emailType: z.enum([
-          'request_submitted',
-          'request_received',
-          'request_rejected',
-          'ticket_created',
-          'service_completed',
-          'delivery_confirmed',
+          "request_submitted",
+          "request_received",
+          "request_rejected",
+          "ticket_created",
+          "service_completed",
+          "delivery_confirmed",
         ]),
         recipientEmail: z.string().email(),
         recipientName: z.string(),
@@ -39,41 +43,48 @@ export const notificationsRouter = router({
         }),
         serviceRequestId: z.string().uuid().optional(),
         serviceTicketId: z.string().uuid().optional(),
-      })
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       // AC 10: Rate limiting check
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000,
+      ).toISOString();
       const { count: recentEmailCount } = await ctx.supabaseAdmin
-        .from('email_notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('recipient_email', input.recipientEmail)
-        .gte('created_at', oneDayAgo);
+        .from("email_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_email", input.recipientEmail)
+        .gte("created_at", oneDayAgo);
 
       if (recentEmailCount && recentEmailCount >= 100) {
         throw new TRPCError({
-          code: 'TOO_MANY_REQUESTS',
-          message: 'Email rate limit exceeded (100 per day)',
+          code: "TOO_MANY_REQUESTS",
+          message: "Email rate limit exceeded (100 per day)",
         });
       }
 
       // AC 4: Check email preferences / unsubscribe status
       const { data: customer } = await ctx.supabaseAdmin
-        .from('customers')
-        .select('email_preferences')
-        .eq('email', input.recipientEmail)
+        .from("customers")
+        .select("email_preferences")
+        .eq("email", input.recipientEmail)
         .single();
 
       if (customer?.email_preferences) {
-        const preferences = customer.email_preferences as Record<string, boolean>;
+        const preferences = customer.email_preferences as Record<
+          string,
+          boolean
+        >;
         if (preferences[input.emailType] === false) {
-          console.log(`Email skipped - user unsubscribed from ${input.emailType}`);
-          return { success: true, skipped: true, reason: 'unsubscribed' };
+          console.log(
+            `Email skipped - user unsubscribed from ${input.emailType}`,
+          );
+          return { success: true, skipped: true, reason: "unsubscribed" };
         }
       }
 
       // Generate unsubscribe URL
-      const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}&type=${input.emailType}`;
+      const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3025"}/unsubscribe?email=${encodeURIComponent(input.recipientEmail)}&type=${input.emailType}`;
 
       // Generate email content from template
       const templateContext: EmailTemplateContext = {
@@ -88,11 +99,14 @@ export const notificationsRouter = router({
         unsubscribeUrl,
       };
 
-      const { html, text, subject } = getEmailTemplate(input.emailType as EmailType, templateContext);
+      const { html, text, subject } = getEmailTemplate(
+        input.emailType as EmailType,
+        templateContext,
+      );
 
       // AC 3: Log email in database
       const { data: emailLog, error: logError } = await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .insert({
           email_type: input.emailType,
           recipient_email: input.recipientEmail,
@@ -101,7 +115,7 @@ export const notificationsRouter = router({
           html_body: html,
           text_body: text,
           context: input.context,
-          status: 'pending',
+          status: "pending",
           service_request_id: input.serviceRequestId,
           service_ticket_id: input.serviceTicketId,
         })
@@ -109,10 +123,10 @@ export const notificationsRouter = router({
         .single();
 
       if (logError) {
-        console.error('Failed to log email:', logError);
+        console.error("Failed to log email:", logError);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to log email notification',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to log email notification",
         });
       }
 
@@ -125,14 +139,16 @@ export const notificationsRouter = router({
 
         // Mock success - update status to sent
         await ctx.supabaseAdmin
-          .from('email_notifications')
+          .from("email_notifications")
           .update({
-            status: 'sent',
+            status: "sent",
             sent_at: new Date().toISOString(),
           })
-          .eq('id', emailLog.id);
+          .eq("id", emailLog.id);
 
-        console.log(`[EMAIL SENT] ${input.emailType} to ${input.recipientEmail} (${subject})`);
+        console.log(
+          `[EMAIL SENT] ${input.emailType} to ${input.recipientEmail} (${subject})`,
+        );
 
         return {
           success: true,
@@ -142,22 +158,26 @@ export const notificationsRouter = router({
       } catch (error) {
         // AC 8: Log failure and prepare for retry
         await ctx.supabaseAdmin
-          .from('email_notifications')
+          .from("email_notifications")
           .update({
-            status: 'failed',
+            status: "failed",
             failed_at: new Date().toISOString(),
-            error_message: error instanceof Error ? error.message : 'Unknown error',
+            error_message:
+              error instanceof Error ? error.message : "Unknown error",
             retry_count: emailLog.retry_count + 1,
           })
-          .eq('id', emailLog.id);
+          .eq("id", emailLog.id);
 
-        console.error(`[EMAIL FAILED] ${input.emailType} to ${input.recipientEmail}:`, error);
+        console.error(
+          `[EMAIL FAILED] ${input.emailType} to ${input.recipientEmail}:`,
+          error,
+        );
 
         // AC 2: Don't throw error - email sending is async and shouldn't block operations
         return {
           success: false,
           emailId: emailLog.id,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
           willRetry: emailLog.retry_count < emailLog.max_retries,
         };
       }
@@ -173,17 +193,17 @@ export const notificationsRouter = router({
         offset: z.number().min(0).default(0),
         emailType: z
           .enum([
-            'request_submitted',
-            'request_received',
-            'request_rejected',
-            'ticket_created',
-            'service_completed',
-            'delivery_confirmed',
+            "request_submitted",
+            "request_received",
+            "request_rejected",
+            "ticket_created",
+            "service_completed",
+            "delivery_confirmed",
           ])
           .optional(),
-        status: z.enum(['pending', 'sent', 'failed', 'bounced']).optional(),
+        status: z.enum(["pending", "sent", "failed", "bounced"]).optional(),
         recipientEmail: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ input, ctx }) => {
       // Authentication check
@@ -194,35 +214,35 @@ export const notificationsRouter = router({
 
       if (authError || !user) {
         throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'You must be logged in to view email logs',
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to view email logs",
         });
       }
 
       // Build query
       let query = ctx.supabaseAdmin
-        .from('email_notifications')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .from("email_notifications")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
         .range(input.offset, input.offset + input.limit - 1);
 
       if (input.emailType) {
-        query = query.eq('email_type', input.emailType);
+        query = query.eq("email_type", input.emailType);
       }
 
       if (input.status) {
-        query = query.eq('status', input.status);
+        query = query.eq("status", input.status);
       }
 
       if (input.recipientEmail) {
-        query = query.ilike('recipient_email', `%${input.recipientEmail}%`);
+        query = query.ilike("recipient_email", `%${input.recipientEmail}%`);
       }
 
       const { data: emails, error, count } = await query;
 
       if (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
+          code: "INTERNAL_SERVER_ERROR",
           message: `Failed to fetch email log: ${error.message}`,
         });
       }
@@ -247,38 +267,39 @@ export const notificationsRouter = router({
 
     if (authError || !user) {
       throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'You must be logged in to view statistics',
+        code: "UNAUTHORIZED",
+        message: "You must be logged in to view statistics",
       });
     }
 
     // Get counts by status
     const { data: stats } = await ctx.supabaseAdmin
-      .from('email_notifications')
-      .select('status')
+      .from("email_notifications")
+      .select("status")
       .then((res) => {
         if (res.error) throw res.error;
         const data = res.data || [];
         return {
           data: {
             total: data.length,
-            sent: data.filter((e) => e.status === 'sent').length,
-            failed: data.filter((e) => e.status === 'failed').length,
-            pending: data.filter((e) => e.status === 'pending').length,
+            sent: data.filter((e) => e.status === "sent").length,
+            failed: data.filter((e) => e.status === "failed").length,
+            pending: data.filter((e) => e.status === "pending").length,
           },
         };
       });
 
     // Get counts by type
     const { data: byType } = await ctx.supabaseAdmin
-      .from('email_notifications')
-      .select('email_type')
+      .from("email_notifications")
+      .select("email_type")
       .then((res) => {
         if (res.error) throw res.error;
         const data = res.data || [];
         const typeCounts: Record<string, number> = {};
         for (const email of data) {
-          typeCounts[email.email_type] = (typeCounts[email.email_type] || 0) + 1;
+          typeCounts[email.email_type] =
+            (typeCounts[email.email_type] || 0) + 1;
         }
         return { data: typeCounts };
       });
@@ -303,35 +324,35 @@ export const notificationsRouter = router({
 
       if (authError || !user) {
         throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'You must be logged in to retry emails',
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to retry emails",
         });
       }
 
       const { data: email, error: fetchError } = await ctx.supabaseAdmin
-        .from('email_notifications')
-        .select('*')
-        .eq('id', input.emailId)
+        .from("email_notifications")
+        .select("*")
+        .eq("id", input.emailId)
         .single();
 
       if (fetchError || !email) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Email not found',
+          code: "NOT_FOUND",
+          message: "Email not found",
         });
       }
 
-      if (email.status === 'sent') {
+      if (email.status === "sent") {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Email already sent',
+          code: "BAD_REQUEST",
+          message: "Email already sent",
         });
       }
 
       if (email.retry_count >= email.max_retries) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Max retries exceeded',
+          code: "BAD_REQUEST",
+          message: "Max retries exceeded",
         });
       }
 
@@ -341,29 +362,30 @@ export const notificationsRouter = router({
         // await sendEmail({ to: email.recipient_email, subject: email.subject, html: email.html_body, text: email.text_body });
 
         await ctx.supabaseAdmin
-          .from('email_notifications')
+          .from("email_notifications")
           .update({
-            status: 'sent',
+            status: "sent",
             sent_at: new Date().toISOString(),
             retry_count: email.retry_count + 1,
           })
-          .eq('id', email.id);
+          .eq("id", email.id);
 
         return { success: true };
       } catch (error) {
         await ctx.supabaseAdmin
-          .from('email_notifications')
+          .from("email_notifications")
           .update({
-            status: 'failed',
+            status: "failed",
             failed_at: new Date().toISOString(),
-            error_message: error instanceof Error ? error.message : 'Unknown error',
+            error_message:
+              error instanceof Error ? error.message : "Unknown error",
             retry_count: email.retry_count + 1,
           })
-          .eq('id', email.id);
+          .eq("id", email.id);
 
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to resend email',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to resend email",
         });
       }
     }),

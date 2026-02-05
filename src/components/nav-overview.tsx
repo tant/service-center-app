@@ -43,7 +43,9 @@ export function NavOverview({
               <a
                 href="/operations/service-requests/new"
                 className="flex items-center gap-2"
-                onClick={(e) => handleClick(e, "/operations/service-requests/new")}
+                onClick={(e) =>
+                  handleClick(e, "/operations/service-requests/new")
+                }
               >
                 <IconCirclePlusFilled />
                 <span>Tạo phiếu yêu cầu</span>
@@ -55,7 +57,11 @@ export function NavOverview({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <a href={item.url} onClick={(e) => handleClick(e, item.url)} className="flex items-center gap-2">
+                <a
+                  href={item.url}
+                  onClick={(e) => handleClick(e, item.url)}
+                  className="flex items-center gap-2"
+                >
                   {item.icon && <item.icon />}
                   <span className="flex-1">{item.title}</span>
                   {item.badge !== undefined && item.badge !== 0 && (

@@ -5,19 +5,36 @@
 
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRequestDetails } from "@/hooks/use-service-request";
 // useConvertToTicket is deprecated - tickets are auto-created via trigger
-import { IconLoader2, IconUser, IconPackage, IconAlertCircle } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconLoader2,
+  IconPackage,
+  IconUser,
+} from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { useRequestDetails } from "@/hooks/use-service-request";
 
 interface ConvertToTicketModalProps {
   requestId: string | null;
@@ -25,20 +42,28 @@ interface ConvertToTicketModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertToTicketModalProps) {
+export function ConvertToTicketModal({
+  requestId,
+  open,
+  onOpenChange,
+}: ConvertToTicketModalProps) {
   const router = useRouter();
   const { data: request, isLoading } = useRequestDetails(requestId);
   // const { convertToTicket, isConverting } = useConvertToTicket(); // DEPRECATED
   const isConverting = false; // Placeholder
 
-  const [serviceType, setServiceType] = useState<"warranty" | "paid">("warranty");
+  const [serviceType, setServiceType] = useState<"warranty" | "paid">(
+    "warranty",
+  );
   const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
   const [additionalNotes, setAdditionalNotes] = useState("");
 
   const handleConvert = () => {
     // DEPRECATED: This functionality is no longer available
     // Tickets are auto-created when staff updates request status to 'received'
-    toast.error("This feature is deprecated. Please update request status to 'received' instead.");
+    toast.error(
+      "This feature is deprecated. Please update request status to 'received' instead.",
+    );
     onOpenChange(false);
 
     // convertToTicket(
@@ -71,11 +96,15 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="convert-to-ticket-dialog">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        data-testid="convert-to-ticket-dialog"
+      >
         <DialogHeader>
           <DialogTitle>Chuyển thành phiếu dịch vụ</DialogTitle>
           <DialogDescription>
-            Tạo phiếu dịch vụ từ yêu cầu của khách hàng. Thông tin sẽ được tự động điền.
+            Tạo phiếu dịch vụ từ yêu cầu của khách hàng. Thông tin sẽ được tự
+            động điền.
           </DialogDescription>
         </DialogHeader>
 
@@ -135,11 +164,15 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
                 </div>
                 <div>
                   <p className="text-muted-foreground">Serial Number</p>
-                  <p className="font-mono text-xs font-medium">{request.serial_number}</p>
+                  <p className="font-mono text-xs font-medium">
+                    {request.serial_number}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Mô tả vấn đề</p>
-                  <p className="text-xs whitespace-pre-wrap">{request.issue_description}</p>
+                  <p className="text-xs whitespace-pre-wrap">
+                    {request.issue_description}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -147,7 +180,10 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
             {/* Service Type */}
             <div className="space-y-2">
               <Label>Loại dịch vụ *</Label>
-              <RadioGroup value={serviceType} onValueChange={(v) => setServiceType(v as "warranty" | "paid")}>
+              <RadioGroup
+                value={serviceType}
+                onValueChange={(v) => setServiceType(v as "warranty" | "paid")}
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="warranty" id="warranty" />
                   <Label htmlFor="warranty" className="font-normal">
@@ -166,7 +202,12 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
             {/* Priority */}
             <div className="space-y-2">
               <Label>Độ ưu tiên</Label>
-              <RadioGroup value={priority} onValueChange={(v) => setPriority(v as "low" | "normal" | "high")}>
+              <RadioGroup
+                value={priority}
+                onValueChange={(v) =>
+                  setPriority(v as "low" | "normal" | "high")
+                }
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="low" id="low" />
                   <Label htmlFor="low" className="font-normal">
@@ -205,7 +246,11 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
 
             {/* Actions */}
             <div className="flex gap-2 justify-end pt-4">
-              <Button variant="outline" onClick={handleCancel} disabled={isConverting}>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isConverting}
+              >
                 Hủy
               </Button>
               <Button onClick={handleConvert} disabled={isConverting}>
@@ -221,7 +266,9 @@ export function ConvertToTicketModal({ requestId, open, onOpenChange }: ConvertT
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">Không tìm thấy yêu cầu</div>
+          <div className="text-center py-8 text-muted-foreground">
+            Không tìm thấy yêu cầu
+          </div>
         )}
       </DialogContent>
     </Dialog>

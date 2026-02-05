@@ -6,10 +6,17 @@
  * Features: auto-save, bulk paste, validation
  */
 
+import {
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clipboard,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SerialInput } from "./serial-input";
-import { CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Clipboard, Camera } from "lucide-react";
 
 interface Product {
   id: string;
@@ -43,7 +50,10 @@ export function ProductSerialAccordion({
 }: ProductSerialAccordionProps) {
   const [isExpanded, setIsExpanded] = useState(!product.serialComplete);
   const serialCount = product.serials.length;
-  const percentage = product.quantity > 0 ? Math.round((serialCount / product.quantity) * 100) : 0;
+  const percentage =
+    product.quantity > 0
+      ? Math.round((serialCount / product.quantity) * 100)
+      : 0;
 
   // Create array of serial slots
   const serialSlots = Array.from({ length: product.quantity }, (_, index) => ({
@@ -85,7 +95,9 @@ export function ProductSerialAccordion({
           <div className="text-left">
             <div className="font-medium">{product.name}</div>
             {product.sku && (
-              <div className="text-sm text-muted-foreground">SKU: {product.sku}</div>
+              <div className="text-sm text-muted-foreground">
+                SKU: {product.sku}
+              </div>
             )}
           </div>
         </div>
@@ -119,21 +131,13 @@ export function ProductSerialAccordion({
             {!product.serialComplete && (
               <div className="flex items-center gap-2">
                 {allowBulk && onBulkPaste && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onBulkPaste}
-                  >
+                  <Button variant="outline" size="sm" onClick={onBulkPaste}>
                     <Clipboard className="h-4 w-4 mr-2" />
                     Dán nhiều serial
                   </Button>
                 )}
                 {allowScan && onScan && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onScan}
-                  >
+                  <Button variant="outline" size="sm" onClick={onScan}>
                     <Camera className="h-4 w-4 mr-2" />
                     Scan
                   </Button>
@@ -178,7 +182,8 @@ export function ProductSerialAccordion({
           {!product.serialComplete && (
             <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 p-3 text-sm text-blue-700 dark:text-blue-300">
               <p>
-                💡 <strong>Tip:</strong> Bạn có thể dán nhiều serial cùng lúc bằng nút "Dán nhiều serial" ở trên.
+                💡 <strong>Tip:</strong> Bạn có thể dán nhiều serial cùng lúc
+                bằng nút "Dán nhiều serial" ở trên.
               </p>
             </div>
           )}

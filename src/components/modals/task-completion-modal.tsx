@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useCompleteTask } from "@/hooks/use-workflow";
+import {
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconNotes,
+  IconPhoto,
+} from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,24 +19,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { IconAlertTriangle, IconAlertCircle, IconPhoto, IconNotes } from "@tabler/icons-react";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useCompleteTask } from "@/hooks/use-workflow";
 
 interface PrerequisiteTask {
   id: string;
   sequence_order: number;
   status: string;
-  task_type?: {
-    id: string;
-    name: string;
-  }[] | {
-    id: string;
-    name: string;
-  };
+  task_type?:
+    | {
+        id: string;
+        name: string;
+      }[]
+    | {
+        id: string;
+        name: string;
+      };
 }
 
 interface TaskCompletionModalProps {
@@ -66,17 +73,13 @@ export function TaskCompletionModal({
 
   // Fetch task requirements
   const { data: requirements, isLoading: loadingReqs } =
-    trpc.tasks.getTaskRequirements.useQuery(
-      { taskId },
-      { enabled: open }
-    );
+    trpc.tasks.getTaskRequirements.useQuery({ taskId }, { enabled: open });
 
   // Fetch attachments
-  const { data: attachments } =
-    trpc.tasks.getTaskAttachments.useQuery(
-      { taskId },
-      { enabled: open }
-    );
+  const { data: attachments } = trpc.tasks.getTaskAttachments.useQuery(
+    { taskId },
+    { enabled: open },
+  );
 
   // Reset when modal opens
   useEffect(() => {
@@ -101,12 +104,18 @@ export function TaskCompletionModal({
     }
 
     // Validate task notes (conditional)
-    if (requirements?.requiresNotes && (!currentTaskNotes || currentTaskNotes.trim().length === 0)) {
+    if (
+      requirements?.requiresNotes &&
+      (!currentTaskNotes || currentTaskNotes.trim().length === 0)
+    ) {
       errors.push("Ghi chú công việc là bắt buộc cho loại công việc này");
     }
 
     // Validate attachments (conditional)
-    if (requirements?.requiresPhoto && (!attachments || attachments.length === 0)) {
+    if (
+      requirements?.requiresPhoto &&
+      (!attachments || attachments.length === 0)
+    ) {
       errors.push("Phải upload ít nhất 1 ảnh/tài liệu cho loại công việc này");
     }
 
@@ -130,7 +139,7 @@ export function TaskCompletionModal({
           setCompletionNotes("");
           onClose();
         },
-      }
+      },
     );
   };
 
@@ -142,7 +151,10 @@ export function TaskCompletionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="task-completion-dialog">
+      <DialogContent
+        className="sm:max-w-[600px]"
+        data-testid="task-completion-dialog"
+      >
         <DialogHeader>
           <DialogTitle>Hoàn thành công việc</DialogTitle>
           <DialogDescription>
@@ -179,17 +191,26 @@ export function TaskCompletionModal({
                 <AlertTitle>Cảnh báo: Hoàn thành không theo thứ tự</AlertTitle>
                 <AlertDescription>
                   <p className="mb-2">
-                    Bạn đang hoàn thành công việc này trước khi hoàn thành các công việc trước đó.
-                    Template đang ở chế độ linh hoạt nên hệ thống sẽ cho phép, nhưng khuyến nghị hoàn thành theo thứ tự.
+                    Bạn đang hoàn thành công việc này trước khi hoàn thành các
+                    công việc trước đó. Template đang ở chế độ linh hoạt nên hệ
+                    thống sẽ cho phép, nhưng khuyến nghị hoàn thành theo thứ tự.
                   </p>
                   <div className="mt-2">
-                    <p className="font-medium text-sm mb-1">Các công việc chưa hoàn thành:</p>
+                    <p className="font-medium text-sm mb-1">
+                      Các công việc chưa hoàn thành:
+                    </p>
                     <ul className="space-y-1">
                       {incompleteTasks.map((task) => {
                         const taskType = getTaskType(task);
                         return (
-                          <li key={task.id} className="flex items-center gap-2 text-sm">
-                            <Badge variant="outline" className="w-8 justify-center">
+                          <li
+                            key={task.id}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <Badge
+                              variant="outline"
+                              className="w-8 justify-center"
+                            >
                               #{task.sequence_order}
                             </Badge>
                             <span>{taskType?.name || "Unknown task"}</span>
@@ -203,52 +224,59 @@ export function TaskCompletionModal({
             )}
 
             {/* Task Notes Requirements Warning */}
-            {requirements?.requiresNotes && (!currentTaskNotes || currentTaskNotes.trim().length === 0) && (
-              <Alert variant="destructive">
-                <IconNotes className="h-4 w-4" />
-                <AlertDescription>
-                  <p className="font-medium">Chưa có ghi chú công việc</p>
-                  <p className="text-sm mt-1">
-                    Loại công việc này yêu cầu ghi chú chi tiết về quá trình thực hiện.
-                    Vui lòng thêm ghi chú công việc trước khi hoàn thành.
-                  </p>
-                </AlertDescription>
-              </Alert>
-            )}
+            {requirements?.requiresNotes &&
+              (!currentTaskNotes || currentTaskNotes.trim().length === 0) && (
+                <Alert variant="destructive">
+                  <IconNotes className="h-4 w-4" />
+                  <AlertDescription>
+                    <p className="font-medium">Chưa có ghi chú công việc</p>
+                    <p className="text-sm mt-1">
+                      Loại công việc này yêu cầu ghi chú chi tiết về quá trình
+                      thực hiện. Vui lòng thêm ghi chú công việc trước khi hoàn
+                      thành.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {/* Task Notes Success */}
-            {requirements?.requiresNotes && currentTaskNotes && currentTaskNotes.trim().length > 0 && (
-              <Alert>
-                <IconNotes className="h-4 w-4" />
-                <AlertDescription>
-                  ✅ Đã có ghi chú công việc
-                </AlertDescription>
-              </Alert>
-            )}
+            {requirements?.requiresNotes &&
+              currentTaskNotes &&
+              currentTaskNotes.trim().length > 0 && (
+                <Alert>
+                  <IconNotes className="h-4 w-4" />
+                  <AlertDescription>
+                    ✅ Đã có ghi chú công việc
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {/* Photo Requirements Warning */}
-            {requirements?.requiresPhoto && (!attachments || attachments.length === 0) && (
-              <Alert variant="destructive">
-                <IconPhoto className="h-4 w-4" />
-                <AlertDescription>
-                  <p className="font-medium">Chưa có ảnh/tài liệu đính kèm</p>
-                  <p className="text-sm mt-1">
-                    Loại công việc này yêu cầu upload ít nhất 1 ảnh hoặc tài liệu.
-                    Vui lòng upload trước khi hoàn thành.
-                  </p>
-                </AlertDescription>
-              </Alert>
-            )}
+            {requirements?.requiresPhoto &&
+              (!attachments || attachments.length === 0) && (
+                <Alert variant="destructive">
+                  <IconPhoto className="h-4 w-4" />
+                  <AlertDescription>
+                    <p className="font-medium">Chưa có ảnh/tài liệu đính kèm</p>
+                    <p className="text-sm mt-1">
+                      Loại công việc này yêu cầu upload ít nhất 1 ảnh hoặc tài
+                      liệu. Vui lòng upload trước khi hoàn thành.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {/* Photo Requirements Success */}
-            {requirements?.requiresPhoto && attachments && attachments.length > 0 && (
-              <Alert>
-                <IconPhoto className="h-4 w-4" />
-                <AlertDescription>
-                  ✅ Đã có {attachments.length} ảnh/tài liệu đính kèm
-                </AlertDescription>
-              </Alert>
-            )}
+            {requirements?.requiresPhoto &&
+              attachments &&
+              attachments.length > 0 && (
+                <Alert>
+                  <IconPhoto className="h-4 w-4" />
+                  <AlertDescription>
+                    ✅ Đã có {attachments.length} ảnh/tài liệu đính kèm
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {/* Completion Notes (Always Required) */}
             <div className="space-y-2">
@@ -264,10 +292,13 @@ export function TaskCompletionModal({
                   if (validationErrors.length > 0) setValidationErrors([]);
                 }}
                 rows={4}
-                className={validationErrors.length > 0 ? "border-destructive" : ""}
+                className={
+                  validationErrors.length > 0 ? "border-destructive" : ""
+                }
               />
               <p className="text-sm text-muted-foreground">
-                Tối thiểu 5 ký tự. Ghi chú này sẽ được lưu vào lịch sử công việc.
+                Tối thiểu 5 ký tự. Ghi chú này sẽ được lưu vào lịch sử công
+                việc.
               </p>
             </div>
           </div>

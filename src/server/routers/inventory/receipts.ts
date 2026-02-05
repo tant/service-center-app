@@ -3,38 +3,42 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
-import type { StockReceipt, StockReceiptWithRelations, StockReceiptReason } from "@/types/inventory";
+import type {
+  StockReceipt,
+  StockReceiptReason,
+  StockReceiptWithRelations,
+} from "@/types/inventory";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+} from "../../middleware/requireRole";
+import { publicProcedure, router } from "../../trpc";
 
 export const receiptsRouter = router({
   /**
    * List receipts with pagination and filters
    */
-  list: publicProcedure.use(requireAnyAuthenticated)
+  list: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
-        receiptType: z
-          .enum(["normal", "adjustment"])
-          .optional(),
+        receiptType: z.enum(["normal", "adjustment"]).optional(),
         reason: z
           .enum(["purchase", "customer_return", "rma_return"])
           .optional(),
         page: z.number().int().min(0).default(0),
         pageSize: z.number().int().min(1).max(100).default(10),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
-      let query = ctx.supabaseAdmin
-        .from("stock_receipts")
-        .select(
-          `
+      let query = ctx.supabaseAdmin.from("stock_receipts").select(
+        `
           *,
           created_by:profiles!created_by_id(id, full_name),
           customer:customers!customer_id(id, name, phone)
         `,
-          { count: "exact" }
-        );
+        { count: "exact" },
+      );
 
       if (input.receiptType) {
         query = query.eq("receipt_type", input.receiptType);
@@ -46,15 +50,19 @@ export const receiptsRouter = router({
 
       const { data, error, count } = await query
         .order("created_at", { ascending: false })
-        .range(input.page * input.pageSize, (input.page + 1) * input.pageSize - 1);
+        .range(
+          input.page * input.pageSize,
+          (input.page + 1) * input.pageSize - 1,
+        );
 
       if (error) {
         throw new Error(`Failed to list receipts: ${error.message}`);
       }
 
       // Fetch serial counts for all receipts in this page
-      const receiptIds = data?.map(r => r.id) || [];
-      let serialCounts: Record<string, { declared: number; entered: number }> = {};
+      const receiptIds = data?.map((r) => r.id) || [];
+      let serialCounts: Record<string, { declared: number; entered: number }> =
+        {};
 
       if (receiptIds.length > 0) {
         const { data: itemsData } = await ctx.supabaseAdmin
@@ -63,22 +71,27 @@ export const receiptsRouter = router({
           .in("receipt_id", receiptIds);
 
         // Aggregate counts by receipt_id
-        serialCounts = (itemsData || []).reduce((acc, item) => {
-          if (!acc[item.receipt_id]) {
-            acc[item.receipt_id] = { declared: 0, entered: 0 };
-          }
-          acc[item.receipt_id].declared += item.declared_quantity;
-          acc[item.receipt_id].entered += item.serial_count;
-          return acc;
-        }, {} as Record<string, { declared: number; entered: number }>);
+        serialCounts = (itemsData || []).reduce(
+          (acc, item) => {
+            if (!acc[item.receipt_id]) {
+              acc[item.receipt_id] = { declared: 0, entered: 0 };
+            }
+            acc[item.receipt_id].declared += item.declared_quantity;
+            acc[item.receipt_id].entered += item.serial_count;
+            return acc;
+          },
+          {} as Record<string, { declared: number; entered: number }>,
+        );
       }
 
       // Merge serial counts with receipts
-      const receiptsWithSerials = (data || []).map(receipt => ({
+      const receiptsWithSerials = (data || []).map((receipt) => ({
         ...receipt,
         totalDeclaredQuantity: serialCounts[receipt.id]?.declared || 0,
         totalSerialsEntered: serialCounts[receipt.id]?.entered || 0,
-        missingSerialsCount: (serialCounts[receipt.id]?.declared || 0) - (serialCounts[receipt.id]?.entered || 0),
+        missingSerialsCount:
+          (serialCounts[receipt.id]?.declared || 0) -
+          (serialCounts[receipt.id]?.entered || 0),
       }));
 
       return {
@@ -93,13 +106,15 @@ export const receiptsRouter = router({
   /**
    * Get single receipt with full details
    */
-  getById: publicProcedure.use(requireAnyAuthenticated)
+  getById: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }): Promise<StockReceiptWithRelations | null> => {
-      const { data, error } = await ctx.supabaseAdmin
-        .from("stock_receipts")
-        .select(
-          `
+    .query(
+      async ({ ctx, input }): Promise<StockReceiptWithRelations | null> => {
+        const { data, error } = await ctx.supabaseAdmin
+          .from("stock_receipts")
+          .select(
+            `
           *,
           items:stock_receipt_items(
             *,
@@ -109,80 +124,91 @@ export const receiptsRouter = router({
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name),
           created_by:profiles!created_by_id(id, full_name),
           customer:customers!customer_id(id, name, phone)
-        `
-        )
-        .eq("id", input.id)
-        .single();
+        `,
+          )
+          .eq("id", input.id)
+          .single();
 
-      if (error) {
-        if (error.code === "PGRST116") {
-          return null;
+        if (error) {
+          if (error.code === "PGRST116") {
+            return null;
+          }
+          throw new Error(`Failed to get receipt: ${error.message}`);
         }
-        throw new Error(`Failed to get receipt: ${error.message}`);
-      }
 
-      // Query attachments separately (polymorphic relationship)
-      const { data: attachments } = await ctx.supabaseAdmin
-        .from("stock_document_attachments")
-        .select("*")
-        .eq("document_type", "receipt")
-        .eq("document_id", input.id);
+        // Query attachments separately (polymorphic relationship)
+        const { data: attachments } = await ctx.supabaseAdmin
+          .from("stock_document_attachments")
+          .select("*")
+          .eq("document_type", "receipt")
+          .eq("document_id", input.id);
 
-      return {
-        ...data,
-        attachments: attachments || []
-      } as StockReceiptWithRelations;
-    }),
+        return {
+          ...data,
+          attachments: attachments || [],
+        } as StockReceiptWithRelations;
+      },
+    ),
 
   /**
    * Create new receipt (draft)
    */
-  create: publicProcedure.use(requireManagerOrAbove)
+  create: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
-      z.object({
-        receiptType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
-        reason: z.enum(["purchase", "customer_return", "rma_return"]).optional().default("purchase"),
-        customerId: z.string().optional(), // Required for customer_return
-        rmaReference: z.string().optional(), // Optional for rma_return
-        virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
-        receiptDate: z.string(),
-        expectedDate: z.string().optional(),
-        supplierId: z.string().optional(),
-        rmaBatchId: z.string().optional(),
-        referenceDocumentNumber: z.string().optional(),
-        notes: z.string().optional(),
-        items: z.array(
-          z.object({
-            productId: z.string(),
-            declaredQuantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
-            unitPrice: z.number().optional(),
-            notes: z.string().optional(),
-          })
-        ).min(1),
-      }).refine(
-        (data) => {
-          // Validate: normal receipts must have positive quantities
-          if (data.receiptType === "normal") {
-            return data.items.every((item) => item.declaredQuantity > 0);
-          }
-          // Adjustment receipts: allow negative but not zero
-          return data.items.every((item) => item.declaredQuantity !== 0);
-        },
-        {
-          message: "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
-        }
-      ).refine(
-        (data) => {
-          // Validate: customer_return requires customerId
-          if (data.reason === "customer_return" && !data.customerId) {
-            return false;
-          }
-          return true;
-        },
-        {
-          message: "Vui lòng chọn khách hàng khi nhập hàng trả lại",
-        }
-      )
+      z
+        .object({
+          receiptType: z.enum(["normal", "adjustment"]), // REDESIGNED: Simplified to 2 types
+          reason: z
+            .enum(["purchase", "customer_return", "rma_return"])
+            .optional()
+            .default("purchase"),
+          customerId: z.string().optional(), // Required for customer_return
+          rmaReference: z.string().optional(), // Optional for rma_return
+          virtualWarehouseId: z.string(), // REDESIGNED: Direct warehouse reference
+          receiptDate: z.string(),
+          expectedDate: z.string().optional(),
+          supplierId: z.string().optional(),
+          rmaBatchId: z.string().optional(),
+          referenceDocumentNumber: z.string().optional(),
+          notes: z.string().optional(),
+          items: z
+            .array(
+              z.object({
+                productId: z.string(),
+                declaredQuantity: z.number().int(), // REDESIGNED: Can be negative for adjustments
+                unitPrice: z.number().optional(),
+                notes: z.string().optional(),
+              }),
+            )
+            .min(1),
+        })
+        .refine(
+          (data) => {
+            // Validate: normal receipts must have positive quantities
+            if (data.receiptType === "normal") {
+              return data.items.every((item) => item.declaredQuantity > 0);
+            }
+            // Adjustment receipts: allow negative but not zero
+            return data.items.every((item) => item.declaredQuantity !== 0);
+          },
+          {
+            message:
+              "Normal receipts require positive quantities. Adjustments cannot have zero quantity.",
+          },
+        )
+        .refine(
+          (data) => {
+            // Validate: customer_return requires customerId
+            if (data.reason === "customer_return" && !data.customerId) {
+              return false;
+            }
+            return true;
+          },
+          {
+            message: "Vui lòng chọn khách hàng khi nhập hàng trả lại",
+          },
+        ),
     )
     .mutation(async ({ ctx, input }) => {
       // Get user profile ID
@@ -193,7 +219,9 @@ export const receiptsRouter = router({
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
-        throw new Error("Unauthorized: Only admin and manager can create receipts");
+        throw new Error(
+          "Unauthorized: Only admin and manager can create receipts",
+        );
       }
 
       // Insert receipt
@@ -236,7 +264,9 @@ export const receiptsRouter = router({
           .insert(items);
 
         if (itemsError) {
-          throw new Error(`Failed to create receipt items: ${itemsError.message}`);
+          throw new Error(
+            `Failed to create receipt items: ${itemsError.message}`,
+          );
         }
       }
 
@@ -246,13 +276,14 @@ export const receiptsRouter = router({
   /**
    * Update receipt notes/reference (simplified - no draft check)
    */
-  update: publicProcedure.use(requireManagerOrAbove)
+  update: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         id: z.string(),
         notes: z.string().optional(),
         referenceDocumentNumber: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { data, error } = await ctx.supabaseAdmin
@@ -277,7 +308,8 @@ export const receiptsRouter = router({
    * In the simplified workflow, receipts are completed immediately and cannot be fully edited.
    * Use the `update` method to edit notes/reference only.
    */
-  updateFull: publicProcedure.use(requireManagerOrAbove)
+  updateFull: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         id: z.string(),
@@ -286,20 +318,24 @@ export const receiptsRouter = router({
         receiptDate: z.string(),
         notes: z.string().optional(),
         referenceDocumentNumber: z.string().optional(),
-        items: z.array(
-          z.object({
-            id: z.string().optional(),
-            productId: z.string(),
-            declaredQuantity: z.number().int(),
-          })
-        ).min(1),
-      })
+        items: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              productId: z.string(),
+              declaredQuantity: z.number().int(),
+            }),
+          )
+          .min(1),
+      }),
     )
     .mutation(async () => {
       // In simplified workflow, receipts are completed immediately.
       // Editing items would affect stock and physical products.
       // Create a new receipt instead, or use adjustment receipt to correct.
-      throw new Error("Không thể sửa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.");
+      throw new Error(
+        "Không thể sửa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.",
+      );
     }),
 
   /**
@@ -309,7 +345,8 @@ export const receiptsRouter = router({
    * - customer_return: Serial must be in customer_installed warehouse
    * - rma_return: Serial must be in rma_staging OR not exist (replacement from supplier)
    */
-  addSerials: publicProcedure.use(requireManagerOrAbove)
+  addSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         receiptItemId: z.string(),
@@ -318,9 +355,9 @@ export const receiptsRouter = router({
             serialNumber: z.string(),
             manufacturerWarrantyEndDate: z.string().optional(),
             userWarrantyEndDate: z.string().optional(),
-          })
+          }),
         ),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const serialNumbers = input.serials.map((s) => s.serialNumber);
@@ -345,7 +382,9 @@ export const receiptsRouter = router({
         throw new Error("Receipt item not found");
       }
 
-      const receipt = Array.isArray(receiptItem.receipt) ? receiptItem.receipt[0] : receiptItem.receipt;
+      const receipt = Array.isArray(receiptItem.receipt)
+        ? receiptItem.receipt[0]
+        : receiptItem.receipt;
       const reason = receipt.reason || "purchase";
       const targetWarehouseId = receipt.virtual_warehouse_id;
 
@@ -357,34 +396,39 @@ export const receiptsRouter = router({
           .select("id")
           .eq("receipt_id", receiptItem.receipt_id);
 
-        const currentReceiptItemIds = currentReceiptItems?.map(item => item.id) || [];
+        const currentReceiptItemIds =
+          currentReceiptItems?.map((item) => item.id) || [];
 
         const { data: existingInReceipts } = await ctx.supabaseAdmin
           .from("stock_receipt_serials")
           .select("serial_number, receipt_item_id")
           .in("serial_number", serialNumbers);
 
-        const duplicatesInOtherReceipts = existingInReceipts?.filter(
-          serial => !currentReceiptItemIds.includes(serial.receipt_item_id)
-        ) || [];
+        const duplicatesInOtherReceipts =
+          existingInReceipts?.filter(
+            (serial) => !currentReceiptItemIds.includes(serial.receipt_item_id),
+          ) || [];
 
         if (duplicatesInOtherReceipts.length > 0) {
-          const duplicates = duplicatesInOtherReceipts.map((e) => e.serial_number).join(", ");
+          const duplicates = duplicatesInOtherReceipts
+            .map((e) => e.serial_number)
+            .join(", ");
           throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
         }
       }
 
       // Check existing physical products with warehouse info
       // Note: Must specify FK with !virtual_warehouse_id because physical_products has 2 FKs to virtual_warehouses
-      const { data: existingProducts, error: checkError } = await ctx.supabaseAdmin
-        .from("physical_products")
-        .select(`
+      const { data: existingProducts, error: checkError } =
+        await ctx.supabaseAdmin
+          .from("physical_products")
+          .select(`
           id,
           serial_number,
           virtual_warehouse_id,
           virtual_warehouse:virtual_warehouses!virtual_warehouse_id(id, name, warehouse_type)
         `)
-        .in("serial_number", serialNumbers);
+          .in("serial_number", serialNumbers);
 
       if (checkError) {
         throw new Error(`Không thể kiểm tra serial: ${checkError.message}`);
@@ -396,18 +440,27 @@ export const receiptsRouter = router({
       const serialsToTransfer: { id: string; serialNumber: string }[] = [];
 
       for (const serialNumber of serialNumbers) {
-        const existing = existingProducts?.find(p => p.serial_number === serialNumber);
+        const existing = existingProducts?.find(
+          (p) => p.serial_number === serialNumber,
+        );
         // Handle Supabase join result type
-        const warehouse = existing?.virtual_warehouse as { id: string; name: string; warehouse_type: string } | { id: string; name: string; warehouse_type: string }[] | null;
-        const warehouseType = Array.isArray(warehouse) ? warehouse[0]?.warehouse_type : warehouse?.warehouse_type;
-        const warehouseName = Array.isArray(warehouse) ? warehouse[0]?.name : warehouse?.name;
+        const warehouse = existing?.virtual_warehouse as
+          | { id: string; name: string; warehouse_type: string }
+          | { id: string; name: string; warehouse_type: string }[]
+          | null;
+        const warehouseType = Array.isArray(warehouse)
+          ? warehouse[0]?.warehouse_type
+          : warehouse?.warehouse_type;
+        const warehouseName = Array.isArray(warehouse)
+          ? warehouse[0]?.name
+          : warehouse?.name;
 
         switch (reason) {
           case "purchase":
             // Purchase: Serial must NOT exist
             if (existing) {
               validationErrors.push(
-                `Serial "${serialNumber}" đã tồn tại trong "${warehouseName}". Không thể nhập mua hàng với serial đã có.`
+                `Serial "${serialNumber}" đã tồn tại trong "${warehouseName}". Không thể nhập mua hàng với serial đã có.`,
               );
             } else {
               serialsToCreate.push(serialNumber);
@@ -418,13 +471,13 @@ export const receiptsRouter = router({
             // Customer return: Serial must be in customer_installed warehouse
             if (!existing) {
               validationErrors.push(
-                `Serial "${serialNumber}" không tồn tại trong hệ thống. Không thể nhập hàng trả lại.`
+                `Serial "${serialNumber}" không tồn tại trong hệ thống. Không thể nhập hàng trả lại.`,
               );
             } else if (warehouseType === "customer_installed") {
               serialsToTransfer.push({ id: existing.id, serialNumber });
             } else {
               validationErrors.push(
-                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng đã bán. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`
+                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng đã bán. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`,
               );
             }
             break;
@@ -438,7 +491,7 @@ export const receiptsRouter = router({
               serialsToTransfer.push({ id: existing.id, serialNumber });
             } else {
               validationErrors.push(
-                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng chờ RMA. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`
+                `Serial "${serialNumber}" đang ở "${warehouseName}", không phải hàng chờ RMA. Vui lòng kiểm tra lại hoặc chọn loại phiếu phù hợp.`,
               );
             }
             break;
@@ -462,10 +515,15 @@ export const receiptsRouter = router({
         const { error: transferError } = await ctx.supabaseAdmin
           .from("physical_products")
           .update({ virtual_warehouse_id: targetWarehouseId })
-          .in("id", serialsToTransfer.map(s => s.id));
+          .in(
+            "id",
+            serialsToTransfer.map((s) => s.id),
+          );
 
         if (transferError) {
-          throw new Error(`Không thể chuyển kho cho serial: ${transferError.message}`);
+          throw new Error(
+            `Không thể chuyển kho cho serial: ${transferError.message}`,
+          );
         }
       }
 
@@ -496,7 +554,8 @@ export const receiptsRouter = router({
   /**
    * Remove serial
    */
-  removeSerial: publicProcedure.use(requireManagerOrAbove)
+  removeSerial: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ serialId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { error } = await ctx.supabaseAdmin
@@ -516,11 +575,14 @@ export const receiptsRouter = router({
    * Deleting a completed receipt would affect stock and physical products.
    * Use adjustment receipt to correct inventory instead.
    */
-  delete: publicProcedure.use(requireManagerOrAbove)
+  delete: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ id: z.string() }))
     .mutation(async () => {
       // In simplified workflow, receipts are completed immediately with stock effects.
       // Deleting would cause data inconsistency.
-      throw new Error("Không thể xóa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.");
+      throw new Error(
+        "Không thể xóa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.",
+      );
     }),
 });

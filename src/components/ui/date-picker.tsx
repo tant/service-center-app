@@ -1,12 +1,16 @@
 "use client";
 
-import * as React from "react";
+import { IconCalendar } from "@tabler/icons-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { IconCalendar } from "@tabler/icons-react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 interface DatePickerProps {
@@ -117,18 +121,18 @@ interface MiniCalendarProps {
 
 function MiniCalendar({ selected, onSelect, disabled }: MiniCalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(
-    selected || new Date()
+    selected || new Date(),
   );
 
   const monthStart = new Date(
     currentMonth.getFullYear(),
     currentMonth.getMonth(),
-    1
+    1,
   );
   const monthEnd = new Date(
     currentMonth.getFullYear(),
     currentMonth.getMonth() + 1,
-    0
+    0,
   );
 
   const startDate = new Date(monthStart);
@@ -147,13 +151,13 @@ function MiniCalendar({ selected, onSelect, disabled }: MiniCalendarProps) {
 
   const handlePrevMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
     );
   };
 
   const handleNextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
     );
   };
 
@@ -238,7 +242,8 @@ function MiniCalendar({ selected, onSelect, disabled }: MiniCalendarProps) {
               "h-8 w-8 p-0 font-normal",
               !isCurrentMonth(day) && "text-muted-foreground opacity-50",
               isToday(day) && "bg-accent",
-              isSelected(day) && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+              isSelected(day) &&
+                "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
             )}
           >
             {day.getDate()}

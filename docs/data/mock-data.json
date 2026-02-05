@@ -507,9 +507,7 @@
         "status": "completed",
         "approvedBy": "manager@sstc.vn",
         "approvedAt": "2025-08-20T11:00:00Z",
-        "items": [
-          { "productSku": "ZBOX-CI", "quantity": 12 }
-        ],
+        "items": [{ "productSku": "ZBOX-CI", "quantity": 12 }],
         "notes": "Mini PC arrival"
       },
       {
@@ -621,9 +619,7 @@
         "status": "completed",
         "approvedBy": "manager@sstc.vn",
         "approvedAt": "2025-09-20T11:00:00Z",
-        "items": [
-          { "productSku": "ZT-4070-G", "quantity": 6 }
-        ],
+        "items": [{ "productSku": "ZT-4070-G", "quantity": 6 }],
         "notes": "Warranty replacements batch 2"
       },
       {
@@ -760,8 +756,16 @@
               "manufacturerWarrantyEndDate": "2028-11-01",
               "userWarrantyEndDate": null,
               "serials": [
-                "TEST-4060-001", "TEST-4060-002", "TEST-4060-003", "TEST-4060-004", "TEST-4060-005",
-                "TEST-4060-006", "TEST-4060-007", "TEST-4060-008", "TEST-4060-009", "TEST-4060-010"
+                "TEST-4060-001",
+                "TEST-4060-002",
+                "TEST-4060-003",
+                "TEST-4060-004",
+                "TEST-4060-005",
+                "TEST-4060-006",
+                "TEST-4060-007",
+                "TEST-4060-008",
+                "TEST-4060-009",
+                "TEST-4060-010"
               ]
             }
           ],
@@ -788,8 +792,15 @@
               "manufacturerWarrantyEndDate": "2030-11-01",
               "userWarrantyEndDate": null,
               "serials": [
-                "TEST-SSD-001", "TEST-SSD-002", "TEST-SSD-003", "TEST-SSD-004", "TEST-SSD-005",
-                "TEST-SSD-006", "TEST-SSD-007", "TEST-SSD-008", "TEST-SSD-009"
+                "TEST-SSD-001",
+                "TEST-SSD-002",
+                "TEST-SSD-003",
+                "TEST-SSD-004",
+                "TEST-SSD-005",
+                "TEST-SSD-006",
+                "TEST-SSD-007",
+                "TEST-SSD-008",
+                "TEST-SSD-009"
               ]
             }
           ],
@@ -1280,10 +1291,7 @@
           "pendingTasks": 1,
           "inProgressTasks": 1,
           "avgCompletionTimeHours": 1.5,
-          "tasks": [
-            "Service ticket QA (in_progress)",
-            "Serial entry (pending)"
-          ]
+          "tasks": ["Service ticket QA (in_progress)", "Serial entry (pending)"]
         },
         "tech3@sstc.vn": {
           "name": "Phạm Văn Sửa Chữa",

@@ -10,11 +10,11 @@
  */
 
 import { router } from "../../trpc";
-import { stockRouter } from "./stock";
-import { receiptsRouter } from "./receipts";
 import { issuesRouter } from "./issues";
-import { transfersRouter } from "./transfers";
+import { receiptsRouter } from "./receipts";
 import { serialsRouter } from "./serials";
+import { stockRouter } from "./stock";
+import { transfersRouter } from "./transfers";
 
 export const inventoryRouter = router({
   stock: stockRouter,

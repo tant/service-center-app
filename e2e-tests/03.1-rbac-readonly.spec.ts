@@ -1,6 +1,6 @@
-import { test, expect, Page } from "@playwright/test";
-import { adminUser, testUsers } from "./test-data";
+import { expect, Page, test } from "@playwright/test";
 import { login, logout, searchUser } from "./helpers";
+import { adminUser, testUsers } from "./test-data";
 
 test.describe("RBAC Read-Only Permissions", () => {
   test.describe("Admin Full Access Tests", () => {
@@ -18,7 +18,9 @@ test.describe("RBAC Read-Only Permissions", () => {
       for (const { path, name } of adminPages) {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
-        await expect(page.getByText(/unauthorized|không có quyền|access denied/i)).not.toBeVisible();
+        await expect(
+          page.getByText(/unauthorized|không có quyền|access denied/i),
+        ).not.toBeVisible();
         console.log(`✓ Admin can access: ${name}`);
       }
       await logout(page);
@@ -28,8 +30,13 @@ test.describe("RBAC Read-Only Permissions", () => {
       await login(page, adminUser);
       await page.goto("/dashboard");
       await page.waitForLoadState("networkidle");
-      await expect(page.getByText(/revenue|doanh thu/i).first()).toBeVisible({ timeout: 5000 });
-      const hasMetrics = await page.getByText(/analytics|phân tích|metrics|kpi/i).isVisible({ timeout: 2000 }).catch(() => false);
+      await expect(page.getByText(/revenue|doanh thu/i).first()).toBeVisible({
+        timeout: 5000,
+      });
+      const hasMetrics = await page
+        .getByText(/analytics|phân tích|metrics|kpi/i)
+        .isVisible({ timeout: 2000 })
+        .catch(() => false);
       if (hasMetrics) {
         console.log("✓ Admin can view metrics/analytics");
       }
@@ -40,7 +47,9 @@ test.describe("RBAC Read-Only Permissions", () => {
       await login(page, adminUser);
       await page.goto("/team");
       await page.waitForLoadState("networkidle");
-      for (const role of Object.keys(testUsers) as Array<keyof typeof testUsers>) {
+      for (const role of Object.keys(testUsers) as Array<
+        keyof typeof testUsers
+      >) {
         const user = testUsers[role];
         const found = await searchUser(page, user.email);
         expect(found).toBe(true);
@@ -53,11 +62,21 @@ test.describe("RBAC Read-Only Permissions", () => {
   test.describe("Manager Permissions Tests", () => {
     test("Manager can access allowed pages", async ({ page }) => {
       await login(page, testUsers.manager);
-      const allowedPages = ["/dashboard", "/tickets", "/customers", "/products", "/parts", "/warehouse", "/team"];
+      const allowedPages = [
+        "/dashboard",
+        "/tickets",
+        "/customers",
+        "/products",
+        "/parts",
+        "/warehouse",
+        "/team",
+      ];
       for (const path of allowedPages) {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
-        await expect(page.getByText(/unauthorized|không có quyền/i)).not.toBeVisible();
+        await expect(
+          page.getByText(/unauthorized|không có quyền/i),
+        ).not.toBeVisible();
       }
       await logout(page);
     });
@@ -70,7 +89,11 @@ test.describe("RBAC Read-Only Permissions", () => {
       for (const path of forbiddenPages) {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
-        const isUnauthorized = (await page.getByText(/unauthorized|không có quyền/i).isVisible({ timeout: 2000 }).catch(() => false)) || !page.url().includes(path);
+        const isUnauthorized =
+          (await page
+            .getByText(/unauthorized|không có quyền/i)
+            .isVisible({ timeout: 2000 })
+            .catch(() => false)) || !page.url().includes(path);
         expect(isUnauthorized).toBe(true);
       }
       await logout(page);
@@ -84,7 +107,11 @@ test.describe("RBAC Read-Only Permissions", () => {
       for (const path of forbiddenPages) {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
-        const isUnauthorized = (await page.getByText(/unauthorized|không có quyền/i).isVisible({ timeout: 2000 }).catch(() => false)) || !page.url().includes(path);
+        const isUnauthorized =
+          (await page
+            .getByText(/unauthorized|không có quyền/i)
+            .isVisible({ timeout: 2000 })
+            .catch(() => false)) || !page.url().includes(path);
         expect(isUnauthorized).toBe(true);
       }
       await logout(page);

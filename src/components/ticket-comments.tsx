@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import {
+  IconLock,
+  IconMessageCircle,
+  IconRobot,
+  IconSend,
+  IconUser,
+} from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,21 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
-import {
-  IconSend,
-  IconMessageCircle,
-  IconLock,
-  IconUser,
-  IconRobot,
-} from "@tabler/icons-react";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -31,6 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Comment {
   id: string;

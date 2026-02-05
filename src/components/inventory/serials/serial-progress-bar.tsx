@@ -4,8 +4,8 @@
  * Features: color-coded progress, multiple variants, customizable display
  */
 
+import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ProgressVariant = "linear" | "compact" | "minimal";
@@ -134,8 +134,8 @@ export function SerialProgressBar({
                 isComplete
                   ? "text-green-600"
                   : percentage < 50
-                  ? "text-red-600"
-                  : "text-yellow-600"
+                    ? "text-red-600"
+                    : "text-yellow-600",
               )}
             >
               {percentage}%
@@ -172,7 +172,7 @@ export function SerialProgressBar({
             <p
               className={cn(
                 "text-xs flex items-center gap-1",
-                percentage < 50 ? "text-red-500" : "text-yellow-600"
+                percentage < 50 ? "text-red-500" : "text-yellow-600",
               )}
             >
               <AlertTriangle className="h-3 w-3" />

@@ -5,14 +5,20 @@
 
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -52,22 +58,27 @@ function SuccessContent() {
                 <IconCheck className="h-12 w-12 text-green-600" />
               </div>
             </div>
-            <CardTitle className="text-2xl">Đã gửi yêu cầu thành công!</CardTitle>
+            <CardTitle className="text-2xl">
+              Đã gửi yêu cầu thành công!
+            </CardTitle>
             <CardDescription>
-              Yêu cầu dịch vụ của bạn đã được ghi nhận. Vui lòng lưu mã theo dõi.
+              Yêu cầu dịch vụ của bạn đã được ghi nhận. Vui lòng lưu mã theo
+              dõi.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <Alert>
               <AlertDescription>
-                <strong>Quan trọng:</strong> Lưu mã theo dõi này để kiểm tra tình trạng yêu cầu.
-                Bạn cũng sẽ nhận được email xác nhận.
+                <strong>Quan trọng:</strong> Lưu mã theo dõi này để kiểm tra
+                tình trạng yêu cầu. Bạn cũng sẽ nhận được email xác nhận.
               </AlertDescription>
             </Alert>
 
             {/* AC 9: Tracking token displayed prominently */}
             <div className="border-2 border-primary rounded-lg p-6 text-center space-y-4">
-              <p className="text-sm text-muted-foreground">Mã theo dõi của bạn:</p>
+              <p className="text-sm text-muted-foreground">
+                Mã theo dõi của bạn:
+              </p>
               <div className="font-mono text-2xl md:text-3xl font-bold text-primary break-all">
                 {token}
               </div>
@@ -81,9 +92,13 @@ function SuccessContent() {
             <div className="space-y-2 text-sm">
               <h3 className="font-semibold">Bước tiếp theo:</h3>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Đội ngũ của chúng tôi sẽ xem xét yêu cầu trong vòng 24 giờ</li>
+                <li>
+                  Đội ngũ của chúng tôi sẽ xem xét yêu cầu trong vòng 24 giờ
+                </li>
                 <li>Bạn sẽ nhận email xác nhận với các bước tiếp theo</li>
-                <li>Theo dõi tình trạng yêu cầu bất cứ lúc nào bằng mã theo dõi</li>
+                <li>
+                  Theo dõi tình trạng yêu cầu bất cứ lúc nào bằng mã theo dõi
+                </li>
               </ol>
             </div>
 
@@ -103,11 +118,13 @@ function SuccessContent() {
 
 export default function ServiceRequestSuccessPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8 flex items-center justify-center">
-        <div className="text-muted-foreground">Đang tải...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8 flex items-center justify-center">
+          <div className="text-muted-foreground">Đang tải...</div>
+        </div>
+      }
+    >
       <SuccessContent />
     </Suspense>
   );

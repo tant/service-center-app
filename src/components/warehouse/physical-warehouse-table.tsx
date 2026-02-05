@@ -5,13 +5,12 @@
  * AC 5.1: Physical warehouses table with CRUD operations
  */
 
-import * as React from "react";
 import {
-  IconPlus,
-  IconEdit,
-  IconTrash,
   IconBuildingWarehouse,
+  IconEdit,
   IconMapPin,
+  IconPlus,
+  IconTrash,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -27,19 +26,10 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import {
-  usePhysicalWarehouses,
-  useDeletePhysicalWarehouse,
-} from "@/hooks/use-warehouse";
-import { Button } from "@/components/ui/button";
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -47,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -56,8 +45,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { WarehouseFormModal } from "./warehouse-form-modal";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  useDeletePhysicalWarehouse,
+  usePhysicalWarehouses,
+} from "@/hooks/use-warehouse";
 import type { PhysicalWarehouse } from "@/types/warehouse";
+import { WarehouseFormModal } from "./warehouse-form-modal";
 
 const columns: ColumnDef<PhysicalWarehouse>[] = [
   {
@@ -69,7 +69,10 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
           <IconBuildingWarehouse className="h-4 w-4 text-muted-foreground" />
           <span>{row.original.name}</span>
           {(row.original as any).is_system_default && (
-            <Badge variant="outline" className="ml-1 bg-primary/10 text-primary border-primary/30">
+            <Badge
+              variant="outline"
+              className="ml-1 bg-primary/10 text-primary border-primary/30"
+            >
               Mặc Định
             </Badge>
           )}
@@ -92,9 +95,7 @@ const columns: ColumnDef<PhysicalWarehouse>[] = [
     accessorKey: "description",
     header: "Mô Tả",
     cell: ({ row }) => (
-      <div className="max-w-xs truncate">
-        {row.original.description || "—"}
-      </div>
+      <div className="max-w-xs truncate">{row.original.description || "—"}</div>
     ),
   },
   {
@@ -156,12 +157,16 @@ export function PhysicalWarehouseTable() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [showCreateModal, setShowCreateModal] = React.useState(false);
-  const [editingWarehouse, setEditingWarehouse] = React.useState<PhysicalWarehouse | null>(null);
-  
+  const [editingWarehouse, setEditingWarehouse] =
+    React.useState<PhysicalWarehouse | null>(null);
+
   // Table states
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
@@ -185,9 +190,10 @@ export function PhysicalWarehouseTable() {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((warehouse) => 
-        warehouse.name.toLowerCase().includes(query) ||
-        warehouse.location.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (warehouse) =>
+          warehouse.name.toLowerCase().includes(query) ||
+          warehouse.location.toLowerCase().includes(query),
       );
     }
 
@@ -246,7 +252,7 @@ export function PhysicalWarehouseTable() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"
             />
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Lọc trạng thái" />
@@ -258,8 +264,12 @@ export function PhysicalWarehouseTable() {
               </SelectContent>
             </Select>
           </div>
-          
-          <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateModal(true)}
+          >
             <IconPlus className="h-4 w-4" />
             <span className="hidden lg:inline ml-2">Thêm Kho Mới</span>
           </Button>
@@ -288,15 +298,15 @@ export function PhysicalWarehouseTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === headerGroup.headers.length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                         </TableHead>
                       ))}
@@ -316,13 +326,13 @@ export function PhysicalWarehouseTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === row.getVisibleCells().length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}

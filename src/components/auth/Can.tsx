@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRole } from '@/hooks/use-role';
-import type { Role } from '@/types/roles';
+import { useRole } from "@/hooks/use-role";
+import type { Role } from "@/types/roles";
 
 interface CanProps {
   roles: Role[];

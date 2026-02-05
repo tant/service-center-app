@@ -5,20 +5,26 @@
  * Form for editing stock issue (recipient info, notes only - items cannot be changed)
  */
 
-import { use, useState, useEffect } from "react";
+import { ArrowLeft, Info, Save } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
+import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Info } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
-import { toast } from "sonner";
 import type { StockIssueReason } from "@/types/inventory";
 
 // Issue reason labels
@@ -51,7 +57,8 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
   const [issueReason, setIssueReason] = useState<StockIssueReason | "">("");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { data: issue, isLoading: issueLoading } = trpc.inventory.issues.getById.useQuery({ id });
+  const { data: issue, isLoading: issueLoading } =
+    trpc.inventory.issues.getById.useQuery({ id });
   const updateIssue = trpc.inventory.issues.update.useMutation();
   const { data: customers } = trpc.customers.getCustomers.useQuery();
 
@@ -101,7 +108,9 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  Đang tải...
+                </div>
               </div>
             </div>
           </div>
@@ -118,7 +127,9 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <div className="text-center py-8 text-muted-foreground">Không tìm thấy phiếu xuất</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  Không tìm thấy phiếu xuất
+                </div>
               </div>
             </div>
           </div>
@@ -148,7 +159,8 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  Phiếu xuất đã hoàn tất. Chỉ có thể chỉnh sửa thông tin người nhận, ghi chú và số chứng từ tham chiếu.
+                  Phiếu xuất đã hoàn tất. Chỉ có thể chỉnh sửa thông tin người
+                  nhận, ghi chú và số chứng từ tham chiếu.
                 </AlertDescription>
               </Alert>
 
@@ -161,12 +173,21 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Lý do xuất kho</Label>
-                      <Select value={issueReason || "__none__"} onValueChange={(v) => setIssueReason(v === "__none__" ? "" : v as StockIssueReason)}>
+                      <Select
+                        value={issueReason || "__none__"}
+                        onValueChange={(v) =>
+                          setIssueReason(
+                            v === "__none__" ? "" : (v as StockIssueReason),
+                          )
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn lý do" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">-- Không chọn --</SelectItem>
+                          <SelectItem value="__none__">
+                            -- Không chọn --
+                          </SelectItem>
                           {ISSUE_REASONS.map((reason) => (
                             <SelectItem key={reason.value} value={reason.value}>
                               {reason.label}
@@ -177,18 +198,49 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
-                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      <Label
+                        className={
+                          issueReason === "sale"
+                            ? "text-primary font-medium"
+                            : ""
+                        }
+                      >
+                        Khách hàng{" "}
+                        {issueReason === "sale" && (
+                          <span className="text-destructive">*</span>
+                        )}
                       </Label>
-                      <Select value={customerId || "__none__"} onValueChange={(v) => setCustomerId(v === "__none__" ? null : v)}>
-                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
-                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
+                      <Select
+                        value={customerId || "__none__"}
+                        onValueChange={(v) =>
+                          setCustomerId(v === "__none__" ? null : v)
+                        }
+                      >
+                        <SelectTrigger
+                          className={
+                            issueReason === "sale" && !customerId
+                              ? "border-destructive"
+                              : ""
+                          }
+                        >
+                          <SelectValue
+                            placeholder={
+                              issueReason === "sale"
+                                ? "Chọn khách hàng (bắt buộc)"
+                                : "Chọn khách hàng (nếu có)"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {issueReason !== "sale" && <SelectItem value="__none__">-- Không chọn --</SelectItem>}
+                          {issueReason !== "sale" && (
+                            <SelectItem value="__none__">
+                              -- Không chọn --
+                            </SelectItem>
+                          )}
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                              {customer.name}{" "}
+                              {customer.phone ? `(${customer.phone})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -227,7 +279,9 @@ export default function EditIssuePage({ params }: EditIssuePageProps) {
                     <Input
                       placeholder="Nhập số hóa đơn, số hợp đồng..."
                       value={referenceDocumentNumber}
-                      onChange={(e) => setReferenceDocumentNumber(e.target.value)}
+                      onChange={(e) =>
+                        setReferenceDocumentNumber(e.target.value)
+                      }
                     />
                   </div>
 

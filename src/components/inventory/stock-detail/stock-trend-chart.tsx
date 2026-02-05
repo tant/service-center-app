@@ -5,7 +5,11 @@
  * Displays stock level trends over time using an area chart
  */
 
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { TrendingUp } from "lucide-react";
 import * as React from "react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { trpc } from "@/components/providers/trpc-provider";
 import {
   Card,
@@ -13,9 +17,14 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
@@ -23,16 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TrendingUp } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StockTrendChartProps {
   productId: string;
@@ -49,17 +49,20 @@ const chartConfig = {
 export function StockTrendChart({ productId }: StockTrendChartProps) {
   const [timeRange, setTimeRange] = React.useState<number>(30);
 
-  const { data: trendData, isLoading } = trpc.inventory.stock.getStockTrend.useQuery({
-    productId,
-    days: timeRange,
-  });
+  const { data: trendData, isLoading } =
+    trpc.inventory.stock.getStockTrend.useQuery({
+      productId,
+      days: timeRange,
+    });
 
   // Format data for chart
   const chartData = React.useMemo(() => {
-    return trendData?.map((item) => ({
-      date: item.date,
-      stock: item.stock,
-    })) || [];
+    return (
+      trendData?.map((item) => ({
+        date: item.date,
+        stock: item.stock,
+      })) || []
+    );
   }, [trendData]);
 
   // Calculate summary statistics
@@ -72,7 +75,9 @@ export function StockTrendChart({ productId }: StockTrendChartProps) {
     const current = stockValues[stockValues.length - 1] || 0;
     const highest = Math.max(...stockValues);
     const lowest = Math.min(...stockValues);
-    const average = Math.round(stockValues.reduce((sum, val) => sum + val, 0) / stockValues.length);
+    const average = Math.round(
+      stockValues.reduce((sum, val) => sum + val, 0) / stockValues.length,
+    );
 
     return { current, highest, lowest, average };
   }, [chartData]);
@@ -112,16 +117,33 @@ export function StockTrendChart({ productId }: StockTrendChartProps) {
           Biến động tồn kho trong {getTimeRangeLabel()}
         </CardDescription>
         <CardAction>
-          <Select value={timeRange.toString()} onValueChange={(v) => setTimeRange(Number.parseInt(v))}>
-            <SelectTrigger className="w-40" size="sm" aria-label="Chọn khoảng thời gian">
+          <Select
+            value={timeRange.toString()}
+            onValueChange={(v) => setTimeRange(Number.parseInt(v))}
+          >
+            <SelectTrigger
+              className="w-40"
+              size="sm"
+              aria-label="Chọn khoảng thời gian"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              <SelectItem value="7" className="rounded-lg">7 ngày qua</SelectItem>
-              <SelectItem value="30" className="rounded-lg">30 ngày qua</SelectItem>
-              <SelectItem value="90" className="rounded-lg">90 ngày qua</SelectItem>
-              <SelectItem value="180" className="rounded-lg">6 tháng qua</SelectItem>
-              <SelectItem value="365" className="rounded-lg">1 năm qua</SelectItem>
+              <SelectItem value="7" className="rounded-lg">
+                7 ngày qua
+              </SelectItem>
+              <SelectItem value="30" className="rounded-lg">
+                30 ngày qua
+              </SelectItem>
+              <SelectItem value="90" className="rounded-lg">
+                90 ngày qua
+              </SelectItem>
+              <SelectItem value="180" className="rounded-lg">
+                6 tháng qua
+              </SelectItem>
+              <SelectItem value="365" className="rounded-lg">
+                1 năm qua
+              </SelectItem>
             </SelectContent>
           </Select>
         </CardAction>
@@ -163,14 +185,16 @@ export function StockTrendChart({ productId }: StockTrendChartProps) {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.toLocaleString('vi-VN')}
+                  tickFormatter={(value) => value.toLocaleString("vi-VN")}
                 />
                 <ChartTooltip
                   cursor={false}
                   content={
                     <ChartTooltipContent
                       labelFormatter={(value) => {
-                        return format(new Date(value), "dd/MM/yyyy", { locale: vi });
+                        return format(new Date(value), "dd/MM/yyyy", {
+                          locale: vi,
+                        });
                       }}
                       indicator="dot"
                     />
@@ -190,27 +214,35 @@ export function StockTrendChart({ productId }: StockTrendChartProps) {
             {/* Summary Statistics */}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t px-4">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Tồn kho hiện tại</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Tồn kho hiện tại
+                </span>
                 <span className="text-xl md:text-2xl font-bold">
-                  {stats.current.toLocaleString('vi-VN')}
+                  {stats.current.toLocaleString("vi-VN")}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Trung bình</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Trung bình
+                </span>
                 <span className="text-xl md:text-2xl font-bold">
-                  {stats.average.toLocaleString('vi-VN')}
+                  {stats.average.toLocaleString("vi-VN")}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Cao nhất</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Cao nhất
+                </span>
                 <span className="text-xl md:text-2xl font-bold text-green-600">
-                  {stats.highest.toLocaleString('vi-VN')}
+                  {stats.highest.toLocaleString("vi-VN")}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-muted-foreground">Thấp nhất</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Thấp nhất
+                </span>
                 <span className="text-xl md:text-2xl font-bold text-orange-600">
-                  {stats.lowest.toLocaleString('vi-VN')}
+                  {stats.lowest.toLocaleString("vi-VN")}
                 </span>
               </div>
             </div>

@@ -5,21 +5,21 @@
  * Used specifically for service ticket task execution.
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { TaskCard } from '@/components/tasks/task-card';
+import { useState } from "react";
 import {
-  CompleteTaskDialog,
   BlockTaskDialog,
-} from '@/components/tasks/task-action-dialogs';
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
+import { TaskCard } from "@/components/tasks/task-card";
 import {
-  useStartTask,
-  useCompleteTask,
   useBlockTask,
+  useCompleteTask,
+  useStartTask,
   useUnblockTask,
-} from '@/hooks/use-entity-tasks';
-import type { TaskWithContext } from '@/server/services/task-service';
+} from "@/hooks/use-entity-tasks";
+import type { TaskWithContext } from "@/server/services/task-service";
 
 interface TicketTaskCardProps {
   task: TaskWithContext;

@@ -5,16 +5,15 @@
 
 "use client";
 
-import * as React from "react";
 import {
-  IconEdit,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconLayoutColumns,
+  IconEdit,
   IconFileUpload,
+  IconLayoutColumns,
 } from "@tabler/icons-react";
 import {
   type ColumnDef,
@@ -30,7 +29,17 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,20 +57,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { useRouter } from "next/navigation";
 import { usePhysicalProducts } from "@/hooks/use-warehouse";
-import { trpc } from "@/components/providers/trpc-provider";
-import { EditProductDrawer } from "./edit-product-drawer";
-import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
-import { createProductColumns, CONDITION_LABELS } from "./product-inventory-table-columns";
 import type { PhysicalProduct } from "@/types/warehouse";
+import { BulkWarrantyUpdateDrawer } from "./bulk-warranty-update-drawer";
+import { EditProductDrawer } from "./edit-product-drawer";
+import {
+  CONDITION_LABELS,
+  createProductColumns,
+} from "./product-inventory-table-columns";
 
 // Extended type with relations from API
 export type PhysicalProductWithRelations = PhysicalProduct & {
@@ -102,27 +105,33 @@ export function ProductInventoryTable() {
   const [warehouseFilter, setWarehouseFilter] = React.useState<string>("all");
   const [conditionFilter, setConditionFilter] = React.useState<string>("all");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [editingProduct, setEditingProduct] = React.useState<PhysicalProductWithRelations | null>(null);
-  const [showBulkWarrantyUpdate, setShowBulkWarrantyUpdate] = React.useState(false);
+  const [editingProduct, setEditingProduct] =
+    React.useState<PhysicalProductWithRelations | null>(null);
+  const [showBulkWarrantyUpdate, setShowBulkWarrantyUpdate] =
+    React.useState(false);
 
   // Table states
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
 
   // Fetch virtual warehouses for filter dropdown
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
 
   // Build filters object - use useMemo to prevent infinite re-renders
   const filters = React.useMemo(() => {
     const f: {
       virtual_warehouse_id?: string;
-      condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
-      status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
+      condition?: "new" | "refurbished" | "used" | "faulty" | "for_parts";
+      status?: "draft" | "active" | "transferring" | "issued" | "disposed";
       search?: string;
       limit?: number;
       offset?: number;
@@ -146,7 +155,14 @@ export function ProductInventoryTable() {
     f.offset = pagination.pageIndex * pagination.pageSize;
 
     return f;
-  }, [warehouseFilter, conditionFilter, statusFilter, searchQuery, pagination.pageSize, pagination.pageIndex]);
+  }, [
+    warehouseFilter,
+    conditionFilter,
+    statusFilter,
+    searchQuery,
+    pagination.pageSize,
+    pagination.pageIndex,
+  ]);
 
   const { products, total, isLoading } = usePhysicalProducts(filters);
 
@@ -157,18 +173,24 @@ export function ProductInventoryTable() {
 
   const router = useRouter();
 
-  const handleEdit = React.useCallback((product: PhysicalProductWithRelations) => {
-    setEditingProduct(product);
-  }, []);
+  const handleEdit = React.useCallback(
+    (product: PhysicalProductWithRelations) => {
+      setEditingProduct(product);
+    },
+    [],
+  );
 
   const handleCloseDrawer = React.useCallback(() => {
     setEditingProduct(null);
   }, []);
 
   // Memoize table meta to prevent re-renders
-  const tableMeta = React.useMemo(() => ({
-    onEdit: handleEdit,
-  }), [handleEdit]);
+  const tableMeta = React.useMemo(
+    () => ({
+      onEdit: handleEdit,
+    }),
+    [handleEdit],
+  );
 
   // Create columns
   const columns = React.useMemo(() => createProductColumns(), []);
@@ -306,9 +328,9 @@ export function ProductInventoryTable() {
         ) : table.getRowModel().rows?.length === 0 ? (
           <div className="rounded-lg border py-8 text-center text-muted-foreground">
             {searchQuery ||
-             warehouseFilter !== "all" ||
-             conditionFilter !== "all" ||
-             statusFilter !== "all"
+            warehouseFilter !== "all" ||
+            conditionFilter !== "all" ||
+            statusFilter !== "all"
               ? "Không tìm thấy sản phẩm phù hợp"
               : "Chưa có sản phẩm nào"}
           </div>
@@ -326,15 +348,15 @@ export function ProductInventoryTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === headerGroup.headers.length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                         </TableHead>
                       ))}
@@ -347,7 +369,9 @@ export function ProductInventoryTable() {
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
                       className="cursor-pointer"
-                      onClick={() => router.push(`/inventory/products/${row.original.id}`)}
+                      onClick={() =>
+                        router.push(`/inventory/products/${row.original.id}`)
+                      }
                     >
                       {row.getVisibleCells().map((cell, index) => (
                         <TableCell
@@ -356,13 +380,13 @@ export function ProductInventoryTable() {
                             index === 0
                               ? "pl-4 lg:pl-6"
                               : index === row.getVisibleCells().length - 1
-                              ? "pr-4 lg:pr-6"
-                              : ""
+                                ? "pr-4 lg:pr-6"
+                                : ""
                           }
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </TableCell>
                       ))}
@@ -384,15 +408,24 @@ export function ProductInventoryTable() {
               <div className="flex items-center gap-8">
                 {/* Page Size Selector */}
                 <div className="ml-8 hidden items-center gap-2 lg:flex">
-                  <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                  <Label
+                    htmlFor="rows-per-page"
+                    className="text-sm font-medium"
+                  >
                     Số dòng mỗi trang
                   </Label>
                   <Select
                     value={`${table.getState().pagination.pageSize}`}
                     onValueChange={(value) => table.setPageSize(Number(value))}
                   >
-                    <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                      <SelectValue placeholder={table.getState().pagination.pageSize} />
+                    <SelectTrigger
+                      size="sm"
+                      className="w-20"
+                      id="rows-per-page"
+                    >
+                      <SelectValue
+                        placeholder={table.getState().pagination.pageSize}
+                      />
                     </SelectTrigger>
                     <SelectContent side="top">
                       {[10, 20, 30, 40, 50].map((pageSize) => (

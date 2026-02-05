@@ -5,16 +5,38 @@
 
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { useRequestDetails, useUpdateRequestStatus } from "@/hooks/use-service-request";
-import { IconPackage, IconUser, IconMapPin, IconFileText, IconTicket, IconLoader2 } from "@tabler/icons-react";
+import {
+  IconFileText,
+  IconLoader2,
+  IconMapPin,
+  IconPackage,
+  IconTicket,
+  IconUser,
+} from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import {
+  useRequestDetails,
+  useUpdateRequestStatus,
+} from "@/hooks/use-service-request";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 
 interface RequestDetailModalProps {
@@ -50,14 +72,17 @@ export function RequestDetailModal({
         onError: (error) => {
           toast.error(`Lỗi: ${error.message}`);
         },
-      }
+      },
     );
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<
       string,
-      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+      {
+        label: string;
+        variant: "default" | "secondary" | "destructive" | "outline";
+      }
     > = {
       submitted: { label: "Đã gửi", variant: "outline" },
       received: { label: "Đã tiếp nhận", variant: "secondary" },
@@ -89,7 +114,9 @@ export function RequestDetailModal({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Mã theo dõi</p>
-                <p className="font-mono text-lg font-bold">{request.tracking_token}</p>
+                <p className="font-mono text-lg font-bold">
+                  {request.tracking_token}
+                </p>
               </div>
               <div>{getStatusBadge(request.status)}</div>
             </div>
@@ -139,7 +166,9 @@ export function RequestDetailModal({
                 </div>
                 <div>
                   <p className="text-muted-foreground">Serial Number</p>
-                  <p className="font-mono text-xs font-medium">{request.serial_number}</p>
+                  <p className="font-mono text-xs font-medium">
+                    {request.serial_number}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -153,7 +182,9 @@ export function RequestDetailModal({
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <p className="whitespace-pre-wrap">{request.issue_description}</p>
+                <p className="whitespace-pre-wrap">
+                  {request.issue_description}
+                </p>
               </CardContent>
             </Card>
 
@@ -190,10 +221,16 @@ export function RequestDetailModal({
                 </CardHeader>
                 <CardContent className="text-sm">
                   <p>
-                    Mã phiếu: <span className="font-mono font-bold">{request.linked_ticket.ticket_number}</span>
+                    Mã phiếu:{" "}
+                    <span className="font-mono font-bold">
+                      {request.linked_ticket.ticket_number}
+                    </span>
                   </p>
                   <p className="text-muted-foreground mt-1">
-                    Trạng thái: {STATUS_FLOW[request.linked_ticket.status as keyof typeof STATUS_FLOW]?.label || request.linked_ticket.status}
+                    Trạng thái:{" "}
+                    {STATUS_FLOW[
+                      request.linked_ticket.status as keyof typeof STATUS_FLOW
+                    ]?.label || request.linked_ticket.status}
                   </p>
                 </CardContent>
               </Card>
@@ -227,16 +264,18 @@ export function RequestDetailModal({
                 </Button>
               )}
 
-              {(request.status === "submitted" || request.status === "received") && !request.linked_ticket && (
-                <>
-                  <Button variant="destructive" onClick={onReject}>
-                    Từ chối yêu cầu
-                  </Button>
-                  <Button variant="default" onClick={onConvert}>
-                    Chuyển thành phiếu dịch vụ
-                  </Button>
-                </>
-              )}
+              {(request.status === "submitted" ||
+                request.status === "received") &&
+                !request.linked_ticket && (
+                  <>
+                    <Button variant="destructive" onClick={onReject}>
+                      Từ chối yêu cầu
+                    </Button>
+                    <Button variant="default" onClick={onConvert}>
+                      Chuyển thành phiếu dịch vụ
+                    </Button>
+                  </>
+                )}
             </div>
           </div>
         ) : (

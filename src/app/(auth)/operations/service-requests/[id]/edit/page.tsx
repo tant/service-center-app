@@ -5,13 +5,13 @@
 
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
-import { ServiceRequestForm } from "@/components/forms/service-request-form";
-import { Button } from "@/components/ui/button";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
 import { IconLoader2 } from "@tabler/icons-react";
+import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ServiceRequestForm } from "@/components/forms/service-request-form";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 
 export default function EditServiceRequestPage() {
   const params = useParams();
@@ -19,11 +19,15 @@ export default function EditServiceRequestPage() {
   const requestId = params.id as string;
 
   // Fetch request details
-  const { data: request, isLoading, error } = trpc.serviceRequest.getDetails.useQuery(
+  const {
+    data: request,
+    isLoading,
+    error,
+  } = trpc.serviceRequest.getDetails.useQuery(
     { request_id: requestId },
     {
       enabled: !!requestId,
-    }
+    },
   );
 
   const updateDraft = trpc.serviceRequest.updateDraft.useMutation({
@@ -38,11 +42,12 @@ export default function EditServiceRequestPage() {
 
   const submitDraft = trpc.serviceRequest.submitDraft.useMutation({
     onSuccess: (data) => {
-      const statusMessage = data.status === 'received'
-        ? 'và đang tự động tạo phiếu sửa chữa'
-        : data.status === 'pickingup'
-        ? 'và đang chờ lấy hàng'
-        : '';
+      const statusMessage =
+        data.status === "received"
+          ? "và đang tự động tạo phiếu sửa chữa"
+          : data.status === "pickingup"
+            ? "và đang chờ lấy hàng"
+            : "";
       toast.success(`Đã gửi yêu cầu ${data.tracking_token} ${statusMessage}`);
       router.push("/operations/service-requests");
     },
@@ -129,12 +134,16 @@ export default function EditServiceRequestPage() {
     customer_email: request.customer_email || "",
     customer_phone: request.customer_phone || "",
     issue_description: request.issue_description,
-    items: request.items?.map((item: any) => ({
-      serial_number: item.serial_number,
-      issue_description: item.issue_description || "",
-    })) || [],
+    items:
+      request.items?.map((item: any) => ({
+        serial_number: item.serial_number,
+        issue_description: item.issue_description || "",
+      })) || [],
     receipt_status: request.receipt_status as "received" | "pending_receipt",
-    preferred_delivery_method: request.delivery_method as "pickup" | "delivery" | undefined,
+    preferred_delivery_method: request.delivery_method as
+      | "pickup"
+      | "delivery"
+      | undefined,
     delivery_address: request.delivery_address || "",
     workflow_id: request.workflow_id || undefined, // Include workflow_id
   };
@@ -178,9 +187,14 @@ export default function EditServiceRequestPage() {
         </Button>
         <Button
           onClick={() => {
-            const form = document.getElementById("service-request-form") as HTMLFormElement;
+            const form = document.getElementById(
+              "service-request-form",
+            ) as HTMLFormElement;
             if (form) {
-              const event = new Event("submit-and-send", { bubbles: true, cancelable: true });
+              const event = new Event("submit-and-send", {
+                bubbles: true,
+                cancelable: true,
+              });
               form.dispatchEvent(event);
             }
           }}

@@ -6,26 +6,39 @@
 
 "use client";
 
-import { Suspense } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Clock,
+  Activity,
   AlertTriangle,
   CheckCircle,
-  Users,
+  Clock,
   TrendingUp,
-  Activity,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
+import { Suspense } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   useTaskProgressSummary,
-  useTicketsWithBlockedTasks,
   useTechnicianWorkload,
+  useTicketsWithBlockedTasks,
 } from "@/hooks/use-task-progress";
-import Link from "next/link";
 
 // Metrics Cards Component
 function MetricsCards() {
@@ -67,7 +80,8 @@ function MetricsCards() {
       title: "Blocked Tasks",
       value: summary.tasks_blocked || 0,
       icon: AlertTriangle,
-      description: summary.tasks_blocked > 0 ? "Requires attention" : "No blockers",
+      description:
+        summary.tasks_blocked > 0 ? "Requires attention" : "No blockers",
       className: summary.tasks_blocked > 0 ? "text-red-600" : "text-gray-400",
     },
     {
@@ -88,7 +102,9 @@ function MetricsCards() {
         return (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {card.title}
+              </CardTitle>
               <Icon className={`h-4 w-4 ${card.className}`} />
             </CardHeader>
             <CardContent>
@@ -118,7 +134,8 @@ function BlockedTasksAlert() {
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertTitle className="text-green-900">All Clear!</AlertTitle>
         <AlertDescription className="text-green-700">
-          No blocked tasks at the moment. All workflows are progressing smoothly.
+          No blocked tasks at the moment. All workflows are progressing
+          smoothly.
         </AlertDescription>
       </Alert>
     );
@@ -129,14 +146,20 @@ function BlockedTasksAlert() {
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle>Blocked Tasks Require Attention</AlertTitle>
       <AlertDescription>
-        {blockedTickets.length} ticket(s) have blocked tasks. Review and resolve blockers to
-        keep workflows moving.
+        {blockedTickets.length} ticket(s) have blocked tasks. Review and resolve
+        blockers to keep workflows moving.
       </AlertDescription>
       <div className="mt-4 space-y-2">
         {blockedTickets.slice(0, 3).map((ticket) => (
-          <div key={ticket.ticket_id} className="flex items-center justify-between text-sm border-t pt-2">
+          <div
+            key={ticket.ticket_id}
+            className="flex items-center justify-between text-sm border-t pt-2"
+          >
             <div>
-              <Link href={`/operations/tickets/${ticket.ticket_id}`} className="font-medium hover:underline">
+              <Link
+                href={`/operations/tickets/${ticket.ticket_id}`}
+                className="font-medium hover:underline"
+              >
                 {ticket.ticket_number}
               </Link>
               <span className="text-muted-foreground ml-2">
@@ -192,7 +215,9 @@ function TechnicianWorkloadTable() {
           <TableRow key={tech.technician_id}>
             <TableCell className="font-medium">
               {tech.technician_name}
-              <div className="text-xs text-muted-foreground">{tech.technician_email}</div>
+              <div className="text-xs text-muted-foreground">
+                {tech.technician_email}
+              </div>
             </TableCell>
             <TableCell>
               <Badge variant="outline" className="capitalize">
@@ -236,7 +261,8 @@ export default function TaskProgressDashboard() {
           Task Progress Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
-          Monitor task-level progress across all active tickets and identify bottlenecks
+          Monitor task-level progress across all active tickets and identify
+          bottlenecks
         </p>
       </div>
 

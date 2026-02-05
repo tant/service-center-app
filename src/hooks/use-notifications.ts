@@ -12,8 +12,14 @@ import { trpc } from "@/components/providers/trpc-provider";
 export function useEmailLog(params: {
   limit?: number;
   offset?: number;
-  emailType?: 'request_submitted' | 'request_received' | 'request_rejected' | 'ticket_created' | 'service_completed' | 'delivery_confirmed';
-  status?: 'pending' | 'sent' | 'failed' | 'bounced';
+  emailType?:
+    | "request_submitted"
+    | "request_received"
+    | "request_rejected"
+    | "ticket_created"
+    | "service_completed"
+    | "delivery_confirmed";
+  status?: "pending" | "sent" | "failed" | "bounced";
   recipientEmail?: string;
 }) {
   return trpc.notifications.getLog.useQuery(params);

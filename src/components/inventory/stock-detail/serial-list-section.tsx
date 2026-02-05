@@ -5,11 +5,13 @@
  * Displays paginated list of serial numbers for the product
  */
 
+import { ChevronLeft, ChevronRight, Hash, Search } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -26,10 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Hash, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { getWarrantyStatus } from "@/utils/warranty";
-import Link from "next/link";
 
 interface SerialListSectionProps {
   productId: string;
@@ -124,14 +124,18 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
                     Không tìm thấy serial numbers nào
                   </TableCell>
                 </TableRow>
               ) : (
                 products.map((product: any) => {
                   const warrantyEndDate =
-                    product.user_warranty_end_date || product.manufacturer_warranty_end_date;
+                    product.user_warranty_end_date ||
+                    product.manufacturer_warranty_end_date;
                   const warrantyStatus = getWarrantyStatus(warrantyEndDate);
 
                   return (
@@ -145,12 +149,16 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-200"
+                        >
                           {product.virtual_warehouse?.name || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {product.virtual_warehouse?.physical_warehouse?.name || "Không có"}
+                        {product.virtual_warehouse?.physical_warehouse?.name ||
+                          "Không có"}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -166,7 +174,8 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
                           {product.condition === "refurbished" && "Tân trang"}
                           {product.condition === "used" && "Đã qua SD"}
                           {product.condition === "faulty" && "Lỗi"}
-                          {product.condition === "for_parts" && "Tháo linh kiện"}
+                          {product.condition === "for_parts" &&
+                            "Tháo linh kiện"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -181,12 +190,18 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
                           </Badge>
                         )}
                         {warrantyStatus === "expired" && (
-                          <Badge variant="outline" className="text-muted-foreground">
+                          <Badge
+                            variant="outline"
+                            className="text-muted-foreground"
+                          >
                             Hết BH
                           </Badge>
                         )}
                         {warrantyStatus === "no_warranty" && (
-                          <Badge variant="outline" className="text-muted-foreground">
+                          <Badge
+                            variant="outline"
+                            className="text-muted-foreground"
+                          >
                             Không BH
                           </Badge>
                         )}
@@ -204,7 +219,8 @@ export function SerialListSection({ productId }: SerialListSectionProps) {
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Hiển thị {(page - 1) * pageSize + 1} -{" "}
-              {Math.min(page * pageSize, data?.total || 0)} của {data?.total || 0} serial numbers
+              {Math.min(page * pageSize, data?.total || 0)} của{" "}
+              {data?.total || 0} serial numbers
             </div>
             <div className="flex items-center gap-2">
               <Button

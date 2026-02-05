@@ -1,22 +1,22 @@
 "use client";
 
+import { ClipboardList, Loader2, RefreshCw } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, ClipboardList, RefreshCw } from "lucide-react";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  BlockTaskDialog,
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
 import { TaskCard } from "@/components/tasks/task-card";
-import { TasksTable } from "@/components/tasks/tasks-table";
 import {
   TaskFilters,
   type TaskFilterValues,
 } from "@/components/tasks/task-filters";
-import {
-  CompleteTaskDialog,
-  BlockTaskDialog,
-} from "@/components/tasks/task-action-dialogs";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
+import { TasksTable } from "@/components/tasks/tasks-table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { TaskWithContext } from "@/server/services/task-service";
 
 /**

@@ -1,28 +1,30 @@
 "use client";
 
+import { IconAlertTriangle, IconLock } from "@tabler/icons-react";
 import * as React from "react";
-import { IconLock, IconAlertTriangle } from "@tabler/icons-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
 interface PrerequisiteTask {
   id: string;
   sequence_order: number;
   status: string;
-  task_type?: {
-    id: string;
-    name: string;
-    category?: string;
-  }[] | {
-    id: string;
-    name: string;
-    category?: string;
-  };
+  task_type?:
+    | {
+        id: string;
+        name: string;
+        category?: string;
+      }[]
+    | {
+        id: string;
+        name: string;
+        category?: string;
+      };
 }
 
 interface TaskDependencyIndicatorProps {
@@ -48,7 +50,7 @@ export function TaskDependencyIndicator({
   if (!isLocked && !hasWarning) return null;
 
   const incompleteTasks = prerequisiteTasks.filter(
-    (task) => task.status !== "completed" && task.status !== "skipped"
+    (task) => task.status !== "completed" && task.status !== "skipped",
   );
 
   // Helper function to get task_type safely (handles both array and object)
@@ -121,9 +123,12 @@ export function TaskDependencyIndicator({
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <div className="space-y-2">
-                <p className="font-medium text-yellow-600">Cảnh báo: Thực hiện không theo thứ tự</p>
+                <p className="font-medium text-yellow-600">
+                  Cảnh báo: Thực hiện không theo thứ tự
+                </p>
                 <p className="text-sm">
-                  Template đang ở chế độ linh hoạt. Bạn có thể hoàn thành công việc này nhưng nên hoàn thành các công việc trước đó:
+                  Template đang ở chế độ linh hoạt. Bạn có thể hoàn thành công
+                  việc này nhưng nên hoàn thành các công việc trước đó:
                 </p>
                 {incompleteTasks.length > 0 && (
                   <ul className="text-sm space-y-1">
@@ -131,7 +136,10 @@ export function TaskDependencyIndicator({
                       const taskType = getTaskType(prereq);
                       return (
                         <li key={prereq.id} className="flex items-center gap-2">
-                          <Badge variant="outline" className="w-8 justify-center">
+                          <Badge
+                            variant="outline"
+                            className="w-8 justify-center"
+                          >
                             #{prereq.sequence_order}
                           </Badge>
                           <span>{taskType?.name || "Unknown task"}</span>

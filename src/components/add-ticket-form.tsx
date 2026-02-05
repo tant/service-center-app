@@ -36,6 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 // Types
 interface SelectedPart {
@@ -75,6 +76,8 @@ export function AddTicketForm() {
     address: "",
   });
   const [phoneSearch, setPhoneSearch] = React.useState("");
+  // ✅ FIX: Debounce phone search to reduce re-renders during typing
+  const debouncedPhoneSearch = useDebouncedValue(phoneSearch, 300);
   // State cho popup chọn khách hàng
   const [showCustomerPopup, setShowCustomerPopup] = React.useState(false);
   const [filteredCustomers, setFilteredCustomers] = React.useState<any[]>([]);
@@ -174,42 +177,50 @@ export function AddTicketForm() {
     },
   });
 
-  // Search customer by phone - cập nhật để hiển thị popup
+  // ✅ FIX: Search customer by phone with debounced value
+  // Reduces re-renders from every keystroke to only after 300ms pause
   React.useEffect(() => {
-    if (phoneSearch.length >= 3) {
+    if (debouncedPhoneSearch.length >= 3) {
       // Tìm khách hàng phù hợp với số điện thoại
       const matchedCustomers =
         customers?.filter((c) => {
           const customerPhone = c.phone?.replace(/\D/g, "") || "";
-          const searchPhone = phoneSearch.replace(/\D/g, "");
+          const searchPhone = debouncedPhoneSearch.replace(/\D/g, "");
           return (
             customerPhone.includes(searchPhone) ||
-            c.phone?.includes(phoneSearch)
+            c.phone?.includes(debouncedPhoneSearch)
           );
         }) || [];
 
-      setFilteredCustomers(matchedCustomers);
+      // ✅ FIX: Batch state updates using startTransition
+      // This batches multiple setState calls into a single re-render
+      React.startTransition(() => {
+        setFilteredCustomers(matchedCustomers);
 
-      // Hiển thị popup nếu có khách hàng phù hợp và chưa chọn khách hàng cụ thể
-      if (matchedCustomers.length > 0 && !customerData.id) {
-        setShowCustomerPopup(true);
-      } else {
-        setShowCustomerPopup(false);
-      }
+        // Hiển thị popup nếu có khách hàng phù hợp và chưa chọn khách hàng cụ thể
+        if (matchedCustomers.length > 0 && !customerData.id) {
+          setShowCustomerPopup(true);
+        } else {
+          setShowCustomerPopup(false);
+        }
+      });
 
       // Tự động điền nếu chỉ có 1 khách hàng khớp hoàn toàn
       const exactMatch = matchedCustomers.find(
         (c) =>
-          c.phone === phoneSearch ||
-          c.phone?.replace(/\D/g, "") === phoneSearch.replace(/\D/g, ""),
+          c.phone === debouncedPhoneSearch ||
+          c.phone?.replace(/\D/g, "") === debouncedPhoneSearch.replace(/\D/g, ""),
       );
 
       if (exactMatch && !customerData.id) {
         selectCustomer(exactMatch);
       }
     } else {
-      setShowCustomerPopup(false);
-      setFilteredCustomers([]);
+      // ✅ FIX: Batch state updates for reset case too
+      React.startTransition(() => {
+        setShowCustomerPopup(false);
+        setFilteredCustomers([]);
+      });
       // Reset customer data nếu phone search quá ngắn và chưa có ID
       if (!customerData.id) {
         setCustomerData((prev) => ({
@@ -220,7 +231,7 @@ export function AddTicketForm() {
         }));
       }
     }
-  }, [phoneSearch, customers, customerData.id]);
+  }, [debouncedPhoneSearch, customers, customerData.id]);
 
   // Hàm chọn khách hàng từ popup
   const selectCustomer = (customer: any) => {

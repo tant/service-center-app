@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
 
 export interface MultiSelectOption {
@@ -56,6 +57,9 @@ export function MultiSelectCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
 
+  // ✅ FIX: Debounce search value to reduce re-renders during typing
+  const debouncedSearch = useDebouncedValue(searchValue, 150);
+
   const selectedOptions = React.useMemo(
     () => options.filter((option) => selected.includes(option.value)),
     [options, selected],
@@ -66,20 +70,24 @@ export function MultiSelectCombobox({
     [options, selected],
   );
 
+  // ✅ FIX: Use debounced value for filtering
   const filteredOptions = React.useMemo(
     () =>
       availableOptions.filter((option) =>
-        option.label.toLowerCase().includes(searchValue.toLowerCase()),
+        option.label.toLowerCase().includes(debouncedSearch.toLowerCase()),
       ),
-    [availableOptions, searchValue],
+    [availableOptions, debouncedSearch],
   );
 
   const handleSelect = React.useCallback(
     (option: MultiSelectOption) => {
       if (option.disabled) return;
 
-      onSelectionChange([...selected, option.value]);
-      setSearchValue("");
+      // ✅ FIX: Batch state updates to reduce re-renders
+      React.startTransition(() => {
+        onSelectionChange([...selected, option.value]);
+        setSearchValue("");
+      });
     },
     [selected, onSelectionChange],
   );
@@ -185,18 +193,22 @@ export function MultiSelectCombobox({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[500px] p-0" align="start">
+      <PopoverContent
+        className="w-[500px] p-0"
+        align="start"
+        disablePositionUpdate={true}
+      >
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
             value={searchValue}
             onValueChange={setSearchValue}
           />
-          <CommandList>
+          <CommandList className="max-h-[400px] min-h-[250px]">
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             {filteredOptions.length > 0 && (
               <CommandGroup>
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="overflow-y-auto">
                   {filteredOptions.map((option) => (
                     <CommandItem
                       key={option.value}
@@ -223,7 +235,7 @@ export function MultiSelectCombobox({
             )}
             {selectedOptions.length > 0 && (
               <CommandGroup heading="Đã chọn">
-                <div className="max-h-[200px] overflow-y-auto">
+                <div className="overflow-y-auto">
                   {selectedOptions.map((option) => (
                     <CommandItem
                       key={option.value}

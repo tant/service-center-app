@@ -41,16 +41,16 @@ Hệ thống quản lý trung tâm bảo hành giúp bạn thực hiện các c�
 ### Cấu trúc kho trong hệ thống
 
 Hệ thống sử dụng **2 cấp kho**:
-- **Kho vật lý (Physical Warehouse):** Vị trí lưu trữ thực tế (VD: Kho Công ty)
+- **Kho vật lý (Physical Warehouse):** Vị trí lưu trữ thực tế
 - **Kho ảo (Virtual Warehouse):** Phân loại trạng thái/mục đích của sản phẩm
 
 #### 7 Loại Kho Ảo
 
 | Tên Kho | Ý nghĩa |
 |---------|---------|
-| **Kho Chính** | Hàng tồn kho thông thường, sẵn sàng để bán |
+| **Công Ty - Kho Chính** | Hàng tồn kho thông thường, sẵn sàng để bán |
 | **Kho Bảo Hành** | Hàng còn bảo hành, sẵn sàng thay thế cho khách |
-| **Hàng Đã Bán** | Sản phẩm đã bán, đang ở phía khách hàng |
+| **Hàng Đã Bán** | Sản phẩm đã bán cho khách hàng |
 | **Kho Đang Sửa Chữa** | Sản phẩm đang được bảo hành/sửa chữa |
 | **Kho Hàng Hỏng** | Sản phẩm hỏng không sửa được, chờ thanh lý hoặc tháo linh kiện |
 | **Kho Chờ Trả Hàng** | Sản phẩm chờ gửi trả nhà cung cấp/nhà sản xuất |
@@ -87,14 +87,12 @@ Hệ thống sử dụng **2 cấp kho**:
 
 ### 3.2. Nhập thông tin cơ bản
 
-Điền các thông tin bắt buộc (có dấu *):
-
 | Trường | Ví dụ | Ghi chú |
 |--------|-------|---------|
 | **Tên sản phẩm*** | ZOTAC RTX 4090 24GB | Tên đầy đủ của sản phẩm |
 | **Mã sản phẩm (SKU)*** | ZT-RTX4090-24G | Mã duy nhất, không được trùng |
-| **Thương hiệu*** | ZOTAC | Chọn từ danh sách hoặc thêm mới |
-| **Danh mục*** | Card đồ họa | Chọn từ cây danh mục |
+| **Thương hiệu*** | ZOTAC | Chọn từ danh sách |
+| **Danh mục*** | Card đồ họa | Chọn từ danh sách |
 | Mô tả | Card đồ họa ZOTAC Gaming... | Tùy chọn |
 
 ### 3.3. Cấu hình bảo hành mặc định

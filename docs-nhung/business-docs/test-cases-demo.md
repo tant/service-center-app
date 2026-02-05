@@ -46,7 +46,7 @@
 |---|-----------|------|------|-------|--------|--------|
 | 8 | TC-CAT-001 (Test 0) | Bước 2 | Feature | Thêm trường "Nhà cung cấp" vào form tạo sản phẩm | Medium | Open |
 | 9 | TC-CAT-001 (Test 0) | Bước 3 | UI | Bỏ trường "Linh kiện liên quan" | Low | **DONE** |
-| 10 | TC-CAT-001 (Test 0) | Bước 5 | Feature | Cần thêm cảnh báo khi trùng tên sản phẩm (warning) và trùng SKU (block) | Medium | Open |
+| 10 | TC-CAT-001 (Test 0) | Bước 5 | Feature | Cần thêm cảnh báo khi trùng tên sản phẩm (warning) và trùng SKU (block) | Medium | **DONE** |
 | 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | **DONE** |
 | 12 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | **DONE** |
 | 13 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | **DONE** |
@@ -58,7 +58,7 @@
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
 | 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
 
-> **Tổng:** 20 issues (12 DONE, 8 Open)
+> **Tổng:** 20 issues (13 DONE, 7 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---
@@ -376,7 +376,8 @@ Serial ABC123456702:
 - ✅ Kiểm tra trùng tên sản phẩm (nếu trùng → cảnh báo, cho phép tiếp tục)
 - ✅ Hiển thị thông báo: "✅ Đã tạo sản phẩm thành công"
 
-> 📋 **Issue #10** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> 📋 **Issue #10 (DONE)** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> **DONE (2026-02-05):** Đã implement validation cho trùng SKU (block creation với error toast) và trùng tên sản phẩm (hiển thị AlertDialog xác nhận, cho phép tiếp tục). Backend check duplicate trước khi insert, frontend xử lý error codes `DUPLICATE_SKU` và `DUPLICATE_NAME`.
 
 - ✅ Sản phẩm xuất hiện trong danh mục với:
 

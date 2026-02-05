@@ -66,6 +66,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const productSchema = z.object({
   id: z.string(),
@@ -549,6 +559,11 @@ function ProductModal({
   onSuccess,
 }: ProductModalProps) {
   const [open, setOpen] = React.useState(false);
+  // Issue #10: State for duplicate name warning dialog
+  const [showDuplicateNameAlert, setShowDuplicateNameAlert] =
+    React.useState(false);
+  const [duplicateNameMessage, setDuplicateNameMessage] = React.useState("");
+
   const [formData, setFormData] = React.useState({
     name: "",
     sku: "",
@@ -558,6 +573,8 @@ function ProductModal({
     type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
     selected_parts: [] as string[],
+    // Issue #10: Flag to skip duplicate name warning
+    skipDuplicateNameWarning: false,
   });
 
   // Issue #9: Hidden - Parts feature is disabled for MVP
@@ -575,7 +592,7 @@ function ProductModal({
 
   const createProductMutation = trpc.products.createProduct.useMutation({
     onSuccess: (data) => {
-      const successMessage = "Tạo sản phẩm thành công";
+      const successMessage = "✅ Đã tạo sản phẩm thành công";
       console.log("[Products] Create product success:", successMessage, {
         productData: formData,
         response: data,
@@ -586,6 +603,25 @@ function ProductModal({
     },
     onError: (error) => {
       const errorMessage = error.message || "Tạo sản phẩm thất bại";
+
+      // Issue #10: Handle duplicate name warning (show confirmation dialog)
+      if (errorMessage.startsWith("DUPLICATE_NAME:")) {
+        const cleanMessage = errorMessage.replace("DUPLICATE_NAME: ", "");
+        console.log("[Products] Duplicate name warning:", cleanMessage);
+        setDuplicateNameMessage(cleanMessage);
+        setShowDuplicateNameAlert(true);
+        return; // Don't show toast for warning
+      }
+
+      // Issue #10: Handle duplicate SKU validation (block creation)
+      if (errorMessage.startsWith("DUPLICATE_SKU:")) {
+        const cleanMessage = errorMessage.replace("DUPLICATE_SKU: ", "");
+        console.log("[Products] Duplicate SKU blocked:", cleanMessage);
+        toast.error(cleanMessage);
+        return;
+      }
+
+      // Other errors
       console.error("[Products] Create product error:", errorMessage, {
         productData: formData,
         error,
@@ -639,6 +675,7 @@ function ProductModal({
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
         selected_parts: [], // Issue #9: Always empty array
+        skipDuplicateNameWarning: false, // Issue #10: Reset flag
       });
     }
   }, [open, product, productWithParts, mode]);
@@ -676,6 +713,8 @@ function ProductModal({
         type: formData.type,
         primary_image: formData.primary_image || null,
         part_ids: formData.selected_parts,
+        // Issue #10: Include flag to skip duplicate name warning
+        skipDuplicateNameWarning: formData.skipDuplicateNameWarning,
       });
     } else if (product) {
       updateProductMutation.mutate({
@@ -707,29 +746,59 @@ function ProductModal({
     );
 
   return (
-    <FormDrawer
-      open={open}
-      onOpenChange={setOpen}
-      trigger={trigger}
-      titleElement={title}
-      description={
-        mode === "add"
-          ? "Tạo sản phẩm mới với các thông tin bắt buộc."
-          : "Chi tiết và tùy chọn quản lý sản phẩm"
-      }
-      isSubmitting={isLoading}
-      onSubmit={handleSubmit}
-      submitLabel={
-        isLoading
-          ? mode === "add"
-            ? "Đang tạo..."
-            : "Đang cập nhật..."
-          : mode === "add"
-            ? "Tạo sản phẩm"
-            : "Lưu thay đổi"
-      }
-      headerClassName="gap-1"
-    >
+    <>
+      {/* Issue #10: Alert dialog for duplicate name warning */}
+      <AlertDialog
+        open={showDuplicateNameAlert}
+        onOpenChange={setShowDuplicateNameAlert}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Cảnh báo: Tên sản phẩm trùng</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicateNameMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                // User confirmed - retry with flag set to true
+                setFormData({ ...formData, skipDuplicateNameWarning: true });
+                setShowDuplicateNameAlert(false);
+                // Trigger submission again
+                handleSubmit();
+              }}
+            >
+              Tiếp tục tạo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        trigger={trigger}
+        titleElement={title}
+        description={
+          mode === "add"
+            ? "Tạo sản phẩm mới với các thông tin bắt buộc."
+            : "Chi tiết và tùy chọn quản lý sản phẩm"
+        }
+        isSubmitting={isLoading}
+        onSubmit={handleSubmit}
+        submitLabel={
+          isLoading
+            ? mode === "add"
+              ? "Đang tạo..."
+              : "Đang cập nhật..."
+            : mode === "add"
+              ? "Tạo sản phẩm"
+              : "Lưu thay đổi"
+        }
+        headerClassName="gap-1"
+      >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3">
           <Label htmlFor="name">Tên sản phẩm *</Label>
@@ -942,5 +1011,6 @@ function ProductModal({
         )}
       </div>
     </FormDrawer>
+    </>
   );
 }

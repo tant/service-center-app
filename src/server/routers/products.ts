@@ -28,6 +28,8 @@ const createProductSchema = z.object({
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
   part_ids: z.array(z.string().uuid()).optional().default([]),
+  // Issue #10: Flag to skip duplicate name warning (after user confirms)
+  skipDuplicateNameWarning: z.boolean().optional().default(false),
 });
 
 const updateProductSchema = z.object({
@@ -95,6 +97,37 @@ export const productsRouter = router({
     .use(requireManagerOrAbove)
     .input(createProductSchema)
     .mutation(async ({ input, ctx }) => {
+      // Issue #10: Check for duplicate SKU (BLOCK if exists)
+      if (input.sku && input.sku.trim() !== "") {
+        const { data: existingSKU } = await ctx.supabaseAdmin
+          .from("products")
+          .select("id, name, sku")
+          .eq("sku", input.sku)
+          .maybeSingle();
+
+        if (existingSKU) {
+          throw new Error(
+            `DUPLICATE_SKU: SKU "${input.sku}" đã tồn tại trong hệ thống (Sản phẩm: ${existingSKU.name})`,
+          );
+        }
+      }
+
+      // Issue #10: Check for duplicate name (WARNING only)
+      // If user hasn't confirmed yet, throw a special error
+      if (!input.skipDuplicateNameWarning) {
+        const { data: existingName } = await ctx.supabaseAdmin
+          .from("products")
+          .select("id, name, sku")
+          .ilike("name", input.name)
+          .maybeSingle();
+
+        if (existingName) {
+          throw new Error(
+            `DUPLICATE_NAME: Sản phẩm với tên "${existingName.name}" đã tồn tại. Bạn có chắc muốn tiếp tục?`,
+          );
+        }
+      }
+
       // First, create the product
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")

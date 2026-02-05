@@ -125,132 +125,137 @@ export function SerialEntryDrawer({
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="space-y-6 py-6">
-          {/* Progress Bar */}
-          <SerialProgressBar
-            current={currentSerialCount}
-            total={declaredQuantity}
-          />
+              {/* Progress Bar */}
+              <SerialProgressBar
+                current={currentSerialCount}
+                total={declaredQuantity}
+              />
 
-          {remaining === 0 && (
-            <div className="rounded-md bg-green-50 dark:bg-green-950 p-4 text-sm text-green-800 dark:text-green-300">
-              Tất cả số serial đã được nhập! Bạn có thể đóng hộp thoại này.
-            </div>
-          )}
-
-          {remaining > 0 && (
-            <>
-              {/* Issue #13: CSV import removed - manual entry only */}
-              {/* Step 1: Enter Serials */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                    1
-                  </div>
-                  <Label htmlFor="serials" className="text-base font-medium">
-                    Nhập số serial{" "}
-                    <span className="text-muted-foreground font-normal">
-                      (mỗi dòng một số)
-                    </span>
-                  </Label>
+              {remaining === 0 && (
+                <div className="rounded-md bg-green-50 dark:bg-green-950 p-4 text-sm text-green-800 dark:text-green-300">
+                  Tất cả số serial đã được nhập! Bạn có thể đóng hộp thoại này.
                 </div>
-                <Textarea
-                  id="serials"
-                  placeholder={`SN001\nSN002\nSN003\n\n(Tối đa ${remaining} serial)`}
-                  value={serialInput}
-                  onChange={(e) => setSerialInput(e.target.value)}
-                  rows={12}
-                  className="font-mono text-sm"
-                  disabled={isProcessing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  💡 Bạn có thể paste nhiều serial cùng lúc
-                </p>
-              </div>
-
-              {/* Step 2: Validate */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                      validationResult
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    2
-                  </div>
-                  <Label className="text-base font-medium">
-                    Kiểm tra tính hợp lệ
-                  </Label>
-                </div>
-                <Button
-                  onClick={handleValidate}
-                  disabled={!serialInput.trim() || isProcessing}
-                  className="w-full"
-                  variant={
-                    validationResult?.summary.allValid ? "outline" : "default"
-                  }
-                >
-                  {validateMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Đang kiểm tra...
-                    </>
-                  ) : validationResult ? (
-                    "Kiểm tra lại"
-                  ) : (
-                    "Kiểm tra Serial"
-                  )}
-                </Button>
-              </div>
-
-              {validationResult && (
-                <SerialValidationDisplay validation={validationResult} />
               )}
 
-              {/* Step 3: Save (only shown after validation) */}
-              {validationResult && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                        validationResult.summary.allValid
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      3
+              {remaining > 0 && (
+                <>
+                  {/* Issue #13: CSV import removed - manual entry only */}
+                  {/* Step 1: Enter Serials */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                        1
+                      </div>
+                      <Label
+                        htmlFor="serials"
+                        className="text-base font-medium"
+                      >
+                        Nhập số serial{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (mỗi dòng một số)
+                        </span>
+                      </Label>
                     </div>
-                    <Label className="text-base font-medium">
-                      Lưu vào hệ thống
-                    </Label>
-                  </div>
-                  <Button
-                    onClick={handleAdd}
-                    disabled={
-                      !validationResult.summary.allValid || isProcessing
-                    }
-                    variant="default"
-                    className="w-full"
-                  >
-                    {addSerialsMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang lưu...
-                      </>
-                    ) : (
-                      `💾 Lưu ${validationResult.summary.total} Serial`
-                    )}
-                  </Button>
-                  {!validationResult.summary.allValid && (
-                    <p className="text-xs text-destructive">
-                      ⚠️ Vui lòng sửa các lỗi trước khi lưu
+                    <Textarea
+                      id="serials"
+                      placeholder={`SN001\nSN002\nSN003\n\n(Tối đa ${remaining} serial)`}
+                      value={serialInput}
+                      onChange={(e) => setSerialInput(e.target.value)}
+                      rows={12}
+                      className="font-mono text-sm"
+                      disabled={isProcessing}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      💡 Bạn có thể paste nhiều serial cùng lúc
                     </p>
+                  </div>
+
+                  {/* Step 2: Validate */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                          validationResult
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        2
+                      </div>
+                      <Label className="text-base font-medium">
+                        Kiểm tra tính hợp lệ
+                      </Label>
+                    </div>
+                    <Button
+                      onClick={handleValidate}
+                      disabled={!serialInput.trim() || isProcessing}
+                      className="w-full"
+                      variant={
+                        validationResult?.summary.allValid
+                          ? "outline"
+                          : "default"
+                      }
+                    >
+                      {validateMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Đang kiểm tra...
+                        </>
+                      ) : validationResult ? (
+                        "Kiểm tra lại"
+                      ) : (
+                        "Kiểm tra Serial"
+                      )}
+                    </Button>
+                  </div>
+
+                  {validationResult && (
+                    <SerialValidationDisplay validation={validationResult} />
                   )}
-                </div>
+
+                  {/* Step 3: Save (only shown after validation) */}
+                  {validationResult && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                            validationResult.summary.allValid
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          3
+                        </div>
+                        <Label className="text-base font-medium">
+                          Lưu vào hệ thống
+                        </Label>
+                      </div>
+                      <Button
+                        onClick={handleAdd}
+                        disabled={
+                          !validationResult.summary.allValid || isProcessing
+                        }
+                        variant="default"
+                        className="w-full"
+                      >
+                        {addSerialsMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Đang lưu...
+                          </>
+                        ) : (
+                          `💾 Lưu ${validationResult.summary.total} Serial`
+                        )}
+                      </Button>
+                      {!validationResult.summary.allValid && (
+                        <p className="text-xs text-destructive">
+                          ⚠️ Vui lòng sửa các lỗi trước khi lưu
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
             </div>
           </div>
 

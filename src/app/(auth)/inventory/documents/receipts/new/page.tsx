@@ -26,9 +26,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  validateInventoryDocumentDate,
-  getMinAllowedDate,
   getMaxAllowedDate,
+  getMinAllowedDate,
+  validateInventoryDocumentDate,
 } from "@/lib/date-validation";
 import type { StockReceiptReason } from "@/types/inventory";
 

@@ -20,20 +20,20 @@ import { useEffect, useState } from "react";
  * ```
  */
 export function useDebouncedValue<T>(value: T, delay = 300): T {
-	const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-	useEffect(() => {
-		// Set timeout để update debounced value sau delay
-		const timer = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delay);
+  useEffect(() => {
+    // Set timeout để update debounced value sau delay
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
 
-		// Cleanup: clear timeout nếu value thay đổi trước khi delay hết
-		// Điều này đảm bảo chỉ value cuối cùng được set
-		return () => {
-			clearTimeout(timer);
-		};
-	}, [value, delay]);
+    // Cleanup: clear timeout nếu value thay đổi trước khi delay hết
+    // Điều này đảm bảo chỉ value cuối cùng được set
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
 
-	return debouncedValue;
+  return debouncedValue;
 }

@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 // Types
 interface SelectedPart {
@@ -209,7 +209,8 @@ export function AddTicketForm() {
       const exactMatch = matchedCustomers.find(
         (c) =>
           c.phone === debouncedPhoneSearch ||
-          c.phone?.replace(/\D/g, "") === debouncedPhoneSearch.replace(/\D/g, ""),
+          c.phone?.replace(/\D/g, "") ===
+            debouncedPhoneSearch.replace(/\D/g, ""),
       );
 
       if (exactMatch && !customerData.id) {

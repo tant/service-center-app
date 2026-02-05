@@ -156,139 +156,144 @@ export function AddProductsToRMADrawer({
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4">
             <div className="flex flex-col gap-4 pb-4">
-          {/* Input Area */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="serial-input" className="text-sm font-medium">
-                Danh sách Serial Number
-              </Label>
-              <div className="flex gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt,.csv"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isValidating || isAdding}
-                >
-                  <IconUpload className="mr-2 h-4 w-4" />
-                  Upload file
-                </Button>
-                {serialInput && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleReset}
-                    disabled={isValidating || isAdding}
-                  >
-                    <IconX className="mr-2 h-4 w-4" />
-                    Xóa
-                  </Button>
-                )}
-              </div>
-            </div>
-            <Textarea
-              id="serial-input"
-              placeholder="Nhập hoặc paste danh sách serial number&#10;Ví dụ:&#10;SN001&#10;SN002&#10;SN003"
-              value={serialInput}
-              onChange={(e) => setSerialInput(e.target.value)}
-              className="min-h-[150px] font-mono text-sm"
-              disabled={isValidating || isAdding}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>
-                {parseSerialNumbers(serialInput).length} serial number được nhập
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleValidate}
-                disabled={
-                  serialInput.trim().length === 0 || isValidating || isAdding
-                }
-              >
-                {isValidating ? "Đang kiểm tra..." : "Kiểm tra"}
-              </Button>
-            </div>
-          </div>
-
-          {/* Validation Results */}
-          {validationResults.length > 0 && (
-            <>
-              <Alert>
-                <AlertDescription className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1 text-sm">
-                      <IconCheck className="h-4 w-4 text-green-600" />
-                      <strong>{validCount}</strong> hợp lệ
-                    </span>
-                    {invalidCount > 0 && (
-                      <span className="flex items-center gap-1 text-sm">
-                        <IconAlertCircle className="h-4 w-4 text-destructive" />
-                        <strong>{invalidCount}</strong> lỗi
-                      </span>
+              {/* Input Area */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="serial-input" className="text-sm font-medium">
+                    Danh sách Serial Number
+                  </Label>
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".txt,.csv"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isValidating || isAdding}
+                    >
+                      <IconUpload className="mr-2 h-4 w-4" />
+                      Upload file
+                    </Button>
+                    {serialInput && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleReset}
+                        disabled={isValidating || isAdding}
+                      >
+                        <IconX className="mr-2 h-4 w-4" />
+                        Xóa
+                      </Button>
                     )}
                   </div>
-                </AlertDescription>
-              </Alert>
-
-              <div className="overflow-hidden rounded-lg border">
-                <div className="max-h-[300px] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="bg-muted sticky top-0 z-10">
-                      <TableRow>
-                        <TableHead className="w-12"></TableHead>
-                        <TableHead>Serial Number</TableHead>
-                        <TableHead>Sản phẩm</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {validationResults.map((result, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            {result.status === "valid" ? (
-                              <IconCheck className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <IconAlertCircle className="h-4 w-4 text-destructive" />
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {result.serial_number}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {result.product_name || "—"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {result.status === "valid" ? (
-                              <span className="text-green-600">Hợp lệ</span>
-                            ) : result.status === "not_found" ? (
-                              <span className="text-destructive">
-                                Không tìm thấy
-                              </span>
-                            ) : result.status === "duplicate" ? (
-                              <span className="text-amber-600">Trùng lặp</span>
-                            ) : (
-                              <span className="text-destructive">
-                                {result.message}
-                              </span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                </div>
+                <Textarea
+                  id="serial-input"
+                  placeholder="Nhập hoặc paste danh sách serial number&#10;Ví dụ:&#10;SN001&#10;SN002&#10;SN003"
+                  value={serialInput}
+                  onChange={(e) => setSerialInput(e.target.value)}
+                  className="min-h-[150px] font-mono text-sm"
+                  disabled={isValidating || isAdding}
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {parseSerialNumbers(serialInput).length} serial number được
+                    nhập
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleValidate}
+                    disabled={
+                      serialInput.trim().length === 0 ||
+                      isValidating ||
+                      isAdding
+                    }
+                  >
+                    {isValidating ? "Đang kiểm tra..." : "Kiểm tra"}
+                  </Button>
                 </div>
               </div>
-            </>
-          )}
+
+              {/* Validation Results */}
+              {validationResults.length > 0 && (
+                <>
+                  <Alert>
+                    <AlertDescription className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1 text-sm">
+                          <IconCheck className="h-4 w-4 text-green-600" />
+                          <strong>{validCount}</strong> hợp lệ
+                        </span>
+                        {invalidCount > 0 && (
+                          <span className="flex items-center gap-1 text-sm">
+                            <IconAlertCircle className="h-4 w-4 text-destructive" />
+                            <strong>{invalidCount}</strong> lỗi
+                          </span>
+                        )}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="overflow-hidden rounded-lg border">
+                    <div className="max-h-[300px] overflow-y-auto">
+                      <Table>
+                        <TableHeader className="bg-muted sticky top-0 z-10">
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead>Serial Number</TableHead>
+                            <TableHead>Sản phẩm</TableHead>
+                            <TableHead>Trạng thái</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {validationResults.map((result, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                {result.status === "valid" ? (
+                                  <IconCheck className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <IconAlertCircle className="h-4 w-4 text-destructive" />
+                                )}
+                              </TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {result.serial_number}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {result.product_name || "—"}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {result.status === "valid" ? (
+                                  <span className="text-green-600">Hợp lệ</span>
+                                ) : result.status === "not_found" ? (
+                                  <span className="text-destructive">
+                                    Không tìm thấy
+                                  </span>
+                                ) : result.status === "duplicate" ? (
+                                  <span className="text-amber-600">
+                                    Trùng lặp
+                                  </span>
+                                ) : (
+                                  <span className="text-destructive">
+                                    {result.message}
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

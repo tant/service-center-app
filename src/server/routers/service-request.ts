@@ -10,7 +10,7 @@ import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
 import type { TRPCContext } from "../trpc";
 import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
 import { TaskService } from "../services/task-service";
-import { createAutoTransfer } from "./tickets";
+import { createAutoReceipt } from "./tickets";
 
 /**
  * Helper function to get authenticated user with role
@@ -603,35 +603,25 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Auto-transfer products to in_service warehouse when received
-      // Tickets are auto-created by DB trigger above; now move products to in_service
+      // Auto-receipt products to in_service warehouse when received (Phiếu Nhập Kho)
+      // Tickets are auto-created by DB trigger above; now receive products into in_service
       if (input.receipt_status === "received") {
         try {
-          const { data: warehouses } = await ctx.supabaseAdmin
+          const { data: inServiceWh } = await ctx.supabaseAdmin
             .from("virtual_warehouses")
-            .select("id, warehouse_type")
-            .in("warehouse_type", ["customer_installed", "in_service"]);
+            .select("id")
+            .eq("warehouse_type", "in_service")
+            .single();
 
-          const customerInstalledWh = warehouses?.find(
-            (w) => w.warehouse_type === "customer_installed",
-          );
-          const inServiceWh = warehouses?.find(
-            (w) => w.warehouse_type === "in_service",
-          );
-
-          if (customerInstalledWh && inServiceWh && reviewedById) {
+          if (inServiceWh && reviewedById) {
             for (const item of input.items) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
-                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .select("id, serial_number, product_id")
                 .eq("serial_number", item.serial_number)
                 .single();
 
-              if (
-                product &&
-                product.virtual_warehouse_id === customerInstalledWh.id
-              ) {
-                // Find customer_id from the created ticket
+              if (product) {
                 const { data: ticket } = await ctx.supabaseAdmin
                   .from("service_tickets")
                   .select("id, customer_id")
@@ -641,9 +631,9 @@ export const serviceRequestRouter = router({
 
                 const customerId = ticket?.customer_id;
                 if (customerId && reviewedById) {
-                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
-                    fromWarehouseId: customerInstalledWh.id,
-                    toWarehouseId: inServiceWh.id,
+                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
+                    warehouseId: inServiceWh.id,
+                    reason: "customer_return",
                     customerId,
                     physicalProductId: product.id,
                     serialNumber: product.serial_number,
@@ -653,15 +643,15 @@ export const serviceRequestRouter = router({
                   });
 
                   console.log(
-                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
                   );
                 }
               }
             }
           }
-        } catch (transferError) {
-          // Don't fail the request submission if transfer fails
-          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        } catch (receiptError) {
+          // Don't fail the request submission if receipt fails
+          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
         }
       }
 
@@ -1249,22 +1239,16 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Auto-transfer products to in_service when status changes to received
+      // Auto-receipt products to in_service when status changes to received (Phiếu Nhập Kho)
       if (input.status === "received") {
         try {
-          const { data: warehouses } = await ctx.supabaseAdmin
+          const { data: inServiceWh } = await ctx.supabaseAdmin
             .from("virtual_warehouses")
-            .select("id, warehouse_type")
-            .in("warehouse_type", ["customer_installed", "in_service"]);
+            .select("id")
+            .eq("warehouse_type", "in_service")
+            .single();
 
-          const customerInstalledWh = warehouses?.find(
-            (w) => w.warehouse_type === "customer_installed",
-          );
-          const inServiceWh = warehouses?.find(
-            (w) => w.warehouse_type === "in_service",
-          );
-
-          if (customerInstalledWh && inServiceWh) {
+          if (inServiceWh) {
             // Get items for this request
             const { data: items } = await ctx.supabaseAdmin
               .from("service_request_items")
@@ -1274,14 +1258,11 @@ export const serviceRequestRouter = router({
             for (const item of items || []) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
-                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .select("id, serial_number, product_id")
                 .eq("serial_number", item.serial_number)
                 .single();
 
-              if (
-                product &&
-                product.virtual_warehouse_id === customerInstalledWh.id
-              ) {
+              if (product) {
                 const { data: ticket } = await ctx.supabaseAdmin
                   .from("service_tickets")
                   .select("id, customer_id")
@@ -1290,9 +1271,9 @@ export const serviceRequestRouter = router({
                   .single();
 
                 if (ticket?.customer_id) {
-                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
-                    fromWarehouseId: customerInstalledWh.id,
-                    toWarehouseId: inServiceWh.id,
+                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
+                    warehouseId: inServiceWh.id,
+                    reason: "customer_return",
                     customerId: ticket.customer_id,
                     physicalProductId: product.id,
                     serialNumber: product.serial_number,
@@ -1302,14 +1283,14 @@ export const serviceRequestRouter = router({
                   });
 
                   console.log(
-                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
                   );
                 }
               }
             }
           }
-        } catch (transferError) {
-          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        } catch (receiptError) {
+          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
         }
       }
 
@@ -1581,33 +1562,24 @@ export const serviceRequestRouter = router({
         });
       }
 
-      // Auto-transfer products to in_service when received
+      // Auto-receipt products to in_service when received (Phiếu Nhập Kho)
       if (input.data.receipt_status === "received") {
         try {
-          const { data: warehouses } = await ctx.supabaseAdmin
+          const { data: inServiceWh } = await ctx.supabaseAdmin
             .from("virtual_warehouses")
-            .select("id, warehouse_type")
-            .in("warehouse_type", ["customer_installed", "in_service"]);
+            .select("id")
+            .eq("warehouse_type", "in_service")
+            .single();
 
-          const customerInstalledWh = warehouses?.find(
-            (w) => w.warehouse_type === "customer_installed",
-          );
-          const inServiceWh = warehouses?.find(
-            (w) => w.warehouse_type === "in_service",
-          );
-
-          if (customerInstalledWh && inServiceWh) {
+          if (inServiceWh) {
             for (const item of input.data.items) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
-                .select("id, serial_number, product_id, virtual_warehouse_id")
+                .select("id, serial_number, product_id")
                 .eq("serial_number", item.serial_number)
                 .single();
 
-              if (
-                product &&
-                product.virtual_warehouse_id === customerInstalledWh.id
-              ) {
+              if (product) {
                 const { data: ticket } = await ctx.supabaseAdmin
                   .from("service_tickets")
                   .select("id, customer_id")
@@ -1616,9 +1588,9 @@ export const serviceRequestRouter = router({
                   .single();
 
                 if (ticket?.customer_id) {
-                  const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
-                    fromWarehouseId: customerInstalledWh.id,
-                    toWarehouseId: inServiceWh.id,
+                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
+                    warehouseId: inServiceWh.id,
+                    reason: "customer_return",
                     customerId: ticket.customer_id,
                     physicalProductId: product.id,
                     serialNumber: product.serial_number,
@@ -1628,14 +1600,14 @@ export const serviceRequestRouter = router({
                   });
 
                   console.log(
-                    `[RECEIVE] Transferred ${product.serial_number} to in_service: ${transfer.transferNumber}`,
+                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
                   );
                 }
               }
             }
           }
-        } catch (transferError) {
-          console.error("[TRANSFER ERROR] Failed to auto-transfer products:", transferError);
+        } catch (receiptError) {
+          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
         }
       }
 

@@ -242,6 +242,193 @@ export async function createAutoTransfer(
   };
 }
 
+/**
+ * Helper function to create a stock receipt (Phiếu Nhập Kho)
+ * Used when goods enter the service center from outside (e.g., customer returns defective product)
+ *
+ * SIMPLIFIED WORKFLOW (no approval):
+ * 1. Create receipt (status defaults to 'completed')
+ * 2. Create receipt item
+ * 3. Add serial → trigger_create_physical_product_on_receipt_serial automatically:
+ *    - Updates physical_product.virtual_warehouse_id to receipt warehouse
+ *    - Updates stock counts (decrements old warehouse, increments new warehouse)
+ */
+export async function createAutoReceipt(
+  supabaseAdmin: TRPCContext["supabaseAdmin"],
+  params: {
+    warehouseId: string;
+    reason: "purchase" | "customer_return" | "rma_return";
+    customerId?: string;
+    physicalProductId: string;
+    serialNumber: string;
+    productId: string;
+    notes: string;
+    createdById: string;
+  },
+): Promise<{ receiptId: string; receiptNumber: string }> {
+  const {
+    warehouseId,
+    reason,
+    customerId,
+    physicalProductId,
+    serialNumber,
+    productId,
+    notes,
+    createdById,
+  } = params;
+
+  // 1. Create receipt
+  const { data: receipt, error: receiptError } = await supabaseAdmin
+    .from("stock_receipts")
+    .insert({
+      virtual_warehouse_id: warehouseId,
+      reason,
+      customer_id: customerId,
+      notes,
+      created_by_id: createdById,
+    })
+    .select("id, receipt_number")
+    .single();
+
+  if (receiptError || !receipt) {
+    throw new Error(`Lỗi tạo phiếu nhập kho: ${receiptError?.message}`);
+  }
+
+  // 2. Create receipt item
+  const { data: receiptItem, error: itemError } = await supabaseAdmin
+    .from("stock_receipt_items")
+    .insert({
+      receipt_id: receipt.id,
+      product_id: productId,
+      declared_quantity: 1,
+    })
+    .select("id")
+    .single();
+
+  if (itemError || !receiptItem) {
+    throw new Error(`Lỗi tạo item nhập kho: ${itemError?.message}`);
+  }
+
+  // 3. Add serial to receipt
+  // This triggers `trigger_create_physical_product_on_receipt_serial` which automatically:
+  // - For existing products (customer_return): updates virtual_warehouse_id, updates stock
+  // - For new products (purchase): creates physical_product, increments stock
+  const { error: serialError } = await supabaseAdmin
+    .from("stock_receipt_serials")
+    .insert({
+      receipt_item_id: receiptItem.id,
+      serial_number: serialNumber,
+      physical_product_id: physicalProductId,
+    });
+
+  if (serialError) {
+    throw new Error(
+      `Lỗi thêm serial vào phiếu nhập kho: ${serialError.message}`,
+    );
+  }
+
+  return {
+    receiptId: receipt.id,
+    receiptNumber: receipt.receipt_number,
+  };
+}
+
+/**
+ * Helper function to create a stock issue (Phiếu Xuất Kho)
+ * Used when goods leave the service center to outside (e.g., return repaired product to customer)
+ *
+ * SIMPLIFIED WORKFLOW (no approval):
+ * 1. Create issue (status defaults to 'completed')
+ * 2. Create issue item
+ * 3. Add serial → trigger_process_issue_serial automatically:
+ *    - For sale/warranty_replacement/repair: moves product to customer_installed, decrements source
+ *    - For return_to_supplier: moves product to rma_staging, decrements source
+ *    - For others: marks as issued, decrements source
+ */
+export async function createAutoIssue(
+  supabaseAdmin: TRPCContext["supabaseAdmin"],
+  params: {
+    warehouseId: string;
+    issueReason: string;
+    customerId?: string;
+    ticketId?: string;
+    physicalProductId: string;
+    serialNumber: string;
+    productId: string;
+    notes: string;
+    createdById: string;
+  },
+): Promise<{ issueId: string; issueNumber: string }> {
+  const {
+    warehouseId,
+    issueReason,
+    customerId,
+    ticketId,
+    physicalProductId,
+    serialNumber,
+    productId,
+    notes,
+    createdById,
+  } = params;
+
+  // 1. Create issue
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("stock_issues")
+    .insert({
+      virtual_warehouse_id: warehouseId,
+      issue_reason: issueReason,
+      customer_id: customerId,
+      ticket_id: ticketId,
+      auto_generated: true,
+      notes,
+      created_by_id: createdById,
+    })
+    .select("id, issue_number")
+    .single();
+
+  if (issueError || !issue) {
+    throw new Error(`Lỗi tạo phiếu xuất kho: ${issueError?.message}`);
+  }
+
+  // 2. Create issue item
+  const { data: issueItem, error: itemError } = await supabaseAdmin
+    .from("stock_issue_items")
+    .insert({
+      issue_id: issue.id,
+      product_id: productId,
+      quantity: 1,
+    })
+    .select("id")
+    .single();
+
+  if (itemError || !issueItem) {
+    throw new Error(`Lỗi tạo item xuất kho: ${itemError?.message}`);
+  }
+
+  // 3. Add serial to issue
+  // This triggers `trigger_process_issue_serial` which automatically:
+  // - Moves physical_product to destination warehouse (based on issue_reason)
+  // - Decrements stock at source warehouse
+  const { error: serialError } = await supabaseAdmin
+    .from("stock_issue_serials")
+    .insert({
+      issue_item_id: issueItem.id,
+      physical_product_id: physicalProductId,
+      serial_number: serialNumber,
+    });
+
+  if (serialError) {
+    throw new Error(
+      `Lỗi thêm serial vào phiếu xuất kho: ${serialError.message}`,
+    );
+  }
+
+  return {
+    issueId: issue.id,
+    issueNumber: issue.issue_number,
+  };
+}
+
 function validateStatusTransition(
   currentStatus: string,
   newStatus: string,
@@ -2071,20 +2258,20 @@ ${changes.join("\n")}
         throw new Error(`Lỗi cập nhật phiếu: ${updateError.message}`);
       }
 
-      // 5. If warranty_replacement, create stock transfers
+      // 5. If warranty_replacement, create stock issue + transfer
       if (
         outcome === "warranty_replacement" &&
         replacement_product_id &&
         replacementProductInfo &&
         warrantyWarehouseId &&
-        customerInstalledWarehouseId &&
         inServiceWarehouseId
       ) {
-        // [TRANSFER 1] Xuất sản phẩm thay thế: warranty_stock → customer_installed
-        const outboundTransfer = await createAutoTransfer(ctx.supabaseAdmin, {
-          fromWarehouseId: warrantyWarehouseId,
-          toWarehouseId: customerInstalledWarehouseId,
+        // [PHIẾU XUẤT KHO] Xuất sản phẩm thay thế từ kho bảo hành cho khách
+        const outboundIssue = await createAutoIssue(ctx.supabaseAdmin, {
+          warehouseId: warrantyWarehouseId,
+          issueReason: "warranty_replacement",
           customerId: ticket.customer_id,
+          ticketId: ticket_id,
           physicalProductId: replacementProductInfo.id,
           serialNumber: replacementProductInfo.serial_number,
           productId: replacementProductInfo.product_id,
@@ -2093,20 +2280,10 @@ ${changes.join("\n")}
         });
 
         console.log(
-          `[WARRANTY] Created outbound transfer: ${outboundTransfer.transferNumber}`,
+          `[WARRANTY] Created outbound issue: ${outboundIssue.issueNumber}`,
         );
 
-        // Update replacement product's customer reference and status
-        // Status = 'issued' means product has been delivered to customer
-        await ctx.supabaseAdmin
-          .from("physical_products")
-          .update({
-            last_known_customer_id: ticket.customer_id,
-            status: "issued",
-          })
-          .eq("id", replacement_product_id);
-
-        // [TRANSFER 2] Chuyển sản phẩm hỏng: in_service → dead_stock
+        // [PHIẾU CHUYỂN KHO] Chuyển sản phẩm hỏng: in_service → dead_stock (nội bộ)
         // Only if ticket has serial_number (old product from customer)
         if (ticket.serial_number && deadStockWarehouseId) {
           const { data: oldProduct } = await ctx.supabaseAdmin
@@ -2119,7 +2296,7 @@ ${changes.join("\n")}
             oldProduct &&
             oldProduct.virtual_warehouse_id === inServiceWarehouseId
           ) {
-            const inboundTransfer = await createAutoTransfer(
+            const deadStockTransfer = await createAutoTransfer(
               ctx.supabaseAdmin,
               {
                 fromWarehouseId: inServiceWarehouseId,
@@ -2134,30 +2311,24 @@ ${changes.join("\n")}
             );
 
             console.log(
-              `[WARRANTY] Created dead_stock transfer: ${inboundTransfer.transferNumber}`,
+              `[WARRANTY] Created dead_stock transfer: ${deadStockTransfer.transferNumber}`,
             );
           }
         }
       }
 
-      // 5b. If repaired or unrepairable, return product to customer: in_service → customer_installed
+      // 5b. If repaired or unrepairable, issue product back to customer (Phiếu Xuất Kho)
       if (
         (outcome === "repaired" || outcome === "unrepairable") &&
         ticket.serial_number
       ) {
-        const { data: warehouses } = await ctx.supabaseAdmin
+        const { data: inServiceWh } = await ctx.supabaseAdmin
           .from("virtual_warehouses")
-          .select("id, warehouse_type")
-          .in("warehouse_type", ["in_service", "customer_installed"]);
+          .select("id")
+          .eq("warehouse_type", "in_service")
+          .single();
 
-        const inServiceWh = warehouses?.find(
-          (w) => w.warehouse_type === "in_service",
-        );
-        const customerInstalledWh = warehouses?.find(
-          (w) => w.warehouse_type === "customer_installed",
-        );
-
-        if (inServiceWh && customerInstalledWh) {
+        if (inServiceWh) {
           const { data: product } = await ctx.supabaseAdmin
             .from("physical_products")
             .select("id, serial_number, product_id, virtual_warehouse_id")
@@ -2165,10 +2336,11 @@ ${changes.join("\n")}
             .single();
 
           if (product && product.virtual_warehouse_id === inServiceWh.id) {
-            const transfer = await createAutoTransfer(ctx.supabaseAdmin, {
-              fromWarehouseId: inServiceWh.id,
-              toWarehouseId: customerInstalledWh.id,
+            const returnIssue = await createAutoIssue(ctx.supabaseAdmin, {
+              warehouseId: inServiceWh.id,
+              issueReason: "repair",
               customerId: ticket.customer_id,
+              ticketId: ticket_id,
               physicalProductId: product.id,
               serialNumber: product.serial_number,
               productId: product.product_id,
@@ -2177,7 +2349,7 @@ ${changes.join("\n")}
             });
 
             console.log(
-              `[${outcome.toUpperCase()}] Created return transfer: ${transfer.transferNumber}`,
+              `[${outcome.toUpperCase()}] Created return issue: ${returnIssue.issueNumber}`,
             );
           }
         }

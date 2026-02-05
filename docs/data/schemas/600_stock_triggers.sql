@@ -196,10 +196,11 @@ BEGIN
   JOIN public.stock_issues si ON sii.issue_id = si.id
   WHERE sii.id = NEW.issue_item_id;
 
-  -- For sale issues: move product to customer_installed warehouse
+  -- For sale/warranty_replacement/repair: move product to customer_installed warehouse
+  -- These are all "xuất kho" scenarios where product goes to customer
   -- NOTE: Only deduct from source, do NOT add to destination
-  -- because sold goods are no longer company inventory
-  IF v_issue_reason = 'sale' THEN
+  -- because goods leaving the system are tracked via physical_product.virtual_warehouse_id
+  IF v_issue_reason IN ('sale', 'warranty_replacement', 'repair') THEN
     SELECT id INTO v_destination_warehouse_id
     FROM public.virtual_warehouses
     WHERE warehouse_type = 'customer_installed'

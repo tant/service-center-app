@@ -50,7 +50,7 @@ export function FormDrawer({
   const isMobile = useIsMobile();
 
   const drawerContent = (
-    <DrawerContent className="overflow-visible">
+    <DrawerContent className="overflow-visible" suppressHydrationWarning>
       <DrawerHeader className={headerClassName}>
         <DrawerTitle>{titleElement || title}</DrawerTitle>
         {description && <DrawerDescription>{description}</DrawerDescription>}

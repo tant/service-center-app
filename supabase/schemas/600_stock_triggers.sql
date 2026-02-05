@@ -197,12 +197,15 @@ BEGIN
   WHERE sii.id = NEW.issue_item_id;
 
   -- For sale issues: move product to customer_installed warehouse
+  -- NOTE: Only deduct from source, do NOT add to destination
+  -- because sold goods are no longer company inventory
   IF v_issue_reason = 'sale' THEN
     SELECT id INTO v_destination_warehouse_id
     FROM public.virtual_warehouses
     WHERE warehouse_type = 'customer_installed'
     LIMIT 1;
 
+    -- Update physical product location (for warranty tracking)
     UPDATE public.physical_products
     SET status = 'issued',
         previous_virtual_warehouse_id = virtual_warehouse_id,
@@ -211,19 +214,19 @@ BEGIN
         updated_at = NOW()
     WHERE id = NEW.physical_product_id;
 
+    -- Only deduct from source warehouse (goods left the system)
     PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
 
-    IF v_destination_warehouse_id IS NOT NULL THEN
-      PERFORM public.upsert_product_stock(v_product_id, v_destination_warehouse_id, 1);
-    END IF;
-
   -- For return_to_supplier (RMA): move product to rma_staging warehouse
+  -- NOTE: Only deduct from source, do NOT add to destination
+  -- because goods have been shipped to manufacturer (left the system)
   ELSIF v_issue_reason = 'return_to_supplier' THEN
     SELECT id INTO v_destination_warehouse_id
     FROM public.virtual_warehouses
     WHERE warehouse_type = 'rma_staging'
     LIMIT 1;
 
+    -- Update physical product location (for tracking)
     UPDATE public.physical_products
     SET status = 'issued',
         previous_virtual_warehouse_id = virtual_warehouse_id,
@@ -231,11 +234,8 @@ BEGIN
         updated_at = NOW()
     WHERE id = NEW.physical_product_id;
 
+    -- Only deduct from source warehouse (goods left the system)
     PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
-
-    IF v_destination_warehouse_id IS NOT NULL THEN
-      PERFORM public.upsert_product_stock(v_product_id, v_destination_warehouse_id, 1);
-    END IF;
 
   ELSE
     -- For other issue reasons: just mark as issued

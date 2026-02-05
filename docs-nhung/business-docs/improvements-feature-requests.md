@@ -463,3 +463,175 @@ UPDATE customers SET
 **Lịch sử cập nhật:**
 - 2026-02-05: Initial draft created
 
+---
+---
+
+## 🎯 IMPROVEMENT #2: Validation cho Số điện thoại và Email
+
+**Ngày đề xuất:** 2026-02-05
+**Người đề xuất:** QC Team (từ Test Cases review)
+**Mức độ ưu tiên:** Medium
+**Trạng thái:** Open
+**Nguồn gốc:** Chuyển từ [Test Cases - Issues #5, #6](./test-cases-demo.md#-issues-tổng-hợp-ngoài-test-cases)
+
+---
+
+### 1. Tổng Quan
+
+**Mô tả ngắn gọn:**
+Bổ sung validation real-time cho các trường Số điện thoại và Email trên toàn hệ thống, đảm bảo dữ liệu đầu vào chính xác và trải nghiệm người dùng nhất quán.
+
+**Vấn đề hiện tại:**
+- Các trường SĐT và Email chưa có validation format
+- User có thể nhập dữ liệu không hợp lệ (VD: SĐT 5 số, email thiếu @)
+- Dữ liệu sai ảnh hưởng đến liên hệ khách hàng, gửi email thông báo BH
+
+**Phạm vi áp dụng:**
+- Form tạo/sửa Khách hàng (Customer Management)
+- Form thông tin khách trong Phiếu xuất (Sales)
+- Form tạo Phiếu dịch vụ (Service Ticket)
+- Bất kỳ form nào có trường SĐT hoặc Email
+
+---
+
+### 2. Yêu cầu Chi tiết
+
+#### 2.1. Validation cho Số điện thoại (VN)
+
+**Format:**
+- 10-11 số, bắt đầu bằng `0` (VD: 0901234567) hoặc `+84` (VD: +84901234567)
+- Regex: `^(0|\+84)[0-9]{9,10}$`
+- Error message: "Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số, bắt đầu bằng 0 hoặc +84"
+
+#### 2.2. Validation cho Email
+
+**Format:**
+- Chuẩn RFC 5322
+- Regex: `^[^\s@]+@[^\s@]+\.[^\s@]+$`
+- Error message: "Email không hợp lệ. Vui lòng nhập đúng định dạng (vd: name@domain.com)"
+
+---
+
+### 3. UX Requirements (Áp dụng chung cho cả SĐT và Email)
+
+**Hành vi validation:**
+- Real-time validation khi user blur khỏi field (on blur)
+- Clear error ngay khi user bắt đầu sửa (on input change)
+
+**Hiển thị lỗi:**
+- Error message màu đỏ (#DC2626) ngay dưới ô nhập
+- Icon cảnh báo bên cạnh message
+- Border ô nhập chuyển màu đỏ khi có lỗi
+- Border trở về bình thường khi user bắt đầu sửa
+
+**Mockup:**
+```
+┌─────────────────────────────────────┐
+│ Số điện thoại *                      │
+│ ┌─────────────────────────────────┐ │
+│ │ 012345                          │ │  ← Border đỏ
+│ └─────────────────────────────────┘ │
+│ ⚠️ Số điện thoại không hợp lệ.      │  ← Text đỏ #DC2626
+│    Vui lòng nhập 10-11 số,          │
+│    bắt đầu bằng 0 hoặc +84         │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ Email                                │
+│ ┌─────────────────────────────────┐ │
+│ │ abc@                            │ │  ← Border đỏ
+│ └─────────────────────────────────┘ │
+│ ⚠️ Email không hợp lệ.              │  ← Text đỏ #DC2626
+│    Vui lòng nhập đúng định dạng     │
+│    (vd: name@domain.com)            │
+└─────────────────────────────────────┘
+```
+
+---
+
+### 4. Technical Implementation
+
+#### 4.1. Shared Validation Utility
+
+```typescript
+// utils/validation.ts
+
+export const PHONE_REGEX = /^(0|\+84)[0-9]{9,10}$/;
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const validatePhone = (value: string): string | null => {
+  if (!value) return null; // Optional field, no error if empty
+  if (!PHONE_REGEX.test(value)) {
+    return 'Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số, bắt đầu bằng 0 hoặc +84';
+  }
+  return null;
+};
+
+export const validateEmail = (value: string): string | null => {
+  if (!value) return null; // Optional field, no error if empty
+  if (!EMAIL_REGEX.test(value)) {
+    return 'Email không hợp lệ. Vui lòng nhập đúng định dạng (vd: name@domain.com)';
+  }
+  return null;
+};
+```
+
+#### 4.2. Reusable Form Field Component
+
+```typescript
+// components/ValidatedInput.tsx
+// Tạo component reusable với:
+// - onBlur: trigger validation
+// - onChange: clear error
+// - Error state: red border + error message + warning icon
+// - Nhất quán trên toàn hệ thống
+```
+
+#### 4.3. Backend Validation (Double-check)
+
+```typescript
+// Validation cũng cần ở backend (API layer) để đảm bảo data integrity
+// Trả về 422 Unprocessable Entity nếu format không hợp lệ
+```
+
+---
+
+### 5. Acceptance Criteria
+
+- [ ] **AC1:** SĐT nhập đúng format (0xxx hoặc +84xxx, 10-11 số) → Không hiển thị lỗi
+- [ ] **AC2:** SĐT nhập sai format → Hiển thị error message màu đỏ khi blur
+- [ ] **AC3:** Email nhập đúng format → Không hiển thị lỗi
+- [ ] **AC4:** Email nhập sai format → Hiển thị error message màu đỏ khi blur
+- [ ] **AC5:** Error tự clear khi user bắt đầu sửa (on input change)
+- [ ] **AC6:** Validation hoạt động nhất quán trên tất cả form có SĐT/Email
+- [ ] **AC7:** Backend cũng reject dữ liệu không hợp lệ (422 response)
+
+---
+
+### 6. Testing Checklist
+
+- [ ] Test SĐT hợp lệ: 0901234567, +84901234567, 02812345678
+- [ ] Test SĐT không hợp lệ: 12345, abc, 090123, +8490123456789999
+- [ ] Test Email hợp lệ: test@domain.com, a@b.co
+- [ ] Test Email không hợp lệ: @domain.com, test@, test@.com, test
+- [ ] Test trường rỗng (nếu optional): Không hiển thị lỗi
+- [ ] Test trường rỗng (nếu required): Hiển thị "Trường bắt buộc"
+- [ ] Test trên tất cả form: Customer, Sales, Service Ticket
+
+---
+
+### 7. Decision & Next Steps
+
+**Trạng thái:** 🟡 Pending Review
+
+**Next Steps:**
+1. Review & approve approach
+2. Implement shared validation utility
+3. Apply to all forms có SĐT/Email
+4. Test across all screens
+
+---
+
+**Lịch sử cập nhật:**
+- 2026-02-05: Chuyển từ Test Cases Issues #5, #6
+

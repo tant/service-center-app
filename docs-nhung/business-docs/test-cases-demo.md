@@ -37,6 +37,7 @@
 | 4 | UI | Remove "Phiếu xuất điều chỉnh (kiểm kê)" | Medium | **DONE** |
 | 6 | UI | **Trang Tổng quan Kho hàng:**<br>- Chỉ hiển thị các cột: **Sản phẩm, SKU, Tồn kho, Xem chi tiết**<br>- Remove card cảnh báo | Medium | Open |
 | 7 | UI/UX Bug | **Panel di chuyển theo chuột và nhấp nháy:**<br>🐛 **Hiện tượng:**<br>- Panel/popover/tooltip di chuyển theo con trỏ chuột<br>- Panel xuất hiện và biến mất liên tục (flickering) khi nhập dữ liệu<br>- Ảnh hưởng đến các trường input trong panel<br>🔍 **Root Cause:**<br>- Radix UI Popover auto-recalculates position when content changes<br>- Multiple state updates trigger re-renders and re-positioning<br>- Animation classes re-applied on every re-render<br>✅ **Solution Implemented:**<br>- Created useDebouncedValue hook (150-500ms)<br>- Added disablePositionUpdate prop to Popover<br>- Applied fixed height containers for Sheets/Drawers<br>- Optimized 8/10 components (80%), 2/10 already optimized (20%)<br>📝 **Analysis:** [issue-7-panel-flickering-analysis.md](../../docs/doc-kien/fix/issue-7-panel-flickering-analysis.md) | High | **DONE** |
+| 21 | Bug | **Lỗi "URI too long" khi nhập số lượng lớn serial:**<br>🐛 **Hiện tượng:**<br>- Nhập ~500 serials vào phiếu → báo lỗi "URI too long"<br>📍 **Ảnh hưởng:**<br>- Phiếu nhập kho (Stock Receipt)<br>- Phiếu xuất kho (Stock Issue)<br>- Phiếu chuyển kho (Transfer)<br>- Lô RMA (RMA Batch)<br>🔍 **Nguyên nhân có thể:**<br>- API gửi danh sách serial qua URL params (GET) thay vì request body (POST/PUT)<br>- URL vượt quá giới hạn cho phép của browser/server<br>✅ **Yêu cầu fix:**<br>- Chuyển sang gửi data qua request body (POST/PUT)<br>- Kiểm tra và xác định số lượng serial tối đa được hỗ trợ<br>- Test với số lượng lớn: 500, 1000 serials | High | Open |
 
 ### ISSUES TỪ TEST CASES
 
@@ -57,8 +58,15 @@
 | 18 | TC-SALE-001 (Test 2) | Bước 2 | Note | Khi thêm thông tin người liên hệ trong phiếu xuất (bán hàng) thì thông tin người liên hệ tự được thêm vào danh sách customer | Info | Open |
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
 | 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
+| 22 | TC-CAT-001 (Test 0) | Bước 2 | Validation | Trường SKU khi tạo sản phẩm mới phải là bắt buộc (required) - hiện tại chưa enforce | Medium | Open |
+| 23 | TC-CAT-001 (Test 0) | Bước 4 | UI | Bỏ cột "Linh kiện" trong màn hình Sản phẩm (danh sách & chi tiết) - liên quan Issue #3 | Medium | Open |
+| 24 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ trường "Loại phiếu" trong form Phiếu nhập kho | Medium | Open |
+| 25 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Lý do nhập kho" chỉ hiển thị: Nhập mua hàng, Nhập RMA về (ẩn các lý do khác) | Medium | Open |
+| 26 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Kho nhập" chỉ hiển thị: Kho Chính + Kho Bảo Hành (ẩn các kho khác) | Medium | Open |
+| 27 | TC-INV-001 (Test 1) | Bước 1 | Bug | Trường số lượng: khi xóa số mặc định (1) thì hiển thị cứng số 0, cần cho phép xóa toàn bộ để nhập lại | Low | Open |
+| 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | Open |
 
-> **Tổng:** 20 issues (13 DONE, 7 Open)
+> **Tổng:** 28 issues (14 DONE, 14 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---
@@ -263,8 +271,6 @@ Serial ABC123456702:
 
 **Tham khảo:** [Section 1.3 - Các Module Chính](./03-quy-trinh-nghiep-vu-chinh.md#13-các-module-chính) - Quản lý Sản phẩm (catalog)
 
-**Vai trò thực hiện:** Manager / Admin
-
 **Lưu ý:** Đây là bước chuẩn bị **BẮT BUỘC** trước khi thực hiện Test 1 (Nhập kho). Sản phẩm phải tồn tại trong catalog trước khi có thể nhập hàng vật lý.
 
 ---
@@ -273,16 +279,16 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập hệ thống với vai trò **Manager** hoặc **Admin**
-2. Vào menu **"Quản lý Sản phẩm"** → **"Danh mục Sản phẩm"**
-3. Click nút **"Thêm Sản phẩm Mới"**
+1. Đăng nhập hệ thống
+2. Vào menu **"Danh mục Sản phẩm"**
+3. Click nút **"Thêm Sản phẩm"**
 
 **Expected Outcome:**
 
-- ✅ Màn hình "Danh mục Sản phẩm" hiển thị
-- ✅ Danh sách sản phẩm hiện có (nếu có) được hiển thị
-- ✅ Nút "Thêm Sản phẩm Mới" hiển thị và có thể click
-- ✅ Form "Tạo Sản phẩm Mới" hiển thị sau khi click
+- ✅ Màn hình "Sản Phẩm" hiển thị
+- ✅ Danh sách sản phẩm hiện có được hiển thị
+- ✅ Nút "Thêm Sản Phẩm" hiển thị và có thể click
+- ✅ Form "Thêm Sản Phẩm Mới" hiển thị sau khi click
 
 ---
 
@@ -290,73 +296,28 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Tại form "Tạo Sản phẩm Mới", nhập các thông tin cơ bản:
+1. Tại form "Thêm Sản Phẩm Mới", nhập các thông tin cơ bản:
    - **Tên sản phẩm**: ZOTAC RTX 4090 24GB *(bắt buộc)*
    - **Mã sản phẩm (SKU)**: ZT-RTX4090-24G *(bắt buộc)*
    - **Thương hiệu**: ZOTAC *(bắt buộc)*
-   - **Danh mục**: Card đồ họa / Graphics Card *(bắt buộc)*
+   - **Model**: ZT-D40900J-10P *(tùy chọn)*
+   - **Loại sản phẩm**: Card đồ họa / Graphics Card *(bắt buộc)*
    - **Mô tả**: "Card đồ họa ZOTAC Gaming GeForce RTX 4090 24GB GDDR6X" *(tùy chọn)*
+   - **Đường dẫn hình ảnh**: URL hoặc upload ảnh sản phẩm *(tùy chọn)*
 
 **Expected Outcome:**
 
 - ✅ Form hiển thị đầy đủ các trường thông tin
 - ✅ Các trường bắt buộc được đánh dấu (*)
-- ✅ Dropdown "Thương hiệu" hiển thị danh sách brands (có thể thêm mới nếu chưa có)
-- ✅ Dropdown "Danh mục" hiển thị cây danh mục sản phẩm
+- ✅ Dropdown "Thương hiệu" hiển thị danh sách brands
+- ✅ Dropdown "Loại sản phẩm" hiển thị danh sách các loại sản phẩm
 - ✅ Validation realtime khi nhập liệu
 
 > 📋 **Issue #8** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
 
 ---
 
-### BƯỚC 3: Cấu hình Thông tin Bảo hành Mặc định
-
-**Thao tác:**
-
-1. Tại phần **"Cấu hình Bảo hành Mặc định"**, nhập:
-   - **Bảo hành hãng (Manufacturer Warranty)**:
-     + Thời hạn mặc định: **36 tháng** (3 năm)
-   - **Bảo hành công ty (Company Warranty)**:
-     + Thời hạn mặc định: **48 tháng** (4 năm)
-   - **Điều kiện bảo hành**: "Không áp dụng với hư hỏng do người dùng, ngấm nước, thiên tai"
-
-**Expected Outcome:**
-
-- ✅ Phần cấu hình bảo hành hiển thị
-- ✅ Có thể nhập thời hạn BH mặc định (sẽ tự động áp dụng khi nhập kho)
-- ✅ Preview hiển thị:
-  - BH Hãng: 36 tháng
-  - BH Công ty: 48 tháng
-- ✅ Điều kiện bảo hành được lưu để hiển thị cho khách hàng
-
-> 📋 **Issue #9** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
-
----
-
-### BƯỚC 4: Thêm Thông tin Bổ sung (Tùy chọn)
-
-**Thao tác:**
-
-1. Tại phần **"Thông tin Bổ sung"**, có thể nhập:
-   - **Giá bán lẻ tham khảo**: 25,000,000 VNĐ
-   - **Hình ảnh sản phẩm**: Upload ảnh (rtx4090-front.jpg, rtx4090-back.jpg)
-   - **Thông số kỹ thuật**:
-     + GPU: AD102
-     + VRAM: 24GB GDDR6X
-     + Công suất: 450W
-   - **Ghi chú nội bộ**: "Sản phẩm flagship, ưu tiên bảo hành"
-
-**Expected Outcome:**
-
-- ✅ Các trường tùy chọn có thể bỏ trống
-- ✅ Upload hình ảnh thành công (preview hiển thị)
-- ✅ Thumbnail hiển thị bên ngoài sau khi thêm ảnh ✨
-- ✅ Thông số kỹ thuật có thể thêm nhiều cặp key-value
-- ✅ Ghi chú nội bộ chỉ hiển thị cho nhân viên, không hiển thị cho khách
-
----
-
-### BƯỚC 5: Lưu Sản phẩm
+### BƯỚC 3: Lưu Sản phẩm
 
 **Thao tác:**
 
@@ -364,10 +325,10 @@ Serial ABC123456702:
    - Tên: ZOTAC RTX 4090 24GB
    - SKU: ZT-RTX4090-24G
    - Thương hiệu: ZOTAC
-   - Danh mục: Card đồ họa
-   - BH Hãng: 36 tháng, BH Công ty: 48 tháng
-2. Click nút **"Lưu Sản phẩm"**
-3. Chờ hệ thống xử lý
+   - Model: ZT-D40900J-10P
+   - Loại sản phẩm: Card đồ họa
+2. Click nút **"Tạo Sản phẩm"**
+3. Sản phẩm được tạo thành công và sản phẩm mới được hiển thị đầu tiên trên màn hình Sản Phẩm
 
 **Expected Outcome:**
 
@@ -383,17 +344,14 @@ Serial ABC123456702:
 
 | Thông tin | Giá trị |
 |-----------|---------|
-| ID | PRD-001 (tự động tạo) |
 | Tên | ZOTAC RTX 4090 24GB |
 | SKU | ZT-RTX4090-24G |
 | Thương hiệu | ZOTAC |
-| Danh mục | Card đồ họa |
-| Tồn kho | 0 (chưa nhập hàng) |
-| Trạng thái | Active |
+| Loại | Card đồ họa |
 
 ---
 
-### BƯỚC 6: Kiểm tra Kết quả
+### BƯỚC 4: Kiểm tra Kết quả
 
 **Thao tác:**
 
@@ -416,9 +374,8 @@ Serial ABC123456702:
 | Tên | ZOTAC RTX 4090 24GB |
 | SKU | ZT-RTX4090-24G |
 | Thương hiệu | ZOTAC |
-| Danh mục | Card đồ họa |
-| BH Hãng mặc định | 36 tháng |
-| BH Công ty mặc định | 48 tháng |
+| Model | ZT-D40900J-10P |
+| Loại sản phẩm | Card đồ họa |
 | Tồn kho hiện tại | 0 cái |
 | Số lượng đã bán | 0 cái |
 
@@ -432,31 +389,11 @@ Serial ABC123456702:
 
 ### Các trường hợp Test bổ sung
 
-**A) Thêm Thương hiệu mới:**
-
-1. Nếu thương hiệu "ZOTAC" chưa tồn tại
-2. Click **"+ Thêm Thương hiệu Mới"** trong dropdown
-3. Nhập: Tên thương hiệu, Logo, Website, Ghi chú
-4. Lưu → Thương hiệu mới xuất hiện trong dropdown
-
-**B) Thêm Danh mục mới:**
-
-1. Nếu danh mục "Card đồ họa" chưa tồn tại
-2. Click **"+ Thêm Danh mục Mới"**
-3. Nhập: Tên danh mục, Danh mục cha (nếu có), Mô tả
-4. Lưu → Danh mục mới xuất hiện trong cây danh mục
-
-**C) Sửa thông tin sản phẩm:**
+**A) Sửa thông tin sản phẩm:**
 
 1. Vào chi tiết sản phẩm → Click **"Sửa"**
 2. Thay đổi thông tin cần thiết
 3. Lưu → Thông tin được cập nhật
-
-**D) Vô hiệu hóa sản phẩm:**
-
-1. Vào chi tiết sản phẩm → Click **"Vô hiệu hóa"**
-2. Xác nhận → Sản phẩm chuyển trạng thái: Active → **Inactive**
-3. Sản phẩm không xuất hiện trong dropdown khi tạo phiếu nhập kho/bán hàng
 
 ---
 
@@ -468,59 +405,43 @@ Serial ABC123456702:
 
 **Tham khảo:** [Section 4.3 - Quy trình Nhập Kho](./03-quy-trinh-nghiep-vu-chinh.md#43-quy-trình-nhập-kho-stock-receipt)
 
-**Vai trò thực hiện:** Warehouse Manager / Reception
-
 ---
 
 ### BƯỚC 1: Tạo Phiếu Nhập Kho
 
 **Thao tác:**
 
-1. Đăng nhập hệ thống với vai trò Manager/Reception
-2. Vào menu **"Quản lý Kho"** → **"Nhập Kho"**
-3. Click nút **"Tạo Phiếu Nhập Kho Mới"**
-4. Chọn **Nhà cung cấp**: ZOTAC Technology
-5. Chọn **Kho vật lý đích**: "Kho Công ty"
-6. Nhập **Ghi chú**: "Nhập hàng mới theo PO-2026-001"
+1. Đăng nhập hệ thống
+2. Vào menu **"Tổng quan Kho hàng"** / **"Phiếu xuất nhập kho"**
+3. Click nút **"Tạo Phiếu Nhập"**
+4. Chọn **Lý do nhập kho** *(bắt buộc)*
+5. Chọn **Kho vật lý đích** muốn nhập hàng *(bắt buộc)*
+6. **Ngày nhập** *(bắt buộc)*
+7. Nhập **Ghi chú**: "Nhập hàng mới theo PO-2026-001" *(tùy chọn)*
+8. Click **"Thêm sản phẩm"**, chọn sản phẩm tương ứng từ dropdown danh sách sản phẩm và điền số lượng tương ứng
+   > Có thể thêm nhiều sản phẩm khác nhau trong cùng 1 phiếu nhập
+9. Click **"Tạo phiếu nhập"**
+10. Hệ thống hiển thị thông báo đã tạo phiếu nhập thành công và auto chuyển sang màn hình phiếu nhập vừa tạo
 
 **Expected Outcome:**
 
-- ✅ Form "Tạo Phiếu Nhập Kho" hiển thị đầy đủ các trường thông tin
-- ✅ Dropdown nhà cung cấp hiển thị danh sách các nhà cung cấp
-- ✅ Dropdown kho đích hiển thị "Kho Công ty" (kho vật lý mặc định)
-- ✅ Sẵn sàng để thêm sản phẩm vào phiếu
+- ✅ Form "Tạo Phiếu Nhập" hiển thị đầy đủ các trường thông tin
+- ✅ Dropdown "Lý do nhập kho" hiển thị các lựa chọn
+- ✅ Dropdown "Kho vật lý đích" hiển thị danh sách kho
+- ✅ Dropdown sản phẩm hiển thị danh sách sản phẩm từ catalog
+- ✅ Có thể thêm nhiều sản phẩm khác nhau vào phiếu
+- ✅ Phiếu nhập được tạo thành công, chuyển sang màn hình chi tiết phiếu
 
-> 📋 **Issues #11-15** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> 📋 **Issues #11-15, #24-28** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
 > **DONE (Issue #15, 2026-02-05):** Đã thêm warranty fields trong serial input drawer. Sử dụng DatePicker (dd/mm/yyyy), có thể áp dụng cho tất cả serials cùng lúc.
 
 ---
 
-### BƯỚC 2: Thêm Sản phẩm vào Phiếu
+### BƯỚC 2: Nhập Serial Numbers và Thông tin Bảo hành
 
 **Thao tác:**
 
-1. Click nút **"Thêm Sản phẩm"**
-2. Chọn **Sản phẩm**: ZOTAC RTX 4090 24GB
-3. Nhập **Số lượng**: 100
-4. Chọn **Kho ảo đích**: Kho Chính
-5. Click **"Thêm"**
-
-**Expected Outcome:**
-
-- ✅ Sản phẩm được thêm vào danh sách với thông tin:
-  - Tên: ZOTAC RTX 4090 24GB
-  - Số lượng: 100
-  - Kho đích: Kho Chính
-- ✅ Hiển thị thông báo: "Cần nhập 100 serial numbers"
-- ✅ Form nhập serial được kích hoạt
-
----
-
-### BƯỚC 3: Nhập 100 Serial Numbers
-
-**Thao tác:**
-
-1. Click vào ô **"Nhập Serial Numbers"**
+1. Tại màn hình chi tiết phiếu nhập vừa tạo, click **"Thêm serial"**
 2. Nhập danh sách serials (mỗi serial một dòng):
    ```
    ABC123456701
@@ -530,19 +451,20 @@ Serial ABC123456702:
    ABC123456800
    ```
    *(Tổng cộng 100 serials từ 701-800)*
-
-3. Click **"Validate Serials"**
+3. Nhập thông tin thời hạn bảo hành cho serials
+4. Click **"Xác nhận"**
 
 **Expected Outcome:**
 
 - ✅ Hệ thống kiểm tra và hiển thị: "100/100 serials hợp lệ"
 - ✅ Không có serial trùng lặp
 - ✅ Nếu có serial đã tồn tại trong hệ thống → Hiển thị cảnh báo đỏ
+- ✅ Thông tin bảo hành được lưu cho từng serial
 - ✅ Danh sách serial được lưu và sẵn sàng cho bước tiếp theo
 
 ---
 
-### BƯỚC 4: Nhập Thông tin Bảo hành
+### BƯỚC 3: Nhập Thông tin Bảo hành
 
 **Thao tác:**
 
@@ -569,7 +491,7 @@ Serial ABC123456702:
 
 ---
 
-### BƯỚC 5: Xác nhận Nhập Kho
+### BƯỚC 4: Xác nhận Nhập Kho
 
 **Thao tác:**
 
@@ -595,7 +517,7 @@ Serial ABC123456702:
 
 ---
 
-### BƯỚC 6: Kiểm tra Kết quả
+### BƯỚC 5: Kiểm tra Kết quả
 
 **Thao tác:**
 
@@ -646,8 +568,6 @@ Serial ABC123456702:
 
 **Mục tiêu:** Kiểm tra quy trình tạo và quản lý thông tin khách hàng trong hệ thống
 
-**Vai trò thực hiện:** Reception / Manager
-
 **Lưu ý:** Đây là bước chuẩn bị trước khi thực hiện Test 2 (Xuất bán). Khách hàng cần tồn tại trong hệ thống để liên kết với đơn hàng và theo dõi bảo hành.
 
 ---
@@ -656,7 +576,7 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập hệ thống với vai trò **Reception** hoặc **Manager**
+1. Đăng nhập hệ thống
 2. Vào menu **"Quản lý Khách hàng"** → **"Danh sách Khách hàng"**
 3. Click nút **"Thêm Khách hàng Mới"**
 
@@ -713,7 +633,6 @@ Serial ABC123456702:
 
 | Thông tin | Giá trị |
 |-----------|---------|
-| ID | CUS-001 (tự động tạo) |
 | Họ tên | Nguyễn Văn A |
 | SĐT | 0912345678 |
 | Email | nguyenvana@email.com |
@@ -786,8 +705,6 @@ Serial ABC123456702:
 
 **Mục tiêu:** Kiểm tra quy trình chuyển kho THỦ CÔNG để chuẩn bị hàng dự phòng cho bảo hành
 
-**Vai trò thực hiện:** Manager / Warehouse Manager
-
 **Điều kiện tiên quyết:** Đã hoàn thành Test 1 - Có 100 sản phẩm trong Kho Chính
 
 **Lưu ý quan trọng:** Đây là **chuyển động THỦ CÔNG DUY NHẤT** trong hệ thống. Tất cả các chuyển động kho khác đều tự động.
@@ -802,7 +719,7 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò Manager/Warehouse Manager
+1. Đăng nhập hệ thống
 2. Vào menu **"Quản lý Kho"** → **"Chuyển Kho"**
 3. Click nút **"Tạo Phiếu Chuyển Kho"**
 4. Nhập thông tin:
@@ -918,8 +835,6 @@ Serial ABC123456702:
 
 **Tham khảo:** [Section 4.7 - Quy trình Bán hàng](./03-quy-trinh-nghiep-vu-chinh.md#47-quy-trình-bán-hàng--mới)
 
-**Vai trò thực hiện:** Reception / Manager
-
 **Tự động hóa:** Hệ thống TỰ ĐỘNG di chuyển kho khi xác nhận bán (Kho Chính → Kho Hàng Bán) - [Quy tắc #7](./03-quy-trinh-nghiep-vu-chinh.md#461-quy-tắc-di-chuyển-kho-tự-động)
 
 ---
@@ -928,7 +843,7 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò Reception/Manager
+1. Đăng nhập hệ thống
 2. Vào menu **"Quản lý Kho"** → **"Xuất Kho"**
 3. Click nút **"Tạo Phiếu Xuất Kho"**
 4. Chọn **Loại xuất kho**: "Bán hàng (Sales)"
@@ -1090,8 +1005,6 @@ Serial ABC123456702:
 - [Section 2.3 - Lễ tân Chuyển đổi](./03-quy-trinh-nghiep-vu-chinh.md#23-bước-2-lễ-tân-xem-xét-và-chuyển-đổi-yêu-cầu)
 - [Section 3.2 - Xác minh Bảo hành](./03-quy-trinh-nghiep-vu-chinh.md#32-quy-trình-xác-minh-bảo-hành)
 
-**Vai trò thực hiện:** Customer Reps / Reception (Nội bộ)
-
 **Tự động hóa:** Xác minh bảo hành tự động, Di chuyển kho tự động khi tạo ticket - [Quy tắc #1](./03-quy-trinh-nghiep-vu-chinh.md#461-quy-tắc-di-chuyển-kho-tự-động)
 
 ---
@@ -1100,7 +1013,7 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập hệ thống với vai trò **Customer Reps / Reception**
+1. Đăng nhập hệ thống
 2. Vào menu **"Phiếu Dịch vụ"** → **"Tạo Phiếu Mới"**
 3. Tại trường **"Serial Number"**, nhập: **ABC123456701**
    *(Serial đã bán cho khách Nguyễn Văn A ở Test 2)*
@@ -1231,8 +1144,6 @@ Serial ABC123456702:
 - [Section 2.4 - Kỹ thuật viên Thực hiện](./03-quy-trinh-nghiep-vu-chinh.md#24-bước-3-kỹ-thuật-viên-thực-hiện-công-việc)
 - [Section 2.4.2 - Quản lý Thời gian và Deadline](./03-quy-trinh-nghiep-vu-chinh.md#242-quản-lý-thời-gian-và-deadline)
 
-**Vai trò thực hiện:** Technician (Kỹ thuật viên)
-
 **Tự động hóa:** Khi hoàn thành tất cả tasks → Phiếu tự động chuyển ready_for_pickup, Di chuyển kho tự động - [Quy tắc #2](./03-quy-trinh-nghiep-vu-chinh.md#461-quy-tắc-di-chuyển-kho-tự-động)
 
 ---
@@ -1241,7 +1152,7 @@ Serial ABC123456702:
 
 **Thao tác:**
 
-1. Đăng nhập hệ thống với vai trò **"Technician"** (Kỹ thuật viên A)
+1. Đăng nhập hệ thống
 2. Vào menu **"Hộp công việc của tôi"** (My Tasks)
 3. Xem danh sách phiếu được gán
 
@@ -1431,8 +1342,6 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Mục tiêu:** Kiểm tra quy trình xử lý sản phẩm HẾT bảo hành, không sửa được
 
-**Vai trò thực hiện:** Technician (chẩn đoán), Manager (duyệt)
-
 **Giả định:** Tạo phiếu dịch vụ mới với serial đã HẾT bảo hành, Kỹ thuật viên chẩn đoán → Không sửa được
 
 **Chuẩn bị dữ liệu test:**
@@ -1485,7 +1394,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò **"Technician"**
+1. Đăng nhập hệ thống
 2. Vào phiếu **SV-2026-003**
 3. Thực hiện một số tasks chẩn đoán (Task 1-3)
 4. Kết luận: **Card hỏng nặng, chip GPU chết, không sửa được**
@@ -1508,7 +1417,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò **"Manager"**
+1. Đăng nhập hệ thống
 2. Vào **"Phiếu chờ duyệt"**
 3. Click vào phiếu **SV-2026-003**
 4. Xem kết quả chẩn đoán:
@@ -1611,8 +1520,6 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 - [Section 3.3 - Quy trình RMA](./03-quy-trinh-nghiep-vu-chinh.md#33-quy-trình-rma-return-merchandise-authorization)
 - [Section 5.4 - Kịch bản 3: Bảo hành Đổi trả](./03-quy-trinh-nghiep-vu-chinh.md#54-kịch-bản-3-bảo-hành-đổi-trả-warranty-replacement)
 
-**Vai trò thực hiện:** Technician (chẩn đoán), Manager (duyệt RMA)
-
 **Giả định:** Tạo phiếu bảo hành mới, Kỹ thuật viên chẩn đoán → Không sửa được, cần đổi mới
 
 **Tự động hóa:**
@@ -1640,7 +1547,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò **"Technician"**
+1. Đăng nhập hệ thống
 2. Vào phiếu **SV-2026-002**
 3. Thực hiện một số tasks chẩn đoán (Task 1-3)
 4. Kết luận: **Card hỏng nặng, chip GPU chết, không sửa được**
@@ -1663,7 +1570,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò **"Manager"**
+1. Đăng nhập hệ thống
 2. Vào **"Phiếu chờ duyệt"** hoặc Dashboard thông báo
 3. Click vào phiếu **SV-2026-002**
 4. Xem kết quả chẩn đoán của Technician:
@@ -1862,8 +1769,6 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Tham khảo:** [Section 3.3.2 - Quy trình RMA Chi tiết](./03-quy-trinh-nghiep-vu-chinh.md#332-quy-trình-rma-chi-tiết)
 
-**Vai trò thực hiện:** Manager
-
 **Tiếp tục từ Test 5:** Đã có sản phẩm lỗi ABC123456702 trong Kho Hàng Hỏng, RMA Batch đã tạo
 
 ---
@@ -1872,7 +1777,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 **Thao tác:**
 
-1. Đăng nhập với vai trò **"Manager"**
+1. Đăng nhập hệ thống
 2. Vào menu **"Quản lý RMA"** → **"Danh sách RMA Batches"**
 3. Click vào lô **RMA-20260205-001**
 

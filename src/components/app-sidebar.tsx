@@ -155,24 +155,25 @@ const baseData = {
       allowedRoles: ["admin", "manager"] as UserRole[],
     },
   ],
-  // Workflows section
-  workflows: [
-    {
-      title: "Workflows",
-      icon: IconChecklist,
-      allowedRoles: ["admin", "manager"] as UserRole[],
-      items: [
-        {
-          title: "Quy trình",
-          url: "/workflows",
-        },
-        {
-          title: "Công việc",
-          url: "/workflows/tasks",
-        },
-      ],
-    },
-  ],
+  // Issue #2: Workflows section hidden
+  // workflows: [
+  //   {
+  //     title: "Workflows",
+  //     icon: IconChecklist,
+  //     allowedRoles: ["admin", "manager"] as UserRole[],
+  //     items: [
+  //       {
+  //         title: "Quy trình",
+  //         url: "/workflows",
+  //       },
+  //       {
+  //         title: "Công việc",
+  //         url: "/workflows/tasks",
+  //       },
+  //     ],
+  //   },
+  // ],
+  workflows: [],
   // Settings section
   settings: [
     {
@@ -330,8 +331,8 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
               />
             )}
 
-            {/* Workflows */}
-            {data.workflows.length > 0 && <NavWorkflows items={data.workflows} />}
+            {/* Issue #2: Workflows section hidden */}
+            {/* {data.workflows.length > 0 && <NavWorkflows items={data.workflows} />} */}
 
             {/* Settings */}
             {data.settings.length > 0 && (

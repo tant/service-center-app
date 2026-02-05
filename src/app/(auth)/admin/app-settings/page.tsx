@@ -179,7 +179,8 @@ export default function AdminAppSettingsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Issue #2: Default Workflows card hidden */}
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Workflow mặc định</CardTitle>
                 <CardDescription>
@@ -271,7 +272,7 @@ export default function AdminAppSettingsPage() {
                   </>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
 
             <Card>
               <CardHeader>

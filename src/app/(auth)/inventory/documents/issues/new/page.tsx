@@ -21,11 +21,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import type { StockIssueReason } from "@/types/inventory";
 
-// REDESIGNED: Only 2 issue types
-const ISSUE_TYPES = [
-  { value: "normal", label: "Phiếu xuất bình thường" },
-  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
-];
+// Issue #4: Hide adjustment type - only normal issues allowed
+// const ISSUE_TYPES = [
+//   { value: "normal", label: "Phiếu xuất bình thường" },
+//   { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+// ];
 
 // Issue reason labels
 const ISSUE_REASONS: { value: StockIssueReason; label: string }[] = [
@@ -47,7 +47,8 @@ interface ProductItem {
 
 export default function CreateIssuePage() {
   const router = useRouter();
-  const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal");
+  // Issue #4: Force type to "normal" - adjustment type is hidden
+  const issueType = "normal";
   const [virtualWarehouseId, setVirtualWarehouseId] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
@@ -90,20 +91,11 @@ export default function CreateIssuePage() {
       return;
     }
 
-    // REDESIGNED: Validate based on type
-    if (issueType === "normal") {
-      const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
-      if (invalidItems.length > 0) {
-        toast.error("Phiếu xuất bình thường phải có số lượng dương");
-        return;
-      }
-    } else {
-      // Adjustment: allow negative but not zero
-      const invalidItems = items.filter((item) => !item.productId || item.quantity === 0);
-      if (invalidItems.length > 0) {
-        toast.error("Số lượng không được bằng 0");
-        return;
-      }
+    // Issue #4: Always require positive quantity (adjustment type hidden)
+    const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
+    if (invalidItems.length > 0) {
+      toast.error("Số lượng phải lớn hơn 0");
+      return;
     }
 
     try {
@@ -154,21 +146,7 @@ export default function CreateIssuePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label>Loại phiếu *</Label>
-                      <Select value={issueType} onValueChange={(v) => setIssueType(v as "normal" | "adjustment")}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại phiếu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ISSUE_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Issue #4: Hide "Loại phiếu" dropdown - adjustment type removed */}
 
                     <div className="grid gap-2">
                       <Label>Kho xuất *</Label>
@@ -194,15 +172,7 @@ export default function CreateIssuePage() {
                     </div>
                   </div>
 
-                  {/* REDESIGNED: Show alert for adjustment type */}
-                  {issueType === "adjustment" && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Phiếu điều chỉnh:</strong> Số dương = giảm stock, số âm = tăng stock. Dùng khi kiểm kê hoặc sửa sai sót.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {/* Issue #4: Adjustment alert removed */}
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -325,10 +295,9 @@ export default function CreateIssuePage() {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min={issueType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
+                              min="1"
                               value={item.quantity}
                               onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
-                              className={item.quantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>
 

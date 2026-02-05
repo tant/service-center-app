@@ -21,11 +21,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import type { StockReceiptReason } from "@/types/inventory";
 
-// REDESIGNED: Only 2 receipt types
-const RECEIPT_TYPES = [
-  { value: "normal", label: "Phiếu nhập bình thường" },
-  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
-];
+// Issue #1: Hide adjustment type - only normal receipts allowed
+// const RECEIPT_TYPES = [
+//   { value: "normal", label: "Phiếu nhập bình thường" },
+//   { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+// ];
 
 // Receipt reason labels
 const RECEIPT_REASONS: { value: StockReceiptReason; label: string; description: string }[] = [
@@ -41,7 +41,8 @@ interface ProductItem {
 
 export default function CreateReceiptPage() {
   const router = useRouter();
-  const [receiptType, setReceiptType] = useState<"normal" | "adjustment">("normal"); // REDESIGNED
+  // Issue #1: Force type to "normal" - adjustment type is hidden
+  const receiptType = "normal";
   const [reason, setReason] = useState<StockReceiptReason>("purchase");
   const [customerId, setCustomerId] = useState("");
   const [rmaReference, setRmaReference] = useState("");
@@ -81,20 +82,11 @@ export default function CreateReceiptPage() {
       return;
     }
 
-    // REDESIGNED: Validate based on type
-    if (receiptType === "normal") {
-      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
-      if (invalidItems.length > 0) {
-        toast.error("Phiếu nhập bình thường phải có số lượng dương");
-        return;
-      }
-    } else {
-      // Adjustment: allow negative but not zero
-      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity === 0);
-      if (invalidItems.length > 0) {
-        toast.error("Số lượng không được bằng 0");
-        return;
-      }
+    // Issue #1: Always require positive quantity (adjustment type hidden)
+    const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
+    if (invalidItems.length > 0) {
+      toast.error("Số lượng phải lớn hơn 0");
+      return;
     }
 
     try {
@@ -143,21 +135,7 @@ export default function CreateReceiptPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label>Loại phiếu *</Label>
-                      <Select value={receiptType} onValueChange={(v) => setReceiptType(v as "normal" | "adjustment")}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại phiếu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RECEIPT_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Issue #1: Hide "Loại phiếu" dropdown - adjustment type removed */}
 
                     <div className="grid gap-2">
                       <Label>Lý do nhập kho *</Label>
@@ -247,15 +225,7 @@ export default function CreateReceiptPage() {
                     </Alert>
                   )}
 
-                  {/* REDESIGNED: Show alert for adjustment type */}
-                  {receiptType === "adjustment" && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Phiếu điều chỉnh:</strong> Số dương = tăng stock, số âm = giảm stock. Dùng khi kiểm kê hoặc sửa sai sót.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {/* Issue #1: Adjustment alert removed */}
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -312,10 +282,9 @@ export default function CreateReceiptPage() {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min={receiptType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
+                              min="1"
                               value={item.declaredQuantity}
                               onChange={(e) => handleItemChange(index, "declaredQuantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
-                              className={item.declaredQuantity < 0 ? "text-red-600 font-medium" : ""}
                             />
                           </div>
 

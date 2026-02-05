@@ -1270,7 +1270,7 @@ export const inventoryRouter = router({
       return data;
     }),
 
-  // Complete RMA batch (submitted → completed) - performs transfer and stock issue
+  // Complete RMA batch (submitted → completed) - creates stock issue directly from dead_stock
   completeRMABatch: publicProcedure
     .input(
       z.object({
@@ -1347,7 +1347,7 @@ export const inventoryRouter = router({
         });
       }
 
-      // Get warehouses
+      // Get dead_stock warehouse
       const { data: deadStockWarehouse } = await ctx.supabaseAdmin
         .from("virtual_warehouses")
         .select("id")
@@ -1355,43 +1355,14 @@ export const inventoryRouter = router({
         .limit(1)
         .single();
 
-      const { data: rmaWarehouse } = await ctx.supabaseAdmin
-        .from("virtual_warehouses")
-        .select("id")
-        .eq("warehouse_type", "rma_staging")
-        .limit(1)
-        .single();
-
-      if (!deadStockWarehouse || !rmaWarehouse) {
+      if (!deadStockWarehouse) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "dead_stock or rma_staging warehouse not found in system",
+          message: "dead_stock warehouse not found in system",
         });
       }
 
       const shippingDate = input.shipping_date || batch.shipping_date || new Date().toISOString().split("T")[0];
-
-      // Step 1: Create stock_transfer (dead_stock → rma_staging)
-      const { data: transfer, error: transferError } = await ctx.supabaseAdmin
-        .from("stock_transfers")
-        .insert({
-          from_virtual_warehouse_id: deadStockWarehouse.id,
-          to_virtual_warehouse_id: rmaWarehouse.id,
-          transfer_date: shippingDate,
-          rma_batch_id: input.batch_id,
-          notes: `Chuyển kho cho lô RMA: ${input.batch_id}`,
-          status: "completed",
-          created_by_id: profile.id,
-        })
-        .select()
-        .single();
-
-      if (transferError || !transfer) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create transfer: ${transferError?.message}`,
-        });
-      }
 
       // Group products by product_id
       const productGroups = new Map<string, typeof batchProducts>();
@@ -1401,48 +1372,16 @@ export const inventoryRouter = router({
         productGroups.set(p.product_id, group);
       }
 
-      // Create transfer items and serials
-      for (const [productId, groupProducts] of productGroups) {
-        const { data: transferItem, error: itemError } = await ctx.supabaseAdmin
-          .from("stock_transfer_items")
-          .insert({
-            transfer_id: transfer.id,
-            product_id: productId,
-            quantity: groupProducts.length,
-          })
-          .select()
-          .single();
-
-        if (itemError || !transferItem) {
-          console.error(`Failed to create transfer item for product ${productId}:`, itemError);
-          continue;
-        }
-
-        // Insert transfer serials (trigger will move products to rma_staging)
-        const serialsToInsert = groupProducts.map(p => ({
-          transfer_item_id: transferItem.id,
-          physical_product_id: p.id,
-          serial_number: p.serial_number,
-        }));
-
-        const { error: serialsError } = await ctx.supabaseAdmin
-          .from("stock_transfer_serials")
-          .insert(serialsToInsert);
-
-        if (serialsError) {
-          console.error(`Failed to create transfer serials:`, serialsError);
-        }
-      }
-
-      // Step 2: Create stock_issue (xuất kho từ rma_staging)
+      // Create stock_issue directly from dead_stock (1-step approach)
       const { data: issue, error: issueError } = await ctx.supabaseAdmin
         .from("stock_issues")
         .insert({
           issue_type: "normal",
-          virtual_warehouse_id: rmaWarehouse.id,
+          issue_reason: "return_to_supplier",
+          virtual_warehouse_id: deadStockWarehouse.id,
           issue_date: shippingDate,
           rma_batch_id: input.batch_id,
-          notes: `Phiếu xuất kho cho lô RMA: ${input.batch_id}`,
+          notes: input.notes || `Xuất kho RMA gửi nhà cung cấp`,
           status: "completed",
           created_by_id: profile.id,
         })
@@ -1489,7 +1428,7 @@ export const inventoryRouter = router({
         }
       }
 
-      // Step 3: Update batch status to completed
+      // Step 2: Update batch status to completed
       const updateData: Record<string, unknown> = {
         status: "completed",
       };
@@ -1511,7 +1450,7 @@ export const inventoryRouter = router({
         });
       }
 
-      return { ...data, transfer_id: transfer.id, issue_id: issue.id };
+      return { ...data, issue_id: issue.id };
     }),
 
   // Remove product from RMA batch (draft only - no transfer needed since product stays in dead_stock)

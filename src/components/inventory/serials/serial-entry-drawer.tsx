@@ -114,15 +114,17 @@ export function SerialEntryDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Thêm Số Serial</SheetTitle>
-          <SheetDescription>
-            Sản phẩm: <span className="font-medium">{productName}</span>
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent className="sm:max-w-2xl">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>Thêm Số Serial</SheetTitle>
+            <SheetDescription>
+              Sản phẩm: <span className="font-medium">{productName}</span>
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="space-y-6 py-6">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="space-y-6 py-6">
           {/* Progress Bar */}
           <SerialProgressBar
             current={currentSerialCount}
@@ -249,13 +251,15 @@ export function SerialEntryDrawer({
               )}
             </>
           )}
-        </div>
+            </div>
+          </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </SheetFooter>
+          <SheetFooter className="shrink-0 border-t pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </SheetFooter>
+        </div>
       </SheetContent>
     </Sheet>
   );

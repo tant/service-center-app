@@ -145,15 +145,17 @@ export function AddProductsToRMADrawer({
     >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent className={isMobile ? "max-h-[90vh]" : "max-w-2xl"}>
-        <DrawerHeader>
-          <DrawerTitle>Thêm sản phẩm vào lô RMA</DrawerTitle>
-          <DrawerDescription>
-            Nhập danh sách serial number (mỗi dòng 1 serial) hoặc upload file
-            text
-          </DrawerDescription>
-        </DrawerHeader>
+        <div className="flex h-full flex-col">
+          <DrawerHeader className="shrink-0">
+            <DrawerTitle>Thêm sản phẩm vào lô RMA</DrawerTitle>
+            <DrawerDescription>
+              Nhập danh sách serial number (mỗi dòng 1 serial) hoặc upload file
+              text
+            </DrawerDescription>
+          </DrawerHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">
+            <div className="flex flex-col gap-4 pb-4">
           {/* Input Area */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -287,22 +289,24 @@ export function AddProductsToRMADrawer({
               </div>
             </>
           )}
-        </div>
+            </div>
+          </div>
 
-        <DrawerFooter className="flex-row gap-2 border-t pt-4">
-          <DrawerClose asChild>
-            <Button variant="outline" className="flex-1" disabled={isAdding}>
-              Hủy
+          <DrawerFooter className="flex-row gap-2 shrink-0 border-t pt-4">
+            <DrawerClose asChild>
+              <Button variant="outline" className="flex-1" disabled={isAdding}>
+                Hủy
+              </Button>
+            </DrawerClose>
+            <Button
+              onClick={handleSubmit}
+              className="flex-1"
+              disabled={validCount === 0 || isAdding}
+            >
+              {isAdding ? "Đang thêm..." : `Thêm ${validCount} sản phẩm`}
             </Button>
-          </DrawerClose>
-          <Button
-            onClick={handleSubmit}
-            className="flex-1"
-            disabled={validCount === 0 || isAdding}
-          >
-            {isAdding ? "Đang thêm..." : `Thêm ${validCount} sản phẩm`}
-          </Button>
-        </DrawerFooter>
+          </DrawerFooter>
+        </div>
       </DrawerContent>
     </Drawer>
   );

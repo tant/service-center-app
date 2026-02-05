@@ -41,20 +41,20 @@ Hệ thống quản lý trung tâm bảo hành giúp bạn thực hiện các c�
 ### Cấu trúc kho trong hệ thống
 
 Hệ thống sử dụng **2 cấp kho**:
-- **Kho vật lý (Physical Warehouse):** Vị trí lưu trữ thực tế (VD: Kho Công ty)
+- **Kho vật lý (Physical Warehouse):** Vị trí lưu trữ thực tế
 - **Kho ảo (Virtual Warehouse):** Phân loại trạng thái/mục đích của sản phẩm
 
-#### 7 Loại Kho Ảo
+#### 5 Loại Kho Ảo
 
-| Tên Kho | Ý nghĩa |
-|---------|---------|
-| **Kho Chính** | Hàng tồn kho thông thường, sẵn sàng để bán |
-| **Kho Bảo Hành** | Hàng còn bảo hành, sẵn sàng thay thế cho khách |
-| **Hàng Đã Bán** | Sản phẩm đã bán, đang ở phía khách hàng |
-| **Kho Đang Sửa Chữa** | Sản phẩm đang được bảo hành/sửa chữa |
-| **Kho Hàng Hỏng** | Sản phẩm hỏng không sửa được, chờ thanh lý hoặc tháo linh kiện |
-| **Kho Chờ Trả Hàng** | Sản phẩm chờ gửi trả nhà cung cấp/nhà sản xuất |
-| **Kho Linh Kiện** | Linh kiện thay thế và phụ tùng |
+| Tên Kho | Mục đích | Khi nào TĂNG tồn kho | Khi nào GIẢM tồn kho |
+|---------|----------|----------------------|---------------------|
+| **Kho Chính** | Lưu trữ hàng mới nhập, sẵn sàng để bán hoặc chuyển sang kho bảo hành | • Nhập hàng từ nhà cung cấp | • Xuất bán cho khách hàng<br>• Chuyển sang Kho Bảo Hành |
+| **Kho Hàng Bán** | Theo dõi sản phẩm đã bán và đang sử dụng bởi khách hàng | • Tạo phiếu xuất bán hàng | • Tự động chuyển sang Kho Sửa Chữa khi tạo phiếu dịch vụ |
+| **Kho Bảo Hành** | Lưu trữ hàng dự phòng để thay thế cho khách khi sản phẩm không sửa được | • Chuyển kho từ Kho Chính (phiếu chuyển kho thủ công) | • Đổi sản phẩm mới cho khách (Warranty Replacement) |
+| **Kho Sửa Chữa** | Lưu trữ sản phẩm đang trong quá trình bảo hành/sửa chữa | • Tạo phiếu dịch vụ thành công<br>• Hàng tự động chuyển từ Kho Hàng Bán | • Sửa xong: tự động chuyển về Kho Hàng Bán<br>• Không sửa được: tự động chuyển sang Kho Hàng Hỏng |
+| **Kho Hàng Hỏng** | Lưu trữ sản phẩm không sửa được, chờ thanh lý hoặc xử lý | • Kết thúc phiếu dịch vụ với kết quả "Không sửa được"<br>• Hàng tự động chuyển từ Kho Sửa Chữa | • Tạo lô RMA |
+
+> **Lưu ý:** Hầu hết các chuyển động giữa các kho ảo đều được hệ thống **TỰ ĐỘNG** thực hiện dựa trên workflow nghiệp vụ, đảm bảo theo dõi chính xác vị trí và trạng thái của từng sản phẩm.
 
 ---
 
@@ -87,14 +87,12 @@ Hệ thống sử dụng **2 cấp kho**:
 
 ### 3.2. Nhập thông tin cơ bản
 
-Điền các thông tin bắt buộc (có dấu *):
-
 | Trường | Ví dụ | Ghi chú |
 |--------|-------|---------|
 | **Tên sản phẩm*** | ZOTAC RTX 4090 24GB | Tên đầy đủ của sản phẩm |
 | **Mã sản phẩm (SKU)*** | ZT-RTX4090-24G | Mã duy nhất, không được trùng |
-| **Thương hiệu*** | ZOTAC | Chọn từ danh sách hoặc thêm mới |
-| **Danh mục*** | Card đồ họa | Chọn từ cây danh mục |
+| **Thương hiệu*** | ZOTAC | Chọn từ danh sách |
+| **Danh mục*** | Card đồ họa | Chọn từ danh sách |
 | Mô tả | Card đồ họa ZOTAC Gaming... | Tùy chọn |
 
 ### 3.3. Cấu hình bảo hành mặc định

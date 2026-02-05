@@ -360,6 +360,15 @@ export const receiptsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Issue #21: Validate array size to prevent "URI too long" error
+      // Frontend should chunk requests, but validate here as safeguard
+      if (input.serials.length > 100) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vui lòng nhập tối đa 100 serials/lần. Hệ thống đã tự động chia nhỏ request.",
+        });
+      }
+
       const serialNumbers = input.serials.map((s) => s.serialNumber);
 
       // Get receipt item with receipt details including reason and target warehouse

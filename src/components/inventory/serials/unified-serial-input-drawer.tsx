@@ -5,6 +5,7 @@
  * Single component for all 3 document types: Receipt, Issue, Transfer
  * Redesigned for better UX: Focus on primary action (textarea)
  * Issue #17: CSV import removed
+ * Issue #21: Implement chunking to avoid "URI too long" error
  */
 
 import {
@@ -33,10 +34,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Issue #21: Chunk size to avoid "URI too long" error
+// 50 serials @ ~12 chars each = ~600 chars (safe for URL encoding)
+const SERIAL_CHUNK_SIZE = 50;
 
 type DocumentType = "receipt" | "issue" | "transfer";
 
@@ -57,6 +61,12 @@ interface ValidationError {
   error: string;
 }
 
+interface ProcessingProgress {
+  current: number;
+  total: number;
+  percentage: number;
+}
+
 export function UnifiedSerialInputDrawer({
   open,
   onOpenChange,
@@ -73,6 +83,8 @@ export function UnifiedSerialInputDrawer({
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
     [],
   );
+  const [processingProgress, setProcessingProgress] =
+    useState<ProcessingProgress | null>(null);
 
   // Warranty fields (only for receipt type)
   const [warrantyOpen, setWarrantyOpen] = useState(false);
@@ -117,6 +129,7 @@ export function UnifiedSerialInputDrawer({
     }
   };
 
+  // Issue #21: Process serials in chunks to avoid "URI too long" error
   const handleSave = async () => {
     if (!serialInput.trim()) {
       toast.error("Vui lòng nhập ít nhất một số serial");
@@ -131,48 +144,79 @@ export function UnifiedSerialInputDrawer({
     }
 
     setValidationErrors([]);
+    setProcessingProgress(null);
+
+    // Split serials into chunks
+    const chunks: string[][] = [];
+    for (let i = 0; i < inputSerials.length; i += SERIAL_CHUNK_SIZE) {
+      chunks.push(inputSerials.slice(i, i + SERIAL_CHUNK_SIZE));
+    }
+
+    const totalChunks = chunks.length;
+    let processedCount = 0;
 
     try {
-      if (type === "receipt") {
-        // Receipt: Add new serials (validates uniqueness)
-        const serialsData = inputSerials.map((s) => ({
-          serialNumber: s,
-          // Apply warranty dates if set
-          ...(manufacturerWarrantyDate && {
-            manufacturerWarrantyEndDate: manufacturerWarrantyDate,
-          }),
-          ...(userWarrantyDate && {
-            userWarrantyEndDate: userWarrantyDate,
-          }),
-        }));
-        await addReceiptSerials.mutateAsync({
-          receiptItemId: itemId,
-          serials: serialsData,
+      // Process each chunk sequentially
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+
+        // Update progress
+        setProcessingProgress({
+          current: chunkIndex + 1,
+          total: totalChunks,
+          percentage: Math.round(((chunkIndex + 1) / totalChunks) * 100),
         });
-      } else if (type === "issue") {
-        await selectIssueSerials.mutateAsync({
-          issueItemId: itemId,
-          serialNumbers: inputSerials,
-          virtualWarehouseId: warehouseId!,
-        });
-      } else {
-        await selectTransferSerials.mutateAsync({
-          transferItemId: itemId,
-          serialNumbers: inputSerials,
-          virtualWarehouseId: warehouseId!,
-        });
+
+        if (type === "receipt") {
+          // Receipt: Add new serials (validates uniqueness)
+          const serialsData = chunk.map((s) => ({
+            serialNumber: s,
+            // Apply warranty dates if set
+            ...(manufacturerWarrantyDate && {
+              manufacturerWarrantyEndDate: manufacturerWarrantyDate,
+            }),
+            ...(userWarrantyDate && {
+              userWarrantyEndDate: userWarrantyDate,
+            }),
+          }));
+          await addReceiptSerials.mutateAsync({
+            receiptItemId: itemId,
+            serials: serialsData,
+          });
+        } else if (type === "issue") {
+          await selectIssueSerials.mutateAsync({
+            issueItemId: itemId,
+            serialNumbers: chunk,
+            virtualWarehouseId: warehouseId!,
+          });
+        } else {
+          await selectTransferSerials.mutateAsync({
+            transferItemId: itemId,
+            serialNumbers: chunk,
+            virtualWarehouseId: warehouseId!,
+          });
+        }
+
+        processedCount += chunk.length;
       }
 
-      toast.success(`Đã lưu ${serialCount} serial thành công!`);
+      // Success!
+      toast.success(
+        totalChunks > 1
+          ? `Đã lưu ${serialCount} serial thành công (${totalChunks} batches)!`
+          : `Đã lưu ${serialCount} serial thành công!`,
+      );
       onSuccess();
       setSerialInput("");
       setValidationErrors([]);
+      setProcessingProgress(null);
       setWarrantyOpen(false);
       setManufacturerWarrantyDate("");
       setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
       console.error("Save error:", error);
+      setProcessingProgress(null);
 
       if (error.message) {
         const errorMsg = error.message;
@@ -200,6 +244,11 @@ export function UnifiedSerialInputDrawer({
       } else {
         toast.error("Không thể lưu serial");
       }
+
+      // Show how many were saved before error
+      if (processedCount > 0) {
+        toast.info(`Đã lưu ${processedCount}/${serialCount} serial trước khi gặp lỗi`);
+      }
     }
   };
 
@@ -208,7 +257,8 @@ export function UnifiedSerialInputDrawer({
   const isProcessing =
     addReceiptSerials.isPending ||
     selectIssueSerials.isPending ||
-    selectTransferSerials.isPending;
+    selectTransferSerials.isPending ||
+    processingProgress !== null;
 
   const hasWarrantySet = manufacturerWarrantyDate || userWarrantyDate;
 
@@ -391,7 +441,9 @@ export function UnifiedSerialInputDrawer({
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang lưu...
+                    {processingProgress
+                      ? `Đang lưu... (${processingProgress.current}/${processingProgress.total})`
+                      : "Đang lưu..."}
                   </>
                 ) : (
                   <>

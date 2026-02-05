@@ -1,5 +1,8 @@
 "use client";
 
+// Issue #21: Implement chunking to avoid "URI too long" error
+// when validating large batches of serial numbers
+
 import {
   IconAlertCircle,
   IconCheck,
@@ -35,6 +38,9 @@ import {
   useValidateRMASerials,
 } from "@/hooks/use-warehouse";
 
+// Issue #21: Chunk size to avoid "URI too long" error
+const SERIAL_CHUNK_SIZE = 50;
+
 interface AddProductsToRMADrawerProps {
   batchId: string;
   trigger: React.ReactNode;
@@ -49,6 +55,12 @@ interface ValidationResult {
   product_name?: string;
 }
 
+interface ValidationProgress {
+  current: number;
+  total: number;
+  percentage: number;
+}
+
 export function AddProductsToRMADrawer({
   batchId,
   trigger,
@@ -60,6 +72,8 @@ export function AddProductsToRMADrawer({
   const [validationResults, setValidationResults] = React.useState<
     ValidationResult[]
   >([]);
+  const [validationProgress, setValidationProgress] =
+    React.useState<ValidationProgress | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { validateAsync, isValidating } = useValidateRMASerials();
@@ -86,18 +100,46 @@ export function AddProductsToRMADrawer({
     reader.readAsText(file);
   };
 
+  // Issue #21: Process serials in chunks to avoid "URI too long" error
   const handleValidate = async () => {
     const serialNumbers = parseSerialNumbers(serialInput);
     if (serialNumbers.length === 0) return;
 
-    try {
-      const results = await validateAsync({
-        serial_numbers: serialNumbers,
-      });
+    setValidationProgress(null);
 
-      setValidationResults(results);
+    // Split serials into chunks
+    const chunks: string[][] = [];
+    for (let i = 0; i < serialNumbers.length; i += SERIAL_CHUNK_SIZE) {
+      chunks.push(serialNumbers.slice(i, i + SERIAL_CHUNK_SIZE));
+    }
+
+    const totalChunks = chunks.length;
+    const allResults: ValidationResult[] = [];
+
+    try {
+      // Process each chunk sequentially
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+
+        // Update progress
+        setValidationProgress({
+          current: chunkIndex + 1,
+          total: totalChunks,
+          percentage: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+        });
+
+        const results = await validateAsync({
+          serial_numbers: chunk,
+        });
+
+        allResults.push(...results);
+      }
+
+      setValidationResults(allResults);
+      setValidationProgress(null);
     } catch (error) {
       console.error("Validation error:", error);
+      setValidationProgress(null);
       // Error toast is already handled by the hook
     }
   };
@@ -214,10 +256,15 @@ export function AddProductsToRMADrawer({
                     disabled={
                       serialInput.trim().length === 0 ||
                       isValidating ||
-                      isAdding
+                      isAdding ||
+                      validationProgress !== null
                     }
                   >
-                    {isValidating ? "Đang kiểm tra..." : "Kiểm tra"}
+                    {isValidating || validationProgress
+                      ? validationProgress
+                        ? `Đang kiểm tra... (${validationProgress.current}/${validationProgress.total})`
+                        : "Đang kiểm tra..."
+                      : "Kiểm tra"}
                   </Button>
                 </div>
               </div>

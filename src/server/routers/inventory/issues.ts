@@ -510,6 +510,14 @@ export const issuesRouter = router({
         throw new Error("No serial numbers provided");
       }
 
+      // Issue #21: Validate array size to prevent "URI too long" error
+      if (input.serialNumbers.length > 100) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vui lòng chọn tối đa 100 serials/lần. Hệ thống đã tự động chia nhỏ request.",
+        });
+      }
+
       const { data: issueItem } = await ctx.supabaseAdmin
         .from("stock_issue_items")
         .select("issue_id, product_id, quantity")

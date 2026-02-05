@@ -1006,6 +1006,14 @@ export const inventoryRouter = router({
         });
       }
 
+      // Issue #21: Validate array size to prevent "URI too long" error
+      if (input.serial_numbers.length > 100) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vui lòng kiểm tra tối đa 100 serials/lần. Hệ thống đã tự động chia nhỏ request.",
+        });
+      }
+
       // Remove duplicates from input
       const uniqueSerials = Array.from(new Set(input.serial_numbers));
 

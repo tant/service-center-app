@@ -3,14 +3,14 @@
  * Public tRPC router for service requests (no authentication required)
  */
 
-import { router, publicProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getWarrantyStatus, getRemainingDays } from "@/utils/warranty";
-import type { TRPCContext } from "../trpc";
-import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
+import { type EmailType, getEmailTemplate } from "@/lib/email-templates";
+import { getRemainingDays, getWarrantyStatus } from "@/utils/warranty";
 import { TaskService } from "../services/task-service";
-import { createAutoReceipt } from "./tickets";
+import type { TRPCContext } from "../trpc";
+import { publicProcedure, router } from "../trpc";
+import { createBatchReceipt } from "./tickets";
 
 /**
  * Helper function to get authenticated user with role
@@ -65,27 +65,27 @@ async function sendEmailNotification(
     deliveryDate?: string;
   },
   serviceRequestId?: string,
-  serviceTicketId?: string
+  serviceTicketId?: string,
 ) {
   try {
     // Check rate limiting (100 emails/day per customer)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count } = await ctx.supabaseAdmin
-      .from('email_notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_email', recipientEmail)
-      .gte('created_at', oneDayAgo);
+      .from("email_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_email", recipientEmail)
+      .gte("created_at", oneDayAgo);
 
     if (count && count >= 100) {
       console.log(`[EMAIL SKIPPED] Rate limit exceeded for ${recipientEmail}`);
-      return { success: false, reason: 'rate_limit' };
+      return { success: false, reason: "rate_limit" };
     }
 
     // Check email preferences
     const { data: customer } = await ctx.supabaseAdmin
-      .from('customers')
-      .select('email_preferences')
-      .eq('email', recipientEmail)
+      .from("customers")
+      .select("email_preferences")
+      .eq("email", recipientEmail)
       .single();
 
     if (customer?.email_preferences) {
@@ -97,7 +97,7 @@ async function sendEmailNotification(
     }
 
     // Generate unsubscribe URL
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3025'}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3025"}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&type=${emailType}`;
 
     // Generate email content
     const { html, text, subject } = getEmailTemplate(emailType, {
@@ -108,7 +108,7 @@ async function sendEmailNotification(
 
     // Log email to database
     const { data: emailLog, error: logError } = await ctx.supabaseAdmin
-      .from('email_notifications')
+      .from("email_notifications")
       .insert({
         email_type: emailType,
         recipient_email: recipientEmail,
@@ -117,7 +117,7 @@ async function sendEmailNotification(
         html_body: html,
         text_body: text,
         context,
-        status: 'pending',
+        status: "pending",
         service_request_id: serviceRequestId,
         service_ticket_id: serviceTicketId,
       })
@@ -125,7 +125,7 @@ async function sendEmailNotification(
       .single();
 
     if (logError) {
-      console.error('[EMAIL ERROR] Failed to log email:', logError);
+      console.error("[EMAIL ERROR] Failed to log email:", logError);
       return { success: false, error: logError.message };
     }
 
@@ -133,33 +133,39 @@ async function sendEmailNotification(
     try {
       // Simulate sending
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'sent',
+          status: "sent",
           sent_at: new Date().toISOString(),
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
-      console.log(`[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`);
+      console.log(
+        `[EMAIL SENT] ${emailType} to ${recipientEmail} (${subject})`,
+      );
       return { success: true, emailId: emailLog.id };
     } catch (error) {
       // Mark as failed
       await ctx.supabaseAdmin
-        .from('email_notifications')
+        .from("email_notifications")
         .update({
-          status: 'failed',
+          status: "failed",
           failed_at: new Date().toISOString(),
-          error_message: error instanceof Error ? error.message : 'Unknown error',
+          error_message:
+            error instanceof Error ? error.message : "Unknown error",
           retry_count: 1,
         })
-        .eq('id', emailLog.id);
+        .eq("id", emailLog.id);
 
       console.error(`[EMAIL FAILED] ${emailType}:`, error);
       return { success: false, willRetry: true };
     }
   } catch (error) {
-    console.error('[EMAIL ERROR] Unexpected error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    console.error("[EMAIL ERROR] Unexpected error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -178,15 +184,26 @@ const requestItemSchema = z.object({
 
 const submitRequestSchema = z.object({
   customer_name: z.string().min(2, "Name must be at least 2 characters"),
-  customer_email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  customer_email: z
+    .string()
+    .email("Invalid email format")
+    .optional()
+    .or(z.literal("")),
   customer_phone: z.string().min(10, "Phone number must be at least 10 digits"),
   issue_description: z.string().min(1, "Description is required"),
-  items: z.array(requestItemSchema).min(1, "At least one product is required").max(10, "Maximum 10 products per request"),
+  items: z
+    .array(requestItemSchema)
+    .min(1, "At least one product is required")
+    .max(10, "Maximum 10 products per request"),
   receipt_status: z.enum(["received", "pending_receipt"]).default("received"),
   preferred_delivery_method: z.enum(["pickup", "delivery"]).default("pickup"),
   delivery_address: z.string().optional(),
   honeypot: z.string().optional(), // AC 12: Spam protection
-  workflow_id: z.string().uuid("Workflow ID must be valid UUID").nullable().optional(), // Service Request Inspection Workflow - nullable to match DB schema
+  workflow_id: z
+    .string()
+    .uuid("Workflow ID must be valid UUID")
+    .nullable()
+    .optional(), // Service Request Inspection Workflow - nullable to match DB schema
 });
 
 /**
@@ -205,15 +222,17 @@ export const serviceRequestRouter = router({
   lookupSerial: publicProcedure
     .input(
       z.object({
-        serial_number: z.string().min(5, "Serial number must be at least 5 characters"),
-      })
+        serial_number: z
+          .string()
+          .min(5, "Serial number must be at least 5 characters"),
+      }),
     )
     .query(async ({ ctx, input }) => {
       // Query physical_products with all necessary joins
       // Note: Must explicitly specify foreign key relationship because physical_products
       // has two FKs to virtual_warehouses (virtual_warehouse_id and previous_virtual_warehouse_id)
       const { data, error } = await ctx.supabaseAdmin
-        .from('physical_products')
+        .from("physical_products")
         .select(`
           id,
           serial_number,
@@ -238,24 +257,32 @@ export const serviceRequestRouter = router({
             )
           )
         `)
-        .eq('serial_number', input.serial_number.toUpperCase())
+        .eq("serial_number", input.serial_number.toUpperCase())
         .single();
 
       if (error || !data) {
         return {
           found: false,
           product: null,
-          error: error?.code === 'PGRST116' ? 'Serial không tìm thấy trong kho hàng đã bán' : `Database error: ${error?.message || 'Unknown'}`
+          error:
+            error?.code === "PGRST116"
+              ? "Serial không tìm thấy trong kho hàng đã bán"
+              : `Database error: ${error?.message || "Unknown"}`,
         };
       }
 
       // Check if product is in customer_installed warehouse
-      const virtualWarehouseData = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
-      if (!virtualWarehouseData || virtualWarehouseData.warehouse_type !== 'customer_installed') {
+      const virtualWarehouseData = Array.isArray(data.virtual_warehouse)
+        ? data.virtual_warehouse[0]
+        : data.virtual_warehouse;
+      if (
+        !virtualWarehouseData ||
+        virtualWarehouseData.warehouse_type !== "customer_installed"
+      ) {
         return {
           found: false,
           product: null,
-          error: 'Serial không tìm thấy trong kho hàng đã bán'
+          error: "Serial không tìm thấy trong kho hàng đã bán",
         };
       }
 
@@ -263,9 +290,9 @@ export const serviceRequestRouter = router({
       let customerData = null;
       if (data.last_known_customer_id) {
         const { data: customer } = await ctx.supabaseAdmin
-          .from('customers')
-          .select('id, name')
-          .eq('id', data.last_known_customer_id)
+          .from("customers")
+          .select("id, name")
+          .eq("id", data.last_known_customer_id)
           .single();
         customerData = customer;
       }
@@ -274,60 +301,79 @@ export const serviceRequestRouter = router({
       let ticketData = null;
       if (data.current_ticket_id) {
         const { data: ticket } = await ctx.supabaseAdmin
-          .from('service_tickets')
-          .select('id, ticket_number')
-          .eq('id', data.current_ticket_id)
+          .from("service_tickets")
+          .select("id, ticket_number")
+          .eq("id", data.current_ticket_id)
           .single();
         ticketData = ticket;
       }
 
       // Calculate warranty status
-      const effectiveWarrantyDate = data.user_warranty_end_date || data.manufacturer_warranty_end_date;
-      let warrantyStatus: 'active' | 'expiring_soon' | 'expired' | 'no_warranty' = 'no_warranty';
+      const effectiveWarrantyDate =
+        data.user_warranty_end_date || data.manufacturer_warranty_end_date;
+      let warrantyStatus:
+        | "active"
+        | "expiring_soon"
+        | "expired"
+        | "no_warranty" = "no_warranty";
       let daysRemaining: number | null = null;
 
       if (effectiveWarrantyDate) {
         const endDate = new Date(effectiveWarrantyDate);
         const today = new Date();
-        daysRemaining = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        daysRemaining = Math.floor(
+          (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         if (daysRemaining < 0) {
-          warrantyStatus = 'expired';
+          warrantyStatus = "expired";
         } else if (daysRemaining <= 30) {
-          warrantyStatus = 'expiring_soon';
+          warrantyStatus = "expiring_soon";
         } else {
-          warrantyStatus = 'active';
+          warrantyStatus = "active";
         }
       }
 
       // Extract nested data (handle Supabase array wrapping)
-      const productData = Array.isArray(data.product) ? data.product[0] : data.product;
-      const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
-      const virtualWarehouse = Array.isArray(data.virtual_warehouse) ? data.virtual_warehouse[0] : data.virtual_warehouse;
+      const productData = Array.isArray(data.product)
+        ? data.product[0]
+        : data.product;
+      const brandData = productData?.brand
+        ? Array.isArray(productData.brand)
+          ? productData.brand[0]
+          : productData.brand
+        : null;
+      const virtualWarehouse = Array.isArray(data.virtual_warehouse)
+        ? data.virtual_warehouse[0]
+        : data.virtual_warehouse;
       const physicalWarehouse = virtualWarehouse?.physical_warehouse
-        ? (Array.isArray(virtualWarehouse.physical_warehouse) ? virtualWarehouse.physical_warehouse[0] : virtualWarehouse.physical_warehouse)
+        ? Array.isArray(virtualWarehouse.physical_warehouse)
+          ? virtualWarehouse.physical_warehouse[0]
+          : virtualWarehouse.physical_warehouse
         : null;
 
       return {
         found: true,
         product: {
-          id: productData?.id || '',
-          name: productData?.name || 'Unknown',
-          sku: productData?.sku || '',
-          brand: brandData?.name || 'Unknown',
+          id: productData?.id || "",
+          name: productData?.name || "Unknown",
+          sku: productData?.sku || "",
+          brand: brandData?.name || "Unknown",
           warranty_status: warrantyStatus,
           warranty_end_date: effectiveWarrantyDate,
           manufacturer_warranty_end_date: data.manufacturer_warranty_end_date,
           user_warranty_end_date: data.user_warranty_end_date,
           days_remaining: daysRemaining,
-          last_customer: customerData ? {
-            id: customerData.id,
-            name: customerData.name,
-          } : null,
+          last_customer: customerData
+            ? {
+                id: customerData.id,
+                name: customerData.name,
+              }
+            : null,
           current_location: {
-            physical_warehouse: physicalWarehouse?.name || 'Unknown',
-            virtual_warehouse: virtualWarehouse?.name || 'Unknown',
-            warehouse_type: virtualWarehouse?.warehouse_type || 'main',
+            physical_warehouse: physicalWarehouse?.name || "Unknown",
+            virtual_warehouse: virtualWarehouse?.name || "Unknown",
+            warehouse_type: virtualWarehouse?.warehouse_type || "main",
           },
           service_history_count: 0, // TODO: Calculate from service tickets
           current_ticket_id: data.current_ticket_id,
@@ -345,7 +391,7 @@ export const serviceRequestRouter = router({
     .input(
       z.object({
         serial_number: z.string().min(1, "Serial number is required"),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // AC: IV3 - Read-only query, no modifications
@@ -363,7 +409,7 @@ export const serviceRequestRouter = router({
             sku,
             brand:brands(name)
           )
-        `
+        `,
         )
         .eq("serial_number", input.serial_number.toUpperCase())
         .single();
@@ -377,7 +423,10 @@ export const serviceRequestRouter = router({
       }
 
       // Use warranty end date - prioritize user warranty, fallback to manufacturer
-      const warrantyEndDate = product.user_warranty_end_date || product.manufacturer_warranty_end_date || null;
+      const warrantyEndDate =
+        product.user_warranty_end_date ||
+        product.manufacturer_warranty_end_date ||
+        null;
 
       const warrantyStatus = warrantyEndDate
         ? getWarrantyStatus(warrantyEndDate)
@@ -392,8 +441,14 @@ export const serviceRequestRouter = router({
         warrantyStatus === "active" || warrantyStatus === "expiring_soon";
 
       // Extract product data (Supabase returns array for foreign key relations)
-      const productData = Array.isArray(product.product) ? product.product[0] : product.product;
-      const brandData = productData?.brand ? (Array.isArray(productData.brand) ? productData.brand[0] : productData.brand) : null;
+      const productData = Array.isArray(product.product)
+        ? product.product[0]
+        : product.product;
+      const brandData = productData?.brand
+        ? Array.isArray(productData.brand)
+          ? productData.brand[0]
+          : productData.brand
+        : null;
 
       return {
         found: true,
@@ -415,8 +470,8 @@ export const serviceRequestRouter = router({
         message: eligible
           ? "Your product is eligible for warranty service."
           : warrantyStatus === "expired"
-          ? "Your warranty has expired. Paid service options available."
-          : "No warranty information available for this product.",
+            ? "Your warranty has expired. Paid service options available."
+            : "No warranty information available for this product.",
       };
     }),
 
@@ -438,7 +493,10 @@ export const serviceRequestRouter = router({
       }
 
       // AC 3: Validate delivery address if delivery method selected
-      if (input.preferred_delivery_method === "delivery" && !input.delivery_address) {
+      if (
+        input.preferred_delivery_method === "delivery" &&
+        !input.delivery_address
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Delivery address is required for delivery method",
@@ -460,28 +518,30 @@ export const serviceRequestRouter = router({
               message: `Serial number not found: ${item.serial_number}`,
             });
           }
-        })
+        }),
       );
 
       // Extract IP address from request headers
       const submittedIp =
-        ctx.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        ctx.req.headers.get('x-real-ip') ||
+        ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        ctx.req.headers.get("x-real-ip") ||
         null;
 
       // Extract User-Agent from request headers
-      const userAgent = ctx.req.headers.get('user-agent') || null;
+      const userAgent = ctx.req.headers.get("user-agent") || null;
 
       // Check if user is authenticated (staff submission)
       let reviewedById: string | null = null;
       try {
-        const { data: { user } } = await ctx.supabaseClient.auth.getUser();
+        const {
+          data: { user },
+        } = await ctx.supabaseClient.auth.getUser();
         if (user) {
           // Get profile ID from user ID
           const { data: profile } = await ctx.supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .eq('user_id', user.id)
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
             .single();
 
           if (profile) {
@@ -490,7 +550,7 @@ export const serviceRequestRouter = router({
         }
       } catch (authError) {
         // Not authenticated - public submission, reviewedById stays null
-        console.log('[SERVICE REQUEST] Public submission (not authenticated)');
+        console.log("[SERVICE REQUEST] Public submission (not authenticated)");
       }
 
       // AC 2, 3: Create service request
@@ -498,7 +558,8 @@ export const serviceRequestRouter = router({
       // AC 6: Status based on receipt_status
       //   - receipt_status = 'received' → status = 'received' (triggers auto ticket creation)
       //   - receipt_status = 'pending_receipt' → status = 'pickingup' (waiting for pickup)
-      const initialStatus = input.receipt_status === 'received' ? 'received' : 'pickingup';
+      const initialStatus =
+        input.receipt_status === "received" ? "received" : "pickingup";
 
       // Always insert with pending_receipt first, then update after items exist
       // This prevents trigger from running before items are inserted
@@ -509,13 +570,13 @@ export const serviceRequestRouter = router({
           customer_email: input.customer_email,
           customer_phone: input.customer_phone,
           issue_description: input.issue_description,
-          receipt_status: 'pending_receipt',
+          receipt_status: "pending_receipt",
           delivery_method: input.preferred_delivery_method || null,
           delivery_address:
             input.preferred_delivery_method === "delivery"
               ? input.delivery_address
               : null,
-          status: 'submitted',
+          status: "submitted",
           reviewed_by_id: reviewedById, // Set if authenticated staff submission
           submitted_ip: submittedIp,
           user_agent: userAgent,
@@ -539,7 +600,7 @@ export const serviceRequestRouter = router({
             request_id: request.id,
             serial_number: item.serial_number,
             issue_description: item.issue_description,
-          }))
+          })),
         );
 
       if (itemsError) {
@@ -561,14 +622,14 @@ export const serviceRequestRouter = router({
         try {
           const taskService = new TaskService(ctx);
           const taskCount = await taskService.createTasksFromWorkflow({
-            entityType: 'service_request',
+            entityType: "service_request",
             entityId: request.id,
             workflowId: input.workflow_id,
             createdById: undefined, // Public submission, no user
           });
 
           console.log(
-            `[SERVICE REQUEST] Created ${taskCount} tasks from workflow for ${request.tracking_token}`
+            `[SERVICE REQUEST] Created ${taskCount} tasks from workflow for ${request.tracking_token}`,
           );
         } catch (workflowError) {
           // Rollback request and items if workflow task creation fails
@@ -579,7 +640,7 @@ export const serviceRequestRouter = router({
 
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : 'Unknown error'}`,
+            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : "Unknown error"}`,
           });
         }
       }
@@ -596,7 +657,10 @@ export const serviceRequestRouter = router({
         .eq("id", request.id);
 
       if (updateError) {
-        console.error('[UPDATE ERROR] Failed to update receipt status:', updateError);
+        console.error(
+          "[UPDATE ERROR] Failed to update receipt status:",
+          updateError,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to update request status: ${updateError.message}`,
@@ -604,7 +668,7 @@ export const serviceRequestRouter = router({
       }
 
       // Auto-receipt products to in_service warehouse when received (Phiếu Nhập Kho)
-      // Tickets are auto-created by DB trigger above; now receive products into in_service
+      // Follows inventory standard: 1 service request receive event = 1 receipt document
       if (input.receipt_status === "received") {
         try {
           const { data: inServiceWh } = await ctx.supabaseAdmin
@@ -614,6 +678,15 @@ export const serviceRequestRouter = router({
             .single();
 
           if (inServiceWh && reviewedById) {
+            // Group items by product_id for batch receipt
+            const productGroups = new Map<
+              string,
+              Array<{
+                serialNumber: string;
+                physicalProductId: string;
+              }>
+            >();
+
             for (const item of input.items) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
@@ -622,36 +695,55 @@ export const serviceRequestRouter = router({
                 .single();
 
               if (product) {
-                const { data: ticket } = await ctx.supabaseAdmin
-                  .from("service_tickets")
-                  .select("id, customer_id")
-                  .eq("request_id", request.id)
-                  .eq("serial_number", item.serial_number)
-                  .single();
-
-                const customerId = ticket?.customer_id;
-                if (customerId && reviewedById) {
-                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
-                    warehouseId: inServiceWh.id,
-                    reason: "customer_return",
-                    customerId,
-                    physicalProductId: product.id,
-                    serialNumber: product.serial_number,
-                    productId: product.product_id,
-                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
-                    createdById: reviewedById,
-                  });
-
-                  console.log(
-                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
-                  );
-                }
+                const group = productGroups.get(product.product_id) ?? [];
+                group.push({
+                  serialNumber: product.serial_number,
+                  physicalProductId: product.id,
+                });
+                productGroups.set(product.product_id, group);
               }
+            }
+
+            // Get customer_id from any ticket (all tickets in same request have same customer)
+            const { data: anyTicket } = await ctx.supabaseAdmin
+              .from("service_tickets")
+              .select("customer_id")
+              .eq("request_id", request.id)
+              .limit(1)
+              .single();
+
+            const customerId = anyTicket?.customer_id;
+
+            if (customerId && productGroups.size > 0) {
+              // Create ONE batch receipt for all products
+              const batchItems = Array.from(productGroups.entries()).map(
+                ([productId, serials]) => ({
+                  productId,
+                  serials,
+                }),
+              );
+
+              const receipt = await createBatchReceipt(ctx.supabaseAdmin, {
+                warehouseId: inServiceWh.id,
+                reason: "customer_return",
+                customerId,
+                requestId: request.id,
+                notes: `Auto: Nhận ${input.items.length} sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
+                createdById: reviewedById,
+                items: batchItems,
+              });
+
+              console.log(
+                `[RECEIVE] Created batch receipt ${receipt.receiptNumber} for ${input.items.length} products from request ${request.tracking_token}`,
+              );
             }
           }
         } catch (receiptError) {
           // Don't fail the request submission if receipt fails
-          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
+          console.error(
+            "[RECEIPT ERROR] Failed to auto-receipt products:",
+            receiptError,
+          );
         }
       }
 
@@ -659,24 +751,28 @@ export const serviceRequestRouter = router({
 
       // Story 1.15: Send email notification (async, non-blocking)
       // Only send if customer provided email
-      if (input.customer_email && input.customer_email.trim() !== '') {
-        const productSummary = input.items.length === 1
-          ? `Serial: ${input.items[0].serial_number}`
-          : `${input.items.length} sản phẩm`;
+      if (input.customer_email && input.customer_email.trim() !== "") {
+        const productSummary =
+          input.items.length === 1
+            ? `Serial: ${input.items[0].serial_number}`
+            : `${input.items.length} sản phẩm`;
 
         sendEmailNotification(
           ctx,
-          'request_submitted',
+          "request_submitted",
           input.customer_email,
           input.customer_name,
           {
             trackingToken: request.tracking_token,
             productName: productSummary,
-            serialNumber: input.items.length === 1 ? input.items[0].serial_number : undefined,
+            serialNumber:
+              input.items.length === 1
+                ? input.items[0].serial_number
+                : undefined,
           },
-          request.id
+          request.id,
         ).catch((err) => {
-          console.error('[EMAIL ERROR] request_submitted failed:', err);
+          console.error("[EMAIL ERROR] request_submitted failed:", err);
         });
       }
 
@@ -708,10 +804,10 @@ export const serviceRequestRouter = router({
 
       // Extract IP and User-Agent
       const submittedIp =
-        ctx.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        ctx.req.headers.get('x-real-ip') ||
+        ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        ctx.req.headers.get("x-real-ip") ||
         null;
-      const userAgent = ctx.req.headers.get('user-agent') || null;
+      const userAgent = ctx.req.headers.get("user-agent") || null;
 
       // Create draft request
       const { data: request, error: requestError } = await ctx.supabaseAdmin
@@ -751,7 +847,7 @@ export const serviceRequestRouter = router({
             request_id: request.id,
             serial_number: item.serial_number,
             issue_description: item.issue_description,
-          }))
+          })),
         );
 
       if (itemsError) {
@@ -838,7 +934,7 @@ export const serviceRequestRouter = router({
       z.object({
         request_id: z.string().uuid(),
         data: submitRequestSchema,
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Require authentication
@@ -919,7 +1015,7 @@ export const serviceRequestRouter = router({
             request_id: input.request_id,
             serial_number: item.serial_number,
             issue_description: item.issue_description,
-          }))
+          })),
         );
 
       if (itemsError) {
@@ -946,7 +1042,7 @@ export const serviceRequestRouter = router({
     .input(
       z.object({
         tracking_token: z.string().min(1, "Tracking token is required"),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const { data: request, error } = await ctx.supabaseAdmin
@@ -958,7 +1054,8 @@ export const serviceRequestRouter = router({
       if (error || !request) {
         return {
           found: false,
-          message: "Request not found. Please check your tracking token and try again.",
+          message:
+            "Request not found. Please check your tracking token and try again.",
         };
       }
 
@@ -974,12 +1071,16 @@ export const serviceRequestRouter = router({
       // AC 6: Mask customer email for privacy (show first 3 chars + ***@domain)
       const maskedEmail = request.customer_email.replace(
         /^(.{3})(.*)(@.*)$/,
-        (_: string, p1: string, p2: string, p3: string) => p1 + "*".repeat(Math.min(p2.length, 10)) + p3
+        (_: string, p1: string, p2: string, p3: string) =>
+          p1 + "*".repeat(Math.min(p2.length, 10)) + p3,
       );
 
       // AC 6: Mask customer phone for privacy (show last 4 digits only)
       const maskedPhone = request.customer_phone
-        ? request.customer_phone.replace(/^(.*)(.{4})$/, (_: string, p1: string, p2: string) => "*".repeat(p1.length) + p2)
+        ? request.customer_phone.replace(
+            /^(.*)(.{4})$/,
+            (_: string, p1: string, p2: string) => "*".repeat(p1.length) + p2,
+          )
         : null;
 
       // AC 5: Build status timeline
@@ -1000,7 +1101,9 @@ export const serviceRequestRouter = router({
           status: "processing",
           label: "Processing",
           timestamp: request.converted_at,
-          completed: !!request.converted_at || ["processing", "completed"].includes(request.status),
+          completed:
+            !!request.converted_at ||
+            ["processing", "completed"].includes(request.status),
         },
         {
           status: "completed",
@@ -1011,29 +1114,30 @@ export const serviceRequestRouter = router({
       ];
 
       // Map items with their tickets
-      const requestItems = items?.map((item) => {
-        const ticketData = item.ticket
-          ? Array.isArray(item.ticket)
-            ? item.ticket[0]
-            : item.ticket
-          : null;
+      const requestItems =
+        items?.map((item) => {
+          const ticketData = item.ticket
+            ? Array.isArray(item.ticket)
+              ? item.ticket[0]
+              : item.ticket
+            : null;
 
-        return {
-          id: item.id,
-          product_brand: item.product_brand,
-          product_model: item.product_model,
-          serial_number: item.serial_number,
-          purchase_date: item.purchase_date,
-          issue_description: item.issue_description,
-          linked_ticket: ticketData
-            ? {
-                id: ticketData.id,
-                ticket_number: ticketData.ticket_number,
-                status: ticketData.status,
-              }
-            : null,
-        };
-      }) || [];
+          return {
+            id: item.id,
+            product_brand: item.product_brand,
+            product_model: item.product_model,
+            serial_number: item.serial_number,
+            purchase_date: item.purchase_date,
+            issue_description: item.issue_description,
+            linked_ticket: ticketData
+              ? {
+                  id: ticketData.id,
+                  ticket_number: ticketData.ticket_number,
+                  status: ticketData.status,
+                }
+              : null,
+          };
+        }) || [];
 
       return {
         found: true,
@@ -1045,7 +1149,10 @@ export const serviceRequestRouter = router({
           customer_phone: maskedPhone,
           issue_description: request.issue_description,
           delivery_method: request.delivery_method,
-          delivery_address: request.delivery_method === "delivery" ? request.delivery_address : null,
+          delivery_address:
+            request.delivery_method === "delivery"
+              ? request.delivery_address
+              : null,
           submitted_at: request.created_at,
           items: requestItems,
           timeline,
@@ -1068,7 +1175,7 @@ export const serviceRequestRouter = router({
         search: z.string().optional(),
         limit: z.number().min(1).max(100).default(100),
         offset: z.number().min(0).default(0),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       // Role-based access control
@@ -1081,15 +1188,13 @@ export const serviceRequestRouter = router({
         });
       }
 
-      let query = ctx.supabaseAdmin
-        .from("service_requests")
-        .select(
-          `
+      let query = ctx.supabaseAdmin.from("service_requests").select(
+        `
           *,
           linked_ticket:service_tickets(id, ticket_number, status)
         `,
-          { count: "exact" }
-        );
+        { count: "exact" },
+      );
 
       // Status filter
       if (input.status) {
@@ -1103,7 +1208,7 @@ export const serviceRequestRouter = router({
       if (input.search) {
         const searchPattern = `%${input.search}%`;
         query = query.or(
-          `tracking_token.ilike.${searchPattern},customer_name.ilike.${searchPattern},serial_number.ilike.${searchPattern}`
+          `tracking_token.ilike.${searchPattern},customer_name.ilike.${searchPattern},serial_number.ilike.${searchPattern}`,
         );
       }
 
@@ -1159,7 +1264,7 @@ export const serviceRequestRouter = router({
             description,
             entity_type
           )
-        `
+        `,
         )
         .eq("id", input.request_id)
         .single();
@@ -1183,7 +1288,7 @@ export const serviceRequestRouter = router({
       z.object({
         request_id: z.string().uuid(),
         status: z.enum(["received", "processing"]),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Role-based access control
@@ -1222,10 +1327,14 @@ export const serviceRequestRouter = router({
       }
 
       // Story 1.15: Send email notification when status changes to 'received'
-      if (input.status === 'received' && data.customer_email && data.customer_email.trim() !== '') {
+      if (
+        input.status === "received" &&
+        data.customer_email &&
+        data.customer_email.trim() !== ""
+      ) {
         sendEmailNotification(
           ctx,
-          'request_received',
+          "request_received",
           data.customer_email,
           data.customer_name,
           {
@@ -1233,13 +1342,14 @@ export const serviceRequestRouter = router({
             productName: data.product_model,
             serialNumber: data.serial_number,
           },
-          data.id
+          data.id,
         ).catch((err) => {
-          console.error('[EMAIL ERROR] request_received failed:', err);
+          console.error("[EMAIL ERROR] request_received failed:", err);
         });
       }
 
       // Auto-receipt products to in_service when status changes to received (Phiếu Nhập Kho)
+      // Follows inventory standard: 1 service request receive event = 1 receipt document
       if (input.status === "received") {
         try {
           const { data: inServiceWh } = await ctx.supabaseAdmin
@@ -1255,6 +1365,15 @@ export const serviceRequestRouter = router({
               .select("serial_number")
               .eq("request_id", input.request_id);
 
+            // Group items by product_id for batch receipt
+            const productGroups = new Map<
+              string,
+              Array<{
+                serialNumber: string;
+                physicalProductId: string;
+              }>
+            >();
+
             for (const item of items || []) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
@@ -1263,34 +1382,54 @@ export const serviceRequestRouter = router({
                 .single();
 
               if (product) {
-                const { data: ticket } = await ctx.supabaseAdmin
-                  .from("service_tickets")
-                  .select("id, customer_id")
-                  .eq("request_id", input.request_id)
-                  .eq("serial_number", item.serial_number)
-                  .single();
-
-                if (ticket?.customer_id) {
-                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
-                    warehouseId: inServiceWh.id,
-                    reason: "customer_return",
-                    customerId: ticket.customer_id,
-                    physicalProductId: product.id,
-                    serialNumber: product.serial_number,
-                    productId: product.product_id,
-                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${data.tracking_token}`,
-                    createdById: profile.id,
-                  });
-
-                  console.log(
-                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
-                  );
-                }
+                const group = productGroups.get(product.product_id) ?? [];
+                group.push({
+                  serialNumber: product.serial_number,
+                  physicalProductId: product.id,
+                });
+                productGroups.set(product.product_id, group);
               }
+            }
+
+            // Get customer_id from any ticket (all tickets in same request have same customer)
+            const { data: anyTicket } = await ctx.supabaseAdmin
+              .from("service_tickets")
+              .select("customer_id")
+              .eq("request_id", input.request_id)
+              .limit(1)
+              .single();
+
+            const customerId = anyTicket?.customer_id;
+
+            if (customerId && productGroups.size > 0) {
+              // Create ONE batch receipt for all products
+              const batchItems = Array.from(productGroups.entries()).map(
+                ([productId, serials]) => ({
+                  productId,
+                  serials,
+                }),
+              );
+
+              const receipt = await createBatchReceipt(ctx.supabaseAdmin, {
+                warehouseId: inServiceWh.id,
+                reason: "customer_return",
+                customerId,
+                requestId: input.request_id,
+                notes: `Auto: Nhận ${items?.length || 0} sản phẩm vào kho sửa chữa - Yêu cầu ${data.tracking_token}`,
+                createdById: profile.id,
+                items: batchItems,
+              });
+
+              console.log(
+                `[RECEIVE] Created batch receipt ${receipt.receiptNumber} for ${items?.length || 0} products from request ${data.tracking_token}`,
+              );
             }
           }
         } catch (receiptError) {
-          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
+          console.error(
+            "[RECEIPT ERROR] Failed to auto-receipt products:",
+            receiptError,
+          );
         }
       }
 
@@ -1330,8 +1469,10 @@ export const serviceRequestRouter = router({
     .input(
       z.object({
         request_id: z.string().uuid(),
-        cancellation_reason: z.string().min(10, "Cancellation reason must be at least 10 characters"),
-      })
+        cancellation_reason: z
+          .string()
+          .min(10, "Cancellation reason must be at least 10 characters"),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Role-based access control
@@ -1364,10 +1505,10 @@ export const serviceRequestRouter = router({
       }
 
       // Story 1.15: Send rejection email notification
-      if (data.customer_email && data.customer_email.trim() !== '') {
+      if (data.customer_email && data.customer_email.trim() !== "") {
         sendEmailNotification(
           ctx,
-          'request_rejected',
+          "request_rejected",
           data.customer_email,
           data.customer_name,
           {
@@ -1376,9 +1517,9 @@ export const serviceRequestRouter = router({
             serialNumber: data.serial_number,
             rejectionReason: input.cancellation_reason,
           },
-          data.id
+          data.id,
         ).catch((err) => {
-          console.error('[EMAIL ERROR] request_rejected failed:', err);
+          console.error("[EMAIL ERROR] request_rejected failed:", err);
         });
       }
 
@@ -1417,7 +1558,7 @@ export const serviceRequestRouter = router({
       z.object({
         request_id: z.string().uuid(),
         data: submitRequestSchema,
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Require authentication
@@ -1466,10 +1607,11 @@ export const serviceRequestRouter = router({
               message: `Serial number not found: ${item.serial_number}`,
             });
           }
-        })
+        }),
       );
 
-      const initialStatus = input.data.receipt_status === 'received' ? 'received' : 'pickingup';
+      const initialStatus =
+        input.data.receipt_status === "received" ? "received" : "pickingup";
 
       // Update request with pending_receipt first (to prevent trigger from running too early)
       const { error: updateError } = await ctx.supabaseAdmin
@@ -1479,13 +1621,13 @@ export const serviceRequestRouter = router({
           customer_email: input.data.customer_email,
           customer_phone: input.data.customer_phone,
           issue_description: input.data.issue_description,
-          receipt_status: 'pending_receipt',
+          receipt_status: "pending_receipt",
           delivery_method: input.data.preferred_delivery_method || null,
           delivery_address:
             input.data.preferred_delivery_method === "delivery"
               ? input.data.delivery_address
               : null,
-          status: 'submitted',
+          status: "submitted",
           reviewed_by_id: profile.id,
           updated_at: new Date().toISOString(),
         })
@@ -1511,7 +1653,7 @@ export const serviceRequestRouter = router({
             request_id: input.request_id,
             serial_number: item.serial_number,
             issue_description: item.issue_description,
-          }))
+          })),
         );
 
       if (itemsError) {
@@ -1527,19 +1669,19 @@ export const serviceRequestRouter = router({
         try {
           const taskService = new TaskService(ctx);
           const taskCount = await taskService.createTasksFromWorkflow({
-            entityType: 'service_request',
+            entityType: "service_request",
             entityId: input.request_id,
             workflowId: input.data.workflow_id,
             createdById: profile.id, // Use user.id (auth.users.id) for FK constraint
           });
 
           console.log(
-            `[SUBMIT DRAFT] Created ${taskCount} tasks from workflow for ${request.tracking_token}`
+            `[SUBMIT DRAFT] Created ${taskCount} tasks from workflow for ${request.tracking_token}`,
           );
         } catch (workflowError) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : 'Unknown error'}`,
+            message: `Failed to create workflow tasks: ${workflowError instanceof Error ? workflowError.message : "Unknown error"}`,
           });
         }
       }
@@ -1563,6 +1705,7 @@ export const serviceRequestRouter = router({
       }
 
       // Auto-receipt products to in_service when received (Phiếu Nhập Kho)
+      // Follows inventory standard: 1 service request receive event = 1 receipt document
       if (input.data.receipt_status === "received") {
         try {
           const { data: inServiceWh } = await ctx.supabaseAdmin
@@ -1572,6 +1715,15 @@ export const serviceRequestRouter = router({
             .single();
 
           if (inServiceWh) {
+            // Group items by product_id for batch receipt
+            const productGroups = new Map<
+              string,
+              Array<{
+                serialNumber: string;
+                physicalProductId: string;
+              }>
+            >();
+
             for (const item of input.data.items) {
               const { data: product } = await ctx.supabaseAdmin
                 .from("physical_products")
@@ -1580,34 +1732,54 @@ export const serviceRequestRouter = router({
                 .single();
 
               if (product) {
-                const { data: ticket } = await ctx.supabaseAdmin
-                  .from("service_tickets")
-                  .select("id, customer_id")
-                  .eq("request_id", input.request_id)
-                  .eq("serial_number", item.serial_number)
-                  .single();
-
-                if (ticket?.customer_id) {
-                  const receipt = await createAutoReceipt(ctx.supabaseAdmin, {
-                    warehouseId: inServiceWh.id,
-                    reason: "customer_return",
-                    customerId: ticket.customer_id,
-                    physicalProductId: product.id,
-                    serialNumber: product.serial_number,
-                    productId: product.product_id,
-                    notes: `Auto: Nhận sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
-                    createdById: profile.id,
-                  });
-
-                  console.log(
-                    `[RECEIVE] Receipt ${product.serial_number} to in_service: ${receipt.receiptNumber}`,
-                  );
-                }
+                const group = productGroups.get(product.product_id) ?? [];
+                group.push({
+                  serialNumber: product.serial_number,
+                  physicalProductId: product.id,
+                });
+                productGroups.set(product.product_id, group);
               }
+            }
+
+            // Get customer_id from any ticket (all tickets in same request have same customer)
+            const { data: anyTicket } = await ctx.supabaseAdmin
+              .from("service_tickets")
+              .select("customer_id")
+              .eq("request_id", input.request_id)
+              .limit(1)
+              .single();
+
+            const customerId = anyTicket?.customer_id;
+
+            if (customerId && productGroups.size > 0) {
+              // Create ONE batch receipt for all products
+              const batchItems = Array.from(productGroups.entries()).map(
+                ([productId, serials]) => ({
+                  productId,
+                  serials,
+                }),
+              );
+
+              const receipt = await createBatchReceipt(ctx.supabaseAdmin, {
+                warehouseId: inServiceWh.id,
+                reason: "customer_return",
+                customerId,
+                requestId: input.request_id,
+                notes: `Auto: Nhận ${input.data.items.length} sản phẩm vào kho sửa chữa - Yêu cầu ${request.tracking_token}`,
+                createdById: profile.id,
+                items: batchItems,
+              });
+
+              console.log(
+                `[RECEIVE] Created batch receipt ${receipt.receiptNumber} for ${input.data.items.length} products from request ${request.tracking_token}`,
+              );
             }
           }
         } catch (receiptError) {
-          console.error("[RECEIPT ERROR] Failed to auto-receipt products:", receiptError);
+          console.error(
+            "[RECEIPT ERROR] Failed to auto-receipt products:",
+            receiptError,
+          );
         }
       }
 

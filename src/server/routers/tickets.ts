@@ -1,22 +1,22 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
-import { createAutoComment } from "../utils/auto-comment";
-import { formatCurrency } from "../utils/format-currency";
-import { PRIORITY_LABELS, WARRANTY_LABELS } from "../utils/label-helpers";
-import { getProfileIdFromUserId } from "../utils/profile-helpers";
 import {
   STATUS_FLOW,
   VALID_STATUS_TRANSITIONS,
 } from "@/lib/constants/ticket-status";
-import { getEmailTemplate, type EmailType } from "@/lib/email-templates";
-import type { TRPCContext } from "../trpc";
+import { type EmailType, getEmailTemplate } from "@/lib/email-templates";
 import {
-  requireAnyAuthenticated,
-  requireOperationsStaff,
-  requireManagerOrAbove,
   requireAdmin,
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+  requireOperationsStaff,
 } from "../middleware/requireRole";
+import type { TRPCContext } from "../trpc";
+import { publicProcedure, router } from "../trpc";
 import { logAudit } from "../utils/auditLog";
+import { createAutoComment } from "../utils/auto-comment";
+import { formatCurrency } from "../utils/format-currency";
+import { PRIORITY_LABELS, WARRANTY_LABELS } from "../utils/label-helpers";
+import { getProfileIdFromUserId } from "../utils/profile-helpers";
 import {
   createTasksFromWorkflow,
   getTicketTasksWithProgress,
@@ -325,6 +325,119 @@ export async function createAutoReceipt(
     throw new Error(
       `Lỗi thêm serial vào phiếu nhập kho: ${serialError.message}`,
     );
+  }
+
+  return {
+    receiptId: receipt.id,
+    receiptNumber: receipt.receipt_number,
+  };
+}
+
+/**
+ * Helper function to create a batch stock receipt (Phiếu Nhập Kho - nhiều sản phẩm)
+ * Used when multiple products enter the service center from the same event
+ * Follows inventory standard: 1 receive event = 1 receipt document
+ *
+ * WORKFLOW:
+ * 1. Create 1 receipt header
+ * 2. For each unique product_id: create 1 receipt_item
+ * 3. For each serial in that product: add to stock_receipt_serials
+ *
+ * EXAMPLE:
+ * Input: [iPhone(S001), iPhone(S002), MacBook(S003)]
+ * Output: 1 receipt with 2 items:
+ *   - Item 1: iPhone (qty=2, serials: S001, S002)
+ *   - Item 2: MacBook (qty=1, serials: S003)
+ */
+export async function createBatchReceipt(
+  supabaseAdmin: TRPCContext["supabaseAdmin"],
+  params: {
+    warehouseId: string;
+    reason: "purchase" | "customer_return" | "rma_return";
+    customerId?: string;
+    requestId?: string;
+    notes: string;
+    createdById: string;
+    items: Array<{
+      productId: string;
+      serials: Array<{
+        serialNumber: string;
+        physicalProductId: string;
+      }>;
+    }>;
+  },
+): Promise<{ receiptId: string; receiptNumber: string }> {
+  const {
+    warehouseId,
+    reason,
+    customerId,
+    requestId,
+    notes,
+    createdById,
+    items,
+  } = params;
+
+  // 1. Create receipt header
+  const { data: receipt, error: receiptError } = await supabaseAdmin
+    .from("stock_receipts")
+    .insert({
+      virtual_warehouse_id: warehouseId,
+      reason,
+      customer_id: customerId,
+      request_id: requestId,
+      notes,
+      created_by_id: createdById,
+    })
+    .select("id, receipt_number")
+    .single();
+
+  if (receiptError || !receipt) {
+    throw new Error(`Lỗi tạo phiếu nhập kho: ${receiptError?.message}`);
+  }
+
+  // 2. Create receipt items (one per unique product_id)
+  for (const item of items) {
+    console.log(`[BATCH RECEIPT] Processing item:`, {
+      productId: item.productId,
+      serialCount: item.serials.length,
+      serials: item.serials,
+    });
+
+    const { data: receiptItem, error: itemError } = await supabaseAdmin
+      .from("stock_receipt_items")
+      .insert({
+        receipt_id: receipt.id,
+        product_id: item.productId,
+        declared_quantity: item.serials.length, // Actual quantity
+      })
+      .select("id")
+      .single();
+
+    if (itemError || !receiptItem) {
+      throw new Error(`Lỗi tạo item nhập kho: ${itemError?.message}`);
+    }
+
+    // 3. Add all serials for this product
+    const serialInserts = item.serials.map((serial) => ({
+      receipt_item_id: receiptItem.id,
+      serial_number: serial.serialNumber,
+      physical_product_id: serial.physicalProductId,
+    }));
+
+    console.log(`[BATCH RECEIPT] Inserting ${serialInserts.length} serials:`, serialInserts);
+
+    const { error: serialError } = await supabaseAdmin
+      .from("stock_receipt_serials")
+      .insert(serialInserts);
+
+    if (serialError) {
+      console.error(`[BATCH RECEIPT ERROR] Failed to insert serials:`, serialError);
+      throw new Error(
+        `Lỗi thêm serial vào phiếu nhập kho: ${serialError.message}`,
+      );
+    }
+
+    console.log(`[BATCH RECEIPT] Successfully inserted ${serialInserts.length} serials`);
   }
 
   return {
@@ -2180,7 +2293,12 @@ ${changes.join("\n")}
           (w) => w.warehouse_type === "dead_stock",
         );
 
-        if (!warrantyWarehouse || !customerWarehouse || !inServiceWarehouse || !deadStockWarehouse) {
+        if (
+          !warrantyWarehouse ||
+          !customerWarehouse ||
+          !inServiceWarehouse ||
+          !deadStockWarehouse
+        ) {
           throw new Error(
             "Không tìm thấy đủ cấu hình kho ảo (warranty_stock, customer_installed, in_service, dead_stock)",
           );

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.stock_receipts (
   -- Receipt reason (track origin of goods)
   reason public.stock_receipt_reason DEFAULT 'purchase',
   customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+  request_id UUID REFERENCES public.service_requests(id) ON DELETE SET NULL,
   rma_reference TEXT,
 
   virtual_warehouse_id UUID NOT NULL REFERENCES public.virtual_warehouses(id) ON DELETE RESTRICT,
@@ -66,12 +67,14 @@ CREATE INDEX idx_stock_receipts_warehouse ON public.stock_receipts(virtual_wareh
 CREATE INDEX idx_stock_receipts_created_by ON public.stock_receipts(created_by_id);
 CREATE INDEX idx_stock_receipts_reason ON public.stock_receipts(reason) WHERE reason IS NOT NULL;
 CREATE INDEX idx_stock_receipts_customer ON public.stock_receipts(customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX idx_stock_receipts_request ON public.stock_receipts(request_id) WHERE request_id IS NOT NULL;
 
 COMMENT ON TABLE public.stock_receipts IS 'Stock receipt documents (Phiếu Nhập Kho)';
 COMMENT ON COLUMN public.stock_receipts.virtual_warehouse_id IS 'Virtual warehouse to receive stock';
 COMMENT ON COLUMN public.stock_receipts.receipt_type IS 'normal (default) or adjustment (kiểm kê)';
 COMMENT ON COLUMN public.stock_receipts.reason IS 'Lý do nhập kho: purchase (mua hàng), customer_return (khách trả lại), rma_return (RMA về)';
 COMMENT ON COLUMN public.stock_receipts.customer_id IS 'Khách hàng trả lại (bắt buộc khi reason = customer_return)';
+COMMENT ON COLUMN public.stock_receipts.request_id IS 'Link to service_request if this receipt was auto-generated from customer return';
 COMMENT ON COLUMN public.stock_receipts.rma_reference IS 'Mã tham chiếu RMA (optional khi reason = rma_return)';
 
 CREATE OR REPLACE FUNCTION public.generate_receipt_number()

@@ -20,6 +20,7 @@ import {
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import type * as React from "react";
 import { NavOverview } from "@/components/nav-overview";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -282,12 +283,12 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/">
+              <Link href="/">
                 <IconInnerShadowTop className="!size-5" />
                 <span className="text-base font-semibold">
                   SSTC Service Center
                 </span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

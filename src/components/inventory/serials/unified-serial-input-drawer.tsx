@@ -4,6 +4,7 @@
  * Unified Serial Input Drawer Component
  * Single component for all 3 document types: Receipt, Issue, Transfer
  * Redesigned for better UX: Focus on primary action (textarea)
+ * Issue #17: CSV import removed
  */
 
 import {
@@ -12,7 +13,6 @@ import {
   ChevronDown,
   Loader2,
   Settings2,
-  Upload,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -203,34 +203,7 @@ export function UnifiedSerialInputDrawer({
     }
   };
 
-  const handleCsvUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const csvData = e.target?.result as string;
-
-      const lines = csvData.trim().split("\n");
-      const hasHeader = lines[0].toLowerCase().includes("serial");
-      const dataLines = hasHeader ? lines.slice(1) : lines;
-
-      const serials = dataLines
-        .map((line) => {
-          const parts = line.split(",");
-          return parts[0]?.trim();
-        })
-        .filter(Boolean);
-
-      setSerialInput(serials.join("\n"));
-      event.target.value = "";
-      toast.success(`Đã tải ${serials.length} serial từ CSV`);
-    };
-
-    reader.readAsText(file);
-  };
+  // Issue #17: CSV import functionality removed
 
   const isProcessing =
     addReceiptSerials.isPending ||
@@ -313,21 +286,7 @@ export function UnifiedSerialInputDrawer({
                       "Có thể paste nhiều serial cùng lúc"
                     )}
                   </span>
-                  <Label
-                    htmlFor="csv-upload"
-                    className="cursor-pointer hover:text-foreground flex items-center gap-1"
-                  >
-                    <Upload className="h-3 w-3" />
-                    Tải từ CSV
-                    <Input
-                      id="csv-upload"
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={handleCsvUpload}
-                      disabled={isProcessing}
-                    />
-                  </Label>
+                  {/* Issue #17: CSV upload removed */}
                 </div>
               </div>
 

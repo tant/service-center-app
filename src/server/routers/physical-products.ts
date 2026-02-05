@@ -945,16 +945,14 @@ export const inventoryRouter = router({
         });
       }
 
-      const { error } = await ctx.supabaseAdmin
-        .from("system_settings")
-        .upsert(
-          {
-            key: input.key,
-            value: input.value,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "key" },
-        );
+      const { error } = await ctx.supabaseAdmin.from("system_settings").upsert(
+        {
+          key: input.key,
+          value: input.value,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" },
+      );
 
       if (error) {
         throw new TRPCError({

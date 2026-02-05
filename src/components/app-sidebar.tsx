@@ -189,7 +189,12 @@ const baseData = {
   //     ],
   //   },
   // ],
-  workflows: [],
+  workflows: [] as Array<{
+    title: string;
+    icon: any;
+    allowedRoles: UserRole[];
+    items?: Array<{ title: string; url: string }>;
+  }>,
   // Settings section
   settings: [
     {

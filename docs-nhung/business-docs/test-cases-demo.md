@@ -9,14 +9,16 @@
 ## MỤC LỤC
 
 1. [Giới thiệu](#81-giới-thiệu)
+   - [Kiến trúc Kho trong Hệ thống](#811-kiến-trúc-kho-trong-hệ-thống)
 2. [Luồng Test 0: Thêm sản phẩm mới vào danh mục (Product Catalog)](#82-luồng-test-0-thêm-sản-phẩm-mới-vào-danh-mục-product-catalog)
 3. [Luồng Test 1: Nhập kho hàng mới (100 cái)](#83-luồng-test-1-nhập-kho-hàng-mới-100-cái)
-4. [Luồng Test 2: Xuất bán cho khách (60 cái)](#84-luồng-test-2-xuất-bán-cho-khách-60-cái)
-5. [Luồng Test 3: Tạo yêu cầu bảo hành từ serial đã bán](#85-luồng-test-3-tạo-yêu-cầu-bảo-hành-từ-serial-đã-bán)
-6. [Luồng Test 4: Kỹ thuật viên thực hiện tasks trong phiếu bảo hành](#86-luồng-test-4-kỹ-thuật-viên-thực-hiện-tasks-trong-phiếu-bảo-hành)
-7. [Luồng Test 5: Duyệt đổi sản phẩm mới (Warranty Replacement)](#87-luồng-test-5-duyệt-đổi-sản-phẩm-mới-warranty-replacement)
-8. [Luồng Test 6: Quy trình RMA gửi sản phẩm hư về nhà máy](#88-luồng-test-6-quy-trình-rma-gửi-sản-phẩm-hư-về-nhà-máy)
-9. [Tổng hợp](#89-tổng-hợp-7-luồng-test)
+4. [Luồng Test 1B: Tạo khách hàng mới (Customer Management)](#84-luồng-test-1b-tạo-khách-hàng-mới-customer-management)
+5. [Luồng Test 2: Xuất bán cho khách (60 cái)](#85-luồng-test-2-xuất-bán-cho-khách-60-cái)
+6. [Luồng Test 3: Tạo yêu cầu bảo hành từ serial đã bán](#86-luồng-test-3-tạo-yêu-cầu-bảo-hành-từ-serial-đã-bán)
+7. [Luồng Test 4: Kỹ thuật viên thực hiện tasks trong phiếu bảo hành](#87-luồng-test-4-kỹ-thuật-viên-thực-hiện-tasks-trong-phiếu-bảo-hành)
+8. [Luồng Test 5: Duyệt đổi sản phẩm mới (Warranty Replacement)](#88-luồng-test-5-duyệt-đổi-sản-phẩm-mới-warranty-replacement)
+9. [Luồng Test 6: Quy trình RMA gửi sản phẩm hư về nhà máy](#89-luồng-test-6-quy-trình-rma-gửi-sản-phẩm-hư-về-nhà-máy)
+10. [Tổng hợp](#810-tổng-hợp-8-luồng-test)
 
 ---
 
@@ -28,14 +30,17 @@
 |---|------|-------|--------|--------|
 | 1 | UI | Remove "Phiếu nhập kho / Phiếu điều chỉnh (kiểm kê)" | Medium | Open |
 | 2 | UI | Hide Workflows module | Medium | Open |
-| 3 | UI | Bỏ "Danh mục linh kiện" trên menu (liên quan đến bỏ trường Linh kiện) | Medium | Open |
+| 3 | UI/Feature | **Hide tất cả features liên quan đến Linh kiện (Parts):**<br>🚫 **Cần ẩn:**<br>- Menu "Danh mục linh kiện" (Parts Catalog)<br>- Kho ảo "Kho Linh kiện" (`parts`) trong danh sách kho<br>- Trường/cột "Linh kiện" trong các form và bảng<br>- Báo cáo/màn hình liên quan đến linh kiện<br>- Options chọn kho linh kiện trong dropdown<br>- Tab/section linh kiện trong các màn hình quản lý kho<br>✅ **Yêu cầu:**<br>- Không xóa dữ liệu, chỉ ẩn UI/UX<br>- Backend vẫn giữ logic để có thể enable lại sau<br>- Kiểm tra toàn bộ hệ thống để đảm bảo không còn references | Medium | Open |
 | 4 | UI | Remove "Phiếu xuất điều chỉnh (kiểm kê)" | Medium | Open |
+| 5 | Validation/UX | **Validation cho Số điện thoại (VN):**<br>📱 **Format:**<br>- 10-11 số, bắt đầu bằng `0` (VD: 0901234567) hoặc `+84` (VD: +84901234567)<br>- Regex: `^(0|\+84)[0-9]{9,10}$`<br>- Error message: "Số điện thoại không hợp lệ. Vui lòng nhập 10-11 số, bắt đầu bằng 0 hoặc +84"<br>🎨 **UX Requirements:**<br>- Real-time validation khi user blur khỏi field<br>- Hiển thị error message màu đỏ (#DC2626) ngay dưới ô nhập<br>- Icon cảnh báo (⚠️) bên cạnh message<br>- Border ô nhập chuyển màu đỏ khi có lỗi<br>- Clear error ngay khi user bắt đầu sửa (on input change) | Medium | Open |
+| 6 | Validation/UX | **Validation cho Email:**<br>📧 **Format:**<br>- Chuẩn RFC 5322<br>- Regex: `^[^\s@]+@[^\s@]+\.[^\s@]+$`<br>- Error message: "Email không hợp lệ. Vui lòng nhập đúng định dạng (vd: name@domain.com)"<br>🎨 **UX Requirements:**<br>- Real-time validation khi user blur khỏi field<br>- Hiển thị error message màu đỏ (#DC2626) ngay dưới ô nhập<br>- Icon cảnh báo (⚠️) bên cạnh message<br>- Border ô nhập chuyển màu đỏ khi có lỗi<br>- Clear error ngay khi user bắt đầu sửa (on input change) | Medium | Open |
+| 7 | UI/UX Bug | **Panel di chuyển theo chuột và nhấp nháy:**<br>🐛 **Hiện tượng:**<br>- Panel/popover/tooltip di chuyển theo con trỏ chuột<br>- Panel xuất hiện và biến mất liên tục (flickering) khi nhập dữ liệu<br>- Ảnh hưởng đến các trường input trong panel<br>🔍 **Nguyên nhân có thể:**<br>- Event listener không đúng (mousemove, mouseenter/leave)<br>- Z-index hoặc positioning conflicts<br>- Re-render không cần thiết khi typing<br>- Validation/tooltip trigger sai thời điểm<br>✅ **Yêu cầu fix:**<br>- Panel phải cố định vị trí khi đang mở<br>- Không re-position khi user đang tương tác với form fields<br>- Chỉ close panel khi user click outside hoặc click close button<br>- Test với tất cả các form có panel/popover/modal | High | Open |
 
 ---
 
 ## 8.1. Giới thiệu
 
-Tài liệu này trình bày **7 luồng test chính** để demo hệ thống quản lý trung tâm bảo hành. Mỗi luồng test:
+Tài liệu này trình bày **8 luồng test chính** để demo hệ thống quản lý trung tâm bảo hành. Mỗi luồng test:
 
 - ✅ Có các bước thực hiện rõ ràng (step-by-step)
 - ✅ Có kết quả mong đợi (Expected Outcome) sau mỗi bước
@@ -51,15 +56,144 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 **Tóm tắt trạng thái kho sau khi hoàn thành tất cả test:**
 
-| Thời điểm | Kho Chính (Main) | Hàng Đã Bán (Customer) | In-Service | Dead Stock | RMA Staging |
-|-----------|------------------|------------------------|------------|------------|-------------|
-| Sau Test 0 | 0 | 0 | 0 | 0 | 0 | *(Sản phẩm đã có trong catalog, chưa nhập kho)* |
-| Sau Test 1 | 100 | 0 | 0 | 0 | 0 |
-| Sau Test 2 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 3 | 40 | 59 | 1 | 0 | 0 |
-| Sau Test 4 | 40 | 60 | 0 | 0 | 0 |
-| Sau Test 5 | 39 | 60 | 0 | 0 | 1 |
-| Sau Test 6 | 40 | 60 | 0 | 0 | 0 |
+| Thời điểm | Kho Chính (Main) | Kho Hàng Bán (Customer) | Kho Sửa Chữa | Kho Hàng Hỏng |
+|-----------|------------------|-------------------------|--------------|---------------|
+| Sau Test 0 | 0 | 0 | 0 | 0 | *(Sản phẩm đã có trong catalog, chưa nhập kho)* |
+| Sau Test 1 | 100 | 0 | 0 | 0 |
+| Sau Test 1B | 100 | 0 | 0 | 0 | *(Khách hàng đã tạo, chưa mua hàng)* |
+| Sau Test 2 | 40 | 60 | 0 | 0 |
+| Sau Test 3 | 40 | 59 | 1 | 0 |
+| Sau Test 4 | 40 | 60 | 0 | 0 |
+| Sau Test 5 | 39 | 60 | 0 | 1 |
+
+---
+
+## 8.1.1. Kiến trúc Kho trong Hệ thống
+
+### Cấu trúc 2 cấp kho
+
+Hệ thống sử dụng **2 cấp kho**:
+- **Kho vật lý (Physical Warehouse):** Vị trí lưu trữ thực tế (ví dụ: Kho Công ty, Chi nhánh Q1, Chi nhánh Q7...)
+- **Kho ảo (Virtual Warehouse):** Phân loại trạng thái/mục đích của sản phẩm
+
+Mỗi kho vật lý có 7 kho ảo tương ứng.
+
+---
+
+### 7 Loại Kho Ảo
+
+| Tên Kho | Mã Kho | Ý nghĩa | Đếm tồn kho? |
+|---------|--------|---------|--------------|
+| **Kho Chính** | `main` | Hàng tồn kho thông thường, sẵn sàng để bán | ✅ CÓ |
+| **Kho Bảo Hành** | `warranty_stock` | Hàng MỚI dự trữ để thay thế cho khách khi bảo hành | ✅ CÓ |
+| **Hàng Đã Bán** | `customer_installed` | Sản phẩm đã bán cho khách hàng (vẫn tracking để quản lý BH) | ✅ CÓ |
+| **Kho Đang Sửa Chữa** | `in_service` | Sản phẩm đang được bảo hành/sửa chữa tại trung tâm | ✅ CÓ |
+| **Kho Hàng Hỏng** | `dead_stock` | Sản phẩm hỏng không sửa được, chờ RMA hoặc thanh lý | ✅ CÓ |
+| **Kho Chờ RMA** | `rma_staging` | Sản phẩm đã tạo lô RMA, chờ gửi về NSX (tùy chọn) | ✅ CÓ |
+| **Kho Linh Kiện** | `parts` | Linh kiện thay thế và phụ tùng | ✅ CÓ |
+
+---
+
+### Phân biệt: TRONG HỆ THỐNG vs RA KHỎI HỆ THỐNG
+
+#### ✅ TRONG HỆ THỐNG (Đếm tồn kho)
+
+**Định nghĩa:** Sản phẩm đang ở **một trong 7 kho ảo** bên trên, được tracking và đếm vào tổng tồn kho.
+
+**Đặc điểm:**
+- ✅ Serial có `warehouse_id` (thuộc 1 kho ảo cụ thể)
+- ✅ Hiển thị trong báo cáo tồn kho
+- ✅ Có thể tra cứu vị trí
+- ✅ Đếm vào tổng: "Tổng tồn kho = X SP"
+
+**Ví dụ:**
+```
+Serial ABC123456701:
+  Warehouse: customer_installed
+  Status: sold
+  Customer: Nguyễn Văn A
+
+→ VẪN TRONG HỆ THỐNG vì cần tracking bảo hành
+→ Đếm vào tồn kho: Customer Installed = +1
+```
+
+**Lưu ý quan trọng:**
+> **Hàng đã bán VẪN TÍNH TỒN KHO** vì doanh nghiệp cần:
+> - Tracking để quản lý bảo hành
+> - Biết serial đó thuộc khách nào
+> - Kiểm tra warranty status
+> - Theo dõi lịch sử service
+
+---
+
+#### ❌ RA KHỎI HỆ THỐNG (KHÔNG đếm tồn kho)
+
+**Định nghĩa:** Sản phẩm **KHÔNG còn ở bất kỳ kho ảo nào**, không tracking vị trí, không đếm tồn kho.
+
+**Đặc điểm:**
+- ❌ Serial có `warehouse_id = NULL` hoặc `out_of_system`
+- ❌ KHÔNG hiển thị trong báo cáo tồn kho
+- ❌ KHÔNG đếm vào tổng tồn kho
+- ✅ VẪN có lịch sử (history/audit log)
+- ✅ VẪN tra cứu được "đã đi đâu, khi nào"
+
+**Trường hợp duy nhất: RMA - Gửi về NSX**
+
+```
+Serial ABC123456702:
+  Warehouse: NULL (hoặc out_of_system)
+  Status: rma_sent
+  RMA Batch: RMA-20260205-001
+
+→ RA KHỎI HỆ THỐNG vì đã gửi cho ZOTAC
+→ KHÔNG đếm tồn kho
+→ VẪN có history để audit
+```
+
+**Lý do:**
+- ❌ SP không còn ở công ty (đã gửi NSX)
+- ❌ Không thể kiểm kê vật lý
+- ❌ Không quay lại (NSX giữ, trả serial mới)
+
+---
+
+### So sánh: Hàng Bán vs Hàng RMA
+
+| Đặc điểm | Hàng Bán | Hàng RMA |
+|----------|----------|----------|
+| **Warehouse** | `customer_installed` ✅ | `NULL` / `out_of_system` ❌ |
+| **Đếm tồn kho?** | **CÓ** ✅ | **KHÔNG** ❌ |
+| **Vật lý ở đâu?** | Nhà khách (vẫn track) | Nhà máy NSX (không track) |
+| **Có quay lại?** | CÓ (khi bảo hành) | KHÔNG (NSX giữ) |
+| **Lý do tracking** | Quản lý bảo hành | Audit/history only |
+| **Serial mới** | Không | CÓ (nhận từ NSX) |
+
+---
+
+### Tóm tắt
+
+```
+┌─────────────────────────────────────────────────────┐
+│        TRONG HỆ THỐNG (Đếm tồn kho)                 │
+├─────────────────────────────────────────────────────┤
+│ • Main (Kho Chính)                                  │
+│ • Warranty Stock (Kho Bảo Hành)                     │
+│ • Customer Installed (Hàng Đã Bán) ← ✅ Vẫn đếm!   │
+│ • In-Service (Đang Sửa)                             │
+│ • Dead Stock (Hàng Hỏng)                            │
+│ • RMA Staging (Chờ RMA - nếu có)                    │
+│ • Parts (Linh Kiện)                                 │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│       RA KHỎI HỆ THỐNG (Không đếm tồn kho)          │
+├─────────────────────────────────────────────────────┤
+│ • RMA Sent (Đã gửi về NSX)                          │
+│   → Không còn ở công ty                             │
+│   → Không tracking vị trí                           │
+│   → Vẫn có history để audit                         │
+└─────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -463,7 +597,147 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 ---
 
-## 8.4. Luồng Test 2: Xuất bán cho khách (60 cái)
+## 8.4. Luồng Test 1B: Tạo khách hàng mới (Customer Management)
+
+**Mục tiêu:** Kiểm tra quy trình tạo và quản lý thông tin khách hàng trong hệ thống
+
+**Vai trò thực hiện:** Reception / Manager
+
+**Lưu ý:** Đây là bước chuẩn bị trước khi thực hiện Test 2 (Xuất bán). Khách hàng cần tồn tại trong hệ thống để liên kết với đơn hàng và theo dõi bảo hành.
+
+---
+
+### BƯỚC 1: Truy cập Quản lý Khách hàng
+
+**Thao tác:**
+
+1. Đăng nhập hệ thống với vai trò **Reception** hoặc **Manager**
+2. Vào menu **"Quản lý Khách hàng"** → **"Danh sách Khách hàng"**
+3. Click nút **"Thêm Khách hàng Mới"**
+
+**Expected Outcome:**
+
+- ✅ Màn hình "Danh sách Khách hàng" hiển thị
+- ✅ Danh sách khách hàng hiện có (nếu có) được hiển thị
+- ✅ Nút "Thêm Khách hàng Mới" hiển thị và có thể click
+- ✅ Form "Tạo Khách hàng Mới" hiển thị sau khi click
+
+---
+
+### BƯỚC 2: Nhập Thông tin Khách hàng
+
+**Thao tác:**
+
+1. Tại form "Tạo Khách hàng Mới", nhập các thông tin:
+   - **Họ tên**: Nguyễn Văn A *(bắt buộc)*
+   - **Số điện thoại**: 0912345678 *(bắt buộc)*
+   - **Email**: nguyenvana@email.com *(tùy chọn)*
+   - **Địa chỉ**: 123 Nguyễn Văn Linh, Q7, TP.HCM *(tùy chọn)*
+   - **Loại khách hàng**: Cá nhân / Doanh nghiệp *(bắt buộc)*
+   - **Ghi chú**: "Khách hàng mới, mua số lượng lớn" *(tùy chọn)*
+
+**Expected Outcome:**
+
+- ✅ Form hiển thị đầy đủ các trường thông tin
+- ✅ Các trường bắt buộc được đánh dấu (*)
+- ✅ Validation realtime:
+  - SĐT đúng định dạng (10-11 số, bắt đầu bằng 0)
+  - Email đúng format (nếu có nhập)
+- ✅ Dropdown "Loại khách hàng" hiển thị các lựa chọn
+
+---
+
+### BƯỚC 3: Lưu Khách hàng
+
+**Thao tác:**
+
+1. Kiểm tra lại toàn bộ thông tin:
+   - Họ tên: Nguyễn Văn A
+   - SĐT: 0912345678
+   - Email: nguyenvana@email.com
+   - Loại: Cá nhân
+2. Click nút **"Lưu Khách hàng"**
+3. Chờ hệ thống xử lý
+
+**Expected Outcome:**
+
+- ✅ Hệ thống validation toàn bộ form
+- ✅ Kiểm tra trùng SĐT (nếu trùng → báo lỗi "Khách hàng với SĐT này đã tồn tại", hiển thị link đến KH cũ)
+- ✅ Hiển thị thông báo: "✅ Đã tạo khách hàng thành công"
+- ✅ Khách hàng xuất hiện trong danh sách với:
+
+| Thông tin | Giá trị |
+|-----------|---------|
+| ID | CUS-001 (tự động tạo) |
+| Họ tên | Nguyễn Văn A |
+| SĐT | 0912345678 |
+| Email | nguyenvana@email.com |
+| Loại | Cá nhân |
+| Trạng thái | Active |
+
+---
+
+### BƯỚC 4: Kiểm tra Kết quả
+
+**Thao tác:**
+
+1. Vào **"Danh sách Khách hàng"** → Tìm kiếm "Nguyễn Văn A" hoặc "0912345678"
+2. Click vào khách hàng vừa tạo để xem chi tiết
+3. Kiểm tra khách hàng có sẵn trong dropdown khi tạo phiếu xuất kho/bán hàng
+
+**Expected Outcome:**
+
+**A) Danh sách Khách hàng:**
+
+- ✅ Khách hàng "Nguyễn Văn A" xuất hiện trong danh sách
+- ✅ Có thể tìm kiếm bằng: Họ tên, SĐT, Email
+- ✅ Hiển thị: Họ tên, SĐT, Email, Loại KH, Trạng thái
+
+**B) Chi tiết Khách hàng:**
+
+| Thông tin | Giá trị |
+|-----------|---------|
+| Họ tên | Nguyễn Văn A |
+| SĐT | 0912345678 |
+| Email | nguyenvana@email.com |
+| Địa chỉ | 123 Nguyễn Văn Linh, Q7, TP.HCM |
+| Loại | Cá nhân |
+| Số đơn hàng | 0 (chưa mua hàng) |
+| Số phiếu BH | 0 |
+
+**C) Sẵn sàng cho Bán hàng:**
+
+- ✅ Khi vào "Quản lý Kho" → "Xuất Kho" → Nhập thông tin khách hàng
+- ✅ Tìm kiếm SĐT: "0912345678" → Tự động điền thông tin Nguyễn Văn A
+- ✅ Có thể chọn khách hàng này cho phiếu xuất kho (Test 2)
+
+---
+
+### Các trường hợp Test bổ sung
+
+**A) Tạo khách hàng trùng SĐT:**
+
+1. Thử tạo khách hàng mới với SĐT: 0912345678 (đã tồn tại)
+2. Hệ thống hiển thị: "❌ Số điện thoại đã tồn tại - KH: Nguyễn Văn A"
+3. Có link "Xem khách hàng" để chuyển đến profile KH cũ
+
+**B) Sửa thông tin khách hàng:**
+
+1. Vào chi tiết KH → Click **"Sửa"**
+2. Thay đổi thông tin cần thiết (email, địa chỉ, ghi chú)
+3. Lưu → Thông tin được cập nhật
+
+**C) Tìm kiếm khách hàng:**
+
+1. Tìm bằng SĐT: 0912345678 → Hiển thị Nguyễn Văn A
+2. Tìm bằng tên: "Nguyễn Văn A" → Hiển thị kết quả phù hợp
+3. Tìm bằng email: nguyenvana@email.com → Hiển thị Nguyễn Văn A
+
+---
+
+## 8.5. Luồng Test 2: Xuất bán cho khách (60 cái)
+
+**Điều kiện tiên quyết:** Đã hoàn thành Test 1B - Khách hàng "Nguyễn Văn A" đã tồn tại trong hệ thống
 
 **Mục tiêu:** Kiểm tra quy trình bán hàng và di chuyển sản phẩm từ kho → khách hàng
 
@@ -520,6 +794,11 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 - ✅ Hiển thị: "✅ Khách hàng mới - Sẵn sàng tạo đơn"
 - ✅ Form validation pass
 - ✅ Section "Chọn sản phẩm" được kích hoạt
+
+#### 📝 ISSUES (Bước 2)
+| # | Loại | Mô tả | Mức độ | Status |
+|---|------|-------|--------|--------|
+| 1 | Note | Khi thêm thông tin người liên hệ trong phiếu xuất (bán hàng) thì thông tin người liên hệ tự được thêm vào danh sách customer | Info | Open |
 
 ---
 
@@ -647,7 +926,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 ---
 
-## 8.5. Luồng Test 3: Tạo yêu cầu bảo hành từ serial đã bán
+## 8.6. Luồng Test 3: Tạo yêu cầu bảo hành từ serial đã bán
 
 **Mục tiêu:** Kiểm tra quy trình tạo yêu cầu dịch vụ và xác minh bảo hành tự động
 
@@ -788,7 +1067,7 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 
 ---
 
-## 8.6. Luồng Test 4: Kỹ thuật viên thực hiện tasks trong phiếu bảo hành
+## 8.7. Luồng Test 4: Kỹ thuật viên thực hiện tasks trong phiếu bảo hành
 
 **Mục tiêu:** Kiểm tra workflow tasks và quy trình kỹ thuật viên thực hiện công việc
 
@@ -993,7 +1272,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 ---
 
-## 8.7. Luồng Test 5: Duyệt đổi sản phẩm mới (Warranty Replacement)
+## 8.8. Luồng Test 5: Duyệt đổi sản phẩm mới (Warranty Replacement)
 
 **Mục tiêu:** Kiểm tra quy trình RMA và thay thế sản phẩm khi không sửa được
 
@@ -1220,7 +1499,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 ---
 
-## 8.8. Luồng Test 6: Quy trình RMA gửi sản phẩm hư về nhà máy
+## 8.9. Luồng Test 6: Quy trình RMA gửi sản phẩm hư về nhà máy
 
 **Mục tiêu:** Kiểm tra quy trình gửi sản phẩm lỗi về nhà máy và nhận hàng thay thế
 
@@ -1455,7 +1734,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 ---
 
-## 8.9. Tổng hợp 7 Luồng Test
+## 8.10. Tổng hợp 8 Luồng Test
 
 ### Bảng Tóm tắt
 
@@ -1463,6 +1742,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 |---|------------|-------------------|---------|---------------|
 | **0** | Thêm sản phẩm mới | [1.3](./03-quy-trinh-nghiep-vu-chinh.md#13-các-module-chính) | Manager/Admin | Sản phẩm xuất hiện trong catalog, sẵn sàng nhập kho |
 | **1** | Nhập kho 100 cái | [4.3](./03-quy-trinh-nghiep-vu-chinh.md#43-quy-trình-nhập-kho-stock-receipt) | Manager/Reception | Kho Chính: +100, Serial tracking hoạt động |
+| **1B** | Tạo khách hàng mới | - | Reception/Manager | Khách hàng tạo thành công, sẵn sàng cho bán hàng |
 | **2** | Xuất bán 60 cái | [4.7](./03-quy-trinh-nghiep-vu-chinh.md#47-quy-trình-bán-hàng--mới) | Reception/Manager | Main: 40, Customer: 60, Auto di chuyển kho |
 | **3** | Tạo yêu cầu BH | [2.2](./03-quy-trinh-nghiep-vu-chinh.md#22-bước-1-khách-hàng-tạo-yêu-cầu-dịch-vụ-service-request), [2.3](./03-quy-trinh-nghiep-vu-chinh.md#23-bước-2-lễ-tân-xem-xét-và-chuyển-đổi-yêu-cầu) | Khách hàng, Reception | SR + Ticket tạo thành công, Auto xác minh BH |
 | **4** | Thực hiện tasks | [2.4](./03-quy-trinh-nghiep-vu-chinh.md#24-bước-3-kỹ-thuật-viên-thực-hiện-công-việc) | Technician | Workflow tuần tự, Auto chuyển trạng thái |
@@ -1485,6 +1765,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 
 - [ ] **Test 0:** Thêm sản phẩm mới vào catalog
 - [ ] **Test 1:** Nhập kho 100 sản phẩm thành công
+- [ ] **Test 1B:** Tạo khách hàng mới thành công
 - [ ] **Test 2:** Xuất bán 60 sản phẩm, hóa đơn in OK
 - [ ] **Test 3:** Tạo SR từ portal, chuyển thành Ticket
 - [ ] **Test 4:** Technician hoàn thành workflow tasks

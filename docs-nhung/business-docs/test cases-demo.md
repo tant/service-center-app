@@ -310,7 +310,9 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 | 2 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | Open |
 | 3 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | Open |
 | 4 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | Open |
-| 5 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho (nhập ngày bắt đầu - ngày kết thúc theo thông tin trên sản phẩm/phiếu từ hãng) | **Critical** | Open |
+| 5 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho (nhập ngày bắt đầu - ngày kết thúc theo thông tin trên sản phẩm/phiếu từ hãng) | **Critical** | ✅ Fixed |
+
+> **✅ Fixed (2026-02-05):** Đã thêm warranty fields trong serial input drawer. Sử dụng DatePicker (dd/mm/yyyy), có thể áp dụng cho tất cả serials cùng lúc.
 
 ---
 
@@ -597,7 +599,9 @@ Tài liệu này trình bày **7 luồng test chính** để demo hệ thống q
 #### 📝 ISSUES (Bước 5)
 | # | Loại | Mô tả | Mức độ | Status |
 |---|------|-------|--------|--------|
-| 1 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua kho "Hàng đã Bán" (Customer Installed). Hiện chỉ đang thay status là "Đã Xuất" - cần auto di chuyển kho theo Quy tắc #7 | High | Open |
+| 1 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua kho "Hàng đã Bán" (Customer Installed). Hiện chỉ đang thay status là "Đã Xuất" - cần auto di chuyển kho theo Quy tắc #7 | High | ✅ Fixed |
+
+> **✅ Fixed (2026-02-05):** Trigger `process_issue_serial()` đã tự động chuyển sản phẩm sang kho `customer_installed` khi xuất với reason='sale'. Đồng thời lưu `last_known_customer_id` để tracking khách hàng.
 
 ---
 

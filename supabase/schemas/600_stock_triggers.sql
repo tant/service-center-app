@@ -68,6 +68,7 @@ DECLARE
   v_product_id UUID;
   v_virtual_warehouse_id UUID;
   v_physical_product_id UUID;
+  v_old_warehouse_id UUID;
 BEGIN
   -- Get info from receipt
   SELECT sri.product_id, sr.virtual_warehouse_id
@@ -76,23 +77,50 @@ BEGIN
   JOIN public.stock_receipts sr ON sri.receipt_id = sr.id
   WHERE sri.id = NEW.receipt_item_id;
 
-  -- Create physical product with status='active' IMMEDIATELY
-  INSERT INTO public.physical_products (
-    product_id, serial_number, virtual_warehouse_id,
-    condition, status,
-    manufacturer_warranty_end_date, user_warranty_end_date
-  ) VALUES (
-    v_product_id, NEW.serial_number, v_virtual_warehouse_id,
-    'new', 'active',
-    NEW.manufacturer_warranty_end_date, NEW.user_warranty_end_date
-  )
-  RETURNING id INTO v_physical_product_id;
+  -- Check if physical product already exists for this serial
+  SELECT id, virtual_warehouse_id
+  INTO v_physical_product_id, v_old_warehouse_id
+  FROM public.physical_products
+  WHERE serial_number = NEW.serial_number;
 
-  -- Link serial to physical_product
-  NEW.physical_product_id := v_physical_product_id;
+  IF v_physical_product_id IS NOT NULL THEN
+    -- Product exists (customer_return, rma_return, or adjustment)
+    -- Update warehouse, status to active, and warranty dates
+    UPDATE public.physical_products
+    SET virtual_warehouse_id = v_virtual_warehouse_id,
+        status = 'active',
+        manufacturer_warranty_end_date = COALESCE(NEW.manufacturer_warranty_end_date, manufacturer_warranty_end_date),
+        user_warranty_end_date = COALESCE(NEW.user_warranty_end_date, user_warranty_end_date),
+        updated_at = NOW()
+    WHERE id = v_physical_product_id;
 
-  -- Update stock IMMEDIATELY
-  PERFORM public.upsert_product_stock(v_product_id, v_virtual_warehouse_id, 1);
+    -- Link serial to existing physical_product
+    NEW.physical_product_id := v_physical_product_id;
+
+    -- Update stock: -1 from old warehouse, +1 to new warehouse
+    IF v_old_warehouse_id IS DISTINCT FROM v_virtual_warehouse_id THEN
+      PERFORM public.upsert_product_stock(v_product_id, v_old_warehouse_id, -1);
+      PERFORM public.upsert_product_stock(v_product_id, v_virtual_warehouse_id, 1);
+    END IF;
+  ELSE
+    -- New product (purchase) - create it
+    INSERT INTO public.physical_products (
+      product_id, serial_number, virtual_warehouse_id,
+      condition, status,
+      manufacturer_warranty_end_date, user_warranty_end_date
+    ) VALUES (
+      v_product_id, NEW.serial_number, v_virtual_warehouse_id,
+      'new', 'active',
+      NEW.manufacturer_warranty_end_date, NEW.user_warranty_end_date
+    )
+    RETURNING id INTO v_physical_product_id;
+
+    -- Link serial to new physical_product
+    NEW.physical_product_id := v_physical_product_id;
+
+    -- Update stock IMMEDIATELY
+    PERFORM public.upsert_product_stock(v_product_id, v_virtual_warehouse_id, 1);
+  END IF;
 
   RETURN NEW;
 END;
@@ -159,7 +187,7 @@ DECLARE
   v_from_warehouse_id UUID;
   v_customer_id UUID;
   v_issue_reason TEXT;
-  v_customer_installed_warehouse_id UUID;
+  v_destination_warehouse_id UUID;
 BEGIN
   -- Get info from issue (including customer_id and issue_reason)
   SELECT sii.product_id, si.virtual_warehouse_id, si.customer_id, si.issue_reason
@@ -170,38 +198,53 @@ BEGIN
 
   -- For sale issues: move product to customer_installed warehouse
   IF v_issue_reason = 'sale' THEN
-    -- Get customer_installed warehouse ID (global warehouse, no physical_warehouse_id)
-    SELECT id INTO v_customer_installed_warehouse_id
+    SELECT id INTO v_destination_warehouse_id
     FROM public.virtual_warehouses
     WHERE warehouse_type = 'customer_installed'
-      AND physical_warehouse_id IS NULL
     LIMIT 1;
 
-    -- Update physical product: move to customer_installed and track customer
     UPDATE public.physical_products
     SET status = 'issued',
         previous_virtual_warehouse_id = virtual_warehouse_id,
-        virtual_warehouse_id = COALESCE(v_customer_installed_warehouse_id, virtual_warehouse_id),
+        virtual_warehouse_id = COALESCE(v_destination_warehouse_id, virtual_warehouse_id),
         last_known_customer_id = COALESCE(v_customer_id, last_known_customer_id),
         updated_at = NOW()
     WHERE id = NEW.physical_product_id;
 
-    -- Decrease stock from source warehouse
     PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
 
-    -- Increase stock at customer_installed (for tracking sold quantity)
-    IF v_customer_installed_warehouse_id IS NOT NULL THEN
-      PERFORM public.upsert_product_stock(v_product_id, v_customer_installed_warehouse_id, 1);
+    IF v_destination_warehouse_id IS NOT NULL THEN
+      PERFORM public.upsert_product_stock(v_product_id, v_destination_warehouse_id, 1);
     END IF;
+
+  -- For return_to_supplier (RMA): move product to rma_staging warehouse
+  ELSIF v_issue_reason = 'return_to_supplier' THEN
+    SELECT id INTO v_destination_warehouse_id
+    FROM public.virtual_warehouses
+    WHERE warehouse_type = 'rma_staging'
+    LIMIT 1;
+
+    UPDATE public.physical_products
+    SET status = 'issued',
+        previous_virtual_warehouse_id = virtual_warehouse_id,
+        virtual_warehouse_id = COALESCE(v_destination_warehouse_id, virtual_warehouse_id),
+        updated_at = NOW()
+    WHERE id = NEW.physical_product_id;
+
+    PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
+
+    IF v_destination_warehouse_id IS NOT NULL THEN
+      PERFORM public.upsert_product_stock(v_product_id, v_destination_warehouse_id, 1);
+    END IF;
+
   ELSE
-    -- For other issue reasons: just mark as issued (original behavior)
+    -- For other issue reasons: just mark as issued
     UPDATE public.physical_products
     SET status = 'issued',
         last_known_customer_id = COALESCE(v_customer_id, last_known_customer_id),
         updated_at = NOW()
     WHERE id = NEW.physical_product_id;
 
-    -- Decrease stock from source warehouse
     PERFORM public.upsert_product_stock(v_product_id, v_from_warehouse_id, -1);
   END IF;
 

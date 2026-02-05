@@ -635,3 +635,70 @@ export const validateEmail = (value: string): string | null => {
 **Lịch sử cập nhật:**
 - 2026-02-05: Chuyển từ Test Cases Issues #5, #6
 
+---
+---
+
+## 🎯 IMPROVEMENT #3: Thêm Thương hiệu mới từ form Sản phẩm
+
+**Ngày đề xuất:** 2026-02-05
+**Người đề xuất:** QC Team
+**Mức độ ưu tiên:** Low
+**Trạng thái:** Open
+**Nguồn gốc:** Chuyển từ [Test Cases - TC-CAT-001 Các trường hợp Test bổ sung](./test-cases-demo.md)
+
+### Mô tả
+
+Cho phép thêm thương hiệu mới trực tiếp từ dropdown trong form tạo sản phẩm, thay vì phải vào màn hình quản lý thương hiệu riêng.
+
+### Yêu cầu
+
+1. Tại dropdown "Thương hiệu" trong form tạo/sửa sản phẩm, thêm option **"+ Thêm Thương hiệu Mới"**
+2. Khi click → Hiển thị popup/modal nhập: Tên thương hiệu, Logo, Website, Ghi chú
+3. Lưu → Thương hiệu mới xuất hiện trong dropdown và được tự động chọn
+
+---
+---
+
+## 🎯 IMPROVEMENT #4: Thêm Danh mục mới từ form Sản phẩm
+
+**Ngày đề xuất:** 2026-02-05
+**Người đề xuất:** QC Team
+**Mức độ ưu tiên:** Low
+**Trạng thái:** Open
+**Nguồn gốc:** Chuyển từ [Test Cases - TC-CAT-001 Các trường hợp Test bổ sung](./test-cases-demo.md)
+
+### Mô tả
+
+Cho phép thêm danh mục sản phẩm mới trực tiếp từ dropdown trong form tạo sản phẩm.
+
+### Yêu cầu
+
+1. Tại dropdown "Loại sản phẩm" trong form tạo/sửa sản phẩm, thêm option **"+ Thêm Danh mục Mới"**
+2. Khi click → Hiển thị popup/modal nhập: Tên danh mục, Danh mục cha (nếu có), Mô tả
+3. Lưu → Danh mục mới xuất hiện trong cây danh mục và được tự động chọn
+
+---
+---
+
+## 🎯 IMPROVEMENT #5: Upload CSV/Excel cho Serial Numbers
+
+**Ngày đề xuất:** 2026-02-05
+**Người đề xuất:** QC Team
+**Mức độ ưu tiên:** Medium
+**Trạng thái:** Open
+**Nguồn gốc:** Phát hiện từ quá trình test TC-INV-001 (Phiếu nhập kho)
+
+### Mô tả
+
+Cho phép import danh sách serial numbers từ file CSV hoặc Excel thay vì phải nhập thủ công từng dòng. Đặc biệt hữu ích khi nhập số lượng lớn (hàng trăm, hàng nghìn serials).
+
+### Yêu cầu
+
+1. Thêm nút **"Upload CSV/Excel"** bên cạnh ô nhập serial thủ công
+2. Hỗ trợ format:
+   - CSV (.csv) - mỗi serial một dòng hoặc phân cách bằng dấu phẩy
+   - Excel (.xlsx) - đọc cột đầu tiên làm danh sách serial
+3. Sau khi upload → hiển thị preview danh sách serials để xác nhận
+4. Validate: kiểm tra trùng, format, số lượng khớp
+5. Áp dụng cho tất cả màn hình nhập serial: Phiếu nhập, Phiếu xuất, Phiếu chuyển kho
+

@@ -25,6 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  validateInventoryDocumentDate,
+  getMinAllowedDate,
+  getMaxAllowedDate,
+} from "@/lib/date-validation";
 import type { StockIssueReason } from "@/types/inventory";
 
 // Issue #4: Hide adjustment type - only normal issues allowed
@@ -59,6 +64,7 @@ export default function CreateIssuePage() {
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0],
   );
+  const [dateError, setDateError] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
@@ -92,9 +98,24 @@ export default function CreateIssuePage() {
     setItems(newItems);
   };
 
+  // Issue #16: Validate issue date
+  const handleDateChange = (newDate: string) => {
+    setIssueDate(newDate);
+    const validation = validateInventoryDocumentDate(newDate);
+    setDateError(validation.error);
+  };
+
   const handleSubmit = async () => {
     if (!issueType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    // Issue #16: Validate issue date
+    const dateValidation = validateInventoryDocumentDate(issueDate);
+    if (!dateValidation.isValid) {
+      toast.error(dateValidation.error || "Ngày xuất không hợp lệ");
+      setDateError(dateValidation.error);
       return;
     }
 
@@ -192,8 +213,14 @@ export default function CreateIssuePage() {
                       <Input
                         type="date"
                         value={issueDate}
-                        onChange={(e) => setIssueDate(e.target.value)}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        min={getMinAllowedDate()}
+                        max={getMaxAllowedDate()}
+                        className={dateError ? "border-destructive" : ""}
                       />
+                      {dateError && (
+                        <p className="text-sm text-destructive">{dateError}</p>
+                      )}
                     </div>
                   </div>
 

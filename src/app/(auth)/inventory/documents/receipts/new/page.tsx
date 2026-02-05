@@ -25,6 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  validateInventoryDocumentDate,
+  getMinAllowedDate,
+  getMaxAllowedDate,
+} from "@/lib/date-validation";
 import type { StockReceiptReason } from "@/types/inventory";
 
 // Issue #1: Hide adjustment type - only normal receipts allowed
@@ -72,6 +77,7 @@ export default function CreateReceiptPage() {
   const [receiptDate, setReceiptDate] = useState(
     new Date().toISOString().split("T")[0],
   );
+  const [dateError, setDateError] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
@@ -99,9 +105,24 @@ export default function CreateReceiptPage() {
     setItems(newItems);
   };
 
+  // Issue #11: Validate receipt date
+  const handleDateChange = (newDate: string) => {
+    setReceiptDate(newDate);
+    const validation = validateInventoryDocumentDate(newDate);
+    setDateError(validation.error);
+  };
+
   const handleSubmit = async () => {
     if (!receiptType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    // Issue #11: Validate receipt date
+    const dateValidation = validateInventoryDocumentDate(receiptDate);
+    if (!dateValidation.isValid) {
+      toast.error(dateValidation.error || "Ngày nhập không hợp lệ");
+      setDateError(dateValidation.error);
       return;
     }
 
@@ -213,8 +234,14 @@ export default function CreateReceiptPage() {
                       <Input
                         type="date"
                         value={receiptDate}
-                        onChange={(e) => setReceiptDate(e.target.value)}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        min={getMinAllowedDate()}
+                        max={getMaxAllowedDate()}
+                        className={dateError ? "border-destructive" : ""}
                       />
+                      {dateError && (
+                        <p className="text-sm text-destructive">{dateError}</p>
+                      )}
                     </div>
 
                     {/* Conditional: Customer for customer_return */}

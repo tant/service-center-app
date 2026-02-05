@@ -47,18 +47,18 @@
 | 8 | TC-CAT-001 (Test 0) | Bước 2 | Feature | Thêm trường "Nhà cung cấp" vào form tạo sản phẩm | Medium | Open |
 | 9 | TC-CAT-001 (Test 0) | Bước 3 | UI | Bỏ trường "Linh kiện liên quan" | Low | **DONE** |
 | 10 | TC-CAT-001 (Test 0) | Bước 5 | Feature | Cần thêm cảnh báo khi trùng tên sản phẩm (warning) và trùng SKU (block) | Medium | Open |
-| 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | Open |
+| 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | **DONE** |
 | 12 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | **DONE** |
 | 13 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | **DONE** |
 | 14 | TC-INV-001 (Test 1) | Bước 1 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | Open |
 | 15 | TC-INV-001 (Test 1) | Bước 1 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho | **Critical** | **DONE** |
-| 16 | TC-SALE-001 (Test 2) | Bước 1 | Validation | Ngày xuất: Block future date, chỉ cho phép back date tối đa 7 ngày (như phiếu nhập) | Medium | Open |
+| 16 | TC-SALE-001 (Test 2) | Bước 1 | Validation | Ngày xuất: Block future date, chỉ cho phép back date tối đa 7 ngày (như phiếu nhập) | Medium | **DONE** |
 | 17 | TC-SALE-001 (Test 2) | Bước 1 | UI | Bỏ "Nhập CSV" trong chọn Serial - Phiếu xuất (như phiếu nhập) | Low | **DONE** |
 | 18 | TC-SALE-001 (Test 2) | Bước 2 | Note | Khi thêm thông tin người liên hệ trong phiếu xuất (bán hàng) thì thông tin người liên hệ tự được thêm vào danh sách customer | Info | Open |
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
 | 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
 
-> **Tổng:** 20 issues (10 DONE, 10 Open)
+> **Tổng:** 20 issues (12 DONE, 8 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---

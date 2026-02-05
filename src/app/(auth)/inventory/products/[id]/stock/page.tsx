@@ -1,8 +1,9 @@
 /**
  * Product Stock Detail Page
- * Displays comprehensive stock information for a specific product
+ * Enhanced warehouse management UI with quick actions, filters, and bulk operations
  */
 
+import { QuickActionToolbar } from "@/components/inventory/stock-detail/quick-action-toolbar";
 import { SerialListSection } from "@/components/inventory/stock-detail/serial-list-section";
 import { StockBreakdownSection } from "@/components/inventory/stock-detail/stock-breakdown-section";
 import { StockDetailHeader } from "@/components/inventory/stock-detail/stock-detail-header";
@@ -22,16 +23,20 @@ export default async function ProductStockDetailPage({ params }: Props) {
         title="Chi Tiết Tồn Kho Sản Phẩm"
         backHref="/inventory/overview"
       />
+
+      {/* Quick Action Toolbar - Sticky */}
+      <QuickActionToolbar productId={id} />
+
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-            {/* Product Header with Key Metrics */}
+            {/* Enhanced Product Header with Metrics & Alerts */}
             <StockDetailHeader productId={id} />
 
             {/* Stock Breakdown by Warehouse */}
             <StockBreakdownSection productId={id} />
 
-            {/* Serial Numbers List */}
+            {/* Enhanced Serial List with Filters & Bulk Actions */}
             <SerialListSection productId={id} />
 
             {/* Stock Trend Chart */}

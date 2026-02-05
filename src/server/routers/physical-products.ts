@@ -1926,4 +1926,81 @@ export const inventoryRouter = router({
         products: batchProducts || [],
       };
     }),
+
+  /**
+   * Get product condition breakdown for stock detail page
+   * Returns count of products by condition and warranty status
+   */
+  getProductConditionBreakdown: publicProcedure
+    .input(z.object({ product_id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      // Get all physical products for this product_id
+      const { data: products, error } = await ctx.supabaseAdmin
+        .from("physical_products")
+        .select(
+          "condition, manufacturer_warranty_end_date, user_warranty_end_date, status",
+        )
+        .eq("product_id", input.product_id);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch products: ${error.message}`,
+        });
+      }
+
+      // Initialize counters
+      const breakdown = {
+        by_condition: {
+          new: 0,
+          refurbished: 0,
+          used: 0,
+          faulty: 0,
+          for_parts: 0,
+        },
+        by_warranty: {
+          active: 0,
+          expiring_soon: 0,
+          expired: 0,
+          no_warranty: 0,
+        },
+        by_status: {
+          active: 0,
+          in_service: 0,
+          issued: 0,
+          disposed: 0,
+        },
+        total: products?.length || 0,
+      };
+
+      // Count by condition, warranty, and status
+      for (const product of products || []) {
+        // Count by condition
+        if (product.condition && product.condition in breakdown.by_condition) {
+          breakdown.by_condition[
+            product.condition as keyof typeof breakdown.by_condition
+          ]++;
+        }
+
+        // Count by warranty status
+        const warrantyEndDate =
+          product.user_warranty_end_date ||
+          product.manufacturer_warranty_end_date;
+        const warrantyStatus = getWarrantyStatus(warrantyEndDate);
+        if (warrantyStatus in breakdown.by_warranty) {
+          breakdown.by_warranty[
+            warrantyStatus as keyof typeof breakdown.by_warranty
+          ]++;
+        }
+
+        // Count by status
+        if (product.status && product.status in breakdown.by_status) {
+          breakdown.by_status[
+            product.status as keyof typeof breakdown.by_status
+          ]++;
+        }
+      }
+
+      return breakdown;
+    }),
 });

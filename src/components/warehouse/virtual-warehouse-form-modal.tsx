@@ -144,14 +144,15 @@ export function VirtualWarehouseFormModal({
     onClose();
   };
 
-  // All 7 warehouse types from system
+  // Issue #9: Hidden "parts" - Parts feature is disabled for MVP
+  // All warehouse types from system (6 visible, parts hidden)
   const warehouseTypeOptions: { value: WarehouseType; label: string }[] = [
     { value: "main", label: WAREHOUSE_TYPE_LABELS.main },
     { value: "warranty_stock", label: WAREHOUSE_TYPE_LABELS.warranty_stock },
     { value: "rma_staging", label: WAREHOUSE_TYPE_LABELS.rma_staging },
     { value: "dead_stock", label: WAREHOUSE_TYPE_LABELS.dead_stock },
     { value: "in_service", label: WAREHOUSE_TYPE_LABELS.in_service },
-    { value: "parts", label: WAREHOUSE_TYPE_LABELS.parts },
+    // { value: "parts", label: WAREHOUSE_TYPE_LABELS.parts }, // Issue #9: Hidden for MVP
     { value: "customer_installed", label: WAREHOUSE_TYPE_LABELS.customer_installed },
   ];
 

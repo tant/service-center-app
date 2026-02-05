@@ -120,17 +120,18 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     },
     enableHiding: false,
   },
-  {
-    accessorKey: "parts_count",
-    header: "Linh kiện",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1.5">
-        <IconPackage className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">{row.original.parts_count}</span>
-        <span className="text-xs text-muted-foreground">parts</span>
-      </div>
-    ),
-  },
+  // Issue #9: Hidden - Parts feature is disabled for MVP
+  // {
+  //   accessorKey: "parts_count",
+  //   header: "Linh kiện",
+  //   cell: ({ row }) => (
+  //     <div className="flex items-center gap-1.5">
+  //       <IconPackage className="h-4 w-4 text-muted-foreground" />
+  //       <span className="font-medium">{row.original.parts_count}</span>
+  //       <span className="text-xs text-muted-foreground">parts</span>
+  //     </div>
+  //   ),
+  // },
   {
     accessorKey: "physical_products_count",
     header: "Tồn kho",
@@ -349,7 +350,7 @@ export function ProductTable({
                   const columnDisplayNames: Record<string, string> = {
                     sku: "SKU",
                     name: "Sản phẩm",
-                    parts_count: "Linh kiện",
+                    // parts_count: "Linh kiện", // Issue #9: Hidden - Parts feature is disabled for MVP
                     brand_name: "Thương hiệu",
                     type: "Loại",
                     updated_at: "Cập nhật",
@@ -553,8 +554,9 @@ function ProductModal({
     selected_parts: [] as string[],
   });
 
+  // Issue #9: Hidden - Parts feature is disabled for MVP
   // Fetch parts data for selection
-  const { data: parts } = trpc.parts.getParts.useQuery();
+  // const { data: parts } = trpc.parts.getParts.useQuery();
 
   // Fetch brands data for selection
   const { data: brands } = trpc.brands.getBrands.useQuery();
@@ -616,10 +618,11 @@ function ProductModal({
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
     if (open) {
-      const existingPartIds =
-        mode === "edit" && productWithParts?.parts
-          ? productWithParts.parts.map((part: { id: string }) => part.id)
-          : [];
+      // Issue #9: Hidden - Parts feature is disabled for MVP
+      // const existingPartIds =
+      //   mode === "edit" && productWithParts?.parts
+      //     ? productWithParts.parts.map((part: { id: string }) => part.id)
+      //     : [];
 
       setFormData({
         name: product?.name || "",
@@ -629,24 +632,25 @@ function ProductModal({
         model: product?.model || "",
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
-        selected_parts: existingPartIds,
+        selected_parts: [], // Issue #9: Always empty array
       });
     }
   }, [open, product, productWithParts, mode]);
 
+  // Issue #9: Hidden - Parts feature is disabled for MVP
   // Prepare parts options for multi-select
-  const partsOptions: MultiSelectOption[] = React.useMemo(
-    () =>
-      parts?.map((part) => ({
-        label: part.name,
-        value: part.id,
-        part_number: part.part_number || "N/A",
-        stock_quantity: part.stock_quantity,
-        price: part.price,
-        disabled: part.stock_quantity === 0,
-      })) || [],
-    [parts],
-  );
+  // const partsOptions: MultiSelectOption[] = React.useMemo(
+  //   () =>
+  //     parts?.map((part) => ({
+  //       label: part.name,
+  //       value: part.id,
+  //       part_number: part.part_number || "N/A",
+  //       stock_quantity: part.stock_quantity,
+  //       price: part.price,
+  //       disabled: part.stock_quantity === 0,
+  //     })) || [],
+  //   [parts],
+  // );
 
   const handleSubmit = async () => {
     if (!formData.name) {
@@ -832,7 +836,8 @@ function ProductModal({
                 placeholder="Nhập đường dẫn hình ảnh (tùy chọn)"
               />
             </div>
-            <div className="flex flex-col gap-3">
+            {/* Issue #9: Hidden - Parts feature is disabled for MVP */}
+            {/* <div className="flex flex-col gap-3">
               <Label htmlFor="parts">Linh kiện liên quan</Label>
               <div className="text-sm text-muted-foreground mb-2">
                 Chọn các linh kiện được sử dụng cho sản phẩm này (tùy chọn)
@@ -913,7 +918,7 @@ function ProductModal({
                   </Badge>
                 )}
               />
-            </div>
+            </div> */}
             {mode === "edit" && product && (
               <>
                 <Separator />

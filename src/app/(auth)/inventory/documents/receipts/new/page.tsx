@@ -39,6 +39,7 @@ import type { StockReceiptReason } from "@/types/inventory";
 // ];
 
 // Receipt reason labels
+// Issue #25: Only show "Nhập mua hàng" and "Nhập RMA về" (hide customer_return)
 const RECEIPT_REASONS: {
   value: StockReceiptReason;
   label: string;
@@ -49,11 +50,11 @@ const RECEIPT_REASONS: {
     label: "Nhập mua hàng",
     description: "Nhập hàng mới từ nhà cung cấp/nhà sản xuất",
   },
-  {
-    value: "customer_return",
-    label: "Nhập hàng trả lại",
-    description: "Khách hàng trả lại sản phẩm đã mua",
-  },
+  // {
+  //   value: "customer_return",
+  //   label: "Nhập hàng trả lại",
+  //   description: "Khách hàng trả lại sản phẩm đã mua",
+  // },
   {
     value: "rma_return",
     label: "Nhập RMA về",
@@ -220,11 +221,14 @@ export default function CreateReceiptPage() {
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
+                          {/* Issue #26: Only show Kho Chính (main) and Kho Bảo Hành (warranty_stock) */}
+                          {virtualWarehouses
+                            ?.filter((wh) => wh.warehouse_type === "main" || wh.warehouse_type === "warranty_stock")
+                            .map((wh) => (
+                              <SelectItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>

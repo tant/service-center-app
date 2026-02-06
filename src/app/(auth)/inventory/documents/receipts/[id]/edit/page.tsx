@@ -260,11 +260,14 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
+                          {/* Issue #26: Only show Kho Chính (main) and Kho Bảo Hành (warranty_stock) */}
+                          {virtualWarehouses
+                            ?.filter((wh) => wh.warehouse_type === "main" || wh.warehouse_type === "warranty_stock")
+                            .map((wh) => (
+                              <SelectItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>

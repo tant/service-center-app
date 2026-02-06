@@ -59,14 +59,14 @@
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
 | 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
 | 22 | TC-CAT-001 (Test 0) | Bước 2 | Validation | Trường SKU khi tạo sản phẩm mới phải là bắt buộc (required) - hiện tại chưa enforce | Medium | Open |
-| 23 | TC-CAT-001 (Test 0) | Bước 4 | UI | Bỏ cột "Linh kiện" trong màn hình Sản phẩm (danh sách & chi tiết) - liên quan Issue #3 | Medium | Open |
-| 24 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ trường "Loại phiếu" trong form Phiếu nhập kho | Medium | Open |
-| 25 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Lý do nhập kho" chỉ hiển thị: Nhập mua hàng, Nhập RMA về (ẩn các lý do khác) | Medium | Open |
-| 26 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Kho nhập" chỉ hiển thị: Kho Chính + Kho Bảo Hành (ẩn các kho khác) | Medium | Open |
+| 23 | TC-CAT-001 (Test 0) | Bước 4 | UI | Bỏ cột "Linh kiện" trong màn hình Sản phẩm (danh sách & chi tiết) - liên quan Issue #3 | Medium | **DONE** |
+| 24 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ trường "Loại phiếu" trong form Phiếu nhập kho | Medium | **DONE** |
+| 25 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Lý do nhập kho" chỉ hiển thị: Nhập mua hàng, Nhập RMA về (ẩn các lý do khác) | Medium | **DONE** |
+| 26 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Kho nhập" chỉ hiển thị: Kho Chính + Kho Bảo Hành (ẩn các kho khác) | Medium | **DONE** |
 | 27 | TC-INV-001 (Test 1) | Bước 1 | Bug | Trường số lượng: khi xóa số mặc định (1) thì hiển thị cứng số 0, cần cho phép xóa toàn bộ để nhập lại | Low | Open |
 | 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | Open |
 
-> **Tổng:** 28 issues (16 DONE, 12 Open)
+> **Tổng:** 28 issues (20 DONE, 8 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---

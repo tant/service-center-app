@@ -2322,7 +2322,7 @@ ${changes.join("\n")}
           await ctx.supabaseAdmin
             .from("physical_products")
             .select(
-              "id, serial_number, product_id, virtual_warehouse_id, status",
+              "id, serial_number, product_id, virtual_warehouse_id, status, manufacturer_warranty_end_date, user_warranty_end_date",
             )
             .eq("id", replacement_product_id)
             .single();
@@ -2354,6 +2354,41 @@ ${changes.join("\n")}
           serial_number: replacementProduct.serial_number,
           product_id: replacementProduct.product_id,
         };
+
+        // Inherit user warranty from defective product (Cách 1: Kế thừa thời gian bảo hành còn lại)
+        // Only inherit user_warranty_end_date, keep manufacturer_warranty_end_date unchanged
+        if (ticket.serial_number) {
+          const { data: defectiveProduct } = await ctx.supabaseAdmin
+            .from("physical_products")
+            .select("user_warranty_end_date, manufacturer_warranty_end_date")
+            .eq("serial_number", ticket.serial_number)
+            .single();
+
+          if (defectiveProduct?.user_warranty_end_date) {
+            // Update replacement product to inherit user warranty end date
+            // Explicitly preserve manufacturer_warranty_end_date from replacement product
+            const { error: warrantyUpdateError } = await ctx.supabaseAdmin
+              .from("physical_products")
+              .update({
+                user_warranty_end_date: defectiveProduct.user_warranty_end_date,
+                manufacturer_warranty_end_date:
+                  replacementProduct.manufacturer_warranty_end_date, // Explicitly preserve
+              })
+              .eq("id", replacement_product_id);
+
+            if (warrantyUpdateError) {
+              console.error(
+                "[WARRANTY] Failed to update warranty dates:",
+                warrantyUpdateError,
+              );
+              // Non-blocking - log error but continue
+            } else {
+              console.log(
+                `[WARRANTY] Inherited user warranty: ${defectiveProduct.user_warranty_end_date}, kept manufacturer warranty: ${replacementProduct.manufacturer_warranty_end_date} | ${ticket.serial_number} → ${replacementProduct.serial_number}`,
+              );
+            }
+          }
+        }
       }
 
       // 3. Get profile ID

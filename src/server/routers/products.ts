@@ -17,7 +17,7 @@ const productTypeEnum = z.enum([
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
-  sku: z.string().nullable().optional(),
+  sku: z.string().min(1, "SKU is required"), // Issue #22: SKU is now required
   short_description: z.string().nullable().optional(),
   brand_id: z
     .string()
@@ -27,6 +27,7 @@ const createProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
+  supplier_name: z.string().nullable().optional(), // Issue #8: Supplier field
   part_ids: z.array(z.string().uuid()).optional().default([]),
   // Issue #10: Flag to skip duplicate name warning (after user confirms)
   skipDuplicateNameWarning: z.boolean().optional().default(false),
@@ -45,6 +46,7 @@ const updateProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum.optional(),
   primary_image: z.string().nullable().optional(),
+  supplier_name: z.string().nullable().optional(), // Issue #8: Supplier field
   part_ids: z.array(z.string().uuid()).optional(),
 });
 
@@ -139,6 +141,7 @@ export const productsRouter = router({
           model: input.model || null,
           type: input.type,
           primary_image: input.primary_image || null,
+          supplier_name: input.supplier_name || null, // Issue #8: Supplier field
         })
         .select()
         .single();
@@ -191,6 +194,8 @@ export const productsRouter = router({
       if (input.type !== undefined) updateData.type = input.type;
       if (input.primary_image !== undefined)
         updateData.primary_image = input.primary_image;
+      if (input.supplier_name !== undefined)
+        updateData.supplier_name = input.supplier_name; // Issue #8: Supplier field
 
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")

@@ -45,7 +45,7 @@
 
 | # | Test Case | Bước | Loại | Mô tả | Mức độ | Status |
 |---|-----------|------|------|-------|--------|--------|
-| 8 | TC-CAT-001 (Test 0) | Bước 2 | Feature | Thêm trường "Nhà cung cấp" vào form tạo sản phẩm | Medium | Open |
+| 8 | TC-CAT-001 (Test 0) | Bước 2 | Feature | Thêm trường "Nhà cung cấp" vào form tạo sản phẩm | Medium | **DONE** |
 | 9 | TC-CAT-001 (Test 0) | Bước 3 | UI | Bỏ trường "Linh kiện liên quan" | Low | **DONE** |
 | 10 | TC-CAT-001 (Test 0) | Bước 5 | Feature | Cần thêm cảnh báo khi trùng tên sản phẩm (warning) và trùng SKU (block) | Medium | **DONE** |
 | 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | **DONE** |
@@ -57,8 +57,8 @@
 | 17 | TC-SALE-001 (Test 2) | Bước 1 | UI | Bỏ "Nhập CSV" trong chọn Serial - Phiếu xuất (như phiếu nhập) | Low | **DONE** |
 | 18 | TC-SALE-001 (Test 2) | Bước 2 | Note | Khi thêm thông tin người liên hệ trong phiếu xuất (bán hàng) thì thông tin người liên hệ tự được thêm vào danh sách customer | Info | Open |
 | 19 | TC-SALE-001 (Test 2) | Bước 5 | Bug | Sau khi hoàn thành phiếu xuất, hàng chưa được chuyển qua Kho Hàng Bán | High | **DONE** |
-| 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | Open |
-| 22 | TC-CAT-001 (Test 0) | Bước 2 | Validation | Trường SKU khi tạo sản phẩm mới phải là bắt buộc (required) - hiện tại chưa enforce | Medium | Open |
+| 20 | TC-SALE-001 (Test 2) | Bước 6 | Bug | Inventory cập nhật không đúng - Kho Hàng Bán = 0 thay vì 60 sau khi bán | **Critical** | **DONE** |
+| 22 | TC-CAT-001 (Test 0) | Bước 2 | Validation | Trường SKU khi tạo sản phẩm mới phải là bắt buộc (required) - hiện tại chưa enforce | Medium | **DONE** |
 | 23 | TC-CAT-001 (Test 0) | Bước 4 | UI | Bỏ cột "Linh kiện" trong màn hình Sản phẩm (danh sách & chi tiết) - liên quan Issue #3 | Medium | **DONE** |
 | 24 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ trường "Loại phiếu" trong form Phiếu nhập kho | Medium | **DONE** |
 | 25 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Lý do nhập kho" chỉ hiển thị: Nhập mua hàng, Nhập RMA về (ẩn các lý do khác) | Medium | **DONE** |
@@ -313,7 +313,8 @@ Serial ABC123456702:
 - ✅ Dropdown "Loại sản phẩm" hiển thị danh sách các loại sản phẩm
 - ✅ Validation realtime khi nhập liệu
 
-> 📋 **Issue #8** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> 📋 **Issue #8 (DONE)** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> **DONE (2026-02-06):** Đã thêm trường "Nhà cung cấp" (supplier_name) vào form tạo/sửa sản phẩm. Migration đã apply, backend và frontend đã cập nhật đầy đủ.
 
 ---
 
@@ -990,9 +991,8 @@ Serial ABC123456702:
 | Ngày mua | 04/02/2026 |
 | Lịch sử | Nhập kho (SR-2026-001) → Bán cho KH (SO-2026-001) |
 
-> 📋 **Issue #20 (Critical)** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
->
-> **Chi tiết:** Kho Hàng Bán = 0 thay vì 60 sau khi bán. Quy tắc #7 không hoạt động → Mất tracking 60 SP.
+> 📋 **Issue #20 (DONE)** - Xem [ISSUES TỔNG HỢP](#-issues-tổng-hợp-ngoài-test-cases)
+> **DONE (2026-02-06):** Bug đã được fix. Trigger `process_issue_serial()` đã tự động chuyển sản phẩm sang kho `customer_installed` khi xuất với reason='sale'. Inventory tracking hoạt động chính xác.
 
 ---
 
@@ -2313,8 +2313,8 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 - [ ] **[TC-NEG-004]** Tạo BH trùng (serial đang có phiếu mở) → Block
 - [ ] **[TC-NEG-005]** Hủy phiếu giữa chừng → Rollback kho đúng
 - [ ] **[TC-NEG-006]** Bán serial đang sửa chữa → Block
-- [ ] **[TC-NEG-007]** Thêm serial không hợp lệ vào RMA → Block
-- [ ] **[TC-NEG-008]** Chuyển kho vượt số lượng → Block
+- [x] **[TC-NEG-007]** Thêm serial không hợp lệ vào RMA → Block ✅ (Validation đã tồn tại)
+- [x] **[TC-NEG-008]** Chuyển kho vượt số lượng → Block ✅ (2026-02-06)
 - [ ] **[TC-CONC-001]** Concurrent access → Data integrity OK
 
 ---

@@ -87,6 +87,7 @@ export const productSchema = z.object({
   model: z.string().nullable(),
   type: z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]),
   primary_image: z.string().nullable(),
+  supplier_name: z.string().nullable(), // Issue #8: Supplier field
   parts_count: z.number().default(0),
   physical_products_count: z.number().default(0),
   created_at: z.string(),
@@ -573,10 +574,17 @@ function ProductModal({
     model: "",
     type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
+    supplier_name: "", // Issue #8: Supplier field
     selected_parts: [] as string[],
     // Issue #10: Flag to skip duplicate name warning
     skipDuplicateNameWarning: false,
   });
+
+  // Validation errors state
+  const [fieldErrors, setFieldErrors] = React.useState<{
+    name?: boolean;
+    sku?: boolean;
+  }>({});
 
   // Issue #9: Hidden - Parts feature is disabled for MVP
   // Fetch parts data for selection
@@ -675,9 +683,13 @@ function ProductModal({
         model: product?.model || "",
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
+        supplier_name: product?.supplier_name || "", // Issue #8: Supplier field
         selected_parts: [], // Issue #9: Always empty array
         skipDuplicateNameWarning: false, // Issue #10: Reset flag
       });
+
+      // Reset validation errors when modal opens
+      setFieldErrors({});
     }
   }, [open, product, productWithParts, mode]);
 
@@ -697,22 +709,43 @@ function ProductModal({
   // );
 
   const handleSubmit = async () => {
+    // Reset errors
+    setFieldErrors({});
+
+    // Validate required fields
+    const errors: { name?: boolean; sku?: boolean } = {};
+
     if (!formData.name) {
       const errorMessage = "Vui lòng nhập tên sản phẩm";
-      console.error("[Products] Validation error:", errorMessage, { formData });
+      console.warn("[Products] Validation error:", errorMessage, { formData });
       toast.error(errorMessage);
+      errors.name = true;
+    }
+
+    // Issue #22: Validate SKU is required
+    if (!formData.sku || formData.sku.trim() === "") {
+      const errorMessage = "Vui lòng nhập SKU";
+      console.warn("[Products] Validation error:", errorMessage, { formData });
+      toast.error(errorMessage);
+      errors.sku = true;
+    }
+
+    // If there are errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     if (mode === "add") {
       createProductMutation.mutate({
         name: formData.name,
-        sku: formData.sku || null,
+        sku: formData.sku,
         short_description: formData.short_description || null,
         brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
+        supplier_name: formData.supplier_name || null, // Issue #8: Supplier field
         part_ids: formData.selected_parts,
         // Issue #10: Include flag to skip duplicate name warning
         skipDuplicateNameWarning: formData.skipDuplicateNameWarning,
@@ -726,6 +759,7 @@ function ProductModal({
         brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
+        supplier_name: formData.supplier_name || null, // Issue #8: Supplier field
         primary_image: formData.primary_image || null,
         part_ids: formData.selected_parts,
       });
@@ -806,23 +840,34 @@ function ProductModal({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                // Clear error when user starts typing
+                if (fieldErrors.name) {
+                  setFieldErrors({ ...fieldErrors, name: false });
+                }
+              }}
               placeholder="Nhập tên sản phẩm"
               required
+              className={fieldErrors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="sku">SKU</Label>
+              <Label htmlFor="sku">SKU *</Label>
               <Input
                 id="sku"
                 value={formData.sku}
-                onChange={(e) =>
-                  setFormData({ ...formData, sku: e.target.value })
-                }
-                placeholder="Nhập SKU (tùy chọn)"
+                onChange={(e) => {
+                  setFormData({ ...formData, sku: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.sku) {
+                    setFieldErrors({ ...fieldErrors, sku: false });
+                  }
+                }}
+                placeholder="Nhập SKU"
+                required
+                className={fieldErrors.sku ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
             <div className="flex flex-col gap-3">
@@ -885,6 +930,17 @@ function ProductModal({
                 placeholder="Nhập model (tùy chọn)"
               />
             </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="supplier_name">Nhà cung cấp</Label>
+            <Input
+              id="supplier_name"
+              value={formData.supplier_name}
+              onChange={(e) =>
+                setFormData({ ...formData, supplier_name: e.target.value })
+              }
+              placeholder="Nhập tên nhà cung cấp (tùy chọn)"
+            />
           </div>
           <div className="flex flex-col gap-3">
             <Label htmlFor="short_description">Mô tả</Label>

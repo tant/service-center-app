@@ -65,8 +65,9 @@
 | 26 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Kho nhập" chỉ hiển thị: Kho Chính + Kho Bảo Hành (ẩn các kho khác) | Medium | **DONE** |
 | 27 | TC-INV-001 (Test 1) | Bước 1 | Bug | Trường số lượng: khi xóa số mặc định (1) thì hiển thị cứng số 0, cần cho phép xóa toàn bộ để nhập lại | Low | Open |
 | 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | Open |
+| 29 | TC-WRN-004 (Test 5B) | Bước 4 | Feature | **Gán thời hạn bảo hành sản phẩm thay thế theo sản phẩm cũ:**<br>Khi đổi mới (Warranty Replacement), thời hạn bảo hành của sản phẩm thay thế phải được gán theo **ngày hết hạn bảo hành của sản phẩm cũ** (không tính lại từ đầu) | High | Open |
 
-> **Tổng:** 28 issues (20 DONE, 8 Open)
+> **Tổng:** 29 issues (23 DONE, 6 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---
@@ -1622,7 +1623,8 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 | C | Tạo Stock Issue | Phiếu xuất kho thay thế |
 | D | Link serial thay thế | ABC123456761 gán vào phiếu SV-2026-002 |
 | E | Đánh dấu outcome | "Warranty Replacement" |
-| F | Cập nhật tồn kho | Kho Chính: 40 → 39, Kho Hàng Hỏng: 0 → 1 |
+| F | Gán thời hạn bảo hành (Issue #29) | ABC123456761 nhận ngày hết hạn BH của ABC123456702 (04/02/2029) |
+| G | Cập nhật tồn kho | Kho Chính: 40 → 39, Kho Hàng Hỏng: 0 → 1 |
 
 - ✅ Hiển thị thông báo: "✅ Đã xác nhận thay thế sản phẩm"
 - ✅ Phiếu SV-2026-002 cập nhật:
@@ -1751,6 +1753,7 @@ Lặp lại quy trình tương tự cho các tasks còn lại:
 |-----------|---------|
 | Vị trí | **Kho Hàng Bán** |
 | Chủ sở hữu | Nguyễn Văn A |
+| Thời hạn bảo hành | **04/02/2029** (gán theo BH sản phẩm cũ, không tính lại) |
 | Giao theo phiếu | SV-2026-002 |
 
 **D) Tồn kho cuối cùng:**

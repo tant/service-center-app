@@ -2,7 +2,7 @@
 
 ## Hệ Thống Quản Lý Trung Tâm Bảo Hành
 
-**Dành cho:** Công ty Cổ phần Công nghệ SSTC
+**Dành cho:** SSTC Service Center
 **Ngày cập nhật:** 2026-02-05
 
 ---
@@ -132,7 +132,7 @@ Hệ thống sử dụng **2 cấp kho**:
 | Sản phẩm | ✅ | Chọn từ danh mục |
 | Số lượng | ✅ | |
 | Mã serial | ✅ | Duy nhất toàn hệ thống |
-| Thời hạn bảo hành: từ ngày - đến ngày | ✅ | Theo phiếu bán hàng từ nhà cung cấp |
+| Thời hạn bảo hành: từ ngày - đến ngày | ✅ | **Điền tay** theo phiếu bán hàng từ nhà cung cấp |
 | Ghi chú | | Số đơn đặt hàng, hóa đơn... |
 
 ### 4.3. Kết quả
@@ -246,9 +246,9 @@ Phiếu Yêu cầu được tạo khi tiếp nhận yêu cầu bảo hành/sửa
 
 ### 7.3. Tạo Phiếu Dịch vụ
 
-Phiếu Dịch vụ được tạo từ Phiếu Yêu cầu khi bắt đầu quá trình sửa chữa/bảo hành.
+Phiếu Dịch vụ được tạo từ Phiếu Yêu cầu khi bắt đầu quá trình sửa chữa/bảo hành — mỗi serial trên phiếu tương ứng với **1 Phiếu Dịch vụ**.
 
-> **Lưu ý:** Quan hệ 1:1 — Mỗi Phiếu Yêu cầu tạo tối đa 1 Phiếu Dịch vụ. Phiếu Yêu cầu có thể tồn tại độc lập (chưa tạo Phiếu Dịch vụ).
+> **Lưu ý:** Quan hệ 1:N — Mỗi Phiếu Yêu cầu tạo **N Phiếu Dịch vụ** (mỗi serial một phiếu). Phiếu Yêu cầu có thể tồn tại độc lập (chưa tạo Phiếu Dịch vụ).
 
 1. Từ Phiếu Yêu cầu → Nhấn "Tạo Phiếu Dịch vụ"
 2. Hệ thống tự động:
@@ -273,6 +273,7 @@ Phiếu Dịch vụ được tạo từ Phiếu Yêu cầu khi bắt đầu quá
 4. Hệ thống tự động:
    - Sản phẩm lỗi: Kho Sửa Chữa → Kho Hàng Hỏng
    - Sản phẩm thay thế: Kho Bảo Hành → Kho Hàng Bán
+   - Thời hạn bảo hành sản phẩm thay thế: gán theo **ngày hết hạn bảo hành của sản phẩm cũ**
    - Liên kết sản phẩm thay thế vào phiếu
 5. Tạo hoặc thêm sản phẩm lỗi vào lô RMA
 6. Đóng phiếu dịch vụ

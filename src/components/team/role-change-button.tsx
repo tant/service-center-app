@@ -79,9 +79,7 @@ export function RoleChangeButton({
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-40">
-        <div className="px-2 py-1.5 text-sm font-medium">
-          Thay đổi vai trò
-        </div>
+        <div className="px-2 py-1.5 text-sm font-medium">Thay đổi vai trò</div>
         <DropdownMenuSeparator />
         {availableRoles.map((role) => {
           const isCurrentRole = currentRole === role;

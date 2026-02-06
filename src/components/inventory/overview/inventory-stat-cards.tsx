@@ -5,9 +5,9 @@
  * Displays 3 key metrics: Total SKUs, Total Stock, and Alerts
  */
 
+import { AlertTriangle, Package, TrendingUp } from "lucide-react";
 import { trpc } from "@/components/providers/trpc-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, TrendingUp, AlertTriangle } from "lucide-react";
 
 export function InventoryStatCards() {
   const { data: stats, isLoading } = trpc.inventory.stock.getStats.useQuery();
@@ -43,9 +43,10 @@ export function InventoryStatCards() {
       icon: TrendingUp,
       description: `${stats.total_declared.toLocaleString()} đã khai báo`,
       color: "text-green-600",
-      subtitle: stats.total_actual !== stats.total_declared
-        ? `Chênh lệch: ${Math.abs(stats.total_declared - stats.total_actual)}`
-        : undefined,
+      subtitle:
+        stats.total_actual !== stats.total_declared
+          ? `Chênh lệch: ${Math.abs(stats.total_declared - stats.total_actual)}`
+          : undefined,
     },
     {
       title: "Cảnh Báo",
@@ -63,14 +64,20 @@ export function InventoryStatCards() {
         return (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {card.title}
+              </CardTitle>
               <Icon className={`h-4 w-4 ${card.color}`} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {card.description}
+              </p>
               {card.subtitle && (
-                <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {card.subtitle}
+                </p>
               )}
             </CardContent>
           </Card>

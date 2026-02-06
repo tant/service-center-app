@@ -85,3 +85,4 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 playwright-report/
+.playwright-mcp/

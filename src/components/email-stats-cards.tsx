@@ -5,9 +5,9 @@
 
 "use client";
 
-import { useEmailStats } from "@/hooks/use-notifications";
+import { CheckCircle, Clock, Mail, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useEmailStats } from "@/hooks/use-notifications";
 
 export function EmailStatsCards() {
   const { data: stats, isLoading } = useEmailStats();
@@ -56,10 +56,14 @@ export function EmailStatsCards() {
               <CardTitle className="text-sm font-medium">
                 {card.title}
               </CardTitle>
-              <Icon className={`h-4 w-4 ${card.className || "text-muted-foreground"}`} />
+              <Icon
+                className={`h-4 w-4 ${card.className || "text-muted-foreground"}`}
+              />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{card.value.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {card.value.toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {card.description}
               </p>

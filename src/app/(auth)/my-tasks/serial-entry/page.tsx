@@ -6,11 +6,15 @@
  * Supports filtering (Mine/Available/Overdue) and sorting
  */
 
-import { useState, useMemo } from "react";
+import { AlertCircle, ClipboardList, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
 import { SerialEntryTaskCard } from "@/components/tasks/serial-entry-task-card";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -19,10 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ClipboardList, AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
 
 type FilterType = "all" | "mine" | "available" | "overdue";
 type SortType = "priority" | "date" | "progress" | "age";
@@ -92,7 +92,12 @@ export default function SerialEntryTaskDashboard() {
       case "priority":
         // Sort by entity context priority
         taskList.sort((a, b) => {
-          const priorityOrder: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+          const priorityOrder: Record<string, number> = {
+            urgent: 0,
+            high: 1,
+            normal: 2,
+            low: 3,
+          };
           const aPriority = a.entity_context.priority
             ? (priorityOrder[a.entity_context.priority] ?? 2)
             : 2;
@@ -105,17 +110,17 @@ export default function SerialEntryTaskDashboard() {
       case "date":
         taskList.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
         break;
       case "progress":
         // Sort by serial completion percentage (from metadata)
         taskList.sort((a, b) => {
           const aPercentage = Number(
-            a.entity_context.metadata?.serialCompletionPercentage || 0
+            a.entity_context.metadata?.serialCompletionPercentage || 0,
           );
           const bPercentage = Number(
-            b.entity_context.metadata?.serialCompletionPercentage || 0
+            b.entity_context.metadata?.serialCompletionPercentage || 0,
           );
           return aPercentage - bPercentage;
         });
@@ -218,19 +223,27 @@ export default function SerialEntryTaskDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <div className="text-sm text-muted-foreground">Của tôi</div>
-                    <div className="text-3xl font-bold text-blue-600">{stats.mine}</div>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {stats.mine}
+                    </div>
                   </CardHeader>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
                     <div className="text-sm text-muted-foreground">Quá hạn</div>
-                    <div className="text-3xl font-bold text-red-600">{stats.overdue}</div>
+                    <div className="text-3xl font-bold text-red-600">
+                      {stats.overdue}
+                    </div>
                   </CardHeader>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
-                    <div className="text-sm text-muted-foreground">Có thể hỗ trợ</div>
-                    <div className="text-3xl font-bold text-green-600">{stats.available}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Có thể hỗ trợ
+                    </div>
+                    <div className="text-3xl font-bold text-green-600">
+                      {stats.available}
+                    </div>
                   </CardHeader>
                 </Card>
               </div>
@@ -241,7 +254,10 @@ export default function SerialEntryTaskDashboard() {
                   <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">Lọc:</span>
-                      <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+                      <Tabs
+                        value={filter}
+                        onValueChange={(v) => setFilter(v as FilterType)}
+                      >
                         <TabsList>
                           <TabsTrigger value="all">
                             Tất cả
@@ -273,7 +289,10 @@ export default function SerialEntryTaskDashboard() {
 
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">Sắp xếp:</span>
-                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortType)}>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(v) => setSortBy(v as SortType)}
+                      >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue />
                         </SelectTrigger>
@@ -301,8 +320,8 @@ export default function SerialEntryTaskDashboard() {
                       {filter === "mine"
                         ? "Bạn không có serial entry task nào. Tuyệt vời!"
                         : filter === "available"
-                        ? "Không có task nào cần hỗ trợ"
-                        : "Không có task quá hạn"}
+                          ? "Không có task nào cần hỗ trợ"
+                          : "Không có task quá hạn"}
                     </p>
                   </CardContent>
                 </Card>
@@ -316,7 +335,9 @@ export default function SerialEntryTaskDashboard() {
                     <h2 className="text-xl font-semibold text-red-600">
                       CẦN XỬ LÝ NGAY
                     </h2>
-                    <Badge variant="destructive">{groupedTasks.urgent.length}</Badge>
+                    <Badge variant="destructive">
+                      {groupedTasks.urgent.length}
+                    </Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {groupedTasks.urgent.map((task) => (
@@ -343,7 +364,9 @@ export default function SerialEntryTaskDashboard() {
                     <h2 className="text-xl font-semibold text-yellow-600">
                       ĐANG XỬ LÝ
                     </h2>
-                    <Badge className="bg-yellow-600">{groupedTasks.high.length}</Badge>
+                    <Badge className="bg-yellow-600">
+                      {groupedTasks.high.length}
+                    </Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {groupedTasks.high.map((task) => (
@@ -370,7 +393,9 @@ export default function SerialEntryTaskDashboard() {
                     <h2 className="text-xl font-semibold text-blue-600">
                       BìNH THƯỜNG
                     </h2>
-                    <Badge className="bg-blue-600">{groupedTasks.normal.length}</Badge>
+                    <Badge className="bg-blue-600">
+                      {groupedTasks.normal.length}
+                    </Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {groupedTasks.normal.map((task) => (
@@ -397,7 +422,9 @@ export default function SerialEntryTaskDashboard() {
                     <h2 className="text-xl font-semibold text-green-600">
                       ĐÃ HOÀN THÀNH
                     </h2>
-                    <Badge className="bg-green-600">{groupedTasks.low.length}</Badge>
+                    <Badge className="bg-green-600">
+                      {groupedTasks.low.length}
+                    </Badge>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {groupedTasks.low.map((task) => (

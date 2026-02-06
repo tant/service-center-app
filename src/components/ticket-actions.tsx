@@ -18,12 +18,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { CompleteTicketModal } from "@/components/modals/complete-ticket-modal";
 import { ConfirmDeliveryModal } from "@/components/modals/confirm-delivery-modal";
 import { SwitchTemplateModal } from "@/components/modals/switch-template-modal";
-import { Button } from "@/components/ui/button";
 import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface TicketActionsProps {
   ticketId: string;
@@ -73,8 +73,7 @@ export function TicketActions({
   // - (Tasks completed OR no tasks)
   // Note: outcome may already be pre-set (default warranty_replacement), so we don't check !outcome
   const canSelectOutcome =
-    ticketStatus === "in_progress" &&
-    (!hasTasks || tasksCompletedAt);
+    ticketStatus === "in_progress" && (!hasTasks || tasksCompletedAt);
 
   // Can confirm delivery if status is ready_for_pickup
   const canConfirmDelivery = ticketStatus === "ready_for_pickup";
@@ -102,7 +101,9 @@ export function TicketActions({
       {ticketStatus === "pending" && (
         <Button
           size="sm"
-          onClick={() => startTicketMutation.mutate({ id: ticketId, status: "in_progress" })}
+          onClick={() =>
+            startTicketMutation.mutate({ id: ticketId, status: "in_progress" })
+          }
           disabled={startTicketMutation.isPending}
         >
           <IconPlayerPlay className="h-4 w-4" />

@@ -9,7 +9,7 @@
  */
 
 export interface ValidationIssue {
-  type: 'error' | 'warning';
+  type: "error" | "warning";
   message: string;
   field?: string;
   taskIndex?: number;
@@ -33,7 +33,12 @@ export interface WorkflowTask {
 export interface WorkflowData {
   name: string;
   description?: string;
-  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
+  entity_type?:
+    | "service_ticket"
+    | "inventory_receipt"
+    | "inventory_issue"
+    | "inventory_transfer"
+    | "service_request";
   enforce_sequence: boolean;
   tasks: WorkflowTask[];
 }
@@ -41,42 +46,44 @@ export interface WorkflowData {
 /**
  * Main validation function
  */
-export function validateWorkflow(workflow: WorkflowData): WorkflowValidationResult {
+export function validateWorkflow(
+  workflow: WorkflowData,
+): WorkflowValidationResult {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
 
   // Basic validation
   if (!workflow.name || workflow.name.trim().length === 0) {
     errors.push({
-      type: 'error',
-      message: 'Tên quy trình không được để trống',
-      field: 'name',
+      type: "error",
+      message: "Tên quy trình không được để trống",
+      field: "name",
     });
   }
 
   if (workflow.name && workflow.name.length > 255) {
     errors.push({
-      type: 'error',
-      message: 'Tên quy trình không được quá 255 ký tự',
-      field: 'name',
+      type: "error",
+      message: "Tên quy trình không được quá 255 ký tự",
+      field: "name",
     });
   }
 
   // Task validation
   if (!workflow.tasks || workflow.tasks.length === 0) {
     errors.push({
-      type: 'error',
-      message: 'Quy trình phải có ít nhất một task',
-      field: 'tasks',
+      type: "error",
+      message: "Quy trình phải có ít nhất một task",
+      field: "tasks",
     });
   } else {
     // Check for missing task types
-    const missingTaskTypes = workflow.tasks.filter(t => !t.task_type_id);
+    const missingTaskTypes = workflow.tasks.filter((t) => !t.task_type_id);
     if (missingTaskTypes.length > 0) {
       errors.push({
-        type: 'error',
+        type: "error",
         message: `Có ${missingTaskTypes.length} task chưa chọn loại`,
-        field: 'tasks',
+        field: "tasks",
       });
     }
 
@@ -84,19 +91,19 @@ export function validateWorkflow(workflow: WorkflowData): WorkflowValidationResu
     const duplicates = findDuplicateTasks(workflow.tasks);
     if (duplicates.length > 0) {
       warnings.push({
-        type: 'warning',
+        type: "warning",
         message: `Có ${duplicates.length} task trùng lặp trong quy trình`,
-        field: 'tasks',
+        field: "tasks",
       });
     }
 
     // Check for at least one required task
-    const hasRequiredTask = workflow.tasks.some(t => t.is_required);
+    const hasRequiredTask = workflow.tasks.some((t) => t.is_required);
     if (!hasRequiredTask) {
       warnings.push({
-        type: 'warning',
-        message: 'Quy trình nên có ít nhất một task bắt buộc',
-        field: 'tasks',
+        type: "warning",
+        message: "Quy trình nên có ít nhất một task bắt buộc",
+        field: "tasks",
       });
     }
 
@@ -104,9 +111,9 @@ export function validateWorkflow(workflow: WorkflowData): WorkflowValidationResu
     workflow.tasks.forEach((task, index) => {
       if (task.custom_instructions && task.custom_instructions.length > 1000) {
         errors.push({
-          type: 'error',
+          type: "error",
           message: `Task ${index + 1}: Hướng dẫn quá dài (tối đa 1000 ký tự)`,
-          field: 'tasks',
+          field: "tasks",
           taskIndex: index,
         });
       }
@@ -158,14 +165,14 @@ function validateSequenceOrders(tasks: WorkflowTask[]): ValidationIssue[] {
   const errors: ValidationIssue[] = [];
 
   // Check for missing or invalid sequence orders
-  const sequences = tasks.map(t => t.sequence_order).sort((a, b) => a - b);
+  const sequences = tasks.map((t) => t.sequence_order).sort((a, b) => a - b);
 
   for (let i = 0; i < sequences.length; i++) {
     if (sequences[i] !== i + 1) {
       errors.push({
-        type: 'error',
-        message: 'Thứ tự task không hợp lệ. Vui lòng sắp xếp lại.',
-        field: 'tasks',
+        type: "error",
+        message: "Thứ tự task không hợp lệ. Vui lòng sắp xếp lại.",
+        field: "tasks",
       });
       break;
     }
@@ -178,33 +185,36 @@ function validateSequenceOrders(tasks: WorkflowTask[]): ValidationIssue[] {
  * Validate workflow before activation
  * More strict validation for workflows that will be used
  */
-export function validateWorkflowForActivation(workflow: WorkflowData): WorkflowValidationResult {
+export function validateWorkflowForActivation(
+  workflow: WorkflowData,
+): WorkflowValidationResult {
   const result = validateWorkflow(workflow);
 
   // Additional checks for activation
   if (result.isValid) {
     if (workflow.tasks.length < 2) {
       result.warnings.push({
-        type: 'warning',
-        message: 'Quy trình chỉ có 1 task. Bạn có chắc muốn kích hoạt?',
-        field: 'tasks',
+        type: "warning",
+        message: "Quy trình chỉ có 1 task. Bạn có chắc muốn kích hoạt?",
+        field: "tasks",
       });
     }
 
     if (!workflow.description || workflow.description.trim().length === 0) {
       result.warnings.push({
-        type: 'warning',
-        message: 'Nên thêm mô tả để người dùng hiểu rõ mục đích quy trình',
-        field: 'description',
+        type: "warning",
+        message: "Nên thêm mô tả để người dùng hiểu rõ mục đích quy trình",
+        field: "description",
       });
     }
 
     // Check if sequence enforcement makes sense
     if (!workflow.enforce_sequence && workflow.tasks.length > 3) {
       result.warnings.push({
-        type: 'warning',
-        message: 'Quy trình có nhiều task nhưng không bắt buộc thứ tự. Điều này có thể gây nhầm lẫn.',
-        field: 'enforce_sequence',
+        type: "warning",
+        message:
+          "Quy trình có nhiều task nhưng không bắt buộc thứ tự. Điều này có thể gây nhầm lẫn.",
+        field: "enforce_sequence",
       });
     }
   }
@@ -224,9 +234,9 @@ export function isWorkflowValid(workflow: WorkflowData): boolean {
  */
 export function getFieldError(
   result: WorkflowValidationResult,
-  field: string
+  field: string,
 ): string | undefined {
-  const error = result.errors.find(e => e.field === field);
+  const error = result.errors.find((e) => e.field === field);
   return error?.message;
 }
 
@@ -235,7 +245,7 @@ export function getFieldError(
  */
 export function getFieldIssues(
   result: WorkflowValidationResult,
-  field: string
+  field: string,
 ): ValidationIssue[] {
-  return result.allIssues.filter(i => i.field === field);
+  return result.allIssues.filter((i) => i.field === field);
 }

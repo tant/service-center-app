@@ -38,9 +38,7 @@ async function apiCall({
     return result;
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : errorMessage || "Có lỗi xảy ra";
+      error instanceof Error ? error.message : errorMessage || "Có lỗi xảy ra";
     console.error(`[Staff API] Error:`, message, error);
     toast.error(message);
     throw error;
@@ -59,7 +57,11 @@ export function useStaffApi() {
     });
   };
 
-  const resetPassword = async (userId: string, newPassword: string, fullName: string) => {
+  const resetPassword = async (
+    userId: string,
+    newPassword: string,
+    fullName: string,
+  ) => {
     return apiCall({
       url: "/api/staff/reset-password",
       method: "POST",
@@ -102,7 +104,7 @@ export function useStaffApi() {
       role: UserRole;
       is_active: boolean;
       avatar_url: string | null;
-    }
+    },
   ) => {
     return apiCall({
       url: "/api/staff",

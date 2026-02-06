@@ -5,27 +5,38 @@
  * Form for creating new stock issue (simplified types + virtual warehouse IDs)
  */
 
-import { useState } from "react";
+import { AlertCircle, ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
+import { useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
-import { toast } from "sonner";
+import {
+  getMaxAllowedDate,
+  getMinAllowedDate,
+  validateInventoryDocumentDate,
+} from "@/lib/date-validation";
 import type { StockIssueReason } from "@/types/inventory";
 
-// REDESIGNED: Only 2 issue types
-const ISSUE_TYPES = [
-  { value: "normal", label: "Phiếu xuất bình thường" },
-  { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
-];
+// Issue #4: Hide adjustment type - only normal issues allowed
+// const ISSUE_TYPES = [
+//   { value: "normal", label: "Phiếu xuất bình thường" },
+//   { value: "adjustment", label: "Phiếu điều chỉnh (kiểm kê)" },
+// ];
 
 // Issue reason labels
 const ISSUE_REASONS: { value: StockIssueReason; label: string }[] = [
@@ -47,9 +58,13 @@ interface ProductItem {
 
 export default function CreateIssuePage() {
   const router = useRouter();
-  const [issueType, setIssueType] = useState<"normal" | "adjustment">("normal");
+  // Issue #4: Force type to "normal" - adjustment type is hidden
+  const issueType = "normal";
   const [virtualWarehouseId, setVirtualWarehouseId] = useState("");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [issueDate, setIssueDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [dateError, setDateError] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
 
@@ -61,7 +76,8 @@ export default function CreateIssuePage() {
 
   const createIssue = trpc.inventory.issues.create.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
   const { data: customers } = trpc.customers.getCustomers.useQuery();
 
   const handleAddItem = () => {
@@ -72,15 +88,34 @@ export default function CreateIssuePage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof ProductItem, value: any) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof ProductItem,
+    value: any,
+  ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
   };
 
+  // Issue #16: Validate issue date
+  const handleDateChange = (newDate: string) => {
+    setIssueDate(newDate);
+    const validation = validateInventoryDocumentDate(newDate);
+    setDateError(validation.error);
+  };
+
   const handleSubmit = async () => {
     if (!issueType || !virtualWarehouseId || items.length === 0) {
       toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    // Issue #16: Validate issue date
+    const dateValidation = validateInventoryDocumentDate(issueDate);
+    if (!dateValidation.isValid) {
+      toast.error(dateValidation.error || "Ngày xuất không hợp lệ");
+      setDateError(dateValidation.error);
       return;
     }
 
@@ -90,20 +125,13 @@ export default function CreateIssuePage() {
       return;
     }
 
-    // REDESIGNED: Validate based on type
-    if (issueType === "normal") {
-      const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
-      if (invalidItems.length > 0) {
-        toast.error("Phiếu xuất bình thường phải có số lượng dương");
-        return;
-      }
-    } else {
-      // Adjustment: allow negative but not zero
-      const invalidItems = items.filter((item) => !item.productId || item.quantity === 0);
-      if (invalidItems.length > 0) {
-        toast.error("Số lượng không được bằng 0");
-        return;
-      }
+    // Issue #4: Always require positive quantity (adjustment type hidden)
+    const invalidItems = items.filter(
+      (item) => !item.productId || item.quantity <= 0,
+    );
+    if (invalidItems.length > 0) {
+      toast.error("Số lượng phải lớn hơn 0");
+      return;
     }
 
     try {
@@ -154,31 +182,23 @@ export default function CreateIssuePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label>Loại phiếu *</Label>
-                      <Select value={issueType} onValueChange={(v) => setIssueType(v as "normal" | "adjustment")}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại phiếu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ISSUE_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Issue #4: Hide "Loại phiếu" dropdown - adjustment type removed */}
 
                     <div className="grid gap-2">
                       <Label>Kho xuất *</Label>
-                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
+                      <Select
+                        value={virtualWarehouseId}
+                        onValueChange={setVirtualWarehouseId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
                           {virtualWarehouses
-                            ?.filter((wh) => wh.warehouse_type !== "customer_installed")
+                            ?.filter(
+                              (wh) =>
+                                wh.warehouse_type !== "customer_installed",
+                            )
                             .map((wh) => (
                               <SelectItem key={wh.id} value={wh.id}>
                                 {wh.name}
@@ -190,19 +210,21 @@ export default function CreateIssuePage() {
 
                     <div className="grid gap-2">
                       <Label>Ngày xuất *</Label>
-                      <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+                      <Input
+                        type="date"
+                        value={issueDate}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        min={getMinAllowedDate()}
+                        max={getMaxAllowedDate()}
+                        className={dateError ? "border-destructive" : ""}
+                      />
+                      {dateError && (
+                        <p className="text-sm text-destructive">{dateError}</p>
+                      )}
                     </div>
                   </div>
 
-                  {/* REDESIGNED: Show alert for adjustment type */}
-                  {issueType === "adjustment" && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Phiếu điều chỉnh:</strong> Số dương = giảm stock, số âm = tăng stock. Dùng khi kiểm kê hoặc sửa sai sót.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  {/* Issue #4: Adjustment alert removed */}
 
                   <div className="grid gap-2">
                     <Label>Ghi chú</Label>
@@ -225,7 +247,12 @@ export default function CreateIssuePage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Lý do xuất kho</Label>
-                      <Select value={issueReason} onValueChange={(v) => setIssueReason(v as StockIssueReason)}>
+                      <Select
+                        value={issueReason}
+                        onValueChange={(v) =>
+                          setIssueReason(v as StockIssueReason)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn lý do" />
                         </SelectTrigger>
@@ -240,21 +267,49 @@ export default function CreateIssuePage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className={issueReason === "sale" ? "text-primary font-medium" : ""}>
-                        Khách hàng {issueReason === "sale" && <span className="text-destructive">*</span>}
+                      <Label
+                        className={
+                          issueReason === "sale"
+                            ? "text-primary font-medium"
+                            : ""
+                        }
+                      >
+                        Khách hàng{" "}
+                        {issueReason === "sale" && (
+                          <span className="text-destructive">*</span>
+                        )}
                       </Label>
                       <Select
                         value={customerId || "__none__"}
-                        onValueChange={(v) => setCustomerId(v === "__none__" ? "" : v)}
+                        onValueChange={(v) =>
+                          setCustomerId(v === "__none__" ? "" : v)
+                        }
                       >
-                        <SelectTrigger className={issueReason === "sale" && !customerId ? "border-destructive" : ""}>
-                          <SelectValue placeholder={issueReason === "sale" ? "Chọn khách hàng (bắt buộc)" : "Chọn khách hàng (nếu có)"} />
+                        <SelectTrigger
+                          className={
+                            issueReason === "sale" && !customerId
+                              ? "border-destructive"
+                              : ""
+                          }
+                        >
+                          <SelectValue
+                            placeholder={
+                              issueReason === "sale"
+                                ? "Chọn khách hàng (bắt buộc)"
+                                : "Chọn khách hàng (nếu có)"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {issueReason !== "sale" && <SelectItem value="__none__">-- Không chọn --</SelectItem>}
+                          {issueReason !== "sale" && (
+                            <SelectItem value="__none__">
+                              -- Không chọn --
+                            </SelectItem>
+                          )}
                           {customers?.map((customer) => (
                             <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                              {customer.name}{" "}
+                              {customer.phone ? `(${customer.phone})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -306,15 +361,21 @@ export default function CreateIssuePage() {
                             <Label>Sản phẩm</Label>
                             <Select
                               value={item.productId}
-                              onValueChange={(value) => handleItemChange(index, "productId", value)}
+                              onValueChange={(value) =>
+                                handleItemChange(index, "productId", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Chọn sản phẩm" />
                               </SelectTrigger>
                               <SelectContent>
                                 {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} {product.sku ? `(${product.sku})` : ""}
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.name}{" "}
+                                    {product.sku ? `(${product.sku})` : ""}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -325,14 +386,25 @@ export default function CreateIssuePage() {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min={issueType === "adjustment" ? undefined : "1"} // REDESIGNED: Allow negative for adjustments
+                              min="1"
                               value={item.quantity}
-                              onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : Number.parseInt(e.target.value))}
-                              className={item.quantity < 0 ? "text-red-600 font-medium" : ""}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "quantity",
+                                  e.target.value === ""
+                                    ? 0
+                                    : Number.parseInt(e.target.value),
+                                )
+                              }
                             />
                           </div>
 
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

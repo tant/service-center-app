@@ -1,7 +1,12 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
+import { RequireRole } from "@/components/auth/RequireRole";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,12 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { RequireRole } from "@/components/auth/RequireRole";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
 
 type DefaultWorkflowMap = {
   service_request?: string;
@@ -36,17 +36,25 @@ function QuickGenerators() {
 
   const handleRandomIssue = async () => {
     const res = await createRandomIssue.mutateAsync();
-    toast.success(`Đã tạo phiếu xuất ${res.issueNumber} (${res.serials} serial)`);
+    toast.success(
+      `Đã tạo phiếu xuất ${res.issueNumber} (${res.serials} serial)`,
+    );
   };
 
   const handleRandomTransfer = async () => {
     const res = await createRandomTransfer.mutateAsync();
-    toast.success(`Đã tạo phiếu chuyển ${res.transferNumber} (${res.serials} serial)`);
+    toast.success(
+      `Đã tạo phiếu chuyển ${res.transferNumber} (${res.serials} serial)`,
+    );
   };
 
   return (
     <div className="grid grid-cols-1 gap-2">
-      <Button variant="outline" onClick={handleRandomIssue} disabled={createRandomIssue.isPending}>
+      <Button
+        variant="outline"
+        onClick={handleRandomIssue}
+        disabled={createRandomIssue.isPending}
+      >
         {createRandomIssue.isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -56,7 +64,11 @@ function QuickGenerators() {
           "Tạo phiếu xuất ngẫu nhiên"
         )}
       </Button>
-      <Button variant="outline" onClick={handleRandomTransfer} disabled={createRandomTransfer.isPending}>
+      <Button
+        variant="outline"
+        onClick={handleRandomTransfer}
+        disabled={createRandomTransfer.isPending}
+      >
         {createRandomTransfer.isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -82,12 +94,14 @@ export default function AdminAppSettingsPage() {
     refetch: refetchSettings,
   } = useDefaultWorkflowsSettings();
 
-  const serviceRequestWorkflows = trpc.workflow.template.getByEntityType.useQuery({
-    entityType: "service_request",
-  });
-  const serviceTicketWorkflows = trpc.workflow.template.getByEntityType.useQuery({
-    entityType: "service_ticket",
-  });
+  const serviceRequestWorkflows =
+    trpc.workflow.template.getByEntityType.useQuery({
+      entityType: "service_request",
+    });
+  const serviceTicketWorkflows =
+    trpc.workflow.template.getByEntityType.useQuery({
+      entityType: "service_ticket",
+    });
 
   const handleSaveDefaultWorkflows = async () => {
     try {
@@ -107,11 +121,15 @@ export default function AdminAppSettingsPage() {
 
   const missingServiceRequestDefault =
     defaultWorkflows.service_request &&
-    !(serviceRequestWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_request);
+    !(serviceRequestWorkflows.data ?? []).some(
+      (wf) => wf.id === defaultWorkflows.service_request,
+    );
 
   const missingServiceTicketDefault =
     defaultWorkflows.service_ticket &&
-    !(serviceTicketWorkflows.data ?? []).some((wf) => wf.id === defaultWorkflows.service_ticket);
+    !(serviceTicketWorkflows.data ?? []).some(
+      (wf) => wf.id === defaultWorkflows.service_ticket,
+    );
 
   const seedMockDataMutation = trpc.admin.seedMockData.useMutation({
     onSuccess: (data) => {
@@ -126,7 +144,11 @@ export default function AdminAppSettingsPage() {
   });
 
   const handleSeedMockData = async () => {
-    if (!confirm("Bạn có chắc chắn muốn tạo dữ liệu test? Thao tác này sẽ thêm nhiều dữ liệu vào database.")) {
+    if (
+      !confirm(
+        "Bạn có chắc chắn muốn tạo dữ liệu test? Thao tác này sẽ thêm nhiều dữ liệu vào database.",
+      )
+    ) {
       return;
     }
 
@@ -149,13 +171,15 @@ export default function AdminAppSettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cài đặt chung</CardTitle>
-                <CardDescription>Thiết lập cấu hình cho ứng dụng</CardDescription>
+                <CardDescription>
+                  Thiết lập cấu hình cho ứng dụng
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Đây là trang tạm cho phần Cài đặt Ứng dụng. Tôi sẽ thêm các
-                  mục cấu hình (ví dụ: tên ứng dụng, chế độ bảo trì, tích hợp 3rd
-                  party) khi có yêu cầu.
+                  mục cấu hình (ví dụ: tên ứng dụng, chế độ bảo trì, tích hợp
+                  3rd party) khi có yêu cầu.
                 </p>
               </CardContent>
             </Card>
@@ -163,13 +187,17 @@ export default function AdminAppSettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Thông tin hệ thống</CardTitle>
-                <CardDescription>Trạng thái và thông tin hữu ích</CardDescription>
+                <CardDescription>
+                  Trạng thái và thông tin hữu ích
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <div className="text-sm font-medium">Phiên bản</div>
-                    <div className="text-sm text-muted-foreground">0.0.0-dev</div>
+                    <div className="text-sm text-muted-foreground">
+                      0.0.0-dev
+                    </div>
                   </div>
                   <div>
                     <div className="text-sm font-medium">Môi trường</div>
@@ -179,7 +207,8 @@ export default function AdminAppSettingsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Issue #2: Default Workflows card hidden */}
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Workflow mặc định</CardTitle>
                 <CardDescription>
@@ -271,7 +300,7 @@ export default function AdminAppSettingsPage() {
                   </>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
 
             <Card>
               <CardHeader>
@@ -284,16 +313,30 @@ export default function AdminAppSettingsPage() {
                 <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
                   <p className="font-medium mb-2">⚠️ Lưu ý quan trọng:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Tạo dữ liệu test theo thứ tự: Staff Users → Customers → Brands → Products → Task Library → Workflows</li>
-                    <li>Dữ liệu được đọc từ <code className="bg-amber-100 px-1 rounded">docs/data/mock-data.json</code> (v4.0.0)</li>
-                    <li>Bao gồm dữ liệu test đầy đủ cho Polymorphic Task Management System (PTMS)</li>
+                    <li>
+                      Tạo dữ liệu test theo thứ tự: Staff Users → Customers →
+                      Brands → Products → Task Library → Workflows
+                    </li>
+                    <li>
+                      Dữ liệu được đọc từ{" "}
+                      <code className="bg-amber-100 px-1 rounded">
+                        docs/data/mock-data.json
+                      </code>{" "}
+                      (v4.0.0)
+                    </li>
+                    <li>
+                      Bao gồm dữ liệu test đầy đủ cho Polymorphic Task
+                      Management System (PTMS)
+                    </li>
                     <li>Chỉ dùng trong môi trường development để test</li>
                   </ul>
                 </div>
 
                 {seedProgress.length > 0 && (
                   <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-                    <p className="text-sm font-medium text-blue-900 mb-2">Tiến trình:</p>
+                    <p className="text-sm font-medium text-blue-900 mb-2">
+                      Tiến trình:
+                    </p>
                     <div className="space-y-1 text-xs text-blue-800 max-h-40 overflow-y-auto">
                       {seedProgress.map((msg, idx) => (
                         <div key={idx}>• {msg}</div>

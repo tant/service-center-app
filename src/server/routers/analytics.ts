@@ -4,8 +4,8 @@
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
 import { requireManagerOrAbove } from "../middleware/requireRole";
+import { publicProcedure, router } from "../trpc";
 
 export const analyticsRouter = router({
   // Get task type statistics
@@ -27,10 +27,14 @@ export const analyticsRouter = router({
   // Get user performance metrics
   getUserPerformance: publicProcedure
     .use(requireManagerOrAbove)
-    .input(z.object({
-      dateFrom: z.string().optional(),
-      dateTo: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          dateFrom: z.string().optional(),
+          dateTo: z.string().optional(),
+        })
+        .optional(),
+    )
     .query(async ({ input, ctx }) => {
       let query = ctx.supabaseAdmin
         .from("entity_tasks")
@@ -75,7 +79,10 @@ export const analyticsRouter = router({
 
         acc[userId].tasksCompleted++;
 
-        const duration = (new Date(task.completed_at).getTime() - new Date(task.started_at).getTime()) / (1000 * 60 * 60);
+        const duration =
+          (new Date(task.completed_at).getTime() -
+            new Date(task.started_at).getTime()) /
+          (1000 * 60 * 60);
         acc[userId].totalHours += duration;
 
         return acc;
@@ -83,7 +90,10 @@ export const analyticsRouter = router({
 
       return Object.values(userStats).map((stat: any) => ({
         ...stat,
-        avgHours: stat.tasksCompleted > 0 ? (stat.totalHours / stat.tasksCompleted).toFixed(2) : 0,
+        avgHours:
+          stat.tasksCompleted > 0
+            ? (stat.totalHours / stat.tasksCompleted).toFixed(2)
+            : 0,
       }));
     }),
 });

@@ -3,8 +3,8 @@
  * Inventory products page for managing physical products
  */
 
-import { PageHeader } from "@/components/page-header";
 import { ProductInventoryTable } from "@/components/inventory/product-inventory-table";
+import { PageHeader } from "@/components/page-header";
 
 export default function InventoryProductsPage() {
   return (

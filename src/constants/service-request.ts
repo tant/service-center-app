@@ -1,71 +1,79 @@
 // Service Request Constants
 // Constants for public service request portal
 
-import type { RequestStatus, ServiceType, DeliveryMethod } from '@/types/enums';
+import type { DeliveryMethod, RequestStatus, ServiceType } from "@/types/enums";
 
 // Request status colors for UI
 export const REQUEST_STATUS_COLORS: Record<RequestStatus, string> = {
-  draft: '#9CA3AF', // Light Gray
-  submitted: '#6B7280', // Gray
-  pickingup: '#8B5CF6', // Purple
-  received: '#3B82F6', // Blue
-  processing: '#F59E0B', // Orange
-  completed: '#10B981', // Green
-  cancelled: '#EF4444', // Red
+  draft: "#9CA3AF", // Light Gray
+  submitted: "#6B7280", // Gray
+  pickingup: "#8B5CF6", // Purple
+  received: "#3B82F6", // Blue
+  processing: "#F59E0B", // Orange
+  completed: "#10B981", // Green
+  cancelled: "#EF4444", // Red
 };
 
 // Request status icons (lucide-react icon names)
 export const REQUEST_STATUS_ICONS: Record<RequestStatus, string> = {
-  draft: 'file-edit',
-  submitted: 'send',
-  pickingup: 'package',
-  received: 'inbox',
-  processing: 'loader-2',
-  completed: 'check-circle',
-  cancelled: 'x-circle',
+  draft: "file-edit",
+  submitted: "send",
+  pickingup: "package",
+  received: "inbox",
+  processing: "loader-2",
+  completed: "check-circle",
+  cancelled: "x-circle",
 };
 
 // Request status descriptions
 export const REQUEST_STATUS_DESCRIPTIONS: Record<RequestStatus, string> = {
-  draft: 'Draft request, not yet submitted',
-  submitted: 'Request submitted, awaiting review',
-  pickingup: 'Awaiting product pickup from customer',
-  received: 'Request received and under review',
-  processing: 'Service ticket created, work in progress',
-  completed: 'Service completed successfully',
-  cancelled: 'Request cancelled or rejected',
+  draft: "Draft request, not yet submitted",
+  submitted: "Request submitted, awaiting review",
+  pickingup: "Awaiting product pickup from customer",
+  received: "Request received and under review",
+  processing: "Service ticket created, work in progress",
+  completed: "Service completed successfully",
+  cancelled: "Request cancelled or rejected",
 };
 
 // Service type options for public portal
-export const PUBLIC_SERVICE_TYPE_OPTIONS: { value: ServiceType; label: string; description: string }[] = [
+export const PUBLIC_SERVICE_TYPE_OPTIONS: {
+  value: ServiceType;
+  label: string;
+  description: string;
+}[] = [
   {
-    value: 'warranty',
-    label: 'Warranty Service',
-    description: 'Free service for products under warranty',
+    value: "warranty",
+    label: "Warranty Service",
+    description: "Free service for products under warranty",
   },
   {
-    value: 'paid',
-    label: 'Paid Repair',
-    description: 'Paid repair service for out-of-warranty products',
+    value: "paid",
+    label: "Paid Repair",
+    description: "Paid repair service for out-of-warranty products",
   },
   {
-    value: 'replacement',
-    label: 'Warranty Replacement',
-    description: 'Request replacement under warranty',
+    value: "replacement",
+    label: "Warranty Replacement",
+    description: "Request replacement under warranty",
   },
 ];
 
 // Delivery method options
-export const DELIVERY_METHOD_OPTIONS: { value: DeliveryMethod; label: string; description: string }[] = [
+export const DELIVERY_METHOD_OPTIONS: {
+  value: DeliveryMethod;
+  label: string;
+  description: string;
+}[] = [
   {
-    value: 'pickup',
-    label: 'Pickup',
-    description: 'Pick up from service center',
+    value: "pickup",
+    label: "Pickup",
+    description: "Pick up from service center",
   },
   {
-    value: 'delivery',
-    label: 'Delivery',
-    description: 'Deliver to customer address',
+    value: "delivery",
+    label: "Delivery",
+    description: "Deliver to customer address",
   },
 ];
 
@@ -111,44 +119,44 @@ export const SERVICE_REQUEST_VALIDATION = {
 export const PUBLIC_PHOTO_UPLOAD = {
   max_photos: 5,
   max_file_size_mb: 5,
-  allowed_formats: ['image/jpeg', 'image/png', 'image/webp'],
+  allowed_formats: ["image/jpeg", "image/png", "image/webp"],
   compression_quality: 0.8,
   thumbnail_size: 200,
 } as const;
 
 // Tracking token settings
 export const TRACKING_TOKEN_SETTINGS = {
-  prefix: 'SR-',
+  prefix: "SR-",
   length: 12,
-  characters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  format_display: 'SR-XXXXXXXXXXXX',
+  characters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  format_display: "SR-XXXXXXXXXXXX",
 } as const;
 
 // Email notification types
 export const EMAIL_NOTIFICATION_TYPES = {
   request_received: {
-    template: 'service_request_received',
-    subject: 'Service Request Received - {{tracking_token}}',
+    template: "service_request_received",
+    subject: "Service Request Received - {{tracking_token}}",
   },
   request_reviewed: {
-    template: 'service_request_reviewed',
-    subject: 'Service Request Update - {{tracking_token}}',
+    template: "service_request_reviewed",
+    subject: "Service Request Update - {{tracking_token}}",
   },
   request_approved: {
-    template: 'service_request_approved',
-    subject: 'Service Request Approved - {{tracking_token}}',
+    template: "service_request_approved",
+    subject: "Service Request Approved - {{tracking_token}}",
   },
   request_rejected: {
-    template: 'service_request_rejected',
-    subject: 'Service Request Update - {{tracking_token}}',
+    template: "service_request_rejected",
+    subject: "Service Request Update - {{tracking_token}}",
   },
   ticket_created: {
-    template: 'ticket_created_from_request',
-    subject: 'Service Ticket Created - {{ticket_number}}',
+    template: "ticket_created_from_request",
+    subject: "Service Ticket Created - {{ticket_number}}",
   },
   ticket_completed: {
-    template: 'ticket_completed',
-    subject: 'Service Completed - {{ticket_number}}',
+    template: "ticket_completed",
+    subject: "Service Completed - {{ticket_number}}",
   },
 } as const;
 
@@ -183,11 +191,11 @@ export const PUBLIC_PORTAL_CONFIG = {
 
 // Request analytics periods
 export const REQUEST_ANALYTICS_PERIODS = [
-  { value: '7d', label: 'Last 7 Days' },
-  { value: '30d', label: 'Last 30 Days' },
-  { value: '90d', label: 'Last 90 Days' },
-  { value: 'ytd', label: 'Year to Date' },
-  { value: 'all', label: 'All Time' },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "30d", label: "Last 30 Days" },
+  { value: "90d", label: "Last 90 Days" },
+  { value: "ytd", label: "Year to Date" },
+  { value: "all", label: "All Time" },
 ] as const;
 
 // SLA targets
@@ -199,20 +207,20 @@ export const SERVICE_REQUEST_SLA = {
 
 // Permission settings
 export const REQUEST_PERMISSIONS = {
-  can_view_all_requests: ['admin', 'manager', 'reception'],
-  can_review_requests: ['admin', 'manager', 'reception'],
-  can_approve_requests: ['admin', 'manager'],
-  can_reject_requests: ['admin', 'manager'],
-  can_convert_to_ticket: ['admin', 'manager', 'reception'],
-  can_export_requests: ['admin', 'manager'],
+  can_view_all_requests: ["admin", "manager", "reception"],
+  can_review_requests: ["admin", "manager", "reception"],
+  can_approve_requests: ["admin", "manager"],
+  can_reject_requests: ["admin", "manager"],
+  can_convert_to_ticket: ["admin", "manager", "reception"],
+  can_export_requests: ["admin", "manager"],
 } as const;
 
 // Default filters
 export const DEFAULT_REQUEST_FILTERS = {
-  status: 'all',
-  service_type: 'all',
-  date_range: '30d',
-  search: '',
+  status: "all",
+  service_type: "all",
+  date_range: "30d",
+  search: "",
   page: 1,
   limit: 50,
 } as const;

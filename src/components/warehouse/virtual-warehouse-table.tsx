@@ -7,12 +7,7 @@
  * Displays virtual warehouses with ability to create and edit (admin/manager only)
  */
 
-import * as React from "react";
-import {
-  IconBox,
-  IconPlus,
-  IconEdit,
-} from "@tabler/icons-react";
+import { IconBox, IconEdit, IconPlus } from "@tabler/icons-react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -27,7 +22,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { useVirtualWarehouses } from "@/hooks/use-warehouse";
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -46,11 +40,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { WAREHOUSE_TYPE_COLORS, WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
+import { TablePagination } from "@/components/ui/table-pagination";
+import {
+  WAREHOUSE_TYPE_COLORS,
+  WAREHOUSE_TYPE_LABELS,
+} from "@/constants/warehouse";
+import { useRole } from "@/hooks/use-role";
+import { useVirtualWarehouses } from "@/hooks/use-warehouse";
 import type { WarehouseType } from "@/types/enums";
 import type { VirtualWarehouse } from "@/types/warehouse";
 import { VirtualWarehouseFormModal } from "./virtual-warehouse-form-modal";
-import { useRole } from "@/hooks/use-role";
 
 // Extended type to include new fields from migration
 type VirtualWarehouseWithPhysical = VirtualWarehouse & {
@@ -102,9 +101,7 @@ const columns: ColumnDef<VirtualWarehouseWithPhysical>[] = [
     accessorKey: "description",
     header: "Mô Tả",
     cell: ({ row }) => (
-      <div className="max-w-md">
-        {row.original.description || "—"}
-      </div>
+      <div className="max-w-md">{row.original.description || "—"}</div>
     ),
   },
   {
@@ -116,7 +113,10 @@ const columns: ColumnDef<VirtualWarehouseWithPhysical>[] = [
         <div className="text-sm">
           {physicalWarehouse ? (
             <span>
-              {physicalWarehouse.name} <code className="text-xs text-muted-foreground">({physicalWarehouse.code})</code>
+              {physicalWarehouse.name}{" "}
+              <code className="text-xs text-muted-foreground">
+                ({physicalWarehouse.code})
+              </code>
             </span>
           ) : (
             <span className="text-muted-foreground italic">Hệ thống</span>
@@ -139,8 +139,11 @@ const columns: ColumnDef<VirtualWarehouseWithPhysical>[] = [
 export function VirtualWarehouseTable() {
   // Table states
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
@@ -148,7 +151,8 @@ export function VirtualWarehouseTable() {
 
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = React.useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = React.useState<VirtualWarehouseWithPhysical | null>(null);
+  const [selectedWarehouse, setSelectedWarehouse] =
+    React.useState<VirtualWarehouseWithPhysical | null>(null);
 
   const { warehouses, isLoading } = useVirtualWarehouses();
   const { isManagerOrAbove } = useRole();
@@ -157,37 +161,38 @@ export function VirtualWarehouseTable() {
   const canManageWarehouses = isManagerOrAbove;
 
   // Add actions column if user can manage warehouses
-  const columnsWithActions: ColumnDef<VirtualWarehouseWithPhysical>[] = canManageWarehouses
-    ? [
-        ...columns,
-        {
-          id: "actions",
-          header: "Thao Tác",
-          cell: ({ row }) => {
-            const warehouse = row.original;
-            // Only allow editing user-created warehouses (those with physical_warehouse_id)
-            const canEdit = warehouse.physical_warehouse_id !== null;
+  const columnsWithActions: ColumnDef<VirtualWarehouseWithPhysical>[] =
+    canManageWarehouses
+      ? [
+          ...columns,
+          {
+            id: "actions",
+            header: "Thao Tác",
+            cell: ({ row }) => {
+              const warehouse = row.original;
+              // Only allow editing user-created warehouses (those with physical_warehouse_id)
+              const canEdit = warehouse.physical_warehouse_id !== null;
 
-            return (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedWarehouse(warehouse);
-                    setIsFormModalOpen(true);
-                  }}
-                  disabled={!canEdit}
-                >
-                  <IconEdit className="h-4 w-4" />
-                  <span className="ml-2">Sửa</span>
-                </Button>
-              </div>
-            );
+              return (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedWarehouse(warehouse);
+                      setIsFormModalOpen(true);
+                    }}
+                    disabled={!canEdit}
+                  >
+                    <IconEdit className="h-4 w-4" />
+                    <span className="ml-2">Sửa</span>
+                  </Button>
+                </div>
+              );
+            },
           },
-        },
-      ]
-    : columns;
+        ]
+      : columns;
 
   const table = useReactTable({
     data: warehouses as VirtualWarehouseWithPhysical[],
@@ -261,15 +266,15 @@ export function VirtualWarehouseTable() {
                           index === 0
                             ? "pl-4 lg:pl-6"
                             : index === headerGroup.headers.length - 1
-                            ? "pr-4 lg:pr-6"
-                            : ""
+                              ? "pr-4 lg:pr-6"
+                              : ""
                         }
                       >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                       </TableHead>
                     ))}
@@ -289,13 +294,13 @@ export function VirtualWarehouseTable() {
                           index === 0
                             ? "pl-4 lg:pl-6"
                             : index === row.getVisibleCells().length - 1
-                            ? "pr-4 lg:pr-6"
-                            : ""
+                              ? "pr-4 lg:pr-6"
+                              : ""
                         }
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -313,9 +318,11 @@ export function VirtualWarehouseTable() {
       {/* Info Note */}
       <div className="rounded-lg bg-muted/50 p-4">
         <p className="text-sm text-muted-foreground">
-          <strong>Lưu ý:</strong> Kho ảo đại diện cho trạng thái logic của sản phẩm và được liên kết với kho vật lý.
-          Kho hệ thống (không có kho vật lý) không thể chỉnh sửa.
-          {canManageWarehouses && " Bạn có thể tạo thêm kho ảo mới được liên kết với các kho vật lý."}
+          <strong>Lưu ý:</strong> Kho ảo đại diện cho trạng thái logic của sản
+          phẩm và được liên kết với kho vật lý. Kho hệ thống (không có kho vật
+          lý) không thể chỉnh sửa.
+          {canManageWarehouses &&
+            " Bạn có thể tạo thêm kho ảo mới được liên kết với các kho vật lý."}
         </p>
       </div>
 

@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { z } from "zod";
+import { publicProcedure, router } from "../trpc";
 
 // Input validation schema
 const setupInputSchema = z.object({
@@ -211,8 +211,14 @@ export const adminRouter = router({
           console.log("   - User ID:", existingAuthUserRecord.id);
           console.log("   - Email:", adminEmail);
           console.log("🔐 RESET: Password length:", adminPassword.length);
-          console.log("🔐 RESET: Password (first 3 chars):", adminPassword.substring(0, 3));
-          console.log("🔐 RESET: Password (last 3 chars):", adminPassword.substring(adminPassword.length - 3));
+          console.log(
+            "🔐 RESET: Password (first 3 chars):",
+            adminPassword.substring(0, 3),
+          );
+          console.log(
+            "🔐 RESET: Password (last 3 chars):",
+            adminPassword.substring(adminPassword.length - 3),
+          );
           console.log("🔐 RESET: Full password for debug:", adminPassword);
 
           const { error: updateError } =
@@ -331,11 +337,20 @@ export const adminRouter = router({
         console.log("👤 AUTH: Creating admin user account...");
         console.log("📧 AUTH: Email:", adminEmail);
         console.log("🔐 AUTH: Password length:", adminPassword.length);
-        console.log("🔐 AUTH: Password (first 3 chars):", adminPassword.substring(0, 3));
-        console.log("🔐 AUTH: Password (last 3 chars):", adminPassword.substring(adminPassword.length - 3));
+        console.log(
+          "🔐 AUTH: Password (first 3 chars):",
+          adminPassword.substring(0, 3),
+        );
+        console.log(
+          "🔐 AUTH: Password (last 3 chars):",
+          adminPassword.substring(adminPassword.length - 3),
+        );
         console.log("🔐 AUTH: Full password for debug:", adminPassword);
         console.log("🔐 AUTH: Password type:", typeof adminPassword);
-        console.log("🔐 AUTH: Password includes special chars:", /[!@#$%^&*]/.test(adminPassword));
+        console.log(
+          "🔐 AUTH: Password includes special chars:",
+          /[!@#$%^&*]/.test(adminPassword),
+        );
 
         const { data: signUpData, error: signUpError } =
           await supabaseAdmin.auth.signUp({
@@ -446,23 +461,41 @@ export const adminRouter = router({
   // Create a random Issue using available serials from a virtual warehouse
   createRandomIssue: publicProcedure
     .input(
-      z.object({ virtualWarehouseId: z.string().optional(), maxItems: z.number().int().min(1).max(10).optional() }).optional()
+      z
+        .object({
+          virtualWarehouseId: z.string().optional(),
+          maxItems: z.number().int().min(1).max(10).optional(),
+        })
+        .optional(),
     )
     .mutation(async ({ ctx, input }) => {
       const { supabaseAdmin } = ctx;
       // Find admin/manager profile for created_by
       const { data: adminProfile } = await supabaseAdmin
-        .from("profiles").select("id").eq("role", "admin").limit(1).single();
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+        .limit(1)
+        .single();
       const { data: managerProfile } = await supabaseAdmin
-        .from("profiles").select("id").eq("email", "manager@sstc.vn").limit(1).single();
+        .from("profiles")
+        .select("id")
+        .eq("email", "manager@sstc.vn")
+        .limit(1)
+        .single();
       const createdById = adminProfile?.id || managerProfile?.id;
-      if (!createdById) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Missing admin/manager profile" });
+      if (!createdById)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Missing admin/manager profile",
+        });
 
       // Choose source virtual warehouse with available stock
       let sourceVwId = input?.virtualWarehouseId || "";
       if (!sourceVwId) {
-        const result = await supabaseAdmin
-          .rpc("get_virtual_warehouses_with_stock"); // optional, may not exist
+        const result = await supabaseAdmin.rpc(
+          "get_virtual_warehouses_with_stock",
+        ); // optional, may not exist
         const vwWithStock = result.error ? null : result.data;
         if (vwWithStock && vwWithStock.length > 0) {
           sourceVwId = vwWithStock[0].id;
@@ -472,7 +505,11 @@ export const adminRouter = router({
             .from("physical_products")
             .select("virtual_warehouse_id")
             .limit(1);
-          if (!anyPP || anyPP.length === 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No physical products available" });
+          if (!anyPP || anyPP.length === 0)
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "No physical products available",
+            });
           sourceVwId = anyPP[0].virtual_warehouse_id as string;
         }
       }
@@ -483,18 +520,37 @@ export const adminRouter = router({
         .select("id, product_id, serial_number")
         .eq("virtual_warehouse_id", sourceVwId)
         .limit(30);
-      if (candErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: candErr.message });
-      if (!candidates || candidates.length === 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No stock in selected warehouse" });
+      if (candErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: candErr.message,
+        });
+      if (!candidates || candidates.length === 0)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No stock in selected warehouse",
+        });
 
       // Randomly pick 3-8 or maxItems
       const maxItems = input?.maxItems ?? 6;
-      const pickCount = Math.min(Math.max(3, Math.floor(Math.random() * 6) + 3), candidates.length, maxItems * 3);
-      const shuffled = [...candidates].sort(() => Math.random() - 0.5).slice(0, pickCount);
+      const pickCount = Math.min(
+        Math.max(3, Math.floor(Math.random() * 6) + 3),
+        candidates.length,
+        maxItems * 3,
+      );
+      const shuffled = [...candidates]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, pickCount);
 
       // Group by product_id
-      const byProduct = new Map<string, { productId: string; pps: { id: string; serial_number: string }[] }>();
+      const byProduct = new Map<
+        string,
+        { productId: string; pps: { id: string; serial_number: string }[] }
+      >();
       for (const pp of shuffled) {
-        const g = byProduct.get(pp.product_id) || { productId: pp.product_id, pps: [] } as any;
+        const g =
+          byProduct.get(pp.product_id) ||
+          ({ productId: pp.product_id, pps: [] } as any);
         g.pps.push({ id: pp.id, serial_number: pp.serial_number });
         byProduct.set(pp.product_id, g);
       }
@@ -510,14 +566,18 @@ export const adminRouter = router({
           issue_date: new Date().toISOString(),
           // status defaults to 'completed' - no approval workflow
           created_by_id: createdById,
-          notes: "Generated by admin.createRandomIssue"
+          notes: "Generated by admin.createRandomIssue",
         })
         .select("id")
         .single();
-      if (issueErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: issueErr.message });
+      if (issueErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: issueErr.message,
+        });
 
       // Create items
-      const itemsToInsert = Array.from(byProduct.values()).map(g => ({
+      const itemsToInsert = Array.from(byProduct.values()).map((g) => ({
         issue_id: issue!.id,
         product_id: g.productId,
         quantity: g.pps.length,
@@ -526,52 +586,109 @@ export const adminRouter = router({
         .from("stock_issue_items")
         .insert(itemsToInsert)
         .select("id, product_id");
-      if (itemsErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: itemsErr.message });
+      if (itemsErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: itemsErr.message,
+        });
 
       // Map product->itemId
-      const itemByProduct = new Map(items!.map((it: any) => [it.product_id, it.id]));
+      const itemByProduct = new Map(
+        items!.map((it: any) => [it.product_id, it.id]),
+      );
       const serialRows = [] as any[];
       for (const g of byProduct.values()) {
         const itemId = itemByProduct.get(g.productId);
         for (const pp of g.pps) {
-          serialRows.push({ issue_item_id: itemId, physical_product_id: pp.id, serial_number: pp.serial_number });
+          serialRows.push({
+            issue_item_id: itemId,
+            physical_product_id: pp.id,
+            serial_number: pp.serial_number,
+          });
         }
       }
       if (serialRows.length > 0) {
-        const { error: serErr } = await supabaseAdmin.from("stock_issue_serials").insert(serialRows);
-        if (serErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: serErr.message });
+        const { error: serErr } = await supabaseAdmin
+          .from("stock_issue_serials")
+          .insert(serialRows);
+        if (serErr)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: serErr.message,
+          });
       }
 
-      return { id: issue!.id, issueNumber, sourceVwId, items: items?.length || 0, serials: serialRows.length };
+      return {
+        id: issue!.id,
+        issueNumber,
+        sourceVwId,
+        items: items?.length || 0,
+        serials: serialRows.length,
+      };
     }),
 
   // Create a random Transfer using available serials from a virtual warehouse
   createRandomTransfer: publicProcedure
     .input(
-      z.object({ fromVirtualWarehouseId: z.string().optional(), toVirtualWarehouseId: z.string().optional(), maxItems: z.number().int().min(1).max(10).optional() }).optional()
+      z
+        .object({
+          fromVirtualWarehouseId: z.string().optional(),
+          toVirtualWarehouseId: z.string().optional(),
+          maxItems: z.number().int().min(1).max(10).optional(),
+        })
+        .optional(),
     )
     .mutation(async ({ ctx, input }) => {
       const { supabaseAdmin } = ctx;
       // Find admin/manager profile for created_by
-      const { data: adminProfile } = await supabaseAdmin.from("profiles").select("id").eq("role", "admin").limit(1).single();
-      const { data: managerProfile } = await supabaseAdmin.from("profiles").select("id").eq("email", "manager@sstc.vn").limit(1).single();
+      const { data: adminProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+        .limit(1)
+        .single();
+      const { data: managerProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("email", "manager@sstc.vn")
+        .limit(1)
+        .single();
       const createdById = adminProfile?.id || managerProfile?.id;
-      if (!createdById) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Missing admin/manager profile" });
+      if (!createdById)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Missing admin/manager profile",
+        });
 
       // Choose source warehouse
       let fromVwId = input?.fromVirtualWarehouseId || "";
       if (!fromVwId) {
-        const { data: anyPP } = await supabaseAdmin.from("physical_products").select("virtual_warehouse_id").limit(1);
-        if (!anyPP || anyPP.length === 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No physical products available" });
+        const { data: anyPP } = await supabaseAdmin
+          .from("physical_products")
+          .select("virtual_warehouse_id")
+          .limit(1);
+        if (!anyPP || anyPP.length === 0)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No physical products available",
+          });
         fromVwId = anyPP[0].virtual_warehouse_id as string;
       }
 
       // Choose destination warehouse (different from source)
       let toVwId = input?.toVirtualWarehouseId || "";
       if (!toVwId) {
-        const { data: allVw } = await supabaseAdmin.from("virtual_warehouses").select("id");
-        const other = (allVw || []).map(v => v.id).filter((id: string) => id !== fromVwId);
-        if (other.length === 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No destination warehouse available" });
+        const { data: allVw } = await supabaseAdmin
+          .from("virtual_warehouses")
+          .select("id");
+        const other = (allVw || [])
+          .map((v) => v.id)
+          .filter((id: string) => id !== fromVwId);
+        if (other.length === 0)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No destination warehouse available",
+          });
         toVwId = other[Math.floor(Math.random() * other.length)];
       }
 
@@ -581,16 +698,35 @@ export const adminRouter = router({
         .select("id, product_id, serial_number")
         .eq("virtual_warehouse_id", fromVwId)
         .limit(30);
-      if (candErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: candErr.message });
-      if (!candidates || candidates.length === 0) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No stock in source warehouse" });
+      if (candErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: candErr.message,
+        });
+      if (!candidates || candidates.length === 0)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No stock in source warehouse",
+        });
 
       const maxItems = input?.maxItems ?? 6;
-      const pickCount = Math.min(Math.max(3, Math.floor(Math.random() * 6) + 3), candidates.length, maxItems * 3);
-      const shuffled = [...candidates].sort(() => Math.random() - 0.5).slice(0, pickCount);
+      const pickCount = Math.min(
+        Math.max(3, Math.floor(Math.random() * 6) + 3),
+        candidates.length,
+        maxItems * 3,
+      );
+      const shuffled = [...candidates]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, pickCount);
 
-      const byProduct = new Map<string, { productId: string; pps: { id: string; serial_number: string }[] }>();
+      const byProduct = new Map<
+        string,
+        { productId: string; pps: { id: string; serial_number: string }[] }
+      >();
       for (const pp of shuffled) {
-        const g = byProduct.get(pp.product_id) || { productId: pp.product_id, pps: [] } as any;
+        const g =
+          byProduct.get(pp.product_id) ||
+          ({ productId: pp.product_id, pps: [] } as any);
         g.pps.push({ id: pp.id, serial_number: pp.serial_number });
         byProduct.set(pp.product_id, g);
       }
@@ -606,13 +742,17 @@ export const adminRouter = router({
           transfer_date: new Date().toISOString(),
           // status defaults to 'completed' - no approval workflow
           created_by_id: createdById,
-          notes: "Generated by admin.createRandomTransfer"
+          notes: "Generated by admin.createRandomTransfer",
         })
         .select("id")
         .single();
-      if (trfErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: trfErr.message });
+      if (trfErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: trfErr.message,
+        });
 
-      const itemsToInsert = Array.from(byProduct.values()).map(g => ({
+      const itemsToInsert = Array.from(byProduct.values()).map((g) => ({
         transfer_id: transfer!.id,
         product_id: g.productId,
         quantity: g.pps.length,
@@ -621,22 +761,45 @@ export const adminRouter = router({
         .from("stock_transfer_items")
         .insert(itemsToInsert)
         .select("id, product_id");
-      if (itemsErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: itemsErr.message });
+      if (itemsErr)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: itemsErr.message,
+        });
 
-      const itemByProduct = new Map(items!.map((it: any) => [it.product_id, it.id]));
+      const itemByProduct = new Map(
+        items!.map((it: any) => [it.product_id, it.id]),
+      );
       const serialRows = [] as any[];
       for (const g of byProduct.values()) {
         const itemId = itemByProduct.get(g.productId);
         for (const pp of g.pps) {
-          serialRows.push({ transfer_item_id: itemId, physical_product_id: pp.id, serial_number: pp.serial_number });
+          serialRows.push({
+            transfer_item_id: itemId,
+            physical_product_id: pp.id,
+            serial_number: pp.serial_number,
+          });
         }
       }
       if (serialRows.length > 0) {
-        const { error: serErr } = await supabaseAdmin.from("stock_transfer_serials").insert(serialRows);
-        if (serErr) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: serErr.message });
+        const { error: serErr } = await supabaseAdmin
+          .from("stock_transfer_serials")
+          .insert(serialRows);
+        if (serErr)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: serErr.message,
+          });
       }
 
-      return { id: transfer!.id, transferNumber, fromVwId, toVwId, items: items?.length || 0, serials: serialRows.length };
+      return {
+        id: transfer!.id,
+        transferNumber,
+        fromVwId,
+        toVwId,
+        items: items?.length || 0,
+        serials: serialRows.length,
+      };
     }),
 
   seedMockData: publicProcedure.mutation(async ({ ctx }) => {
@@ -646,7 +809,12 @@ export const adminRouter = router({
 
     try {
       // Read mock data file
-      const mockDataPath = join(process.cwd(), "docs", "data", "mock-data.json");
+      const mockDataPath = join(
+        process.cwd(),
+        "docs",
+        "data",
+        "mock-data.json",
+      );
       console.log("📂 SEED: Reading mock data from:", mockDataPath);
       const mockDataContent = readFileSync(mockDataPath, "utf-8");
       const mockData = JSON.parse(mockDataContent);
@@ -685,21 +853,26 @@ export const adminRouter = router({
             .single();
 
           if (existingProfile) {
-            console.log(`⚠️ SEED: User ${staffUser.email} already exists, skipping...`);
+            console.log(
+              `⚠️ SEED: User ${staffUser.email} already exists, skipping...`,
+            );
             results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
             continue;
           }
 
           // Create auth user
-          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: staffUser.email,
-            password: staffUser.password,
-            email_confirm: true,
-          });
+          const { data: authData, error: authError } =
+            await supabaseAdmin.auth.admin.createUser({
+              email: staffUser.email,
+              password: staffUser.password,
+              email_confirm: true,
+            });
 
           if (authError) {
             if (authError.message.includes("already registered")) {
-              console.log(`⚠️ SEED: User ${staffUser.email} already registered in auth, skipping...`);
+              console.log(
+                `⚠️ SEED: User ${staffUser.email} already registered in auth, skipping...`,
+              );
               results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
               continue;
             }
@@ -718,14 +891,22 @@ export const adminRouter = router({
             });
 
           if (profileError) {
-            console.error(`❌ SEED: Failed to create profile for ${staffUser.email}:`, profileError);
+            console.error(
+              `❌ SEED: Failed to create profile for ${staffUser.email}:`,
+              profileError,
+            );
             results.push(`❌ Lỗi tạo profile cho ${staffUser.email}`);
           } else {
-            console.log(`✅ SEED: Created user ${staffUser.email} with role ${staffUser.role}`);
+            console.log(
+              `✅ SEED: Created user ${staffUser.email} with role ${staffUser.role}`,
+            );
             results.push(`✅ Tạo ${staffUser.email} (${staffUser.role})`);
           }
         } catch (error: any) {
-          console.error(`❌ SEED: Error creating user ${staffUser.email}:`, error);
+          console.error(
+            `❌ SEED: Error creating user ${staffUser.email}:`,
+            error,
+          );
           results.push(`❌ Lỗi tạo ${staffUser.email}: ${error.message}`);
         }
       }
@@ -746,36 +927,53 @@ export const adminRouter = router({
             .single();
 
           if (existingCustomer) {
-            console.log(`⚠️ SEED: Customer ${customer.phone} already exists, skipping...`);
-            results.push(`⚠️ Khách hàng ${customer.fullName} đã tồn tại, bỏ qua`);
+            console.log(
+              `⚠️ SEED: Customer ${customer.phone} already exists, skipping...`,
+            );
+            results.push(
+              `⚠️ Khách hàng ${customer.fullName} đã tồn tại, bỏ qua`,
+            );
             customerMap.set(customer.phone, existingCustomer.id);
             continue;
           }
 
-          const { data: customerData, error: customerError } = await supabaseAdmin
-            .from("customers")
-            .insert({
-              name: customer.fullName,
-              phone: customer.phone,
-              email: customer.email || null,
-              address: customer.address || null,
-              notes: customer.notes || null,
-            })
-            .select("id")
-            .single();
+          const { data: customerData, error: customerError } =
+            await supabaseAdmin
+              .from("customers")
+              .insert({
+                name: customer.fullName,
+                phone: customer.phone,
+                email: customer.email || null,
+                address: customer.address || null,
+                notes: customer.notes || null,
+              })
+              .select("id")
+              .single();
 
           if (customerError) {
-            console.error(`❌ SEED: Failed to create customer ${customer.fullName}:`, customerError);
-            results.push(`❌ Lỗi tạo khách hàng ${customer.fullName}: ${customerError.message}`);
+            console.error(
+              `❌ SEED: Failed to create customer ${customer.fullName}:`,
+              customerError,
+            );
+            results.push(
+              `❌ Lỗi tạo khách hàng ${customer.fullName}: ${customerError.message}`,
+            );
             continue;
           }
 
           customerMap.set(customer.phone, customerData.id);
-          console.log(`✅ SEED: Created customer ${customer.fullName} (${customer.phone})`);
+          console.log(
+            `✅ SEED: Created customer ${customer.fullName} (${customer.phone})`,
+          );
           results.push(`✅ Tạo khách hàng ${customer.fullName}`);
         } catch (error: any) {
-          console.error(`❌ SEED: Error creating customer ${customer.fullName}:`, error);
-          results.push(`❌ Lỗi tạo khách hàng ${customer.fullName}: ${error.message}`);
+          console.error(
+            `❌ SEED: Error creating customer ${customer.fullName}:`,
+            error,
+          );
+          results.push(
+            `❌ Lỗi tạo khách hàng ${customer.fullName}: ${error.message}`,
+          );
         }
       }
 
@@ -791,7 +989,10 @@ export const adminRouter = router({
         .select("id, name, warehouse_type");
 
       if (vwQueryError) {
-        console.error("❌ SEED: Failed to query virtual warehouses:", vwQueryError);
+        console.error(
+          "❌ SEED: Failed to query virtual warehouses:",
+          vwQueryError,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to query virtual warehouses: ${vwQueryError.message}`,
@@ -799,17 +1000,22 @@ export const adminRouter = router({
       }
 
       if (defaultVWs && defaultVWs.length > 0) {
-        console.log(`✅ SEED: Found ${defaultVWs.length} default virtual warehouses`);
+        console.log(
+          `✅ SEED: Found ${defaultVWs.length} default virtual warehouses`,
+        );
         for (const vw of defaultVWs) {
           virtualWarehouseMap.set(vw.name, vw.id);
           console.log(`  → ${vw.name} (${vw.warehouse_type})`);
         }
         results.push(`✅ Tìm thấy ${defaultVWs.length} kho ảo mặc định`);
       } else {
-        console.error("❌ SEED: No virtual warehouses found. Please ensure database has been seeded properly.");
+        console.error(
+          "❌ SEED: No virtual warehouses found. Please ensure database has been seeded properly.",
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "No virtual warehouses found. Please run 'pnpx supabase db reset' first.",
+          message:
+            "No virtual warehouses found. Please run 'pnpx supabase db reset' first.",
         });
       }
 
@@ -829,7 +1035,9 @@ export const adminRouter = router({
             .single();
 
           if (existingBrand) {
-            console.log(`⚠️ SEED: Brand ${brand.name} already exists, skipping...`);
+            console.log(
+              `⚠️ SEED: Brand ${brand.name} already exists, skipping...`,
+            );
             results.push(`⚠️ Nhãn hàng ${brand.name} đã tồn tại, bỏ qua`);
             brandMap.set(brand.name, existingBrand.id);
             continue;
@@ -845,8 +1053,13 @@ export const adminRouter = router({
             .single();
 
           if (brandError) {
-            console.error(`❌ SEED: Failed to create brand ${brand.name}:`, brandError);
-            results.push(`❌ Lỗi tạo nhãn hàng ${brand.name}: ${brandError.message}`);
+            console.error(
+              `❌ SEED: Failed to create brand ${brand.name}:`,
+              brandError,
+            );
+            results.push(
+              `❌ Lỗi tạo nhãn hàng ${brand.name}: ${brandError.message}`,
+            );
             continue;
           }
 
@@ -861,9 +1074,13 @@ export const adminRouter = router({
 
       // Step 5: Create Products
       console.log("\n📦 SEED STEP 5: Creating products...");
-      console.log(`📦 SEED: Total products to create: ${mockData.products?.length || 0}`);
+      console.log(
+        `📦 SEED: Total products to create: ${mockData.products?.length || 0}`,
+      );
       results.push("📦 Bước 5: Tạo Products...");
-      results.push(`📦 Tổng số sản phẩm cần tạo: ${mockData.products?.length || 0}`);
+      results.push(
+        `📦 Tổng số sản phẩm cần tạo: ${mockData.products?.length || 0}`,
+      );
 
       const productMap = new Map<string, string>(); // sku -> id mapping
 
@@ -878,7 +1095,9 @@ export const adminRouter = router({
             .single();
 
           if (existingProduct) {
-            console.log(`⚠️ SEED: Product ${product.sku} already exists, skipping...`);
+            console.log(
+              `⚠️ SEED: Product ${product.sku} already exists, skipping...`,
+            );
             results.push(`⚠️ Sản phẩm ${product.name} đã tồn tại, bỏ qua`);
             productMap.set(product.sku, existingProduct.id);
             continue;
@@ -887,12 +1106,18 @@ export const adminRouter = router({
           const brandId = brandMap.get(product.brand);
 
           if (!brandId) {
-            console.error(`❌ SEED: Brand ${product.brand} not found for product ${product.name}`);
-            results.push(`❌ Không tìm thấy brand ${product.brand} cho ${product.name}`);
+            console.error(
+              `❌ SEED: Brand ${product.brand} not found for product ${product.name}`,
+            );
+            results.push(
+              `❌ Không tìm thấy brand ${product.brand} cho ${product.name}`,
+            );
             continue;
           }
 
-          console.log(`🔄 SEED: Inserting product: ${product.name}, SKU: ${product.sku}, Brand ID: ${brandId}`);
+          console.log(
+            `🔄 SEED: Inserting product: ${product.name}, SKU: ${product.sku}, Brand ID: ${brandId}`,
+          );
 
           const { data: productData, error: productError } = await supabaseAdmin
             .from("products")
@@ -907,11 +1132,21 @@ export const adminRouter = router({
             .select("id")
             .single();
 
-          console.log(`📊 SEED: Insert result - Data:`, productData, `Error:`, productError);
+          console.log(
+            `📊 SEED: Insert result - Data:`,
+            productData,
+            `Error:`,
+            productError,
+          );
 
           if (productError) {
-            console.error(`❌ SEED: Failed to create product ${product.name}:`, productError);
-            results.push(`❌ Lỗi tạo sản phẩm ${product.name}: ${productError.message}`);
+            console.error(
+              `❌ SEED: Failed to create product ${product.name}:`,
+              productError,
+            );
+            results.push(
+              `❌ Lỗi tạo sản phẩm ${product.name}: ${productError.message}`,
+            );
             continue;
           }
 
@@ -919,7 +1154,10 @@ export const adminRouter = router({
           console.log(`✅ SEED: Created product ${product.name}`);
           results.push(`✅ Tạo sản phẩm ${product.name}`);
         } catch (error: any) {
-          console.error(`❌ SEED: Error creating product ${product.name}:`, error);
+          console.error(
+            `❌ SEED: Error creating product ${product.name}:`,
+            error,
+          );
           results.push(`❌ Lỗi tạo sản phẩm ${product.name}: ${error.message}`);
         }
       }
@@ -940,7 +1178,9 @@ export const adminRouter = router({
             .single();
 
           if (existingTask) {
-            console.log(`⚠️ SEED: Task ${task.name} already exists, skipping...`);
+            console.log(
+              `⚠️ SEED: Task ${task.name} already exists, skipping...`,
+            );
             results.push(`⚠️ Task ${task.name} đã tồn tại, bỏ qua`);
             taskLibraryMap.set(task.name, existingTask.id);
             continue;
@@ -958,7 +1198,10 @@ export const adminRouter = router({
             .single();
 
           if (taskError) {
-            console.error(`❌ SEED: Failed to create task ${task.name}:`, taskError);
+            console.error(
+              `❌ SEED: Failed to create task ${task.name}:`,
+              taskError,
+            );
             results.push(`❌ Lỗi tạo task ${task.name}: ${taskError.message}`);
             continue;
           }
@@ -988,28 +1231,36 @@ export const adminRouter = router({
             .single();
 
           if (existingWorkflow) {
-            console.log(`⚠️ SEED: Workflow ${workflow.name} already exists, skipping...`);
+            console.log(
+              `⚠️ SEED: Workflow ${workflow.name} already exists, skipping...`,
+            );
             results.push(`⚠️ Workflow ${workflow.name} đã tồn tại, bỏ qua`);
             workflowMap.set(workflow.name, existingWorkflow.id);
             continue;
           }
 
-          const { data: workflowData, error: workflowError } = await supabaseAdmin
-            .from("workflows")
-            .insert({
-              name: workflow.name,
-              description: workflow.description || null,
-              entity_type: workflow.entityType,
-              strict_sequence: workflow.enforceSequence,
-              is_active: workflow.isActive,
-              created_by_id: adminUserId,
-            })
-            .select("id")
-            .single();
+          const { data: workflowData, error: workflowError } =
+            await supabaseAdmin
+              .from("workflows")
+              .insert({
+                name: workflow.name,
+                description: workflow.description || null,
+                entity_type: workflow.entityType,
+                strict_sequence: workflow.enforceSequence,
+                is_active: workflow.isActive,
+                created_by_id: adminUserId,
+              })
+              .select("id")
+              .single();
 
           if (workflowError) {
-            console.error(`❌ SEED: Failed to create workflow ${workflow.name}:`, workflowError);
-            results.push(`❌ Lỗi tạo workflow ${workflow.name}: ${workflowError.message}`);
+            console.error(
+              `❌ SEED: Failed to create workflow ${workflow.name}:`,
+              workflowError,
+            );
+            results.push(
+              `❌ Lỗi tạo workflow ${workflow.name}: ${workflowError.message}`,
+            );
             continue;
           }
 
@@ -1022,7 +1273,9 @@ export const adminRouter = router({
             const taskId = taskLibraryMap.get(task.taskName);
 
             if (!taskId) {
-              console.warn(`⚠️ SEED: Task ${task.taskName} not found for workflow ${workflow.name}`);
+              console.warn(
+                `⚠️ SEED: Task ${task.taskName} not found for workflow ${workflow.name}`,
+              );
               continue;
             }
 
@@ -1037,16 +1290,26 @@ export const adminRouter = router({
               });
 
             if (workflowTaskError) {
-              console.error(`❌ SEED: Failed to add task ${task.taskName} to workflow ${workflow.name}:`, workflowTaskError);
+              console.error(
+                `❌ SEED: Failed to add task ${task.taskName} to workflow ${workflow.name}:`,
+                workflowTaskError,
+              );
             } else {
-              console.log(`✅ SEED: Added task ${task.taskName} to workflow ${workflow.name}`);
+              console.log(
+                `✅ SEED: Added task ${task.taskName} to workflow ${workflow.name}`,
+              );
             }
           }
 
           results.push(`  ↳ Thêm ${workflow.tasks.length} tasks vào workflow`);
         } catch (error: any) {
-          console.error(`❌ SEED: Error creating workflow ${workflow.name}:`, error);
-          results.push(`❌ Lỗi tạo workflow ${workflow.name}: ${error.message}`);
+          console.error(
+            `❌ SEED: Error creating workflow ${workflow.name}:`,
+            error,
+          );
+          results.push(
+            `❌ Lỗi tạo workflow ${workflow.name}: ${error.message}`,
+          );
         }
       }
 

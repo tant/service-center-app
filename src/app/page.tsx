@@ -1,6 +1,6 @@
 import {
-  GalleryVerticalEnd,
   ArrowRight,
+  GalleryVerticalEnd,
   LayoutDashboard,
   Package,
   Users,

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Icon } from "@tabler/icons-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,20 +30,14 @@ export function NavSection({
   const { isMobile } = useSidebar();
   const pathname = usePathname();
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
-    if (pathname === url) {
-      e.preventDefault();
-    }
-  };
-
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url} onClick={(e) => handleClick(e, item.url)} className="flex items-center gap-2">
+            <SidebarMenuButton asChild isActive={pathname === item.url}>
+              <Link href={item.url} className="flex items-center gap-2">
                 <item.icon />
                 <span className="flex-1">{item.name}</span>
                 {item.badge !== undefined && item.badge !== 0 && (
@@ -50,7 +45,7 @@ export function NavSection({
                     {item.badge}
                   </Badge>
                 )}
-              </a>
+              </Link>
             </SidebarMenuButton>
             {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>

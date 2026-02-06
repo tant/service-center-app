@@ -2,12 +2,12 @@
 // Story 1.15: Email Notification System - 6 Key Moments
 
 export type EmailType =
-  | 'request_submitted'
-  | 'request_received'
-  | 'request_rejected'
-  | 'ticket_created'
-  | 'service_completed'
-  | 'delivery_confirmed';
+  | "request_submitted"
+  | "request_received"
+  | "request_rejected"
+  | "ticket_created"
+  | "service_completed"
+  | "delivery_confirmed";
 
 export interface EmailTemplateContext {
   customerName: string;
@@ -131,8 +131,13 @@ function createEmailLayout(content: string, unsubscribeUrl: string): string {
 /**
  * Email Template 1: Service Request Submitted
  */
-export function requestSubmittedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function requestSubmittedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Yêu cầu dịch vụ đã được tiếp nhận</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Cảm ơn bạn đã gửi yêu cầu dịch vụ tại SSTC Service Center. Chúng tôi đã tiếp nhận yêu cầu của bạn.</p>
@@ -142,8 +147,8 @@ export function requestSubmittedTemplate(ctx: EmailTemplateContext): { html: str
       <div class="info-value">${ctx.trackingToken}</div>
     </div>
 
-    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ''}
-    ${ctx.serialNumber ? `<p><strong>Serial:</strong> ${ctx.serialNumber}</p>` : ''}
+    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ""}
+    ${ctx.serialNumber ? `<p><strong>Serial:</strong> ${ctx.serialNumber}</p>` : ""}
 
     <p><strong>Các bước tiếp theo:</strong></p>
     <ul>
@@ -157,7 +162,9 @@ export function requestSubmittedTemplate(ctx: EmailTemplateContext): { html: str
     </a>
 
     <p>Nếu có thắc mắc, vui lòng liên hệ hotline của chúng tôi.</p>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Yêu cầu dịch vụ đã được tiếp nhận
@@ -167,8 +174,8 @@ Xin chào ${ctx.customerName},
 Cảm ơn bạn đã gửi yêu cầu dịch vụ tại SSTC Service Center. Chúng tôi đã tiếp nhận yêu cầu của bạn.
 
 Mã theo dõi: ${ctx.trackingToken}
-${ctx.productName ? `Sản phẩm: ${ctx.productName}` : ''}
-${ctx.serialNumber ? `Serial: ${ctx.serialNumber}` : ''}
+${ctx.productName ? `Sản phẩm: ${ctx.productName}` : ""}
+${ctx.serialNumber ? `Serial: ${ctx.serialNumber}` : ""}
 
 Các bước tiếp theo:
 - Nhân viên của chúng tôi sẽ xem xét yêu cầu trong vòng 24 giờ
@@ -195,8 +202,13 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
 /**
  * Email Template 2: Request Received by Staff
  */
-export function requestReceivedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function requestReceivedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Yêu cầu của bạn đã được tiếp nhận</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Nhân viên của chúng tôi đã xem xét và tiếp nhận yêu cầu dịch vụ của bạn.</p>
@@ -218,7 +230,9 @@ export function requestReceivedTemplate(ctx: EmailTemplateContext): { html: stri
     <a href="https://service.sstc.vn/service-request/track?token=${ctx.trackingToken}" class="button">
       Theo dõi yêu cầu
     </a>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Yêu cầu của bạn đã được tiếp nhận
@@ -247,8 +261,13 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
 /**
  * Email Template 3: Request Rejected
  */
-export function requestRejectedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function requestRejectedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Yêu cầu dịch vụ không được chấp nhận</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Rất tiếc, chúng tôi không thể chấp nhận yêu cầu dịch vụ của bạn vào lúc này.</p>
@@ -260,7 +279,7 @@ export function requestRejectedTemplate(ctx: EmailTemplateContext): { html: stri
 
     <p><strong>Lý do:</strong></p>
     <p style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; border-radius: 4px;">
-      ${ctx.rejectionReason || 'Không đáp ứng điều kiện bảo hành'}
+      ${ctx.rejectionReason || "Không đáp ứng điều kiện bảo hành"}
     </p>
 
     <p><strong>Bạn có thể:</strong></p>
@@ -275,7 +294,9 @@ export function requestRejectedTemplate(ctx: EmailTemplateContext): { html: stri
     <a href="https://service.sstc.vn/service-request" class="button">
       Gửi yêu cầu mới
     </a>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Yêu cầu dịch vụ không được chấp nhận
@@ -285,7 +306,7 @@ Xin chào ${ctx.customerName},
 Rất tiếc, chúng tôi không thể chấp nhận yêu cầu dịch vụ của bạn.
 
 Mã theo dõi: ${ctx.trackingToken}
-Lý do: ${ctx.rejectionReason || 'Không đáp ứng điều kiện bảo hành'}
+Lý do: ${ctx.rejectionReason || "Không đáp ứng điều kiện bảo hành"}
 
 Bạn có thể liên hệ hotline hoặc gửi yêu cầu mới tại: https://service.sstc.vn/service-request
 
@@ -305,8 +326,13 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
 /**
  * Email Template 4: Ticket Created / Service Started
  */
-export function ticketCreatedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function ticketCreatedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Phiếu dịch vụ đã được tạo</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Chúng tôi đã tạo phiếu dịch vụ và bắt đầu xử lý sản phẩm của bạn.</p>
@@ -316,8 +342,8 @@ export function ticketCreatedTemplate(ctx: EmailTemplateContext): { html: string
       <div class="info-value">${ctx.ticketNumber}</div>
     </div>
 
-    ${ctx.trackingToken ? `<p><strong>Mã theo dõi gốc:</strong> ${ctx.trackingToken}</p>` : ''}
-    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ''}
+    ${ctx.trackingToken ? `<p><strong>Mã theo dõi gốc:</strong> ${ctx.trackingToken}</p>` : ""}
+    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ""}
 
     <p><strong>Trạng thái hiện tại:</strong> Đang xử lý</p>
 
@@ -329,7 +355,9 @@ export function ticketCreatedTemplate(ctx: EmailTemplateContext): { html: string
     </ul>
 
     <p>Bạn có thể sử dụng số phiếu dịch vụ để theo dõi tiến độ.</p>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Phiếu dịch vụ đã được tạo
@@ -339,8 +367,8 @@ Xin chào ${ctx.customerName},
 Chúng tôi đã tạo phiếu dịch vụ và bắt đầu xử lý sản phẩm của bạn.
 
 Số phiếu: ${ctx.ticketNumber}
-${ctx.trackingToken ? `Mã theo dõi: ${ctx.trackingToken}` : ''}
-${ctx.productName ? `Sản phẩm: ${ctx.productName}` : ''}
+${ctx.trackingToken ? `Mã theo dõi: ${ctx.trackingToken}` : ""}
+${ctx.productName ? `Sản phẩm: ${ctx.productName}` : ""}
 
 Trạng thái: Đang xử lý
 Thời gian dự kiến: 3-7 ngày làm việc
@@ -360,8 +388,13 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
 /**
  * Email Template 5: Service Completed / Ready for Pickup
  */
-export function serviceCompletedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function serviceCompletedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Dịch vụ đã hoàn tất</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Chúng tôi đã hoàn tất việc xử lý sản phẩm của bạn. Sản phẩm đã sẵn sàng để bàn giao.</p>
@@ -371,8 +404,8 @@ export function serviceCompletedTemplate(ctx: EmailTemplateContext): { html: str
       <div class="info-value">${ctx.ticketNumber}</div>
     </div>
 
-    ${ctx.completedDate ? `<p><strong>Ngày hoàn thành:</strong> ${ctx.completedDate}</p>` : ''}
-    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ''}
+    ${ctx.completedDate ? `<p><strong>Ngày hoàn thành:</strong> ${ctx.completedDate}</p>` : ""}
+    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ""}
 
     <p><strong>Trạng thái:</strong> Hoàn thành - Sẵn sàng bàn giao</p>
 
@@ -384,7 +417,9 @@ export function serviceCompletedTemplate(ctx: EmailTemplateContext): { html: str
     </ul>
 
     <p>Cảm ơn bạn đã tin tưởng SSTC Service Center!</p>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Dịch vụ đã hoàn tất
@@ -394,7 +429,7 @@ Xin chào ${ctx.customerName},
 Chúng tôi đã hoàn tất việc xử lý sản phẩm của bạn.
 
 Số phiếu: ${ctx.ticketNumber}
-${ctx.completedDate ? `Hoàn thành: ${ctx.completedDate}` : ''}
+${ctx.completedDate ? `Hoàn thành: ${ctx.completedDate}` : ""}
 Trạng thái: Sẵn sàng bàn giao
 
 Vui lòng đến trung tâm để nhận sản phẩm.
@@ -416,8 +451,13 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
 /**
  * Email Template 6: Delivery Confirmed
  */
-export function deliveryConfirmedTemplate(ctx: EmailTemplateContext): { html: string; text: string; subject: string } {
-  const html = createEmailLayout(`
+export function deliveryConfirmedTemplate(ctx: EmailTemplateContext): {
+  html: string;
+  text: string;
+  subject: string;
+} {
+  const html = createEmailLayout(
+    `
     <h2>Xác nhận đã giao hàng</h2>
     <p>Xin chào <strong>${ctx.customerName}</strong>,</p>
     <p>Sản phẩm của bạn đã được giao thành công.</p>
@@ -427,8 +467,8 @@ export function deliveryConfirmedTemplate(ctx: EmailTemplateContext): { html: st
       <div class="info-value">${ctx.ticketNumber}</div>
     </div>
 
-    ${ctx.deliveryDate ? `<p><strong>Ngày giao:</strong> ${ctx.deliveryDate}</p>` : ''}
-    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ''}
+    ${ctx.deliveryDate ? `<p><strong>Ngày giao:</strong> ${ctx.deliveryDate}</p>` : ""}
+    ${ctx.productName ? `<p><strong>Sản phẩm:</strong> ${ctx.productName}</p>` : ""}
 
     <p><strong>Trạng thái:</strong> Đã giao hàng</p>
 
@@ -440,7 +480,9 @@ export function deliveryConfirmedTemplate(ctx: EmailTemplateContext): { html: st
     </ul>
 
     <p>Cảm ơn bạn đã sử dụng dịch vụ của SSTC Service Center. Chúng tôi hy vọng được phục vụ bạn lần sau!</p>
-  `, ctx.unsubscribeUrl);
+  `,
+    ctx.unsubscribeUrl,
+  );
 
   const text = `
 Xác nhận đã giao hàng
@@ -450,7 +492,7 @@ Xin chào ${ctx.customerName},
 Sản phẩm của bạn đã được giao thành công.
 
 Số phiếu: ${ctx.ticketNumber}
-${ctx.deliveryDate ? `Ngày giao: ${ctx.deliveryDate}` : ''}
+${ctx.deliveryDate ? `Ngày giao: ${ctx.deliveryDate}` : ""}
 
 Vui lòng kiểm tra sản phẩm ngay. Nếu có vấn đề, liên hệ trong vòng 24 giờ.
 
@@ -474,20 +516,20 @@ Hủy đăng ký: ${ctx.unsubscribeUrl}
  */
 export function getEmailTemplate(
   type: EmailType,
-  context: EmailTemplateContext
+  context: EmailTemplateContext,
 ): { html: string; text: string; subject: string } {
   switch (type) {
-    case 'request_submitted':
+    case "request_submitted":
       return requestSubmittedTemplate(context);
-    case 'request_received':
+    case "request_received":
       return requestReceivedTemplate(context);
-    case 'request_rejected':
+    case "request_rejected":
       return requestRejectedTemplate(context);
-    case 'ticket_created':
+    case "ticket_created":
       return ticketCreatedTemplate(context);
-    case 'service_completed':
+    case "service_completed":
       return serviceCompletedTemplate(context);
-    case 'delivery_confirmed':
+    case "delivery_confirmed":
       return deliveryConfirmedTemplate(context);
     default:
       throw new Error(`Unknown email type: ${type}`);

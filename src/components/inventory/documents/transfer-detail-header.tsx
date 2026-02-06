@@ -5,11 +5,18 @@
  * Displays header information for a stock transfer
  */
 
+import { format } from "date-fns";
+import {
+  ArrowRight,
+  Calendar,
+  FileText,
+  Phone,
+  User,
+  UserCheck,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StockTransfer } from "@/types/inventory";
 import { DocumentStatusBadge } from "../shared/document-status-badge";
-import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, UserCheck, Phone, FileText, ArrowRight } from "lucide-react";
 
 interface TransferDetailHeaderProps {
   transfer: any; // StockTransfer with relations
@@ -63,7 +70,10 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
                 <div>
                   <div className="text-sm font-medium">Ngày dự kiến</div>
                   <div className="text-sm text-muted-foreground">
-                    {format(new Date(transfer.expected_delivery_date), "dd/MM/yyyy")}
+                    {format(
+                      new Date(transfer.expected_delivery_date),
+                      "dd/MM/yyyy",
+                    )}
                   </div>
                 </div>
               </div>
@@ -97,7 +107,9 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
               <div className="flex items-start gap-2">
                 <UserCheck className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
-                  <div className="text-sm font-medium">Khách hàng nhận hàng</div>
+                  <div className="text-sm font-medium">
+                    Khách hàng nhận hàng
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {transfer.customer.name}
                   </div>
@@ -122,7 +134,9 @@ export function TransferDetailHeader({ transfer }: TransferDetailHeaderProps) {
                 <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium">Ghi chú</div>
-                  <div className="text-sm text-muted-foreground">{transfer.notes}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {transfer.notes}
+                  </div>
                 </div>
               </div>
             )}

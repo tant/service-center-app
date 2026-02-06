@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
 import {
   requireAnyAuthenticated,
   requireManagerOrAbove,
 } from "../middleware/requireRole";
+import { publicProcedure, router } from "../trpc";
 
 /**
  * Story 1.6: Warehouse Hierarchy Setup
@@ -13,7 +13,10 @@ import {
 // Physical warehouse schemas for validation
 const createPhysicalWarehouseSchema = z.object({
   name: z.string().min(1, "Warehouse name is required"),
-  code: z.string().min(1, "Warehouse code is required").max(20, "Warehouse code must be 20 characters or less"),
+  code: z
+    .string()
+    .min(1, "Warehouse code is required")
+    .max(20, "Warehouse code must be 20 characters or less"),
   location: z.string().min(1, "Location is required"),
   description: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
@@ -22,7 +25,11 @@ const createPhysicalWarehouseSchema = z.object({
 const updatePhysicalWarehouseSchema = z.object({
   id: z.string().uuid("Warehouse ID must be a valid UUID"),
   name: z.string().min(1, "Warehouse name is required").optional(),
-  code: z.string().min(1, "Warehouse code is required").max(20, "Warehouse code must be 20 characters or less").optional(),
+  code: z
+    .string()
+    .min(1, "Warehouse code is required")
+    .max(20, "Warehouse code must be 20 characters or less")
+    .optional(),
   location: z.string().min(1, "Location is required").optional(),
   description: z.string().nullable().optional(),
   is_active: z.boolean().optional(),
@@ -41,8 +48,20 @@ const listPhysicalWarehousesSchema = z
 // Virtual warehouse schemas
 const createVirtualWarehouseSchema = z.object({
   name: z.string().min(1, "Warehouse name is required"),
-  physical_warehouse_id: z.string().uuid("Physical warehouse ID must be a valid UUID"),
-  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts", "customer_installed"]).default("main"),
+  physical_warehouse_id: z
+    .string()
+    .uuid("Physical warehouse ID must be a valid UUID"),
+  warehouse_type: z
+    .enum([
+      "main",
+      "warranty_stock",
+      "rma_staging",
+      "dead_stock",
+      "in_service",
+      "parts",
+      "customer_installed",
+    ])
+    .default("main"),
   description: z.string().nullable().optional(),
   is_active: z.boolean().default(true),
 });
@@ -50,7 +69,17 @@ const createVirtualWarehouseSchema = z.object({
 const updateVirtualWarehouseSchema = z.object({
   id: z.string().uuid("Virtual warehouse ID must be a valid UUID"),
   name: z.string().min(1, "Warehouse name is required").optional(),
-  warehouse_type: z.enum(["main", "warranty_stock", "rma_staging", "dead_stock", "in_service", "parts", "customer_installed"]).optional(),
+  warehouse_type: z
+    .enum([
+      "main",
+      "warranty_stock",
+      "rma_staging",
+      "dead_stock",
+      "in_service",
+      "parts",
+      "customer_installed",
+    ])
+    .optional(),
   description: z.string().nullable().optional(),
   is_active: z.boolean().optional(),
 });
@@ -108,7 +137,9 @@ export const warehouseRouter = router({
         .single();
 
       if (error) {
-        throw new Error(`Failed to create physical warehouse: ${error.message}`);
+        throw new Error(
+          `Failed to create physical warehouse: ${error.message}`,
+        );
       }
 
       return warehouse;
@@ -131,7 +162,9 @@ export const warehouseRouter = router({
         .single();
 
       if (error) {
-        throw new Error(`Failed to update physical warehouse: ${error.message}`);
+        throw new Error(
+          `Failed to update physical warehouse: ${error.message}`,
+        );
       }
 
       return warehouse;
@@ -146,11 +179,12 @@ export const warehouseRouter = router({
     .input(deletePhysicalWarehouseSchema)
     .mutation(async ({ ctx, input }) => {
       // Check if this is the system default warehouse
-      const { data: existingWarehouse, error: fetchError } = await ctx.supabaseAdmin
-        .from("physical_warehouses")
-        .select("is_system_default, name")
-        .eq("id", input.id)
-        .single();
+      const { data: existingWarehouse, error: fetchError } =
+        await ctx.supabaseAdmin
+          .from("physical_warehouses")
+          .select("is_system_default, name")
+          .eq("id", input.id)
+          .single();
 
       if (fetchError) {
         throw new Error(`Failed to fetch warehouse: ${fetchError.message}`);
@@ -158,7 +192,7 @@ export const warehouseRouter = router({
 
       if (existingWarehouse?.is_system_default) {
         throw new Error(
-          `Không thể xóa kho mặc định "${existingWarehouse.name}". Kho này được yêu cầu cho hoạt động hệ thống.`
+          `Không thể xóa kho mặc định "${existingWarehouse.name}". Kho này được yêu cầu cho hoạt động hệ thống.`,
         );
       }
 
@@ -171,7 +205,9 @@ export const warehouseRouter = router({
         .single();
 
       if (error) {
-        throw new Error(`Failed to delete physical warehouse: ${error.message}`);
+        throw new Error(
+          `Failed to delete physical warehouse: ${error.message}`,
+        );
       }
 
       return warehouse;
@@ -183,21 +219,21 @@ export const warehouseRouter = router({
   listVirtualWarehouses: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const { data: warehouses, error } = await ctx.supabaseAdmin
-      .from("virtual_warehouses")
-      .select(`
+      const { data: warehouses, error } = await ctx.supabaseAdmin
+        .from("virtual_warehouses")
+        .select(`
         *,
         physical_warehouse:physical_warehouses(id, name, code, location)
       `)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch virtual warehouses: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch virtual warehouses: ${error.message}`);
+      }
 
-    return warehouses || [];
-  }),
+      return warehouses || [];
+    }),
 
   /**
    * AC 3.6: Create a new virtual warehouse (admin/manager only)

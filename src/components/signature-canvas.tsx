@@ -1,12 +1,12 @@
 // Signature Canvas Component
 // Story 1.14: Customer Delivery Confirmation Workflow - Signature Capture
 
-'use client';
+"use client";
 
-import { useRef, useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { IconEraser, IconCheck, IconX } from '@tabler/icons-react';
+import { IconCheck, IconEraser, IconX } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface SignatureCanvasProps {
   onSave: (dataUrl: string) => void;
@@ -29,58 +29,62 @@ export function SignatureCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // Set up canvas
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
     // Fill with white background
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, []);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    e:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     setIsDrawing(true);
     setIsEmpty(false);
 
     const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e
-      ? e.touches[0].clientX - rect.left
-      : e.clientX - rect.left;
-    const y = 'touches' in e
-      ? e.touches[0].clientY - rect.top
-      : e.clientY - rect.top;
+    const x =
+      "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y =
+      "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (
+    e:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
     if (!isDrawing) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e
-      ? e.touches[0].clientX - rect.left
-      : e.clientX - rect.left;
-    const y = 'touches' in e
-      ? e.touches[0].clientY - rect.top
-      : e.clientY - rect.top;
+    const x =
+      "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y =
+      "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -94,10 +98,10 @@ export function SignatureCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     setIsEmpty(true);
   };
@@ -107,7 +111,7 @@ export function SignatureCanvas({
     if (!canvas || isEmpty) return;
 
     // Convert canvas to data URL (PNG format)
-    const dataUrl = canvas.toDataURL('image/png');
+    const dataUrl = canvas.toDataURL("image/png");
     onSave(dataUrl);
   };
 
@@ -149,19 +153,11 @@ export function SignatureCanvas({
         </div>
 
         <div className="flex gap-2 justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-          >
+          <Button type="button" variant="outline" onClick={onCancel}>
             <IconX className="h-4 w-4 mr-1" />
             Hủy
           </Button>
-          <Button
-            type="button"
-            onClick={save}
-            disabled={isEmpty}
-          >
+          <Button type="button" onClick={save} disabled={isEmpty}>
             <IconCheck className="h-4 w-4 mr-1" />
             Xác nhận
           </Button>

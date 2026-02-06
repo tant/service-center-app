@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { IconCheck, IconX } from "@tabler/icons-react";
-
+import * as React from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 interface TemplatePreviewModalProps {
@@ -85,7 +84,8 @@ export function TemplatePreviewModal({
                   Loại dịch vụ
                 </h3>
                 <Badge variant="outline">
-                  {serviceTypeLabels[workflow.service_type] || workflow.service_type}
+                  {serviceTypeLabels[workflow.service_type] ||
+                    workflow.service_type}
                 </Badge>
               </div>
 
@@ -167,14 +167,17 @@ export function TemplatePreviewModal({
             )}
           </div>
 
-          {workflow.enforce_sequence && workflow.tasks && workflow.tasks.length > 0 && (
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-sm text-muted-foreground">
-                <strong>Lưu ý:</strong> Mẫu này yêu cầu thực hiện công việc theo thứ tự nghiêm ngặt.
-                Các công việc phải được hoàn thành theo đúng trình tự từ 1 đến {workflow.tasks.length}.
-              </p>
-            </div>
-          )}
+          {workflow.enforce_sequence &&
+            workflow.tasks &&
+            workflow.tasks.length > 0 && (
+              <div className="rounded-lg bg-muted p-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Lưu ý:</strong> Mẫu này yêu cầu thực hiện công việc
+                  theo thứ tự nghiêm ngặt. Các công việc phải được hoàn thành
+                  theo đúng trình tự từ 1 đến {workflow.tasks.length}.
+                </p>
+              </div>
+            )}
         </div>
 
         <DialogFooter>

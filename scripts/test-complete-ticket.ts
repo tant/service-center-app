@@ -3,13 +3,14 @@
  * Run: pnpm tsx scripts/test-complete-ticket.ts
  */
 
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
 // Load environment variables from .env file
 config();
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -87,7 +88,11 @@ async function runTests() {
   if (!customerWarehouse) {
     console.log("❌ No customer_installed warehouse found\n");
   } else {
-    console.log("✅ customer_installed warehouse:", customerWarehouse.name, "\n");
+    console.log(
+      "✅ customer_installed warehouse:",
+      customerWarehouse.name,
+      "\n",
+    );
   }
 
   // Test 5: Get available replacement products
@@ -115,7 +120,7 @@ async function runTests() {
     } else {
       console.log("✅ Found", replacements.length, "replacement product(s):");
       replacements.forEach((p: any) => {
-        console.log(`   - ${p.serial_number} (${p.product?.name || 'N/A'})`);
+        console.log(`   - ${p.serial_number} (${p.product?.name || "N/A"})`);
       });
     }
   } else {
@@ -136,7 +141,9 @@ async function runTests() {
   }
 
   // Test 7: Test constraint (should fail)
-  console.log("=== Test 7: Test constraint chk_replacement_requires_outcome ===");
+  console.log(
+    "=== Test 7: Test constraint chk_replacement_requires_outcome ===",
+  );
   if (warrantyTicket) {
     // Try to set replacement_product_id without warranty_replacement outcome
     const { error: constraintError } = await supabase
@@ -149,7 +156,11 @@ async function runTests() {
 
     if (constraintError) {
       console.log("✅ Constraint working - blocked invalid update");
-      console.log("   Error:", constraintError.message.substring(0, 100), "...\n");
+      console.log(
+        "   Error:",
+        constraintError.message.substring(0, 100),
+        "...\n",
+      );
     } else {
       console.log("❌ Constraint NOT working - update should have failed\n");
       // Rollback

@@ -92,7 +92,10 @@ export abstract class BaseEntityAdapter {
    * @param taskId - UUID of task to start
    * @returns Result with canStart boolean and optional reason
    */
-  async canStartTask(ctx: TRPCContext, taskId: string): Promise<CanStartResult> {
+  async canStartTask(
+    ctx: TRPCContext,
+    taskId: string,
+  ): Promise<CanStartResult> {
     // Default: Allow all tasks to start
     return { canStart: true };
   }
@@ -137,7 +140,11 @@ export abstract class BaseEntityAdapter {
    * @param taskId - UUID of task that was blocked
    * @param reason - Reason for blocking
    */
-  async onTaskBlock(ctx: TRPCContext, taskId: string, reason: string): Promise<void> {
+  async onTaskBlock(
+    ctx: TRPCContext,
+    taskId: string,
+    reason: string,
+  ): Promise<void> {
     // Default: No action
   }
 
@@ -155,7 +162,10 @@ export abstract class BaseEntityAdapter {
    * @param entityId - UUID of entity
    * @returns Task context for UI
    */
-  abstract getEntityContext(ctx: TRPCContext, entityId: string): Promise<TaskContext>;
+  abstract getEntityContext(
+    ctx: TRPCContext,
+    entityId: string,
+  ): Promise<TaskContext>;
 
   /**
    * Optional: Validate if workflow can be assigned to entity
@@ -222,8 +232,8 @@ export abstract class BaseEntityAdapter {
     }
 
     // All required tasks must be completed or skipped
-    return tasks.every((task) =>
-      task.status === "completed" || task.status === "skipped"
+    return tasks.every(
+      (task) => task.status === "completed" || task.status === "skipped",
     );
   }
 
@@ -267,8 +277,8 @@ export abstract class BaseEntityAdapter {
     }
 
     // All previous required tasks must be completed or skipped
-    return previousTasks.every((t) =>
-      t.status === "completed" || t.status === "skipped"
+    return previousTasks.every(
+      (t) => t.status === "completed" || t.status === "skipped",
     );
   }
 }

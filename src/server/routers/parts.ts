@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
 import {
+  requireAdmin,
   requireAnyAuthenticated,
   requireManagerOrAbove,
-  requireAdmin,
 } from "../middleware/requireRole";
+import { publicProcedure, router } from "../trpc";
 
 // Part schemas for validation
 const createPartSchema = z.object({
@@ -44,42 +44,46 @@ export const partsRouter = router({
   getNewParts: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfPrevMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        1,
+      );
 
-    // Get current month's new parts
-    const { data: currentMonthData, error: currentError } =
-      await ctx.supabaseAdmin
+      // Get current month's new parts
+      const { data: currentMonthData, error: currentError } =
+        await ctx.supabaseAdmin
+          .from("parts")
+          .select("count", { count: "exact" })
+          .gte("created_at", startOfMonth.toISOString())
+          .lt("created_at", now.toISOString());
+
+      // Get previous month's new parts
+      const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
         .from("parts")
         .select("count", { count: "exact" })
-        .gte("created_at", startOfMonth.toISOString())
-        .lt("created_at", now.toISOString());
+        .gte("created_at", startOfPrevMonth.toISOString())
+        .lt("created_at", startOfMonth.toISOString());
 
-    // Get previous month's new parts
-    const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
-      .from("parts")
-      .select("count", { count: "exact" })
-      .gte("created_at", startOfPrevMonth.toISOString())
-      .lt("created_at", startOfMonth.toISOString());
+      if (currentError || prevError) {
+        throw new Error(currentError?.message || prevError?.message);
+      }
 
-    if (currentError || prevError) {
-      throw new Error(currentError?.message || prevError?.message);
-    }
+      const currentCount = currentMonthData?.[0]?.count || 0;
+      const prevCount = prevMonthData?.[0]?.count || 0;
+      const growthRate =
+        prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
 
-    const currentCount = currentMonthData?.[0]?.count || 0;
-    const prevCount = prevMonthData?.[0]?.count || 0;
-    const growthRate =
-      prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
-
-    return {
-      currentMonthCount: currentCount,
-      previousMonthCount: prevCount,
-      growthRate,
-      hasPreviousData: prevCount > 0,
-      latestUpdate: now.toISOString(),
-    };
-  }),
+      return {
+        currentMonthCount: currentCount,
+        previousMonthCount: prevCount,
+        growthRate,
+        hasPreviousData: prevCount > 0,
+        latestUpdate: now.toISOString(),
+      };
+    }),
   createPart: publicProcedure
     .use(requireManagerOrAbove)
     .input(createPartSchema)
@@ -206,19 +210,19 @@ export const partsRouter = router({
   getParts: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const { data: parts, error } = await ctx.supabaseAdmin
-      .from("parts")
-      .select(
-        "id, name, part_number, sku, price, cost_price, stock_quantity, description",
-      )
-      .order("name", { ascending: true });
+      const { data: parts, error } = await ctx.supabaseAdmin
+        .from("parts")
+        .select(
+          "id, name, part_number, sku, price, cost_price, stock_quantity, description",
+        )
+        .order("name", { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch parts: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch parts: ${error.message}`);
+      }
 
-    return parts || [];
-  }),
+      return parts || [];
+    }),
 
   deletePart: publicProcedure
     .use(requireAdmin)
@@ -261,9 +265,9 @@ export const partsRouter = router({
   getProducts: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const { data: products, error } = await ctx.supabaseAdmin
-      .from("products")
-      .select(`
+      const { data: products, error } = await ctx.supabaseAdmin
+        .from("products")
+        .select(`
         id,
         name,
         type,
@@ -273,14 +277,14 @@ export const partsRouter = router({
           name
         )
       `)
-      .order("name", { ascending: true });
+        .order("name", { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch products: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch products: ${error.message}`);
+      }
 
-    return products || [];
-  }),
+      return products || [];
+    }),
 });
 
 export type PartsRouter = typeof partsRouter;

@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  IconCheck,
+  IconClipboardList,
+  IconClock,
+  IconLoader,
+  IconTrendingUp,
+} from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,13 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  IconCheck,
-  IconClock,
-  IconClipboardList,
-  IconLoader,
-  IconTrendingUp,
-} from "@tabler/icons-react";
 
 interface EmployeePerformance {
   id: string;

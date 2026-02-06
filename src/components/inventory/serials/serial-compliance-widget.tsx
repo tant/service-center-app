@@ -6,20 +6,20 @@
  * Features: completion rate, overdue tasks, team performance, trends
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  CheckCircle2,
   AlertTriangle,
-  Flame,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
-  Users,
+  CheckCircle2,
   Clock,
+  Flame,
+  TrendingDown,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ComplianceMetrics {
   totalReceipts: number;
@@ -151,7 +151,9 @@ export function SerialComplianceWidget({
 
           {/* Overdue Count */}
           <div className="space-y-1">
-            <div className={`text-2xl font-bold ${metrics.overdueCount > 0 ? "text-red-600" : "text-green-600"}`}>
+            <div
+              className={`text-2xl font-bold ${metrics.overdueCount > 0 ? "text-red-600" : "text-green-600"}`}
+            >
               {metrics.overdueCount}
             </div>
             <div className="text-sm text-muted-foreground flex items-center gap-1">
@@ -208,7 +210,9 @@ export function SerialComplianceWidget({
               {topPerformers.slice(0, 3).map((member, index) => {
                 const completionRate =
                   member.assignedTasks > 0
-                    ? Math.round((member.completedTasks / member.assignedTasks) * 100)
+                    ? Math.round(
+                        (member.completedTasks / member.assignedTasks) * 100,
+                      )
                     : 0;
 
                 return (
@@ -232,8 +236,8 @@ export function SerialComplianceWidget({
                         completionRate === 100
                           ? "text-green-600"
                           : completionRate > 50
-                          ? "text-yellow-600"
-                          : "text-red-600"
+                            ? "text-yellow-600"
+                            : "text-red-600"
                       }`}
                     >
                       {completionRate}%
@@ -251,8 +255,8 @@ export function SerialComplianceWidget({
             <p className="flex items-start gap-2">
               <Flame className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>
-                <strong>Cần hành động ngay!</strong> Có {metrics.overdueCount} task
-                quá hạn cần được xử lý.
+                <strong>Cần hành động ngay!</strong> Có {metrics.overdueCount}{" "}
+                task quá hạn cần được xử lý.
               </span>
             </p>
           </div>

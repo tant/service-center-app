@@ -4,11 +4,28 @@
  * Unified Serial Input Drawer Component
  * Single component for all 3 document types: Receipt, Issue, Transfer
  * Redesigned for better UX: Focus on primary action (textarea)
+ * Issue #17: CSV import removed
+ * Issue #21: Implement chunking to avoid "URI too long" error
  */
 
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  Settings2,
+} from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/components/providers/trpc-provider";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Drawer,
   DrawerClose,
@@ -17,19 +34,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DatePicker } from "@/components/ui/date-picker";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Upload, Loader2, AlertCircle, CheckCircle2, ChevronDown, Settings2 } from "lucide-react";
-import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// Issue #21: Chunk size to avoid "URI too long" error
+// 50 serials @ ~12 chars each = ~600 chars (safe for URL encoding)
+const SERIAL_CHUNK_SIZE = 50;
 
 type DocumentType = "receipt" | "issue" | "transfer";
 
@@ -50,6 +61,12 @@ interface ValidationError {
   error: string;
 }
 
+interface ProcessingProgress {
+  current: number;
+  total: number;
+  percentage: number;
+}
+
 export function UnifiedSerialInputDrawer({
   open,
   onOpenChange,
@@ -63,7 +80,11 @@ export function UnifiedSerialInputDrawer({
 }: UnifiedSerialInputDrawerProps) {
   const isMobile = useIsMobile();
   const [serialInput, setSerialInput] = useState("");
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
+    [],
+  );
+  const [processingProgress, setProcessingProgress] =
+    useState<ProcessingProgress | null>(null);
 
   // Warranty fields (only for receipt type)
   const [warrantyOpen, setWarrantyOpen] = useState(false);
@@ -72,8 +93,10 @@ export function UnifiedSerialInputDrawer({
 
   // Mutations based on document type
   const addReceiptSerials = trpc.inventory.receipts.addSerials.useMutation();
-  const selectIssueSerials = trpc.inventory.issues.selectSerialsByNumbers.useMutation();
-  const selectTransferSerials = trpc.inventory.transfers.selectSerialsByNumbers.useMutation();
+  const selectIssueSerials =
+    trpc.inventory.issues.selectSerialsByNumbers.useMutation();
+  const selectTransferSerials =
+    trpc.inventory.transfers.selectSerialsByNumbers.useMutation();
 
   const remaining = quantity - currentSerialCount;
 
@@ -86,20 +109,27 @@ export function UnifiedSerialInputDrawer({
 
   const getDocumentTypeLabel = () => {
     switch (type) {
-      case "receipt": return "Phiếu nhập";
-      case "issue": return "Phiếu xuất";
-      case "transfer": return "Phiếu chuyển";
+      case "receipt":
+        return "Phiếu nhập";
+      case "issue":
+        return "Phiếu xuất";
+      case "transfer":
+        return "Phiếu chuyển";
     }
   };
 
   const getValidationHint = () => {
     switch (type) {
-      case "receipt": return "Serial phải chưa tồn tại trong hệ thống";
-      case "issue": return "Serial phải đã có trong kho xuất";
-      case "transfer": return "Serial phải đã có trong kho nguồn";
+      case "receipt":
+        return "Serial phải chưa tồn tại trong hệ thống";
+      case "issue":
+        return "Serial phải đã có trong kho xuất";
+      case "transfer":
+        return "Serial phải đã có trong kho nguồn";
     }
   };
 
+  // Issue #21: Process serials in chunks to avoid "URI too long" error
   const handleSave = async () => {
     if (!serialInput.trim()) {
       toast.error("Vui lòng nhập ít nhất một số serial");
@@ -107,62 +137,101 @@ export function UnifiedSerialInputDrawer({
     }
 
     if (serialCount > remaining) {
-      toast.error(`Bạn chỉ có thể thêm ${remaining} serial. Bạn đã nhập ${serialCount}.`);
+      toast.error(
+        `Bạn chỉ có thể thêm ${remaining} serial. Bạn đã nhập ${serialCount}.`,
+      );
       return;
     }
 
     setValidationErrors([]);
+    setProcessingProgress(null);
+
+    // Split serials into chunks
+    const chunks: string[][] = [];
+    for (let i = 0; i < inputSerials.length; i += SERIAL_CHUNK_SIZE) {
+      chunks.push(inputSerials.slice(i, i + SERIAL_CHUNK_SIZE));
+    }
+
+    const totalChunks = chunks.length;
+    let processedCount = 0;
 
     try {
-      if (type === "receipt") {
-        // Receipt: Add new serials (validates uniqueness)
-        const serialsData = inputSerials.map((s) => ({
-          serialNumber: s,
-          // Apply warranty dates if set
-          ...(manufacturerWarrantyDate && {
-            manufacturerWarrantyEndDate: manufacturerWarrantyDate,
-          }),
-          ...(userWarrantyDate && {
-            userWarrantyEndDate: userWarrantyDate,
-          }),
-        }));
-        await addReceiptSerials.mutateAsync({
-          receiptItemId: itemId,
-          serials: serialsData,
+      // Process each chunk sequentially
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+
+        // Update progress
+        setProcessingProgress({
+          current: chunkIndex + 1,
+          total: totalChunks,
+          percentage: Math.round(((chunkIndex + 1) / totalChunks) * 100),
         });
-      } else if (type === "issue") {
-        await selectIssueSerials.mutateAsync({
-          issueItemId: itemId,
-          serialNumbers: inputSerials,
-          virtualWarehouseId: warehouseId!,
-        });
-      } else {
-        await selectTransferSerials.mutateAsync({
-          transferItemId: itemId,
-          serialNumbers: inputSerials,
-          virtualWarehouseId: warehouseId!,
-        });
+
+        if (type === "receipt") {
+          // Receipt: Add new serials (validates uniqueness)
+          const serialsData = chunk.map((s) => ({
+            serialNumber: s,
+            // Apply warranty dates if set
+            ...(manufacturerWarrantyDate && {
+              manufacturerWarrantyEndDate: manufacturerWarrantyDate,
+            }),
+            ...(userWarrantyDate && {
+              userWarrantyEndDate: userWarrantyDate,
+            }),
+          }));
+          await addReceiptSerials.mutateAsync({
+            receiptItemId: itemId,
+            serials: serialsData,
+          });
+        } else if (type === "issue") {
+          await selectIssueSerials.mutateAsync({
+            issueItemId: itemId,
+            serialNumbers: chunk,
+            virtualWarehouseId: warehouseId!,
+          });
+        } else {
+          await selectTransferSerials.mutateAsync({
+            transferItemId: itemId,
+            serialNumbers: chunk,
+            virtualWarehouseId: warehouseId!,
+          });
+        }
+
+        processedCount += chunk.length;
       }
 
-      toast.success(`Đã lưu ${serialCount} serial thành công!`);
+      // Success!
+      toast.success(
+        totalChunks > 1
+          ? `Đã lưu ${serialCount} serial thành công (${totalChunks} batches)!`
+          : `Đã lưu ${serialCount} serial thành công!`,
+      );
       onSuccess();
       setSerialInput("");
       setValidationErrors([]);
+      setProcessingProgress(null);
       setWarrantyOpen(false);
       setManufacturerWarrantyDate("");
       setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
       console.error("Save error:", error);
+      setProcessingProgress(null);
 
       if (error.message) {
         const errorMsg = error.message;
 
-        if (errorMsg.includes("Duplicate") || errorMsg.includes("not found") || errorMsg.includes("already")) {
-          const errors: ValidationError[] = inputSerials.map(serial => ({
-            serial,
-            error: errorMsg.includes(serial) ? errorMsg : ""
-          })).filter(e => e.error);
+        if (
+          errorMsg.includes("Duplicate") ||
+          errorMsg.includes("not found") ||
+          errorMsg.includes("already")
+        ) {
+          const errors: ValidationError[] = inputSerials
+            .map((serial) => ({
+              serial,
+              error: errorMsg.includes(serial) ? errorMsg : "",
+            }))
+            .filter((e) => e.error);
 
           if (errors.length > 0) {
             setValidationErrors(errors);
@@ -175,52 +244,41 @@ export function UnifiedSerialInputDrawer({
       } else {
         toast.error("Không thể lưu serial");
       }
+
+      // Show how many were saved before error
+      if (processedCount > 0) {
+        toast.info(`Đã lưu ${processedCount}/${serialCount} serial trước khi gặp lỗi`);
+      }
     }
   };
 
-  const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const csvData = e.target?.result as string;
-
-      const lines = csvData.trim().split("\n");
-      const hasHeader = lines[0].toLowerCase().includes("serial");
-      const dataLines = hasHeader ? lines.slice(1) : lines;
-
-      const serials = dataLines
-        .map(line => {
-          const parts = line.split(",");
-          return parts[0]?.trim();
-        })
-        .filter(Boolean);
-
-      setSerialInput(serials.join("\n"));
-      event.target.value = "";
-      toast.success(`Đã tải ${serials.length} serial từ CSV`);
-    };
-
-    reader.readAsText(file);
-  };
+  // Issue #17: CSV import functionality removed
 
   const isProcessing =
     addReceiptSerials.isPending ||
     selectIssueSerials.isPending ||
-    selectTransferSerials.isPending;
+    selectTransferSerials.isPending ||
+    processingProgress !== null;
 
   const hasWarrantySet = manufacturerWarrantyDate || userWarrantyDate;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} direction={isMobile ? "bottom" : "right"}>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      direction={isMobile ? "bottom" : "right"}
+    >
       <DrawerContent className="overflow-visible flex flex-col max-h-[95vh]">
         {/* Header with inline progress */}
         <DrawerHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <DrawerTitle className="text-base">{getDocumentTypeLabel()}</DrawerTitle>
+            <DrawerTitle className="text-base">
+              {getDocumentTypeLabel()}
+            </DrawerTitle>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">{currentSerialCount}/{quantity}</span>
+              <span className="text-muted-foreground">
+                {currentSerialCount}/{quantity}
+              </span>
               <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary transition-all"
@@ -263,25 +321,22 @@ export function UnifiedSerialInputDrawer({
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
                     {serialCount > 0 ? (
-                      <span className={serialCount > remaining ? "text-destructive font-medium" : ""}>
-                        Đã nhập {serialCount} serial {serialCount > remaining && `(vượt ${serialCount - remaining})`}
+                      <span
+                        className={
+                          serialCount > remaining
+                            ? "text-destructive font-medium"
+                            : ""
+                        }
+                      >
+                        Đã nhập {serialCount} serial{" "}
+                        {serialCount > remaining &&
+                          `(vượt ${serialCount - remaining})`}
                       </span>
                     ) : (
                       "Có thể paste nhiều serial cùng lúc"
                     )}
                   </span>
-                  <Label htmlFor="csv-upload" className="cursor-pointer hover:text-foreground flex items-center gap-1">
-                    <Upload className="h-3 w-3" />
-                    Tải từ CSV
-                    <Input
-                      id="csv-upload"
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={handleCsvUpload}
-                      disabled={isProcessing}
-                    />
-                  </Label>
+                  {/* Issue #17: CSV upload removed */}
                 </div>
               </div>
 
@@ -290,11 +345,14 @@ export function UnifiedSerialInputDrawer({
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <div className="font-medium mb-1">Có {validationErrors.length} lỗi:</div>
+                    <div className="font-medium mb-1">
+                      Có {validationErrors.length} lỗi:
+                    </div>
                     <ul className="list-disc list-inside space-y-0.5 text-xs">
                       {validationErrors.slice(0, 5).map((err, idx) => (
                         <li key={idx}>
-                          <span className="font-mono">{err.serial}</span>: {err.error}
+                          <span className="font-mono">{err.serial}</span>:{" "}
+                          {err.error}
                         </li>
                       ))}
                       {validationErrors.length > 5 && (
@@ -317,22 +375,31 @@ export function UnifiedSerialInputDrawer({
                         <Settings2 className="h-4 w-4 text-muted-foreground" />
                         <span>Tùy chọn bảo hành</span>
                         {hasWarrantySet && (
-                          <span className="text-xs text-primary">(đã thiết lập)</span>
+                          <span className="text-xs text-primary">
+                            (đã thiết lập)
+                          </span>
                         )}
                       </span>
-                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${warrantyOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${warrantyOpen ? "rotate-180" : ""}`}
+                      />
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-3">
                     <div className="grid gap-3 sm:grid-cols-2 p-3 rounded-lg bg-muted/30">
                       <div className="space-y-1.5">
-                        <Label htmlFor="manufacturer-warranty" className="text-xs">
+                        <Label
+                          htmlFor="manufacturer-warranty"
+                          className="text-xs"
+                        >
                           Hết hạn BH Nhà máy
                         </Label>
                         <DatePicker
                           id="manufacturer-warranty"
                           value={manufacturerWarrantyDate}
-                          onChange={(value) => setManufacturerWarrantyDate(value)}
+                          onChange={(value) =>
+                            setManufacturerWarrantyDate(value)
+                          }
                           placeholder="dd/mm/yyyy"
                         />
                       </div>
@@ -366,13 +433,17 @@ export function UnifiedSerialInputDrawer({
             {remaining > 0 && (
               <Button
                 onClick={handleSave}
-                disabled={serialCount === 0 || serialCount > remaining || isProcessing}
+                disabled={
+                  serialCount === 0 || serialCount > remaining || isProcessing
+                }
                 className="flex-1"
               >
                 {isProcessing ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang lưu...
+                    {processingProgress
+                      ? `Đang lưu... (${processingProgress.current}/${processingProgress.total})`
+                      : "Đang lưu..."}
                   </>
                 ) : (
                   <>

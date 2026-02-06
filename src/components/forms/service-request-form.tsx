@@ -6,21 +6,46 @@
 
 "use client";
 
+import {
+  IconCheck,
+  IconList,
+  IconLoader2,
+  IconPackage,
+  IconPlus,
+  IconTruck,
+  IconUser,
+} from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IconLoader2, IconPlus, IconUser, IconPackage, IconTruck, IconCheck, IconList } from "@tabler/icons-react";
-import { toast } from "sonner";
-import { ProductSerialInput } from "./service-request/product-serial-input";
-import { trpc } from "@/components/providers/trpc-provider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useDefaultWorkflowsSettings } from "@/hooks/use-default-workflows-settings";
+import { ProductSerialInput } from "./service-request/product-serial-input";
 
 interface ProductItem {
   serial_number: string;
@@ -57,19 +82,29 @@ export function ServiceRequestForm({
   isSubmitting,
 }: ServiceRequestFormProps) {
   // Form state
-  const [customerName, setCustomerName] = useState(initialData?.customer_name || "");
-  const [customerEmail, setCustomerEmail] = useState(initialData?.customer_email || "");
-  const [customerPhone, setCustomerPhone] = useState(initialData?.customer_phone || "");
-  const [issueDescription, setIssueDescription] = useState(initialData?.issue_description || "");
-  const [receiptStatus, setReceiptStatus] = useState<"received" | "pending_receipt">(
-    initialData?.receipt_status || "received"
+  const [customerName, setCustomerName] = useState(
+    initialData?.customer_name || "",
   );
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | undefined>(
-    initialData?.preferred_delivery_method || "pickup"
+  const [customerEmail, setCustomerEmail] = useState(
+    initialData?.customer_email || "",
   );
-  const [deliveryAddress, setDeliveryAddress] = useState(initialData?.delivery_address || "");
+  const [customerPhone, setCustomerPhone] = useState(
+    initialData?.customer_phone || "",
+  );
+  const [issueDescription, setIssueDescription] = useState(
+    initialData?.issue_description || "",
+  );
+  const [receiptStatus, setReceiptStatus] = useState<
+    "received" | "pending_receipt"
+  >(initialData?.receipt_status || "received");
+  const [deliveryMethod, setDeliveryMethod] = useState<
+    "pickup" | "delivery" | undefined
+  >(initialData?.preferred_delivery_method || "pickup");
+  const [deliveryAddress, setDeliveryAddress] = useState(
+    initialData?.delivery_address || "",
+  );
   const [items, setItems] = useState<ProductItem[]>(
-    initialData?.items || [{ serial_number: "" }]
+    initialData?.items || [{ serial_number: "" }],
   );
   const [workflowId, setWorkflowId] = useState(initialData?.workflow_id || "");
 
@@ -83,12 +118,12 @@ export function ServiceRequestForm({
     {
       enabled: lookupPhone.length >= 10,
       retry: false,
-    }
+    },
   );
 
   // Workflow query - only fetch service_request workflows
   const { data: workflows } = trpc.workflow.template.list.useQuery({
-    entity_type: 'service_request',
+    entity_type: "service_request",
     is_active: true,
   });
   const { defaults } = useDefaultWorkflowsSettings();
@@ -105,7 +140,9 @@ export function ServiceRequestForm({
     if (exists) {
       setWorkflowId(defaultId);
     } else if (!warnedMissingDefault.current) {
-      toast.error("Workflow mặc định cho phiếu yêu cầu dịch vụ không tồn tại. Vui lòng chọn thủ công.");
+      toast.error(
+        "Workflow mặc định cho phiếu yêu cầu dịch vụ không tồn tại. Vui lòng chọn thủ công.",
+      );
       warnedMissingDefault.current = true;
     }
   }, [mode, defaults, workflows, workflowId]);
@@ -131,7 +168,11 @@ export function ServiceRequestForm({
       setCustomerEmail(customerLookup.data.email || "");
       setCustomerFound(true);
       toast.success(`Đã tìm thấy khách hàng: ${customerLookup.data.name}`);
-    } else if (customerLookup.isFetched && lookupPhone && !customerLookup.data) {
+    } else if (
+      customerLookup.isFetched &&
+      lookupPhone &&
+      !customerLookup.data
+    ) {
       setCustomerFound(false);
     }
   }, [customerLookup.data, customerLookup.isFetched, lookupPhone]);
@@ -152,7 +193,11 @@ export function ServiceRequestForm({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleUpdateItem = (index: number, field: keyof ProductItem, value: string) => {
+  const handleUpdateItem = (
+    index: number,
+    field: keyof ProductItem,
+    value: string,
+  ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
@@ -190,7 +235,9 @@ export function ServiceRequestForm({
       toast.error("Mô tả vấn đề không được để trống");
       return false;
     }
-    if (items.some((item) => !item.serial_number || item.serial_number.length < 5)) {
+    if (
+      items.some((item) => !item.serial_number || item.serial_number.length < 5)
+    ) {
       toast.error("Tất cả serial number phải có ít nhất 5 ký tự");
       return false;
     }
@@ -213,7 +260,8 @@ export function ServiceRequestForm({
     })),
     receipt_status: receiptStatus,
     preferred_delivery_method: deliveryMethod,
-    delivery_address: deliveryMethod === "delivery" ? deliveryAddress : undefined,
+    delivery_address:
+      deliveryMethod === "delivery" ? deliveryAddress : undefined,
     workflow_id: workflowId || undefined,
   });
 
@@ -243,24 +291,59 @@ export function ServiceRequestForm({
     if (form && onSaveDraft) {
       form.addEventListener("submit-draft", handleSaveDraft as EventListener);
       return () => {
-        form.removeEventListener("submit-draft", handleSaveDraft as EventListener);
+        form.removeEventListener(
+          "submit-draft",
+          handleSaveDraft as EventListener,
+        );
       };
     }
-  }, [onSaveDraft, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress, workflowId]);
+  }, [
+    onSaveDraft,
+    customerName,
+    customerEmail,
+    customerPhone,
+    issueDescription,
+    items,
+    receiptStatus,
+    deliveryMethod,
+    deliveryAddress,
+    workflowId,
+  ]);
 
   // Listen for submit-and-send event
   useEffect(() => {
     const form = document.getElementById("service-request-form");
     if (form && onSubmitAndSend) {
-      form.addEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+      form.addEventListener(
+        "submit-and-send",
+        handleSubmitAndSend as EventListener,
+      );
       return () => {
-        form.removeEventListener("submit-and-send", handleSubmitAndSend as EventListener);
+        form.removeEventListener(
+          "submit-and-send",
+          handleSubmitAndSend as EventListener,
+        );
       };
     }
-  }, [onSubmitAndSend, customerName, customerEmail, customerPhone, issueDescription, items, receiptStatus, deliveryMethod, deliveryAddress, workflowId]);
+  }, [
+    onSubmitAndSend,
+    customerName,
+    customerEmail,
+    customerPhone,
+    issueDescription,
+    items,
+    receiptStatus,
+    deliveryMethod,
+    deliveryAddress,
+    workflowId,
+  ]);
 
   return (
-    <form id="service-request-form" onSubmit={handleSubmit} className="space-y-6">
+    <form
+      id="service-request-form"
+      onSubmit={handleSubmit}
+      className="space-y-6"
+    >
       {/* Products */}
       <Card>
         <CardHeader>
@@ -280,7 +363,9 @@ export function ServiceRequestForm({
               Thêm sản phẩm
             </Button>
           </CardTitle>
-          <CardDescription>Thêm serial number của các sản phẩm cần sửa chữa</CardDescription>
+          <CardDescription>
+            Thêm serial number của các sản phẩm cần sửa chữa
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {items.map((item, index) => (
@@ -288,7 +373,9 @@ export function ServiceRequestForm({
               key={index}
               index={index}
               serial={item.serial_number}
-              onSerialChange={(serial) => handleUpdateItem(index, "serial_number", serial)}
+              onSerialChange={(serial) =>
+                handleUpdateItem(index, "serial_number", serial)
+              }
               onRemove={() => handleRemoveItem(index)}
               canRemove={items.length > 1}
               disabled={isSubmitting}
@@ -312,7 +399,9 @@ export function ServiceRequestForm({
             rows={3}
             disabled={isSubmitting}
           />
-          <p className="text-xs text-muted-foreground">{issueDescription.length} ký tự</p>
+          <p className="text-xs text-muted-foreground">
+            {issueDescription.length} ký tự
+          </p>
         </CardContent>
       </Card>
 
@@ -325,14 +414,17 @@ export function ServiceRequestForm({
               Quy trình xử lý (tùy chọn)
             </CardTitle>
             <CardDescription>
-              Chọn quy trình xử lý để tự động tạo các bước công việc cho phiếu yêu cầu
+              Chọn quy trình xử lý để tự động tạo các bước công việc cho phiếu
+              yêu cầu
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Select
                 value={workflowId || "none"}
-                onValueChange={(value) => setWorkflowId(value === "none" ? "" : value)}
+                onValueChange={(value) =>
+                  setWorkflowId(value === "none" ? "" : value)
+                }
                 disabled={isSubmitting}
               >
                 <SelectTrigger>
@@ -351,15 +443,24 @@ export function ServiceRequestForm({
 
             {workflowId && workflows && (
               <div className="mt-2 p-3 bg-muted rounded-md">
-                <p className="text-sm font-medium mb-2">Các bước trong quy trình:</p>
+                <p className="text-sm font-medium mb-2">
+                  Các bước trong quy trình:
+                </p>
                 <ol className="list-decimal ml-4 space-y-1">
                   {workflows
                     ?.find((w) => w.id === workflowId)
-                    ?.tasks?.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                    ?.tasks?.sort(
+                      (a: any, b: any) => a.sequence_order - b.sequence_order,
+                    )
                     ?.map((task: any) => (
-                      <li key={task.id} className="text-sm text-muted-foreground">
-                        {task.task_type?.name || 'Công việc'}
-                        {task.is_required && <span className="text-red-500 ml-1">*</span>}
+                      <li
+                        key={task.id}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {task.task_type?.name || "Công việc"}
+                        {task.is_required && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
                       </li>
                     ))}
                 </ol>
@@ -437,7 +538,8 @@ export function ServiceRequestForm({
         <CardHeader>
           <CardTitle className="text-sm">Tình trạng nhận hàng</CardTitle>
           <CardDescription>
-            Đánh dấu nếu đã nhận sản phẩm từ khách hàng. Bỏ chọn nếu khách sẽ gửi sau.
+            Đánh dấu nếu đã nhận sản phẩm từ khách hàng. Bỏ chọn nếu khách sẽ
+            gửi sau.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -459,7 +561,8 @@ export function ServiceRequestForm({
           </div>
           {receiptStatus === "pending_receipt" && (
             <p className="text-xs text-muted-foreground mt-3 p-3 bg-muted rounded-md">
-              💡 Phiếu sửa chữa sẽ được tạo tự động khi đánh dấu đã nhận sản phẩm
+              💡 Phiếu sửa chữa sẽ được tạo tự động khi đánh dấu đã nhận sản
+              phẩm
             </p>
           )}
         </CardContent>

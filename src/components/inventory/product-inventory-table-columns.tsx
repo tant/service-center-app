@@ -3,12 +3,12 @@
  * Extracted for better organization and reusability
  */
 
-import type { ColumnDef } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { IconEdit } from "@tabler/icons-react";
-import { WarrantyDateCell } from "./warranty-date-cell";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { PhysicalProductWithRelations } from "./product-inventory-table";
+import { WarrantyDateCell } from "./warranty-date-cell";
 
 export const CONDITION_LABELS = {
   new: "Mới",
@@ -76,7 +76,8 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
       accessorKey: "virtual_warehouse",
       header: "Kho",
       cell: ({ row }) => {
-        const warehouseName = row.original.virtual_warehouse?.name || "Không xác định";
+        const warehouseName =
+          row.original.virtual_warehouse?.name || "Không xác định";
 
         return (
           <div>
@@ -96,8 +97,18 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
       accessorKey: "condition",
       header: "Tình Trạng",
       cell: ({ row }) => (
-        <Badge variant={CONDITION_COLORS[row.original.condition as keyof typeof CONDITION_COLORS]}>
-          {CONDITION_LABELS[row.original.condition as keyof typeof CONDITION_LABELS]}
+        <Badge
+          variant={
+            CONDITION_COLORS[
+              row.original.condition as keyof typeof CONDITION_COLORS
+            ]
+          }
+        >
+          {
+            CONDITION_LABELS[
+              row.original.condition as keyof typeof CONDITION_LABELS
+            ]
+          }
         </Badge>
       ),
     },
@@ -105,7 +116,15 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
       accessorKey: "status",
       header: "Trạng Thái",
       cell: ({ row }) => (
-        <Badge variant={STATUS_COLORS[row.original.status] as "default" | "secondary" | "outline" | "destructive"}>
+        <Badge
+          variant={
+            STATUS_COLORS[row.original.status] as
+              | "default"
+              | "secondary"
+              | "outline"
+              | "destructive"
+          }
+        >
           {STATUS_LABELS[row.original.status] || row.original.status}
         </Badge>
       ),
@@ -135,7 +154,10 @@ export function createProductColumns(): ColumnDef<PhysicalProductWithRelations>[
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => { e.stopPropagation(); meta.onEdit(row.original); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                meta.onEdit(row.original);
+              }}
             >
               <IconEdit className="h-4 w-4" />
             </Button>

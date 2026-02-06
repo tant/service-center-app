@@ -24,17 +24,18 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,7 +46,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -54,6 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -61,7 +62,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { trpc } from "@/components/providers/trpc-provider";
 
 export const partSchema = z.object({
   id: z.string(),
@@ -643,9 +643,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
           <Input
             id="name"
             value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Nhập tên linh kiện"
             required
           />
@@ -800,9 +798,7 @@ function PartsModal({ part, mode, trigger, onSuccess }: PartsModalProps) {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-muted-foreground">
-                  Giá trị tồn kho
-                </Label>
+                <Label className="text-muted-foreground">Giá trị tồn kho</Label>
                 <div>
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",

@@ -12,14 +12,29 @@
 
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { TaskStatusBadge } from "./task-status-badge";
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Package,
+  User,
+} from "lucide-react";
 import Link from "next/link";
-import { Clock, User, Calendar, AlertCircle, ExternalLink, Package, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { TaskWithContext } from "@/server/services/task-service";
+import { TaskStatusBadge } from "./task-status-badge";
 
 interface SerialEntryTaskCardProps {
   task: TaskWithContext;
@@ -52,7 +67,10 @@ function getProgressColor(percentage: number): string {
 /**
  * Get priority badge variant based on completion percentage
  */
-function getPriorityBadge(percentage: number): { label: string; variant: "destructive" | "default" | "secondary" } {
+function getPriorityBadge(percentage: number): {
+  label: string;
+  variant: "destructive" | "default" | "secondary";
+} {
   if (percentage >= 100) return { label: "Hoàn thành", variant: "secondary" };
   if (percentage >= 50) return { label: "Đang xử lý", variant: "default" };
   return { label: "Cần xử lý ngay", variant: "destructive" };
@@ -70,11 +88,14 @@ export function SerialEntryTaskCard({
 
   // Extract product info from task metadata
   const productName = task.metadata?.product_name as string | undefined;
-  const expectedQuantity = task.metadata?.expected_quantity as number | undefined;
+  const expectedQuantity = task.metadata?.expected_quantity as
+    | number
+    | undefined;
 
   // Use serial progress if available, otherwise calculate from metadata
   const serialCount = serialProgress?.serial_count ?? 0;
-  const totalExpected = serialProgress?.expected_quantity ?? expectedQuantity ?? 0;
+  const totalExpected =
+    serialProgress?.expected_quantity ?? expectedQuantity ?? 0;
   const percentage = serialProgress?.percentage ?? 0;
 
   // Format date helper
@@ -91,7 +112,9 @@ export function SerialEntryTaskCard({
 
   // Check if overdue
   const isOverdue =
-    task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+    task.due_date &&
+    new Date(task.due_date) < new Date() &&
+    task.status !== "completed";
 
   const progressColor = getProgressColor(percentage);
   const priorityBadge = getPriorityBadge(percentage);
@@ -137,7 +160,11 @@ export function SerialEntryTaskCard({
               {serialCount} / {totalExpected} ({Math.round(percentage)}%)
             </span>
           </div>
-          <Progress value={percentage} className="h-2" indicatorClassName={progressColor} />
+          <Progress
+            value={percentage}
+            className="h-2"
+            indicatorClassName={progressColor}
+          />
           {percentage >= 100 && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
@@ -177,7 +204,9 @@ export function SerialEntryTaskCard({
           {task.due_date && (
             <div
               className={`flex items-center gap-2 ${
-                isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
+                isOverdue
+                  ? "text-destructive font-medium"
+                  : "text-muted-foreground"
               }`}
             >
               <Calendar className="h-4 w-4" />
@@ -209,8 +238,12 @@ export function SerialEntryTaskCard({
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="font-medium text-sm text-destructive">Lý do bị chặn:</p>
-                <p className="text-sm text-destructive/90 mt-1">{task.blocked_reason}</p>
+                <p className="font-medium text-sm text-destructive">
+                  Lý do bị chặn:
+                </p>
+                <p className="text-sm text-destructive/90 mt-1">
+                  {task.blocked_reason}
+                </p>
               </div>
             </div>
           </div>
@@ -220,7 +253,9 @@ export function SerialEntryTaskCard({
         {task.status === "completed" && task.completion_notes && (
           <div className="rounded-lg border bg-muted/50 p-3">
             <p className="font-medium text-sm">Ghi chú hoàn thành:</p>
-            <p className="text-sm text-muted-foreground mt-1">{task.completion_notes}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {task.completion_notes}
+            </p>
           </div>
         )}
       </CardContent>

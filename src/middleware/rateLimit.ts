@@ -5,7 +5,7 @@
  * Implements sliding window rate limiting with IP-based tracking
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
 interface RateLimitStore {
   [key: string]: {
@@ -31,20 +31,20 @@ const RATE_LIMIT_CONFIG = {
  */
 function getClientIP(request: NextRequest): string {
   // Check X-Forwarded-For header (common in proxies/load balancers)
-  const forwardedFor = request.headers.get('x-forwarded-for');
+  const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
-    return forwardedFor.split(',')[0].trim();
+    return forwardedFor.split(",")[0].trim();
   }
 
   // Check X-Real-IP header
-  const realIP = request.headers.get('x-real-ip');
+  const realIP = request.headers.get("x-real-ip");
   if (realIP) {
     return realIP;
   }
 
   // Next.js 15+ provides request.ip
   // @ts-expect-error - ip property exists in Next.js 15+ runtime but may not be in types yet
-  return request.ip || 'unknown';
+  return request.ip || "unknown";
 }
 
 /**
@@ -53,7 +53,7 @@ function getClientIP(request: NextRequest): string {
 function checkRateLimit(
   clientIP: string,
   windowMs: number,
-  maxRequests: number
+  maxRequests: number,
 ): { allowed: boolean; remaining: number; resetTime: number } {
   const now = Date.now();
   const key = `rate_limit:${clientIP}`;
@@ -93,7 +93,7 @@ export function rateLimitPublicEndpoint(request: NextRequest) {
   const { allowed, remaining, resetTime } = checkRateLimit(
     clientIP,
     windowMs,
-    maxRequests
+    maxRequests,
   );
 
   if (!allowed) {
@@ -103,28 +103,28 @@ export function rateLimitPublicEndpoint(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Too Many Requests',
+        error: "Too Many Requests",
         message: `Vượt quá giới hạn. Tối đa ${maxRequests} yêu cầu mỗi giờ mỗi IP.`,
         retryAfter: resetDate.toISOString(),
       },
       {
         status: 429,
         headers: {
-          'X-RateLimit-Limit': maxRequests.toString(),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': resetDate.toISOString(),
-          'Retry-After': retryAfter.toString(),
+          "X-RateLimit-Limit": maxRequests.toString(),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": resetDate.toISOString(),
+          "Retry-After": retryAfter.toString(),
         },
-      }
+      },
     );
   }
 
   // Request allowed - add rate limit headers to response
   return NextResponse.next({
     headers: {
-      'X-RateLimit-Limit': maxRequests.toString(),
-      'X-RateLimit-Remaining': remaining.toString(),
-      'X-RateLimit-Reset': new Date(resetTime).toISOString(),
+      "X-RateLimit-Limit": maxRequests.toString(),
+      "X-RateLimit-Remaining": remaining.toString(),
+      "X-RateLimit-Reset": new Date(resetTime).toISOString(),
     },
   });
 }
@@ -144,6 +144,6 @@ export function cleanupExpiredEntries() {
 }
 
 // Run cleanup every 10 minutes
-if (typeof setInterval !== 'undefined') {
+if (typeof setInterval !== "undefined") {
   setInterval(cleanupExpiredEntries, 10 * 60 * 1000);
 }

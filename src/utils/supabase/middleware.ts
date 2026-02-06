@@ -87,64 +87,60 @@ export async function updateSession(request: NextRequest) {
     let cookieSetCount = 0;
 
     const clientCreateStart = performance.now();
-    const supabase = createServerClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        cookies: {
-          getAll() {
-            cookieGetCount++;
-            const cookies = request.cookies.getAll();
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          cookieGetCount++;
+          const cookies = request.cookies.getAll();
+          console.log(
+            `🍪 [MIDDLEWARE-${requestId}] Cookie getAll() call #${cookieGetCount} - ${cookies.length} cookies found`,
+          );
+
+          // Log cookie info without full content
+          cookies.forEach((cookie) => {
+            const value = cookie.value;
+            let displayValue;
+            if (value.length > 50) {
+              displayValue = `${value.substring(0, 25)}...${value.substring(value.length - 25)}`;
+            } else {
+              displayValue = value;
+            }
             console.log(
-              `🍪 [MIDDLEWARE-${requestId}] Cookie getAll() call #${cookieGetCount} - ${cookies.length} cookies found`,
+              `🍪 [MIDDLEWARE-${requestId}] Cookie: ${cookie.name} = ${displayValue}`,
             );
+          });
 
-            // Log cookie info without full content
-            cookies.forEach((cookie) => {
-              const value = cookie.value;
-              let displayValue;
-              if (value.length > 50) {
-                displayValue = `${value.substring(0, 25)}...${value.substring(value.length - 25)}`;
-              } else {
-                displayValue = value;
-              }
-              console.log(
-                `🍪 [MIDDLEWARE-${requestId}] Cookie: ${cookie.name} = ${displayValue}`,
-              );
-            });
+          return cookies;
+        },
+        setAll(cookiesToSet) {
+          cookieSetCount++;
+          console.log(
+            `🍪 [MIDDLEWARE-${requestId}] Cookie setAll() call #${cookieSetCount} - ${cookiesToSet.length} cookies to set`,
+          );
 
-            return cookies;
-          },
-          setAll(cookiesToSet) {
-            cookieSetCount++;
+          // Log cookies being set with truncated values
+          cookiesToSet.forEach(({ name, value }) => {
+            let displayValue;
+            if (value && value.length > 50) {
+              displayValue = `${value.substring(0, 25)}...${value.substring(value.length - 25)}`;
+            } else {
+              displayValue = value;
+            }
             console.log(
-              `🍪 [MIDDLEWARE-${requestId}] Cookie setAll() call #${cookieSetCount} - ${cookiesToSet.length} cookies to set`,
+              `🍪 [MIDDLEWARE-${requestId}] Setting cookie: ${name} = ${displayValue}`,
             );
+            request.cookies.set(name, value);
+          });
 
-            // Log cookies being set with truncated values
-            cookiesToSet.forEach(({ name, value }) => {
-              let displayValue;
-              if (value && value.length > 50) {
-                displayValue = `${value.substring(0, 25)}...${value.substring(value.length - 25)}`;
-              } else {
-                displayValue = value;
-              }
-              console.log(
-                `🍪 [MIDDLEWARE-${requestId}] Setting cookie: ${name} = ${displayValue}`,
-              );
-              request.cookies.set(name, value);
-            });
-
-            supabaseResponse = NextResponse.next({
-              request,
-            });
-            cookiesToSet.forEach(({ name, value, options }) => {
-              supabaseResponse.cookies.set(name, value, options);
-            });
-          },
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+          });
         },
       },
-    );
+    });
 
     const clientCreateEnd = performance.now();
     console.log(

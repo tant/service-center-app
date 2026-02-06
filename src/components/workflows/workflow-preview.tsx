@@ -4,9 +4,15 @@
  * Read-only visual preview of workflow with task flow diagram
  */
 
-import { CheckCircle, Clock, AlertCircle, ArrowDown } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, ArrowDown, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ENTITY_TYPE_LABELS } from "@/lib/constants/workflow";
 
@@ -22,7 +28,12 @@ interface WorkflowTask {
 interface WorkflowPreviewProps {
   name: string;
   description?: string;
-  entity_type?: "service_ticket" | "inventory_receipt" | "inventory_issue" | "inventory_transfer" | "service_request";
+  entity_type?:
+    | "service_ticket"
+    | "inventory_receipt"
+    | "inventory_issue"
+    | "inventory_transfer"
+    | "service_request";
   enforce_sequence: boolean;
   tasks: WorkflowTask[];
   notes?: string;
@@ -38,18 +49,24 @@ export function WorkflowPreview({
   notes,
   className,
 }: WorkflowPreviewProps) {
-  const sortedTasks = [...tasks].sort((a, b) => a.sequence_order - b.sequence_order);
+  const sortedTasks = [...tasks].sort(
+    (a, b) => a.sequence_order - b.sequence_order,
+  );
 
   return (
-    <div className={`space-y-6 ${className || ''}`}>
+    <div className={`space-y-6 ${className || ""}`}>
       {/* Workflow Header */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-2xl">{name || "Quy trình chưa có tên"}</CardTitle>
+              <CardTitle className="text-2xl">
+                {name || "Quy trình chưa có tên"}
+              </CardTitle>
               {description && (
-                <CardDescription className="text-base">{description}</CardDescription>
+                <CardDescription className="text-base">
+                  {description}
+                </CardDescription>
               )}
             </div>
             {entity_type && (
@@ -139,19 +156,25 @@ export function WorkflowPreview({
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Tổng số công việc</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Tổng số công việc
+              </p>
               <p className="text-2xl font-bold">{tasks.length}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Công việc bắt buộc</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Công việc bắt buộc
+              </p>
               <p className="text-2xl font-bold">
-                {tasks.filter(t => t.is_required).length}
+                {tasks.filter((t) => t.is_required).length}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Công việc tùy chọn</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Công việc tùy chọn
+              </p>
               <p className="text-2xl font-bold">
-                {tasks.filter(t => !t.is_required).length}
+                {tasks.filter((t) => !t.is_required).length}
               </p>
             </div>
           </div>
@@ -170,9 +193,13 @@ interface TaskPreviewCardProps {
   enforceSequence: boolean;
 }
 
-function TaskPreviewCard({ task, index, enforceSequence }: TaskPreviewCardProps) {
+function TaskPreviewCard({
+  task,
+  index,
+  enforceSequence,
+}: TaskPreviewCardProps) {
   return (
-    <Card className={task.is_required ? 'border-blue-200 bg-blue-50/50' : ''}>
+    <Card className={task.is_required ? "border-blue-200 bg-blue-50/50" : ""}>
       <CardContent className="pt-6">
         <div className="flex gap-4">
           {/* Step number */}
@@ -180,8 +207,8 @@ function TaskPreviewCard({ task, index, enforceSequence }: TaskPreviewCardProps)
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full ${
                 task.is_required
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-600"
               }`}
             >
               <span className="text-sm font-semibold">{index + 1}</span>
@@ -194,8 +221,8 @@ function TaskPreviewCard({ task, index, enforceSequence }: TaskPreviewCardProps)
               <h4 className="font-medium">
                 {task.task_name || `Task ${index + 1}`}
               </h4>
-              <Badge variant={task.is_required ? 'default' : 'secondary'}>
-                {task.is_required ? 'Bắt buộc' : 'Tùy chọn'}
+              <Badge variant={task.is_required ? "default" : "secondary"}>
+                {task.is_required ? "Bắt buộc" : "Tùy chọn"}
               </Badge>
             </div>
 

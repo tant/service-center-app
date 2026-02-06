@@ -72,7 +72,8 @@ function collectWorkflowIds(value: unknown) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "default_workflows phải là object mapping ticket_type → workflow_id.",
+      message:
+        "default_workflows phải là object mapping ticket_type → workflow_id.",
     });
   }
 

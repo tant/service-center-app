@@ -6,9 +6,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSwitchTemplate } from "@/hooks/use-workflow";
+import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -27,10 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useSwitchTemplate } from "@/hooks/use-workflow";
 
 interface SwitchTemplateModalProps {
   open: boolean;
@@ -60,7 +60,7 @@ export function SwitchTemplateModal({
   // Fetch selected template details for preview
   const { data: selectedWorkflow } = trpc.workflow.template.getById.useQuery(
     { template_id: selectedWorkflowId },
-    { enabled: !!selectedWorkflowId }
+    { enabled: !!selectedWorkflowId },
   );
 
   // Reset form when modal closes
@@ -101,7 +101,7 @@ export function SwitchTemplateModal({
           setReason("");
           onClose();
         },
-      }
+      },
     );
   };
 
@@ -114,9 +114,7 @@ export function SwitchTemplateModal({
 
   // Filter out current template from list
   const availableWorkflows =
-    workflows?.filter(
-      (t) => t.id !== currentTemplateId && t.is_active
-    ) || [];
+    workflows?.filter((t) => t.id !== currentTemplateId && t.is_active) || [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -124,8 +122,8 @@ export function SwitchTemplateModal({
         <DialogHeader>
           <DialogTitle>Chuyển đổi mẫu quy trình</DialogTitle>
           <DialogDescription>
-            Thay đổi mẫu quy trình khi chẩn đoán phát hiện vấn đề khác.
-            Các công việc đã hoàn thành sẽ được giữ lại.
+            Thay đổi mẫu quy trình khi chẩn đoán phát hiện vấn đề khác. Các công
+            việc đã hoàn thành sẽ được giữ lại.
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +143,9 @@ export function SwitchTemplateModal({
             <AlertTitle>Cảnh báo quan trọng</AlertTitle>
             <AlertDescription>
               <ul className="list-disc list-inside space-y-1 text-sm mt-2">
-                <li>Các công việc đã hoàn thành và đang thực hiện sẽ được giữ lại</li>
+                <li>
+                  Các công việc đã hoàn thành và đang thực hiện sẽ được giữ lại
+                </li>
                 <li>Các công việc đang chờ hoặc bị chặn sẽ bị xóa</li>
                 <li>Công việc mới từ mẫu quy trình mới sẽ được thêm vào</li>
                 <li>Thao tác này sẽ được ghi lại trong lịch sử audit</li>
@@ -202,7 +202,10 @@ export function SwitchTemplateModal({
                         key={task.id}
                         className="flex items-start gap-2 text-sm"
                       >
-                        <Badge variant="outline" className="w-8 justify-center shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="w-8 justify-center shrink-0"
+                        >
                           #{index + 1}
                         </Badge>
                         <div className="flex-1">
@@ -216,7 +219,10 @@ export function SwitchTemplateModal({
                           )}
                         </div>
                         {task.is_required && (
-                          <Badge variant="secondary" className="text-xs shrink-0">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs shrink-0"
+                          >
                             Bắt buộc
                           </Badge>
                         )}
@@ -273,9 +279,7 @@ export function SwitchTemplateModal({
             type="button"
             onClick={handleSubmit}
             disabled={
-              isSwitching ||
-              !selectedWorkflowId ||
-              reason.trim().length < 10
+              isSwitching || !selectedWorkflowId || reason.trim().length < 10
             }
           >
             {isSwitching ? "Đang xử lý..." : "Xác nhận chuyển đổi"}

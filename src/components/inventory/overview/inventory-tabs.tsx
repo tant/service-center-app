@@ -5,8 +5,16 @@
  * Provides tab navigation between All Warehouses, Physical, and Virtual views
  */
 
+import {
+  ArrowLeftRight,
+  Box,
+  Layers,
+  PackageMinus,
+  PackagePlus,
+  Warehouse,
+} from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,17 +23,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryTableAll } from "./inventory-table-all";
 import { InventoryTablePhysical } from "./inventory-table-physical";
 import { InventoryTableVirtual } from "./inventory-table-virtual";
-import { Warehouse, Box, Layers, PackagePlus, PackageMinus, ArrowLeftRight } from "lucide-react";
-import Link from "next/link";
 
 export function InventoryTabs() {
   const [activeTab, setActiveTab] = useState("all");
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex w-full flex-col justify-start gap-6">
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="flex w-full flex-col justify-start gap-6"
+    >
       {/* Tab Header */}
       <div className="flex items-center justify-between px-4 lg:px-6">
         {/* Mobile: Select Dropdown */}
@@ -80,15 +91,24 @@ export function InventoryTabs() {
       </div>
 
       {/* Tab Contents */}
-      <TabsContent value="all" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="all"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         <InventoryTableAll />
       </TabsContent>
 
-      <TabsContent value="physical" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="physical"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         <InventoryTablePhysical />
       </TabsContent>
 
-      <TabsContent value="virtual" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="virtual"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         <InventoryTableVirtual />
       </TabsContent>
     </Tabs>

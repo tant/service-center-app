@@ -1,15 +1,14 @@
 "use client";
 
-import * as React from "react";
-import { useRouter, useParams } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
-
-import { Button } from "@/components/ui/button";
+import { useParams, useRouter } from "next/navigation";
+import * as React from "react";
 import { PageHeader } from "@/components/page-header";
 import { TemplateForm } from "@/components/templates/template-form";
+import { Button } from "@/components/ui/button";
 import {
-  useTaskTypes,
   useTaskTemplate,
+  useTaskTypes,
   useUpdateTemplate,
 } from "@/hooks/use-workflow";
 
@@ -19,7 +18,8 @@ export default function EditTemplatePage() {
   const templateId = params.id as string;
 
   const { taskTypes: tasks } = useTaskTypes();
-  const { template: workflow, isLoading: isLoadingTemplate } = useTaskTemplate(templateId);
+  const { template: workflow, isLoading: isLoadingTemplate } =
+    useTaskTemplate(templateId);
   const { updateTemplate, isUpdating } = useUpdateTemplate();
 
   const handleSubmit = (workflowData: any) => {
@@ -32,7 +32,7 @@ export default function EditTemplatePage() {
         onSuccess: () => {
           router.push("/workflows");
         },
-      }
+      },
     );
   };
 
@@ -43,14 +43,13 @@ export default function EditTemplatePage() {
   if (isLoadingTemplate) {
     return (
       <>
-        <PageHeader
-          title="Đang tải..."
-          backHref="/workflows"
-        />
+        <PageHeader title="Đang tải..." backHref="/workflows" />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Đang tải mẫu quy trình...</p>
+            <p className="text-sm text-muted-foreground">
+              Đang tải mẫu quy trình...
+            </p>
           </div>
         </div>
       </>
@@ -60,13 +59,12 @@ export default function EditTemplatePage() {
   if (!workflow) {
     return (
       <>
-        <PageHeader
-          title="Không tìm thấy"
-          backHref="/workflows"
-        />
+        <PageHeader title="Không tìm thấy" backHref="/workflows" />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center space-y-3">
-            <p className="text-sm text-muted-foreground">Không tìm thấy mẫu quy trình</p>
+            <p className="text-sm text-muted-foreground">
+              Không tìm thấy mẫu quy trình
+            </p>
             <Button onClick={() => router.back()}>
               <IconArrowLeft className="h-4 w-4 mr-2" />
               Quay lại

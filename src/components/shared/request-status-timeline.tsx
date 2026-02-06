@@ -3,10 +3,10 @@
  * AC 5: Status timeline showing progress
  */
 
-import { cn } from "@/lib/utils";
 import { IconCheck, IconCircle } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface TimelineItem {
   status: string;
@@ -19,7 +19,9 @@ interface RequestStatusTimelineProps {
   timeline: TimelineItem[];
 }
 
-export function RequestStatusTimeline({ timeline }: RequestStatusTimelineProps) {
+export function RequestStatusTimeline({
+  timeline,
+}: RequestStatusTimelineProps) {
   return (
     <div className="relative py-4">
       {/* Vertical line */}
@@ -34,7 +36,7 @@ export function RequestStatusTimeline({ timeline }: RequestStatusTimelineProps) 
                 "z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-sm transition-all",
                 item.completed
                   ? "border-primary bg-primary text-primary-foreground"
-                  : "border-muted-foreground/50 bg-background text-muted-foreground"
+                  : "border-muted-foreground/50 bg-background text-muted-foreground",
               )}
             >
               {item.completed ? (
@@ -49,7 +51,7 @@ export function RequestStatusTimeline({ timeline }: RequestStatusTimelineProps) 
               <h3
                 className={cn(
                   "font-semibold",
-                  item.completed ? "text-foreground" : "text-muted-foreground"
+                  item.completed ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 {item.label}

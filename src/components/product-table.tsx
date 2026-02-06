@@ -26,16 +26,26 @@ import * as React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { trpc } from "@/components/providers/trpc-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -50,7 +60,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -59,6 +68,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -77,6 +87,7 @@ export const productSchema = z.object({
   model: z.string().nullable(),
   type: z.enum(["VGA", "MiniPC", "SSD", "RAM", "Mainboard", "Other"]),
   primary_image: z.string().nullable(),
+  supplier_name: z.string().nullable(), // Issue #8: Supplier field
   parts_count: z.number().default(0),
   physical_products_count: z.number().default(0),
   created_at: z.string(),
@@ -120,17 +131,18 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     },
     enableHiding: false,
   },
-  {
-    accessorKey: "parts_count",
-    header: "Linh kiện",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1.5">
-        <IconPackage className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">{row.original.parts_count}</span>
-        <span className="text-xs text-muted-foreground">parts</span>
-      </div>
-    ),
-  },
+  // Issue #9: Hidden - Parts feature is disabled for MVP
+  // {
+  //   accessorKey: "parts_count",
+  //   header: "Linh kiện",
+  //   cell: ({ row }) => (
+  //     <div className="flex items-center gap-1.5">
+  //       <IconPackage className="h-4 w-4 text-muted-foreground" />
+  //       <span className="font-medium">{row.original.parts_count}</span>
+  //       <span className="text-xs text-muted-foreground">parts</span>
+  //     </div>
+  //   ),
+  // },
   {
     accessorKey: "physical_products_count",
     header: "Tồn kho",
@@ -139,7 +151,9 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
       return (
         <div className="flex items-center gap-1.5">
           <IconPackage className="h-4 w-4 text-muted-foreground" />
-          <span className={`font-semibold ${count > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+          <span
+            className={`font-semibold ${count > 0 ? "text-green-600" : "text-muted-foreground"}`}
+          >
             {count}
           </span>
           <span className="text-xs text-muted-foreground">units</span>
@@ -297,6 +311,7 @@ export function ProductTable({
     <Tabs
       defaultValue="product-list"
       className="w-full flex-col justify-start gap-6"
+      suppressHydrationWarning
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
         <Label htmlFor="view-selector" className="sr-only">
@@ -349,7 +364,7 @@ export function ProductTable({
                   const columnDisplayNames: Record<string, string> = {
                     sku: "SKU",
                     name: "Sản phẩm",
-                    parts_count: "Linh kiện",
+                    // parts_count: "Linh kiện", // Issue #9: Hidden - Parts feature is disabled for MVP
                     brand_name: "Thương hiệu",
                     type: "Loại",
                     updated_at: "Cập nhật",
@@ -369,11 +384,15 @@ export function ProductTable({
             </DropdownMenuContent>
           </DropdownMenu>
           {/* Only Admin and Manager can add products */}
-          {['admin', 'manager'].includes(currentUserRole) && (
+          {["admin", "manager"].includes(currentUserRole) && (
             <ProductModal
               mode="add"
               trigger={
-                <Button variant="outline" size="sm" data-testid="add-product-button">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="add-product-button"
+                >
                   <IconPlus />
                   <span className="hidden lg:inline">Thêm sản phẩm</span>
                 </Button>
@@ -542,6 +561,11 @@ function ProductModal({
   onSuccess,
 }: ProductModalProps) {
   const [open, setOpen] = React.useState(false);
+  // Issue #10: State for duplicate name warning dialog
+  const [showDuplicateNameAlert, setShowDuplicateNameAlert] =
+    React.useState(false);
+  const [duplicateNameMessage, setDuplicateNameMessage] = React.useState("");
+
   const [formData, setFormData] = React.useState({
     name: "",
     sku: "",
@@ -550,11 +574,21 @@ function ProductModal({
     model: "",
     type: "VGA" as "VGA" | "MiniPC" | "SSD" | "RAM" | "Mainboard" | "Other",
     primary_image: "",
+    supplier_name: "", // Issue #8: Supplier field
     selected_parts: [] as string[],
+    // Issue #10: Flag to skip duplicate name warning
+    skipDuplicateNameWarning: false,
   });
 
+  // Validation errors state
+  const [fieldErrors, setFieldErrors] = React.useState<{
+    name?: boolean;
+    sku?: boolean;
+  }>({});
+
+  // Issue #9: Hidden - Parts feature is disabled for MVP
   // Fetch parts data for selection
-  const { data: parts } = trpc.parts.getParts.useQuery();
+  // const { data: parts } = trpc.parts.getParts.useQuery();
 
   // Fetch brands data for selection
   const { data: brands } = trpc.brands.getBrands.useQuery();
@@ -567,7 +601,7 @@ function ProductModal({
 
   const createProductMutation = trpc.products.createProduct.useMutation({
     onSuccess: (data) => {
-      const successMessage = "Tạo sản phẩm thành công";
+      const successMessage = "✅ Đã tạo sản phẩm thành công";
       console.log("[Products] Create product success:", successMessage, {
         productData: formData,
         response: data,
@@ -578,6 +612,25 @@ function ProductModal({
     },
     onError: (error) => {
       const errorMessage = error.message || "Tạo sản phẩm thất bại";
+
+      // Issue #10: Handle duplicate name warning (show confirmation dialog)
+      if (errorMessage.startsWith("DUPLICATE_NAME:")) {
+        const cleanMessage = errorMessage.replace("DUPLICATE_NAME: ", "");
+        console.log("[Products] Duplicate name warning:", cleanMessage);
+        setDuplicateNameMessage(cleanMessage);
+        setShowDuplicateNameAlert(true);
+        return; // Don't show toast for warning
+      }
+
+      // Issue #10: Handle duplicate SKU validation (block creation)
+      if (errorMessage.startsWith("DUPLICATE_SKU:")) {
+        const cleanMessage = errorMessage.replace("DUPLICATE_SKU: ", "");
+        console.log("[Products] Duplicate SKU blocked:", cleanMessage);
+        toast.error(cleanMessage);
+        return;
+      }
+
+      // Other errors
       console.error("[Products] Create product error:", errorMessage, {
         productData: formData,
         error,
@@ -616,10 +669,11 @@ function ProductModal({
   // Reset form when modal opens or mode/product changes
   React.useEffect(() => {
     if (open) {
-      const existingPartIds =
-        mode === "edit" && productWithParts?.parts
-          ? productWithParts.parts.map((part: { id: string }) => part.id)
-          : [];
+      // Issue #9: Hidden - Parts feature is disabled for MVP
+      // const existingPartIds =
+      //   mode === "edit" && productWithParts?.parts
+      //     ? productWithParts.parts.map((part: { id: string }) => part.id)
+      //     : [];
 
       setFormData({
         name: product?.name || "",
@@ -629,43 +683,72 @@ function ProductModal({
         model: product?.model || "",
         type: product?.type || "VGA",
         primary_image: product?.primary_image || "",
-        selected_parts: existingPartIds,
+        supplier_name: product?.supplier_name || "", // Issue #8: Supplier field
+        selected_parts: [], // Issue #9: Always empty array
+        skipDuplicateNameWarning: false, // Issue #10: Reset flag
       });
+
+      // Reset validation errors when modal opens
+      setFieldErrors({});
     }
   }, [open, product, productWithParts, mode]);
 
+  // Issue #9: Hidden - Parts feature is disabled for MVP
   // Prepare parts options for multi-select
-  const partsOptions: MultiSelectOption[] = React.useMemo(
-    () =>
-      parts?.map((part) => ({
-        label: part.name,
-        value: part.id,
-        part_number: part.part_number || "N/A",
-        stock_quantity: part.stock_quantity,
-        price: part.price,
-        disabled: part.stock_quantity === 0,
-      })) || [],
-    [parts],
-  );
+  // const partsOptions: MultiSelectOption[] = React.useMemo(
+  //   () =>
+  //     parts?.map((part) => ({
+  //       label: part.name,
+  //       value: part.id,
+  //       part_number: part.part_number || "N/A",
+  //       stock_quantity: part.stock_quantity,
+  //       price: part.price,
+  //       disabled: part.stock_quantity === 0,
+  //     })) || [],
+  //   [parts],
+  // );
 
   const handleSubmit = async () => {
+    // Reset errors
+    setFieldErrors({});
+
+    // Validate required fields
+    const errors: { name?: boolean; sku?: boolean } = {};
+
     if (!formData.name) {
       const errorMessage = "Vui lòng nhập tên sản phẩm";
-      console.error("[Products] Validation error:", errorMessage, { formData });
+      console.warn("[Products] Validation error:", errorMessage, { formData });
       toast.error(errorMessage);
+      errors.name = true;
+    }
+
+    // Issue #22: Validate SKU is required
+    if (!formData.sku || formData.sku.trim() === "") {
+      const errorMessage = "Vui lòng nhập SKU";
+      console.warn("[Products] Validation error:", errorMessage, { formData });
+      toast.error(errorMessage);
+      errors.sku = true;
+    }
+
+    // If there are errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     if (mode === "add") {
       createProductMutation.mutate({
         name: formData.name,
-        sku: formData.sku || null,
+        sku: formData.sku,
         short_description: formData.short_description || null,
         brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
         primary_image: formData.primary_image || null,
+        supplier_name: formData.supplier_name || null, // Issue #8: Supplier field
         part_ids: formData.selected_parts,
+        // Issue #10: Include flag to skip duplicate name warning
+        skipDuplicateNameWarning: formData.skipDuplicateNameWarning,
       });
     } else if (product) {
       updateProductMutation.mutate({
@@ -676,6 +759,7 @@ function ProductModal({
         brand_id: formData.brand_id || null,
         model: formData.model || null,
         type: formData.type,
+        supplier_name: formData.supplier_name || null, // Issue #8: Supplier field
         primary_image: formData.primary_image || null,
         part_ids: formData.selected_parts,
       });
@@ -697,142 +781,195 @@ function ProductModal({
     );
 
   return (
-    <FormDrawer
-      open={open}
-      onOpenChange={setOpen}
-      trigger={trigger}
-      titleElement={title}
-      description={
-        mode === "add"
-          ? "Tạo sản phẩm mới với các thông tin bắt buộc."
-          : "Chi tiết và tùy chọn quản lý sản phẩm"
-      }
-      isSubmitting={isLoading}
-      onSubmit={handleSubmit}
-      submitLabel={
-        isLoading
-          ? mode === "add"
-            ? "Đang tạo..."
-            : "Đang cập nhật..."
-          : mode === "add"
-            ? "Tạo sản phẩm"
-            : "Lưu thay đổi"
-      }
-      headerClassName="gap-1"
-    >
-      <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="name">Tên sản phẩm *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+    <>
+      {/* Issue #10: Alert dialog for duplicate name warning */}
+      <AlertDialog
+        open={showDuplicateNameAlert}
+        onOpenChange={setShowDuplicateNameAlert}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Cảnh báo: Tên sản phẩm trùng</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicateNameMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                // User confirmed - retry with flag set to true
+                setFormData({ ...formData, skipDuplicateNameWarning: true });
+                setShowDuplicateNameAlert(false);
+                // Trigger submission again
+                handleSubmit();
+              }}
+            >
+              Tiếp tục tạo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <FormDrawer
+        open={open}
+        onOpenChange={setOpen}
+        trigger={trigger}
+        titleElement={title}
+        description={
+          mode === "add"
+            ? "Tạo sản phẩm mới với các thông tin bắt buộc."
+            : "Chi tiết và tùy chọn quản lý sản phẩm"
+        }
+        isSubmitting={isLoading}
+        onSubmit={handleSubmit}
+        submitLabel={
+          isLoading
+            ? mode === "add"
+              ? "Đang tạo..."
+              : "Đang cập nhật..."
+            : mode === "add"
+              ? "Tạo sản phẩm"
+              : "Lưu thay đổi"
+        }
+        headerClassName="gap-1"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="name">Tên sản phẩm *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                // Clear error when user starts typing
+                if (fieldErrors.name) {
+                  setFieldErrors({ ...fieldErrors, name: false });
                 }
-                placeholder="Nhập tên sản phẩm"
+              }}
+              placeholder="Nhập tên sản phẩm"
+              required
+              className={fieldErrors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="sku">SKU *</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => {
+                  setFormData({ ...formData, sku: e.target.value });
+                  // Clear error when user starts typing
+                  if (fieldErrors.sku) {
+                    setFieldErrors({ ...fieldErrors, sku: false });
+                  }
+                }}
+                placeholder="Nhập SKU"
                 required
+                className={fieldErrors.sku ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sku: e.target.value })
-                  }
-                  placeholder="Nhập SKU (tùy chọn)"
-                />
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Loại sản phẩm *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(
-                    value:
-                      | "VGA"
-                      | "MiniPC"
-                      | "SSD"
-                      | "RAM"
-                      | "Mainboard"
-                      | "Other",
-                  ) => setFormData({ ...formData, type: value })}
-                >
-                  <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Chọn loại" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="VGA">VGA</SelectItem>
-                    <SelectItem value="MiniPC">MiniPC</SelectItem>
-                    <SelectItem value="SSD">SSD</SelectItem>
-                    <SelectItem value="RAM">RAM</SelectItem>
-                    <SelectItem value="Mainboard">Mainboard</SelectItem>
-                    <SelectItem value="Other">Khác</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="brand">Thương hiệu</Label>
-                <Select
-                  value={formData.brand_id || ""}
-                  onValueChange={(value: string) =>
-                    setFormData({ ...formData, brand_id: value || null })
-                  }
-                >
-                  <SelectTrigger id="brand" className="w-full">
-                    <SelectValue placeholder="Chọn thương hiệu (tùy chọn)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands?.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="model">Model</Label>
-                <Input
-                  id="model"
-                  value={formData.model}
-                  onChange={(e) =>
-                    setFormData({ ...formData, model: e.target.value })
-                  }
-                  placeholder="Nhập model (tùy chọn)"
-                />
-              </div>
-            </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="short_description">Mô tả</Label>
-              <Textarea
-                id="short_description"
-                value={formData.short_description}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    short_description: e.target.value,
-                  })
+              <Label htmlFor="type">Loại sản phẩm *</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(
+                  value:
+                    | "VGA"
+                    | "MiniPC"
+                    | "SSD"
+                    | "RAM"
+                    | "Mainboard"
+                    | "Other",
+                ) => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger id="type" className="w-full">
+                  <SelectValue placeholder="Chọn loại" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VGA">VGA</SelectItem>
+                  <SelectItem value="MiniPC">MiniPC</SelectItem>
+                  <SelectItem value="SSD">SSD</SelectItem>
+                  <SelectItem value="RAM">RAM</SelectItem>
+                  <SelectItem value="Mainboard">Mainboard</SelectItem>
+                  <SelectItem value="Other">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="brand">Thương hiệu</Label>
+              <Select
+                value={formData.brand_id || ""}
+                onValueChange={(value: string) =>
+                  setFormData({ ...formData, brand_id: value || null })
                 }
-                placeholder="Nhập mô tả sản phẩm (tùy chọn)"
-                rows={3}
-              />
+              >
+                <SelectTrigger id="brand" className="w-full">
+                  <SelectValue placeholder="Chọn thương hiệu (tùy chọn)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands?.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="primary_image">Đường dẫn hình ảnh</Label>
+              <Label htmlFor="model">Model</Label>
               <Input
-                id="primary_image"
-                value={formData.primary_image}
+                id="model"
+                value={formData.model}
                 onChange={(e) =>
-                  setFormData({ ...formData, primary_image: e.target.value })
+                  setFormData({ ...formData, model: e.target.value })
                 }
-                placeholder="Nhập đường dẫn hình ảnh (tùy chọn)"
+                placeholder="Nhập model (tùy chọn)"
               />
             </div>
-            <div className="flex flex-col gap-3">
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="supplier_name">Nhà cung cấp</Label>
+            <Input
+              id="supplier_name"
+              value={formData.supplier_name}
+              onChange={(e) =>
+                setFormData({ ...formData, supplier_name: e.target.value })
+              }
+              placeholder="Nhập tên nhà cung cấp (tùy chọn)"
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="short_description">Mô tả</Label>
+            <Textarea
+              id="short_description"
+              value={formData.short_description}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  short_description: e.target.value,
+                })
+              }
+              placeholder="Nhập mô tả sản phẩm (tùy chọn)"
+              rows={3}
+            />
+          </div>
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="primary_image">Đường dẫn hình ảnh</Label>
+            <Input
+              id="primary_image"
+              value={formData.primary_image}
+              onChange={(e) =>
+                setFormData({ ...formData, primary_image: e.target.value })
+              }
+              placeholder="Nhập đường dẫn hình ảnh (tùy chọn)"
+            />
+          </div>
+          {/* Issue #9: Hidden - Parts feature is disabled for MVP */}
+          {/* <div className="flex flex-col gap-3">
               <Label htmlFor="parts">Linh kiện liên quan</Label>
               <div className="text-sm text-muted-foreground mb-2">
                 Chọn các linh kiện được sử dụng cho sản phẩm này (tùy chọn)
@@ -913,37 +1050,32 @@ function ProductModal({
                   </Badge>
                 )}
               />
-            </div>
-            {mode === "edit" && product && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">ID Sản phẩm</Label>
-                    <div className="font-mono text-xs">{product.id}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Loại</Label>
-                    <div>{product.type}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">Ngày tạo</Label>
-                    <div>
-                      {new Date(product.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-muted-foreground">
-                      Cập nhật lúc
-                    </Label>
-                    <div>
-                      {new Date(product.updated_at).toLocaleDateString()}
-                    </div>
-                  </div>
+            </div> */}
+          {mode === "edit" && product && (
+            <>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">ID Sản phẩm</Label>
+                  <div className="font-mono text-xs">{product.id}</div>
                 </div>
-              </>
-            )}
-          </div>
-    </FormDrawer>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Loại</Label>
+                  <div>{product.type}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Ngày tạo</Label>
+                  <div>{new Date(product.created_at).toLocaleDateString()}</div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground">Cập nhật lúc</Label>
+                  <div>{new Date(product.updated_at).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </FormDrawer>
+    </>
   );
 }

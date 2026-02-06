@@ -5,7 +5,19 @@
 
 "use client";
 
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconLoader2,
+  IconPackage,
+  IconX,
+} from "@tabler/icons-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,15 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useUpdateRequestStatus } from "@/hooks/use-service-request";
-import { IconCheck, IconX, IconPackage, IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
-import { toast } from "sonner";
 
 interface ConfirmIncomingModalProps {
   request: any | null;
@@ -37,7 +43,7 @@ export function ConfirmIncomingModal({
   onSuccess,
 }: ConfirmIncomingModalProps) {
   const { updateStatus, isUpdating } = useUpdateRequestStatus();
-  
+
   const [itemsChecked, setItemsChecked] = useState(false);
   const [conditionNotes, setConditionNotes] = useState("");
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
@@ -62,10 +68,10 @@ export function ConfirmIncomingModal({
           toast.success(
             `Đã xác nhận nhận hàng cho yêu cầu ${request.tracking_token}`,
             {
-              description: hasDiscrepancy 
+              description: hasDiscrepancy
                 ? "⚠️ Có sai lệch so với mô tả. Vui lòng liên hệ khách hàng."
                 : "Trạng thái đã chuyển sang 'Đã tiếp nhận'",
-            }
+            },
           );
           handleCancel();
           onSuccess?.();
@@ -73,7 +79,7 @@ export function ConfirmIncomingModal({
         onError: (error) => {
           toast.error(`Lỗi: ${error.message}`);
         },
-      }
+      },
     );
   };
 
@@ -172,7 +178,10 @@ export function ConfirmIncomingModal({
               onCheckedChange={(checked) => setItemsChecked(!!checked)}
             />
             <div className="space-y-1 leading-none">
-              <Label htmlFor="items-checked" className="font-semibold cursor-pointer">
+              <Label
+                htmlFor="items-checked"
+                className="font-semibold cursor-pointer"
+              >
                 Xác nhận đã kiểm tra hàng
               </Label>
               <p className="text-sm text-muted-foreground">
@@ -182,7 +191,9 @@ export function ConfirmIncomingModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="condition-notes">Ghi chú tình trạng hàng (tùy chọn)</Label>
+            <Label htmlFor="condition-notes">
+              Ghi chú tình trạng hàng (tùy chọn)
+            </Label>
             <Textarea
               id="condition-notes"
               placeholder="Ví dụ: Hàng nguyên vẹn, đóng gói cẩn thận..."
@@ -206,19 +217,26 @@ export function ConfirmIncomingModal({
               }}
             />
             <div className="space-y-1 leading-none">
-              <Label htmlFor="has-discrepancy" className="font-semibold flex items-center gap-2 cursor-pointer">
+              <Label
+                htmlFor="has-discrepancy"
+                className="font-semibold flex items-center gap-2 cursor-pointer"
+              >
                 <IconAlertTriangle className="h-4 w-4 text-yellow-600" />
                 Có sai lệch so với mô tả
               </Label>
               <p className="text-sm text-muted-foreground">
-                Đánh dấu nếu hàng nhận được khác với thông tin mô tả trong yêu cầu
+                Đánh dấu nếu hàng nhận được khác với thông tin mô tả trong yêu
+                cầu
               </p>
             </div>
           </div>
 
           {hasDiscrepancy && (
             <div className="space-y-2">
-              <Label htmlFor="discrepancy-notes" className="text-yellow-700 dark:text-yellow-500">
+              <Label
+                htmlFor="discrepancy-notes"
+                className="text-yellow-700 dark:text-yellow-500"
+              >
                 Chi tiết sai lệch *
               </Label>
               <Textarea
@@ -239,7 +257,8 @@ export function ConfirmIncomingModal({
             <Alert variant="destructive">
               <IconAlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Có sai lệch được ghi nhận. Vui lòng liên hệ khách hàng để xác nhận trước khi tiến hành xử lý.
+                Có sai lệch được ghi nhận. Vui lòng liên hệ khách hàng để xác
+                nhận trước khi tiến hành xử lý.
               </AlertDescription>
             </Alert>
           )}
@@ -255,10 +274,7 @@ export function ConfirmIncomingModal({
             <IconX className="h-4 w-4 mr-2" />
             Hủy
           </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={!isValid() || isUpdating}
-          >
+          <Button onClick={handleConfirm} disabled={!isValid() || isUpdating}>
             {isUpdating ? (
               <>
                 <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />

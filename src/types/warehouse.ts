@@ -1,32 +1,48 @@
 // Warehouse Management Types
 // Types for physical/virtual warehouses, products, and stock management
 
-import type { Database } from './database.types';
-import type { WarehouseType, ProductCondition, MovementType } from './enums';
+import type { Database } from "./database.types";
+import type { MovementType, ProductCondition, WarehouseType } from "./enums";
 
 // Database table types
-export type PhysicalWarehouse = Database['public']['Tables']['physical_warehouses']['Row'];
-export type PhysicalWarehouseInsert = Database['public']['Tables']['physical_warehouses']['Insert'];
-export type PhysicalWarehouseUpdate = Database['public']['Tables']['physical_warehouses']['Update'];
+export type PhysicalWarehouse =
+  Database["public"]["Tables"]["physical_warehouses"]["Row"];
+export type PhysicalWarehouseInsert =
+  Database["public"]["Tables"]["physical_warehouses"]["Insert"];
+export type PhysicalWarehouseUpdate =
+  Database["public"]["Tables"]["physical_warehouses"]["Update"];
 
-export type VirtualWarehouse = Database['public']['Tables']['virtual_warehouses']['Row'];
-export type VirtualWarehouseInsert = Database['public']['Tables']['virtual_warehouses']['Insert'];
-export type VirtualWarehouseUpdate = Database['public']['Tables']['virtual_warehouses']['Update'];
+export type VirtualWarehouse =
+  Database["public"]["Tables"]["virtual_warehouses"]["Row"];
+export type VirtualWarehouseInsert =
+  Database["public"]["Tables"]["virtual_warehouses"]["Insert"];
+export type VirtualWarehouseUpdate =
+  Database["public"]["Tables"]["virtual_warehouses"]["Update"];
 
-export type PhysicalProduct = Database['public']['Tables']['physical_products']['Row'];
-export type PhysicalProductInsert = Database['public']['Tables']['physical_products']['Insert'];
-export type PhysicalProductUpdate = Database['public']['Tables']['physical_products']['Update'];
+export type PhysicalProduct =
+  Database["public"]["Tables"]["physical_products"]["Row"];
+export type PhysicalProductInsert =
+  Database["public"]["Tables"]["physical_products"]["Insert"];
+export type PhysicalProductUpdate =
+  Database["public"]["Tables"]["physical_products"]["Update"];
 
-export type StockMovement = Database['public']['Tables']['stock_movements']['Row'];
-export type StockMovementInsert = Database['public']['Tables']['stock_movements']['Insert'];
+export type StockMovement =
+  Database["public"]["Tables"]["stock_movements"]["Row"];
+export type StockMovementInsert =
+  Database["public"]["Tables"]["stock_movements"]["Insert"];
 
-export type ProductStockThreshold = Database['public']['Tables']['product_stock_thresholds']['Row'];
-export type ProductStockThresholdInsert = Database['public']['Tables']['product_stock_thresholds']['Insert'];
-export type ProductStockThresholdUpdate = Database['public']['Tables']['product_stock_thresholds']['Update'];
+export type ProductStockThreshold =
+  Database["public"]["Tables"]["product_stock_thresholds"]["Row"];
+export type ProductStockThresholdInsert =
+  Database["public"]["Tables"]["product_stock_thresholds"]["Insert"];
+export type ProductStockThresholdUpdate =
+  Database["public"]["Tables"]["product_stock_thresholds"]["Update"];
 
-export type RMABatch = Database['public']['Tables']['rma_batches']['Row'];
-export type RMABatchInsert = Database['public']['Tables']['rma_batches']['Insert'];
-export type RMABatchUpdate = Database['public']['Tables']['rma_batches']['Update'];
+export type RMABatch = Database["public"]["Tables"]["rma_batches"]["Row"];
+export type RMABatchInsert =
+  Database["public"]["Tables"]["rma_batches"]["Insert"];
+export type RMABatchUpdate =
+  Database["public"]["Tables"]["rma_batches"]["Update"];
 
 // View types
 // TODO: Re-enable when views are recreated in migrations

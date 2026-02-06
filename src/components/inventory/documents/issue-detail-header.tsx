@@ -5,11 +5,23 @@
  * Displays header information for a stock issue
  */
 
-import { StockIssueWithRelations, StockIssueReason } from "@/types/inventory";
-import { DocumentStatusBadge } from "../shared/document-status-badge";
 import { format } from "date-fns";
+import {
+  Calendar,
+  FileText,
+  Package,
+  Phone,
+  Tag,
+  User,
+  UserCheck,
+  Warehouse,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, User, FileText, Package, Warehouse, UserCheck, Phone, Tag } from "lucide-react";
+import type {
+  StockIssueReason,
+  StockIssueWithRelations,
+} from "@/types/inventory";
+import { DocumentStatusBadge } from "../shared/document-status-badge";
 
 interface IssueDetailHeaderProps {
   issue: StockIssueWithRelations;
@@ -37,7 +49,8 @@ const ISSUE_REASON_LABELS: Record<StockIssueReason, string> = {
 export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
   // Determine recipient display name
   const recipientDisplay = issue.customer?.name || issue.recipient_name || null;
-  const recipientPhoneDisplay = issue.customer?.phone || issue.recipient_phone || null;
+  const recipientPhoneDisplay =
+    issue.customer?.phone || issue.recipient_phone || null;
 
   return (
     <Card>
@@ -87,7 +100,8 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
                 <div>
                   <div className="text-sm font-medium">Lý do xuất</div>
                   <div className="text-sm text-muted-foreground">
-                    {ISSUE_REASON_LABELS[issue.issue_reason] || issue.issue_reason}
+                    {ISSUE_REASON_LABELS[issue.issue_reason] ||
+                      issue.issue_reason}
                   </div>
                 </div>
               </div>
@@ -104,7 +118,9 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
                   <div className="text-sm text-muted-foreground">
                     {recipientDisplay}
                     {issue.customer && (
-                      <span className="ml-1 text-xs text-blue-600">(Khách hàng)</span>
+                      <span className="ml-1 text-xs text-blue-600">
+                        (Khách hàng)
+                      </span>
                     )}
                   </div>
                 </div>
@@ -116,7 +132,9 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
                 <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium">SĐT người nhận</div>
-                  <div className="text-sm text-muted-foreground">{recipientPhoneDisplay}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {recipientPhoneDisplay}
+                  </div>
                 </div>
               </div>
             )}
@@ -139,7 +157,9 @@ export function IssueDetailHeader({ issue }: IssueDetailHeaderProps) {
                 <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium">Ghi chú</div>
-                  <div className="text-sm text-muted-foreground">{issue.notes}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {issue.notes}
+                  </div>
                 </div>
               </div>
             )}

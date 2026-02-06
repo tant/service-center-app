@@ -5,21 +5,27 @@
  * Allows viewing and editing stock receipt details
  */
 
-import { use, useState } from "react";
-import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
-import { PageHeader } from "@/components/page-header";
-import { ReceiptDetailHeader } from "@/components/inventory/documents/receipt-detail-header";
-import { ReceiptItemsTable } from "@/components/inventory/documents/receipt-items-table";
-import { SerialEntryCard, SerialEntryStatus } from "@/components/inventory/serials";
-import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
-import { TaskCard } from "@/components/tasks/task-card";
-import { CompleteTaskDialog, BlockTaskDialog } from "@/components/tasks/task-action-dialogs";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ListTodo } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useState } from "react";
 import { toast } from "sonner";
+import { ReceiptDetailHeader } from "@/components/inventory/documents/receipt-detail-header";
+import { ReceiptItemsTable } from "@/components/inventory/documents/receipt-items-table";
+import {
+  SerialEntryCard,
+  type SerialEntryStatus,
+} from "@/components/inventory/serials";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import {
+  BlockTaskDialog,
+  CompleteTaskDialog,
+} from "@/components/tasks/task-action-dialogs";
+import { TaskCard } from "@/components/tasks/task-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkflowSelectionDialog } from "@/components/workflows/workflow-selection-dialog";
 
 interface ReceiptDetailPageProps {
   params: Promise<{ id: string }>;
@@ -31,22 +37,35 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
 
   // Task action dialog state
-  const [completeTaskDialog, setCompleteTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [completeTaskDialog, setCompleteTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
-  const [blockTaskDialog, setBlockTaskDialog] = useState<{ open: boolean; taskId: string | null; taskName: string }>({
+  const [blockTaskDialog, setBlockTaskDialog] = useState<{
+    open: boolean;
+    taskId: string | null;
+    taskName: string;
+  }>({
     open: false,
     taskId: null,
     taskName: "",
   });
 
-  const { data: receipt, isLoading, refetch } = trpc.inventory.receipts.getById.useQuery({ id });
-  const { data: taskData, refetch: refetchTasks } = trpc.tasks.getEntityTasks.useQuery(
-    { entityType: "inventory_receipt", entityId: id },
-    { refetchInterval: 30000 }
-  );
+  const {
+    data: receipt,
+    isLoading,
+    refetch,
+  } = trpc.inventory.receipts.getById.useQuery({ id });
+  const { data: taskData, refetch: refetchTasks } =
+    trpc.tasks.getEntityTasks.useQuery(
+      { entityType: "inventory_receipt", entityId: id },
+      { refetchInterval: 30000 },
+    );
   const tasks = taskData?.tasks || [];
 
   // Task mutations
@@ -161,10 +180,15 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
   }
 
   // Calculate serial entry progress
-  const totalDeclaredQuantity = receipt.items?.reduce((sum, item) => sum + item.declared_quantity, 0) || 0;
-  const totalSerialCount = receipt.items?.reduce((sum, item) => sum + (item.serials?.length || 0), 0) || 0;
-  const allItemsComplete = totalDeclaredQuantity > 0 && totalSerialCount === totalDeclaredQuantity;
-
+  const totalDeclaredQuantity =
+    receipt.items?.reduce((sum, item) => sum + item.declared_quantity, 0) || 0;
+  const totalSerialCount =
+    receipt.items?.reduce(
+      (sum, item) => sum + (item.serials?.length || 0),
+      0,
+    ) || 0;
+  const allItemsComplete =
+    totalDeclaredQuantity > 0 && totalSerialCount === totalDeclaredQuantity;
 
   // Determine serial entry status
   const getSerialEntryStatus = (): SerialEntryStatus => {
@@ -172,13 +196,16 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
     if (totalSerialCount === 0) return "pending";
     // Check if task is overdue (> 7 days) - placeholder logic
     const createdAt = new Date(receipt.created_at);
-    const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceCreation = Math.floor(
+      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
     if (daysSinceCreation > 7 && !allItemsComplete) return "overdue";
     return "in-progress";
   };
 
   const serialEntryStatus = getSerialEntryStatus();
-  const showSerialEntryCard = receipt.status === "completed" && !allItemsComplete;
+  const showSerialEntryCard =
+    receipt.status === "completed" && !allItemsComplete;
 
   return (
     <>
@@ -217,7 +244,12 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <ListTodo className="h-4 w-4" />
-                      Công việc ({tasks.filter((t: any) => t.status === "completed").length}/{tasks.length})
+                      Công việc (
+                      {
+                        tasks.filter((t: any) => t.status === "completed")
+                          .length
+                      }
+                      /{tasks.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -226,8 +258,12 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
                         key={task.id}
                         task={task}
                         onStartTask={handleStartTask}
-                        onCompleteTask={(taskId) => handleCompleteTask(taskId, task.name)}
-                        onBlockTask={(taskId) => handleBlockTask(taskId, task.name)}
+                        onCompleteTask={(taskId) =>
+                          handleCompleteTask(taskId, task.name)
+                        }
+                        onBlockTask={(taskId) =>
+                          handleBlockTask(taskId, task.name)
+                        }
                         onUnblockTask={handleUnblockTask}
                         isLoading={
                           startTaskMutation.isPending ||
@@ -242,32 +278,43 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
               )}
 
               {/* Serial Entry Status Card - shown after approval if serials incomplete */}
+              {/* Issue #12: Removed onContinue button - users add serials directly in items table */}
               {showSerialEntryCard && receipt.created_by && (
                 <SerialEntryCard
-                  receiptId={receipt.id}
                   status={serialEntryStatus}
                   progress={{
                     current: totalSerialCount,
                     total: totalDeclaredQuantity,
                   }}
-                  lastUpdated={receipt.updated_at ? new Date(receipt.updated_at) : undefined}
+                  lastUpdated={
+                    receipt.updated_at
+                      ? new Date(receipt.updated_at)
+                      : undefined
+                  }
                   assignedTo={{
-                    id: typeof receipt.created_by === 'string' ? receipt.created_by : receipt.created_by?.id || "",
-                    full_name: typeof receipt.created_by === 'object' && receipt.created_by?.full_name ? receipt.created_by.full_name : "Unknown User",
+                    id:
+                      typeof receipt.created_by === "string"
+                        ? receipt.created_by
+                        : receipt.created_by?.id || "",
+                    full_name:
+                      typeof receipt.created_by === "object" &&
+                      receipt.created_by?.full_name
+                        ? receipt.created_by.full_name
+                        : "Unknown User",
                   }}
-                  taskAge={Math.floor((Date.now() - new Date(receipt.created_at).getTime()) / (1000 * 60 * 60 * 24))}
-                  onContinue={() => {
-                    // Scroll to items table where serials can be added
-                    document.querySelector('[data-serial-entry]')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  canEdit={receipt.status === "completed"}
+                  taskAge={Math.floor(
+                    (Date.now() - new Date(receipt.created_at).getTime()) /
+                      (1000 * 60 * 60 * 24),
+                  )}
                 />
               )}
 
               <div data-serial-entry>
-                <ReceiptItemsTable receipt={receipt} onSerialsAdded={() => refetch()} />
+                <ReceiptItemsTable
+                  receipt={receipt}
+                  onSerialsAdded={() => refetch()}
+                />
               </div>
-
             </div>
           </div>
         </div>
@@ -289,7 +336,8 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
       <CompleteTaskDialog
         open={completeTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setCompleteTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleCompleteTaskConfirm}
         taskName={completeTaskDialog.taskName}
@@ -299,7 +347,8 @@ export default function ReceiptDetailPage({ params }: ReceiptDetailPageProps) {
       <BlockTaskDialog
         open={blockTaskDialog.open}
         onOpenChange={(open) =>
-          !open && setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
+          !open &&
+          setBlockTaskDialog({ open: false, taskId: null, taskName: "" })
         }
         onConfirm={handleBlockTaskConfirm}
         taskName={blockTaskDialog.taskName}

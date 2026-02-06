@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -13,6 +12,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FormDrawerProps {
   open: boolean;
@@ -50,7 +50,7 @@ export function FormDrawer({
   const isMobile = useIsMobile();
 
   const drawerContent = (
-    <DrawerContent className="overflow-visible">
+    <DrawerContent className="overflow-visible" suppressHydrationWarning>
       <DrawerHeader className={headerClassName}>
         <DrawerTitle>{titleElement || title}</DrawerTitle>
         {description && <DrawerDescription>{description}</DrawerDescription>}

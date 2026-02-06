@@ -27,7 +27,8 @@ export function VirtualWarehouseSelector({
   disabled = false,
   className,
 }: VirtualWarehouseSelectorProps) {
-  const { data: warehouses, isLoading } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: warehouses, isLoading } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
 
   const options = (warehouses || []).map((w: any) => ({
     value: w.id,
@@ -51,6 +52,7 @@ export function VirtualWarehouseSelector({
 /**
  * VirtualWarehouseTypeSelector - Selects virtual warehouse by type
  * Use this for filtering/viewing stock by warehouse type
+ * Issue #9: "parts" option hidden - Parts feature is disabled for MVP
  */
 const VIRTUAL_WAREHOUSE_TYPES = [
   { value: "main", label: "Kho Chính" },
@@ -58,7 +60,7 @@ const VIRTUAL_WAREHOUSE_TYPES = [
   { value: "rma_staging", label: "Kho RMA" },
   { value: "dead_stock", label: "Kho Hỏng" },
   { value: "in_service", label: "Đang Sử Dụng" },
-  { value: "parts", label: "Kho Linh Kiện" },
+  // { value: "parts", label: "Kho Linh Kiện" }, // Issue #9: Hidden for MVP
   { value: "customer_installed", label: "Hàng Đã Bán" },
 ];
 
@@ -98,7 +100,8 @@ export function PhysicalWarehouseSelector({
   disabled = false,
   className,
 }: PhysicalWarehouseSelectorProps) {
-  const { data: warehouses, isLoading } = trpc.warehouse.listPhysicalWarehouses.useQuery();
+  const { data: warehouses, isLoading } =
+    trpc.warehouse.listPhysicalWarehouses.useQuery();
 
   const options = (warehouses || []).map((w: any) => ({
     value: w.id,

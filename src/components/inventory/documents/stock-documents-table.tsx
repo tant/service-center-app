@@ -5,9 +5,23 @@
  * Displays all stock documents (receipts, issues, transfers) in a unified view
  */
 
-import { useState } from "react";
+import { format } from "date-fns";
+import {
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Layers,
+  PackageMinus,
+  PackagePlus,
+  Search,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,11 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { FileText, ChevronLeft, ChevronRight, Layers, PackagePlus, PackageMinus, ArrowLeftRight, Search } from "lucide-react";
-import { format } from "date-fns";
-import Link from "next/link";
 
 type DocumentType = "all" | "receipt" | "issue" | "transfer";
 
@@ -44,20 +53,23 @@ export function StockDocumentsTable() {
   };
 
   // Fetch all three document types
-  const { data: receiptsData, isLoading: receiptsLoading } = trpc.inventory.receipts.list.useQuery(
-    { page, pageSize },
-    { enabled: documentType === "all" || documentType === "receipt" }
-  );
+  const { data: receiptsData, isLoading: receiptsLoading } =
+    trpc.inventory.receipts.list.useQuery(
+      { page, pageSize },
+      { enabled: documentType === "all" || documentType === "receipt" },
+    );
 
-  const { data: issuesData, isLoading: issuesLoading } = trpc.inventory.issues.list.useQuery(
-    { page, pageSize },
-    { enabled: documentType === "all" || documentType === "issue" }
-  );
+  const { data: issuesData, isLoading: issuesLoading } =
+    trpc.inventory.issues.list.useQuery(
+      { page, pageSize },
+      { enabled: documentType === "all" || documentType === "issue" },
+    );
 
-  const { data: transfersData, isLoading: transfersLoading } = trpc.inventory.transfers.list.useQuery(
-    { page, pageSize },
-    { enabled: documentType === "all" || documentType === "transfer" }
-  );
+  const { data: transfersData, isLoading: transfersLoading } =
+    trpc.inventory.transfers.list.useQuery(
+      { page, pageSize },
+      { enabled: documentType === "all" || documentType === "transfer" },
+    );
 
   // Combine and sort documents
   const allDocuments = (() => {
@@ -110,13 +122,21 @@ export function StockDocumentsTable() {
     }
 
     // Sort by created_at descending
-    return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return filtered.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
   })();
 
   const isLoading = receiptsLoading || issuesLoading || transfersLoading;
 
   const handleRowClick = (doc: any) => {
-    const docType = doc.documentType === "receipt" ? "receipts" : doc.documentType === "issue" ? "issues" : "transfers";
+    const docType =
+      doc.documentType === "receipt"
+        ? "receipts"
+        : doc.documentType === "issue"
+          ? "issues"
+          : "transfers";
     router.push(`/inventory/documents/${docType}/${doc.id}`);
   };
 
@@ -135,13 +155,18 @@ export function StockDocumentsTable() {
 
   const getDocumentTypeBadge = (type: string) => {
     const colors = {
-      receipt: "bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
-      issue: "bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
-      transfer: "bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
+      receipt:
+        "bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+      issue:
+        "bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
+      transfer:
+        "bg-purple-100 text-purple-700 border border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
     };
 
     return (
-      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${colors[type as keyof typeof colors]}`}>
+      <span
+        className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${colors[type as keyof typeof colors]}`}
+      >
         {getDocumentTypeLabel(type)}
       </span>
     );
@@ -172,19 +197,27 @@ export function StockDocumentsTable() {
               <TableHead>Người tạo</TableHead>
               <TableHead>Serial thiếu</TableHead>
               <TableHead>Ghi chú</TableHead>
-              <TableHead className="text-right pr-4 lg:pr-6">Thao tác</TableHead>
+              <TableHead className="text-right pr-4 lg:pr-6">
+                Thao tác
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={documentType === "all" ? 7 : 6}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Đang tải...
                 </TableCell>
               </TableRow>
             ) : allDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={documentType === "all" ? 7 : 6} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={documentType === "all" ? 7 : 6}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Không tìm thấy chứng từ nào.
                 </TableCell>
               </TableRow>
@@ -195,8 +228,14 @@ export function StockDocumentsTable() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleRowClick(doc)}
                 >
-                  <TableCell className="font-medium pl-4 lg:pl-6">{doc.documentNumber}</TableCell>
-                  {documentType === "all" && <TableCell>{getDocumentTypeBadge(doc.documentType)}</TableCell>}
+                  <TableCell className="font-medium pl-4 lg:pl-6">
+                    {doc.documentNumber}
+                  </TableCell>
+                  {documentType === "all" && (
+                    <TableCell>
+                      {getDocumentTypeBadge(doc.documentType)}
+                    </TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">
                     {doc.date ? format(new Date(doc.date), "dd/MM/yyyy") : "-"}
                   </TableCell>
@@ -211,7 +250,9 @@ export function StockDocumentsTable() {
                           : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       }`}
                     >
-                      {doc.missingSerialsCount > 0 ? `${doc.missingSerialsCount} serial` : "Hoàn thành"}
+                      {doc.missingSerialsCount > 0
+                        ? `${doc.missingSerialsCount} serial`
+                        : "Hoàn thành"}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
@@ -251,9 +292,7 @@ export function StockDocumentsTable() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-sm">
-              Trang {page + 1}
-            </div>
+            <div className="text-sm">Trang {page + 1}</div>
             <Button
               variant="outline"
               size="sm"
@@ -269,7 +308,11 @@ export function StockDocumentsTable() {
   );
 
   return (
-    <Tabs value={documentType} onValueChange={handleDocumentTypeChange} className="w-full flex-col justify-start gap-6">
+    <Tabs
+      value={documentType}
+      onValueChange={handleDocumentTypeChange}
+      className="w-full flex-col justify-start gap-6"
+    >
       {/* Tab Header with Actions and Status Filter */}
       <div className="flex items-center justify-between px-4 lg:px-6">
         <TabsList className="grid w-full max-w-2xl grid-cols-4">
@@ -315,19 +358,31 @@ export function StockDocumentsTable() {
       </div>
 
       {/* Tab Contents */}
-      <TabsContent value="all" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="all"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         {renderTable()}
       </TabsContent>
 
-      <TabsContent value="receipt" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="receipt"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         {renderTable()}
       </TabsContent>
 
-      <TabsContent value="issue" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="issue"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         {renderTable()}
       </TabsContent>
 
-      <TabsContent value="transfer" className="relative flex flex-col gap-4 px-4 lg:px-6">
+      <TabsContent
+        value="transfer"
+        className="relative flex flex-col gap-4 px-4 lg:px-6"
+      >
         {renderTable()}
       </TabsContent>
     </Tabs>

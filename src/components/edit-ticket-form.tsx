@@ -1,7 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  IconClipboardText,
+  IconCurrencyDollar,
+  IconDownload,
+  IconEdit,
+  IconEye,
+  IconMinus,
+  IconPhoto,
+  IconPlus,
+  IconTool,
+  IconTrash,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { NumberCounter } from "@/components/number-counter";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,7 +27,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,29 +43,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { trpc } from "@/components/providers/trpc-provider";
-import {
-  IconTrash,
-  IconPlus,
-  IconEdit,
-  IconPhoto,
-  IconX,
-  IconDownload,
-  IconEye,
-  IconUser,
-  IconClipboardText,
-  IconCurrencyDollar,
-  IconTool,
-  IconMinus,
-} from "@tabler/icons-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { NumberCounter } from "@/components/number-counter";
 import { STATUS_FLOW } from "@/lib/constants/ticket-status";
 import { createClient } from "@/utils/supabase/client";
 
@@ -586,7 +586,7 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+    return Math.round((bytes / k ** i) * 100) / 100 + " " + sizes[i];
   };
 
   const partsTotal = parts.reduce(
@@ -848,7 +848,9 @@ export function EditTicketForm({ ticket }: EditTicketFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="warranty_replacement">Đổi bảo hành</SelectItem>
+                    <SelectItem value="warranty_replacement">
+                      Đổi bảo hành
+                    </SelectItem>
                     <SelectItem value="repaired">Đã sửa</SelectItem>
                     <SelectItem value="unrepairable">Không sửa được</SelectItem>
                   </SelectContent>

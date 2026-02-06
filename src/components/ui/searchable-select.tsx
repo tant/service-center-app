@@ -1,9 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,6 +16,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { cn } from "@/lib/utils";
 
 export interface SearchableSelectOption {
   label: string;
@@ -53,15 +53,22 @@ export function SearchableSelect({
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
 
+  // ✅ FIX: Debounce search value để giảm re-renders khi typing
+  // User types → searchValue updates immediately (UI responsive)
+  // But filtering only happens after 150ms pause → less flicker
+  const debouncedSearch = useDebouncedValue(searchValue, 150);
+
   const selectedOption = React.useMemo(
     () => options.find((option) => option.value === value),
     [options, value],
   );
 
+  // ✅ FIX: Use debounced value for filtering
+  // Reduces filteredOptions recalculation from every keystroke to only after pause
   const filteredOptions = React.useMemo(
     () =>
       options.filter((option) => {
-        const searchLower = searchValue.toLowerCase();
+        const searchLower = debouncedSearch.toLowerCase();
 
         // Search in main label and description
         if (
@@ -77,7 +84,7 @@ export function SearchableSelect({
           option[field]?.toString().toLowerCase().includes(searchLower),
         );
       }),
-    [options, searchValue],
+    [options, debouncedSearch],
   );
 
   const handleSelect = React.useCallback(
@@ -139,18 +146,22 @@ export function SearchableSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
+      <PopoverContent
+        className="w-[400px] p-0"
+        align="start"
+        disablePositionUpdate={true}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder={searchPlaceholder}
             value={searchValue}
             onValueChange={setSearchValue}
           />
-          <CommandList>
+          <CommandList className="max-h-[300px] min-h-[200px]">
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             {filteredOptions.length > 0 && (
               <CommandGroup>
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="overflow-y-auto">
                   {filteredOptions.map((option) => (
                     <CommandItem
                       key={option.value}

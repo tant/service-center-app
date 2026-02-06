@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Drawer,
@@ -16,6 +13,9 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useFinalizeRMABatch } from "@/hooks/use-warehouse";
 
 interface UpdateShippingInfoDrawerProps {
@@ -49,8 +49,8 @@ export function UpdateShippingInfoDrawer({
         if (!isNaN(date.getTime())) {
           // DatePicker expects ISO date string (YYYY-MM-DD)
           const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
           setShippingDate(`${year}-${month}-${day}`);
         } else {
           setShippingDate("");
@@ -78,12 +78,16 @@ export function UpdateShippingInfoDrawer({
           setOpen(false);
           onSuccess?.();
         },
-      }
+      },
     );
   };
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} direction={isMobile ? "bottom" : "right"}>
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      direction={isMobile ? "bottom" : "right"}
+    >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent>
         <DrawerHeader>

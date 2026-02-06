@@ -6,17 +6,19 @@
  * Shows progress, last updated, task assignment, and primary action
  */
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { SerialProgressBar } from "./serial-progress-bar";
-import { AlertTriangle, CheckCircle2, Clock, Flame } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { AlertTriangle, CheckCircle2, Clock, Flame } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { SerialProgressBar } from "./serial-progress-bar";
 
-export type SerialEntryStatus = "pending" | "in-progress" | "complete" | "overdue";
+export type SerialEntryStatus =
+  | "pending"
+  | "in-progress"
+  | "complete"
+  | "overdue";
 
 interface SerialEntryCardProps {
-  receiptId: string;
   status: SerialEntryStatus;
   progress: {
     current: number;
@@ -28,24 +30,17 @@ interface SerialEntryCardProps {
     full_name: string;
   };
   taskAge: number; // days
-  onContinue?: () => void;
-  canEdit: boolean;
   children?: React.ReactNode;
 }
 
 export function SerialEntryCard({
-  receiptId,
   status,
   progress,
   lastUpdated,
   assignedTo,
   taskAge,
-  onContinue,
-  canEdit,
   children,
 }: SerialEntryCardProps) {
-  const percentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
-
   // Determine background color based on status
   const getStatusStyles = () => {
     switch (status) {
@@ -162,27 +157,7 @@ export function SerialEntryCard({
           )}
         </div>
 
-        {/* Action Section - Different display based on edit permission */}
-        {status !== "complete" && (
-          <>
-            {canEdit && onContinue ? (
-              // Editable: Show clickable button
-              <Button
-                onClick={onContinue}
-                className="w-full"
-                size="lg"
-                variant="default"
-              >
-                {status === "pending" ? "Bắt đầu nhập serial" : "Tiếp tục nhập serial"} →
-              </Button>
-            ) : (
-              // Not editable: Show informational text instead of button
-              <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground text-center">
-                <p>Người phụ trách: <span className="font-medium text-foreground">{assignedTo.full_name}</span></p>
-              </div>
-            )}
-          </>
-        )}
+        {/* Issue #12: Removed "Bắt đầu nhập serial" button - users can add serials directly in items table */}
 
         {/* Stock Update Info */}
         {(status === "in-progress" || status === "overdue") && (
@@ -190,7 +165,8 @@ export function SerialEntryCard({
             <p className="flex items-center gap-2">
               <span>💡</span>
               <span>
-                Tồn kho đã được cập nhật. Đang tiếp tục nhập serial để đảm bảo truy xuất nguồn gốc.
+                Tồn kho đã được cập nhật. Đang tiếp tục nhập serial để đảm bảo
+                truy xuất nguồn gốc.
               </span>
             </p>
           </div>
@@ -198,9 +174,7 @@ export function SerialEntryCard({
 
         {/* Children (Product list) */}
         {children && (
-          <div className="mt-4 pt-4 border-t border-border/50">
-            {children}
-          </div>
+          <div className="mt-4 pt-4 border-t border-border/50">{children}</div>
         )}
       </CardContent>
     </Card>

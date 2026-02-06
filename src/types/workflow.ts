@@ -1,25 +1,32 @@
 // Task Workflow Types
 // Types for workflows, task execution, and workflow management
 
-import type { Database } from './database.types';
-import type { TaskStatus, ServiceType } from './enums';
+import type { Database } from "./database.types";
+import type { ServiceType, TaskStatus } from "./enums";
 
 // Database table types
-export type Workflow = Database['public']['Tables']['workflows']['Row'];
-export type WorkflowInsert = Database['public']['Tables']['workflows']['Insert'];
-export type WorkflowUpdate = Database['public']['Tables']['workflows']['Update'];
+export type Workflow = Database["public"]["Tables"]["workflows"]["Row"];
+export type WorkflowInsert =
+  Database["public"]["Tables"]["workflows"]["Insert"];
+export type WorkflowUpdate =
+  Database["public"]["Tables"]["workflows"]["Update"];
 
-export type Task = Database['public']['Tables']['tasks']['Row'];
-export type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
-export type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
+export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
+export type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 
-export type WorkflowTask = Database['public']['Tables']['workflow_tasks']['Row'];
-export type WorkflowTaskInsert = Database['public']['Tables']['workflow_tasks']['Insert'];
-export type WorkflowTaskUpdate = Database['public']['Tables']['workflow_tasks']['Update'];
+export type WorkflowTask =
+  Database["public"]["Tables"]["workflow_tasks"]["Row"];
+export type WorkflowTaskInsert =
+  Database["public"]["Tables"]["workflow_tasks"]["Insert"];
+export type WorkflowTaskUpdate =
+  Database["public"]["Tables"]["workflow_tasks"]["Update"];
 
-export type EntityTask = Database['public']['Tables']['entity_tasks']['Row'];
-export type EntityTaskInsert = Database['public']['Tables']['entity_tasks']['Insert'];
-export type EntityTaskUpdate = Database['public']['Tables']['entity_tasks']['Update'];
+export type EntityTask = Database["public"]["Tables"]["entity_tasks"]["Row"];
+export type EntityTaskInsert =
+  Database["public"]["Tables"]["entity_tasks"]["Insert"];
+export type EntityTaskUpdate =
+  Database["public"]["Tables"]["entity_tasks"]["Update"];
 
 // Note: task_history and ticket_workflow_changes tables removed in polymorphic refactor
 // History is now tracked in audit_logs table
@@ -29,7 +36,8 @@ export type EntityTaskUpdate = Database['public']['Tables']['entity_tasks']['Upd
 // export type TicketWorkflowChangeInsert = Database['public']['Tables']['ticket_workflow_changes']['Insert'];
 
 // View types
-export type TaskProgressSummary = Database['public']['Views']['v_task_progress_summary']['Row'];
+export type TaskProgressSummary =
+  Database["public"]["Views"]["v_task_progress_summary"]["Row"];
 
 // Extended types with relations
 export interface WorkflowWithTasks extends Workflow {
@@ -111,11 +119,11 @@ export interface TaskAnalytics {
 
 // Task category constants
 export const TASK_CATEGORIES = [
-  'Intake',
-  'Diagnosis',
-  'Repair',
-  'QA',
-  'Closing',
+  "Intake",
+  "Diagnosis",
+  "Repair",
+  "QA",
+  "Closing",
 ] as const;
 
-export type TaskCategory = typeof TASK_CATEGORIES[number];
+export type TaskCategory = (typeof TASK_CATEGORIES)[number];

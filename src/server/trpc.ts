@@ -140,7 +140,9 @@ export async function createTRPCContext(opts: { req: Request }) {
   const { supabaseClient, supabaseAdmin } = createSupabaseClients(opts.req);
 
   // Get user session for auth context
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  const {
+    data: { user },
+  } = await supabaseClient.auth.getUser();
 
   const contextEndTime = performance.now();
 
@@ -150,9 +152,7 @@ export async function createTRPCContext(opts: { req: Request }) {
   console.log(
     `📊 [TRPC-CTX-${requestId}] Global stats - Contexts: ${contextCreationCount}, Clients: ${clientCreationCount}`,
   );
-  console.log(
-    `👤 [TRPC-CTX-${requestId}] User: ${user?.email || "anonymous"}`,
-  );
+  console.log(`👤 [TRPC-CTX-${requestId}] User: ${user?.email || "anonymous"}`);
 
   return {
     supabaseClient,

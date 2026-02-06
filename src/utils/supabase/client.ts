@@ -19,11 +19,11 @@ export function createClient() {
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
         "@supabase/ssr: Your project's URL and API key are required to create a Supabase client!\n\n" +
-        "Missing variables:\n" +
-        (!supabaseUrl ? "- NEXT_PUBLIC_SUPABASE_URL\n" : "") +
-        (!supabaseAnonKey ? "- NEXT_PUBLIC_SUPABASE_ANON_KEY\n" : "") +
-        "\nCheck your Supabase project's API settings to find these values\n" +
-        "https://supabase.com/dashboard/project/_/settings/api"
+          "Missing variables:\n" +
+          (!supabaseUrl ? "- NEXT_PUBLIC_SUPABASE_URL\n" : "") +
+          (!supabaseAnonKey ? "- NEXT_PUBLIC_SUPABASE_ANON_KEY\n" : "") +
+          "\nCheck your Supabase project's API settings to find these values\n" +
+          "https://supabase.com/dashboard/project/_/settings/api",
       );
     }
 

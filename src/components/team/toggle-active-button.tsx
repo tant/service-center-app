@@ -31,7 +31,7 @@ export function ToggleActiveButton({
     if (isLastActiveAdmin && isActive) {
       toast.error(
         "Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Vui lòng nâng cấp người dùng khác lên quản trị viên trước.",
-        { duration: 5000 }
+        { duration: 5000 },
       );
       return;
     }
@@ -58,7 +58,9 @@ export function ToggleActiveButton({
           } ${isActive ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
           onClick={handleToggle}
           disabled={isDisabled}
-          aria-label={isActive ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản"}
+          aria-label={
+            isActive ? "Vô hiệu hóa tài khoản" : "Kích hoạt tài khoản"
+          }
           data-testid="toggle-active-button"
         >
           {isActive ? (

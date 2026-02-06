@@ -6,13 +6,13 @@
 
 "use client";
 
+import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
 import * as React from "react";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FormDrawer } from "@/components/ui/form-drawer";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { trpc } from "@/components/providers/trpc-provider";
-import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
 
 interface BulkWarrantyUpdateDrawerProps {
   open: boolean;
@@ -33,14 +33,18 @@ interface ProcessResult {
   error_count: number;
 }
 
-export function BulkWarrantyUpdateDrawer({ open, onClose }: BulkWarrantyUpdateDrawerProps) {
+export function BulkWarrantyUpdateDrawer({
+  open,
+  onClose,
+}: BulkWarrantyUpdateDrawerProps) {
   const [file, setFile] = React.useState<File | null>(null);
   const [error, setError] = React.useState<string>("");
   const [result, setResult] = React.useState<ProcessResult | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const bulkUpdateMutation = trpc.physicalProducts.bulkUpdateWarranty.useMutation();
+  const bulkUpdateMutation =
+    trpc.physicalProducts.bulkUpdateWarranty.useMutation();
   const utils = trpc.useUtils();
 
   // Reset state when drawer opens/closes
@@ -105,10 +109,14 @@ export function BulkWarrantyUpdateDrawer({ open, onClose }: BulkWarrantyUpdateDr
       // Validate date format (YYYY-MM-DD)
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(manufacturerDate)) {
-        throw new Error(`Dòng ${i + 1}: Ngày bảo hành nhà máy không đúng định dạng (YYYY-MM-DD): ${manufacturerDate}`);
+        throw new Error(
+          `Dòng ${i + 1}: Ngày bảo hành nhà máy không đúng định dạng (YYYY-MM-DD): ${manufacturerDate}`,
+        );
       }
       if (!dateRegex.test(userDate)) {
-        throw new Error(`Dòng ${i + 1}: Ngày bảo hành user không đúng định dạng (YYYY-MM-DD): ${userDate}`);
+        throw new Error(
+          `Dòng ${i + 1}: Ngày bảo hành user không đúng định dạng (YYYY-MM-DD): ${userDate}`,
+        );
       }
 
       updates.push({
@@ -204,15 +212,19 @@ export function BulkWarrantyUpdateDrawer({ open, onClose }: BulkWarrantyUpdateDr
               </li>
               <li>Định dạng ngày: YYYY-MM-DD (vd: 2025-12-31)</li>
               <li>
-                <strong>Tất cả các trường đều phải có giá trị</strong> - không được để trống
+                <strong>Tất cả các trường đều phải có giá trị</strong> - không
+                được để trống
               </li>
               <li className="text-amber-600 dark:text-amber-500">
-                <strong>⚠️ Lưu ý:</strong> Số serial phải tồn tại trong hệ thống. Serial không tồn tại sẽ báo lỗi.
+                <strong>⚠️ Lưu ý:</strong> Số serial phải tồn tại trong hệ thống.
+                Serial không tồn tại sẽ báo lỗi.
               </li>
             </ul>
             <div className="mt-3 p-2 bg-muted rounded text-xs font-mono">
               <p className="font-medium mb-1">Ví dụ file CSV:</p>
-              <p>serial_number,manufacturer_warranty_end_date,user_warranty_end_date</p>
+              <p>
+                serial_number,manufacturer_warranty_end_date,user_warranty_end_date
+              </p>
               <p>ZT4070-2025-001,2026-12-31,2027-12-31</p>
               <p>ZT4070-2025-002,2026-06-30,2027-06-30</p>
               <p>ZT4070-2025-003,2027-01-15,2028-01-15</p>
@@ -296,7 +308,9 @@ export function BulkWarrantyUpdateDrawer({ open, onClose }: BulkWarrantyUpdateDr
                   <div key={index} className="space-y-0.5">
                     <div className="flex items-start gap-2">
                       <IconX className="h-3 w-3 text-destructive mt-0.5 flex-shrink-0" />
-                      <span className="font-mono font-medium">{item.serial_number}</span>
+                      <span className="font-mono font-medium">
+                        {item.serial_number}
+                      </span>
                     </div>
                     <p className="text-muted-foreground ml-5">{item.error}</p>
                   </div>

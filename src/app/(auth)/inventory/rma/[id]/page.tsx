@@ -5,34 +5,29 @@
 
 "use client";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { use } from "react";
 import {
   IconArrowLeft,
-  IconPlus,
   IconCheck,
-  IconTruck,
+  IconPlus,
   IconTrash,
+  IconTruck,
   IconX,
 } from "@tabler/icons-react";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useRMABatchDetails, useFinalizeRMABatch, useCompleteRMABatch, useCancelRMABatch, useRemoveProductFromRMA } from "@/hooks/use-warehouse";
-import { RMA_STATUS_LABELS, RMA_STATUS_COLORS } from "@/constants/warehouse";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { use } from "react";
 import { AddProductsToRMADrawer } from "@/components/drawers/add-products-to-rma-drawer";
 import { UpdateShippingInfoDrawer } from "@/components/drawers/update-shipping-info-drawer";
+import { PageHeader } from "@/components/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -43,12 +38,31 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { RMA_STATUS_COLORS, RMA_STATUS_LABELS } from "@/constants/warehouse";
+import {
+  useCancelRMABatch,
+  useCompleteRMABatch,
+  useFinalizeRMABatch,
+  useRemoveProductFromRMA,
+  useRMABatchDetails,
+} from "@/hooks/use-warehouse";
 
 interface RMABatchDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) {
+export default function RMABatchDetailPage({
+  params,
+}: RMABatchDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { batch, products, isLoading, error } = useRMABatchDetails(id);
@@ -56,7 +70,9 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
   const { completeBatch, isCompleting } = useCompleteRMABatch();
   const { cancelBatch, isCancelling } = useCancelRMABatch();
   const { removeProduct, isRemoving } = useRemoveProductFromRMA();
-  const [productToDelete, setProductToDelete] = React.useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = React.useState<string | null>(
+    null,
+  );
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -110,7 +126,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
         onSuccess: () => {
           // Optionally navigate back or show success
         },
-      }
+      },
     );
   };
 
@@ -126,7 +142,7 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
         onSuccess: () => {
           setProductToDelete(null);
         },
-      }
+      },
     );
   };
 
@@ -137,7 +153,9 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
-              <div className="text-center text-muted-foreground">Đang tải thông tin lô RMA...</div>
+              <div className="text-center text-muted-foreground">
+                Đang tải thông tin lô RMA...
+              </div>
             </div>
           </div>
         </div>
@@ -193,7 +211,9 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Thông tin lô RMA</CardTitle>
-                    <CardDescription>Chi tiết về lô hàng trả về nhà cung cấp</CardDescription>
+                    <CardDescription>
+                      Chi tiết về lô hàng trả về nhà cung cấp
+                    </CardDescription>
                   </div>
                   {getStatusBadge(batch.status)}
                 </div>
@@ -201,28 +221,52 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Nhà cung cấp</div>
-                    <div className="text-base font-semibold">{batch.supplier_name}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Nhà cung cấp
+                    </div>
+                    <div className="text-base font-semibold">
+                      {batch.supplier_name}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Số sản phẩm</div>
-                    <div className="text-base font-semibold">{products.length}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Số sản phẩm
+                    </div>
+                    <div className="text-base font-semibold">
+                      {products.length}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Ngày vận chuyển</div>
-                    <div className="text-sm">{formatDate(batch.shipping_date)}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Ngày vận chuyển
+                    </div>
+                    <div className="text-sm">
+                      {formatDate(batch.shipping_date)}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Mã vận đơn</div>
-                    <div className="text-sm">{batch.tracking_number || "—"}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Mã vận đơn
+                    </div>
+                    <div className="text-sm">
+                      {batch.tracking_number || "—"}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Người tạo</div>
-                    <div className="text-sm">{batch.created_by?.full_name || "—"}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Người tạo
+                    </div>
+                    <div className="text-sm">
+                      {batch.created_by?.full_name || "—"}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Ngày tạo</div>
-                    <div className="text-sm">{formatDateTime(batch.created_at)}</div>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      Ngày tạo
+                    </div>
+                    <div className="text-sm">
+                      {formatDateTime(batch.created_at)}
+                    </div>
                   </div>
                 </div>
 
@@ -230,7 +274,9 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                   <>
                     <Separator />
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground mb-1">Ghi chú</div>
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        Ghi chú
+                      </div>
                       <div className="text-sm">{batch.notes}</div>
                     </div>
                   </>
@@ -259,15 +305,18 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                           <DialogTrigger asChild>
                             <Button size="sm" disabled={isFinalizing}>
                               <IconCheck className="h-4 w-4" />
-                              {isFinalizing ? "Đang xử lý..." : "Chốt danh sách"}
+                              {isFinalizing
+                                ? "Đang xử lý..."
+                                : "Chốt danh sách"}
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Xác nhận chốt danh sách</DialogTitle>
                               <DialogDescription>
-                                Sau khi chốt, bạn sẽ không thể thêm hoặc xóa sản phẩm khỏi lô này nữa.
-                                Lô sẽ chuyển sang trạng thái "Chờ gửi".
+                                Sau khi chốt, bạn sẽ không thể thêm hoặc xóa sản
+                                phẩm khỏi lô này nữa. Lô sẽ chuyển sang trạng
+                                thái "Chờ gửi".
                               </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
@@ -283,7 +332,12 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                       )}
 
                       {/* Cancel button for draft */}
-                      <Dialog open={showCancelDialog && isDraft} onOpenChange={(open) => !open && setShowCancelDialog(false)}>
+                      <Dialog
+                        open={showCancelDialog && isDraft}
+                        onOpenChange={(open) =>
+                          !open && setShowCancelDialog(false)
+                        }
+                      >
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
@@ -299,20 +353,29 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                           <DialogHeader>
                             <DialogTitle>Xác nhận hủy lô RMA</DialogTitle>
                             <DialogDescription>
-                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm sẽ được gỡ khỏi lô và
-                              lô sẽ chuyển sang trạng thái "Đã hủy".
+                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm
+                              sẽ được gỡ khỏi lô và lô sẽ chuyển sang trạng thái
+                              "Đã hủy".
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowCancelDialog(false)}
+                            >
                               Không
                             </Button>
                             <Button
                               variant="destructive"
                               disabled={isCancelling}
-                              onClick={() => cancelBatch({ batch_id: batch.id }, {
-                                onSuccess: () => setShowCancelDialog(false),
-                              })}
+                              onClick={() =>
+                                cancelBatch(
+                                  { batch_id: batch.id },
+                                  {
+                                    onSuccess: () => setShowCancelDialog(false),
+                                  },
+                                )
+                              }
                             >
                               {isCancelling ? "Đang hủy..." : "Xác nhận hủy"}
                             </Button>
@@ -343,22 +406,30 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                         <DialogTrigger asChild>
                           <Button size="sm" disabled={isCompleting}>
                             <IconCheck className="h-4 w-4" />
-                            {isCompleting ? "Đang xử lý..." : "Hoàn thành & Xuất kho"}
+                            {isCompleting
+                              ? "Đang xử lý..."
+                              : "Hoàn thành & Xuất kho"}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Xác nhận hoàn thành lô RMA</DialogTitle>
+                            <DialogTitle>
+                              Xác nhận hoàn thành lô RMA
+                            </DialogTitle>
                             <DialogDescription>
-                              Lô RMA sẽ được đánh dấu hoàn thành, hệ thống sẽ tự động:
+                              Lô RMA sẽ được đánh dấu hoàn thành, hệ thống sẽ tự
+                              động:
                             </DialogDescription>
                             <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
-                              <li>Chuyển sản phẩm từ Kho Hàng Hỏng sang Kho RMA</li>
+                              <li>
+                                Chuyển sản phẩm từ Kho Hàng Hỏng sang Kho RMA
+                              </li>
                               <li>Tạo phiếu xuất kho từ Kho RMA</li>
                             </ul>
                             {!batch.tracking_number && (
                               <p className="mt-2 text-sm text-yellow-600">
-                                Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật trước khi xác nhận.
+                                Lưu ý: Chưa có mã vận đơn, bạn có thể cập nhật
+                                trước khi xác nhận.
                               </p>
                             )}
                           </DialogHeader>
@@ -366,11 +437,18 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                             <DialogClose asChild>
                               <Button variant="outline">Hủy</Button>
                             </DialogClose>
-                            <Button onClick={() => completeBatch({
-                              batch_id: batch.id,
-                              shipping_date: batch.shipping_date || new Date().toISOString().split("T")[0],
-                              tracking_number: batch.tracking_number || undefined,
-                            })}>
+                            <Button
+                              onClick={() =>
+                                completeBatch({
+                                  batch_id: batch.id,
+                                  shipping_date:
+                                    batch.shipping_date ||
+                                    new Date().toISOString().split("T")[0],
+                                  tracking_number:
+                                    batch.tracking_number || undefined,
+                                })
+                              }
+                            >
                               Xác nhận hoàn thành
                             </Button>
                           </DialogFooter>
@@ -378,7 +456,12 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                       </Dialog>
 
                       {/* Cancel button for submitted */}
-                      <Dialog open={showCancelDialog && isSubmitted} onOpenChange={(open) => !open && setShowCancelDialog(false)}>
+                      <Dialog
+                        open={showCancelDialog && isSubmitted}
+                        onOpenChange={(open) =>
+                          !open && setShowCancelDialog(false)
+                        }
+                      >
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
@@ -394,20 +477,29 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                           <DialogHeader>
                             <DialogTitle>Xác nhận hủy lô RMA</DialogTitle>
                             <DialogDescription>
-                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm sẽ được gỡ khỏi lô và
-                              lô sẽ chuyển sang trạng thái "Đã hủy".
+                              Bạn có chắc muốn hủy lô RMA này? Tất cả sản phẩm
+                              sẽ được gỡ khỏi lô và lô sẽ chuyển sang trạng thái
+                              "Đã hủy".
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowCancelDialog(false)}
+                            >
                               Không
                             </Button>
                             <Button
                               variant="destructive"
                               disabled={isCancelling}
-                              onClick={() => cancelBatch({ batch_id: batch.id }, {
-                                onSuccess: () => setShowCancelDialog(false),
-                              })}
+                              onClick={() =>
+                                cancelBatch(
+                                  { batch_id: batch.id },
+                                  {
+                                    onSuccess: () => setShowCancelDialog(false),
+                                  },
+                                )
+                              }
                             >
                               {isCancelling ? "Đang hủy..." : "Xác nhận hủy"}
                             </Button>
@@ -446,7 +538,8 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
               <CardContent>
                 {products.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    Chưa có sản phẩm nào trong lô này. {canEdit && "Nhấn nút 'Thêm sản phẩm' để bắt đầu."}
+                    Chưa có sản phẩm nào trong lô này.{" "}
+                    {canEdit && "Nhấn nút 'Thêm sản phẩm' để bắt đầu."}
                   </div>
                 ) : (
                   <div className="overflow-hidden rounded-lg border">
@@ -457,7 +550,11 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                           <TableHead>Serial Number</TableHead>
                           <TableHead>SKU</TableHead>
                           <TableHead>Loại</TableHead>
-                          {canEdit && <TableHead className="text-right">Thao tác</TableHead>}
+                          {canEdit && (
+                            <TableHead className="text-right">
+                              Thao tác
+                            </TableHead>
+                          )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -477,14 +574,21 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                             </TableCell>
                             {canEdit && (
                               <TableCell className="text-right">
-                                <Dialog open={productToDelete === item.id} onOpenChange={(open) => !open && setProductToDelete(null)}>
+                                <Dialog
+                                  open={productToDelete === item.id}
+                                  onOpenChange={(open) =>
+                                    !open && setProductToDelete(null)
+                                  }
+                                >
                                   <DialogTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="h-8 w-8 p-0"
                                       title="Xóa khỏi lô"
-                                      onClick={() => setProductToDelete(item.id)}
+                                      onClick={() =>
+                                        setProductToDelete(item.id)
+                                      }
                                       disabled={isRemoving}
                                     >
                                       <IconTrash className="h-4 w-4 text-destructive" />
@@ -492,23 +596,30 @@ export default function RMABatchDetailPage({ params }: RMABatchDetailPageProps) 
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
-                                      <DialogTitle>Xác nhận xóa sản phẩm</DialogTitle>
+                                      <DialogTitle>
+                                        Xác nhận xóa sản phẩm
+                                      </DialogTitle>
                                       <DialogDescription>
-                                        Bạn có chắc muốn xóa sản phẩm <strong>{item.serial_number}</strong> khỏi lô RMA này?
-                                        Sản phẩm sẽ vẫn ở Kho Hàng Hỏng và có thể được thêm vào lô RMA khác.
+                                        Bạn có chắc muốn xóa sản phẩm{" "}
+                                        <strong>{item.serial_number}</strong>{" "}
+                                        khỏi lô RMA này? Sản phẩm sẽ vẫn ở Kho
+                                        Hàng Hỏng và có thể được thêm vào lô RMA
+                                        khác.
                                       </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>
-                                      <Button 
-                                        variant="outline" 
+                                      <Button
+                                        variant="outline"
                                         onClick={() => setProductToDelete(null)}
                                         disabled={isRemoving}
                                       >
                                         Hủy
                                       </Button>
-                                      <Button 
+                                      <Button
                                         variant="destructive"
-                                        onClick={() => handleRemoveProduct(item.id)}
+                                        onClick={() =>
+                                          handleRemoveProduct(item.id)
+                                        }
                                         disabled={isRemoving}
                                       >
                                         {isRemoving ? "Đang xóa..." : "Xóa"}

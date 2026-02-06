@@ -34,7 +34,7 @@ export function useTechnicianWorkload(technicianId?: string) {
     technicianId ? { technicianId } : undefined,
     {
       refetchInterval: 30000, // Refetch every 30 seconds
-    }
+    },
   );
 }
 
@@ -47,6 +47,6 @@ export function useTaskCompletionTimeline(daysBack: number = 7) {
     { daysBack },
     {
       refetchInterval: 60000, // Refetch every 60 seconds
-    }
+    },
   );
 }

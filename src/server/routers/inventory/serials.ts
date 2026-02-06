@@ -3,19 +3,23 @@
  */
 
 import { z } from "zod";
-import { router, publicProcedure } from "../../trpc";
-import { requireAnyAuthenticated, requireManagerOrAbove } from "../../middleware/requireRole";
+import {
+  requireAnyAuthenticated,
+  requireManagerOrAbove,
+} from "../../middleware/requireRole";
+import { publicProcedure, router } from "../../trpc";
 
 export const serialsRouter = router({
   /**
    * Validate serial numbers for duplicates
    * Checks both physical_products and stock_receipt_serials tables
    */
-  validateSerials: publicProcedure.use(requireManagerOrAbove)
+  validateSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         serialNumbers: z.array(z.string()),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const results: {
@@ -32,7 +36,7 @@ export const serialsRouter = router({
         .in("serial_number", input.serialNumbers);
 
       const existingPhysicalSet = new Set(
-        existingPhysical?.map((p) => p.serial_number) || []
+        existingPhysical?.map((p) => p.serial_number) || [],
       );
 
       // Check stock_receipt_serials
@@ -42,7 +46,7 @@ export const serialsRouter = router({
         .in("serial_number", input.serialNumbers);
 
       const existingReceiptsSet = new Set(
-        existingReceipts?.map((r) => r.serial_number) || []
+        existingReceipts?.map((r) => r.serial_number) || [],
       );
 
       // Check for duplicates within input array
@@ -98,7 +102,8 @@ export const serialsRouter = router({
    * Bulk add serials to receipt item
    * Similar to addSerials but optimized for large batches
    */
-  bulkAddSerials: publicProcedure.use(requireManagerOrAbove)
+  bulkAddSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         receiptItemId: z.string(),
@@ -107,9 +112,9 @@ export const serialsRouter = router({
             serialNumber: z.string(),
             manufacturerWarrantyEndDate: z.string().optional(),
             userWarrantyEndDate: z.string().optional(),
-          })
+          }),
         ),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       if (input.serials.length === 0) {
@@ -128,9 +133,12 @@ export const serialsRouter = router({
       }
 
       // Check if adding these serials would exceed declared quantity
-      if (receiptItem.serial_count + input.serials.length > receiptItem.declared_quantity) {
+      if (
+        receiptItem.serial_count + input.serials.length >
+        receiptItem.declared_quantity
+      ) {
         throw new Error(
-          `Cannot add ${input.serials.length} serials. Would exceed declared quantity of ${receiptItem.declared_quantity}`
+          `Cannot add ${input.serials.length} serials. Would exceed declared quantity of ${receiptItem.declared_quantity}`,
         );
       }
 
@@ -143,8 +151,12 @@ export const serialsRouter = router({
         .in("serial_number", serialNumbers);
 
       if (existingPhysical && existingPhysical.length > 0) {
-        const duplicates = existingPhysical.map((e) => e.serial_number).join(", ");
-        throw new Error(`Duplicate serials found in physical_products: ${duplicates}`);
+        const duplicates = existingPhysical
+          .map((e) => e.serial_number)
+          .join(", ");
+        throw new Error(
+          `Duplicate serials found in physical_products: ${duplicates}`,
+        );
       }
 
       const { data: existingInReceipts } = await ctx.supabaseAdmin
@@ -153,7 +165,9 @@ export const serialsRouter = router({
         .in("serial_number", serialNumbers);
 
       if (existingInReceipts && existingInReceipts.length > 0) {
-        const duplicates = existingInReceipts.map((e) => e.serial_number).join(", ");
+        const duplicates = existingInReceipts
+          .map((e) => e.serial_number)
+          .join(", ");
         throw new Error(`Serials already in receipts: ${duplicates}`);
       }
 
@@ -191,12 +205,13 @@ export const serialsRouter = router({
    * Expected format: serial_number (one per line or comma-separated)
    * Note: Warranty information should be managed separately in Products page
    */
-  bulkImportCSV: publicProcedure.use(requireManagerOrAbove)
+  bulkImportCSV: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         receiptItemId: z.string(),
         csvData: z.string(), // CSV content as string
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Parse CSV - each line is a serial number
@@ -218,7 +233,9 @@ export const serialsRouter = router({
         if (!line) continue;
 
         // Support both newline-separated and comma-separated formats
-        const parts = line.includes(",") ? line.split(",").map((p) => p.trim()) : [line];
+        const parts = line.includes(",")
+          ? line.split(",").map((p) => p.trim())
+          : [line];
 
         if (parts.length === 0 || !parts[0]) {
           errors.push(`Line ${i + 1}: Empty serial number`);
@@ -256,9 +273,12 @@ export const serialsRouter = router({
       }
 
       // Check if adding these serials would exceed declared quantity
-      if (receiptItem.serial_count + serials.length > receiptItem.declared_quantity) {
+      if (
+        receiptItem.serial_count + serials.length >
+        receiptItem.declared_quantity
+      ) {
         throw new Error(
-          `Cannot add ${serials.length} serials. Would exceed declared quantity of ${receiptItem.declared_quantity}`
+          `Cannot add ${serials.length} serials. Would exceed declared quantity of ${receiptItem.declared_quantity}`,
         );
       }
 
@@ -271,8 +291,12 @@ export const serialsRouter = router({
         .in("serial_number", serialNumbers);
 
       if (existingPhysical && existingPhysical.length > 0) {
-        const duplicates = existingPhysical.map((e) => e.serial_number).join(", ");
-        throw new Error(`Duplicate serials found in physical_products: ${duplicates}`);
+        const duplicates = existingPhysical
+          .map((e) => e.serial_number)
+          .join(", ");
+        throw new Error(
+          `Duplicate serials found in physical_products: ${duplicates}`,
+        );
       }
 
       const { data: existingInReceipts } = await ctx.supabaseAdmin
@@ -281,7 +305,9 @@ export const serialsRouter = router({
         .in("serial_number", serialNumbers);
 
       if (existingInReceipts && existingInReceipts.length > 0) {
-        const duplicates = existingInReceipts.map((e) => e.serial_number).join(", ");
+        const duplicates = existingInReceipts
+          .map((e) => e.serial_number)
+          .join(", ");
         throw new Error(`Serials already in receipts: ${duplicates}`);
       }
 
@@ -318,7 +344,8 @@ export const serialsRouter = router({
    * Get serial number history
    * Tracks all movements: receipt → issue → transfer
    */
-  getSerialHistory: publicProcedure.use(requireManagerOrAbove)
+  getSerialHistory: publicProcedure
+    .use(requireManagerOrAbove)
     .input(z.object({ serialNumber: z.string() }))
     .query(async ({ ctx, input }) => {
       // Check if serial exists in physical_products
@@ -329,7 +356,7 @@ export const serialsRouter = router({
           *,
           product:products(id, name, sku),
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
-        `
+        `,
         )
         .eq("serial_number", input.serialNumber)
         .single();
@@ -346,7 +373,7 @@ export const serialsRouter = router({
               product:products(id, name, sku),
               receipt:stock_receipts(receipt_number, status, receipt_date)
             )
-          `
+          `,
           )
           .eq("serial_number", input.serialNumber)
           .single();
@@ -361,7 +388,8 @@ export const serialsRouter = router({
               {
                 event: "receipt_created",
                 date: receiptSerial.created_at,
-                receiptNumber: receiptSerial.receipt_item.receipt.receipt_number,
+                receiptNumber:
+                  receiptSerial.receipt_item.receipt.receipt_number,
                 status: receiptSerial.receipt_item.receipt.status,
               },
             ],
@@ -380,7 +408,8 @@ export const serialsRouter = router({
         date: physicalProduct.created_at,
         warehouse: {
           virtual: physicalProduct.virtual_warehouse?.warehouse_type,
-          physical: (physicalProduct.virtual_warehouse as any)?.physical_warehouse?.id,
+          physical: (physicalProduct.virtual_warehouse as any)
+            ?.physical_warehouse?.id,
         },
       });
 
@@ -399,7 +428,7 @@ export const serialsRouter = router({
               ticket:service_tickets(ticket_number)
             )
           )
-        `
+        `,
         )
         .eq("physical_product_id", physicalProduct.id)
         .order("created_at", { ascending: true });
@@ -437,7 +466,7 @@ export const serialsRouter = router({
               to_virtual_warehouse:virtual_warehouses!to_virtual_warehouse_id(id, name, warehouse_type)
             )
           )
-        `
+        `,
         )
         .eq("physical_product_id", physicalProduct.id)
         .order("created_at", { ascending: true });
@@ -469,7 +498,8 @@ export const serialsRouter = router({
         serialNumber: input.serialNumber,
         currentLocation: {
           virtual: physicalProduct.virtual_warehouse?.warehouse_type,
-          physical: (physicalProduct.virtual_warehouse as any)?.physical_warehouse?.id,
+          physical: (physicalProduct.virtual_warehouse as any)
+            ?.physical_warehouse?.id,
         },
         product: physicalProduct.product,
         warranty: {
@@ -477,7 +507,7 @@ export const serialsRouter = router({
           userEndDate: physicalProduct.user_warranty_end_date,
         },
         history: history.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
         ),
       };
     }),
@@ -486,14 +516,15 @@ export const serialsRouter = router({
    * Search serials across all warehouses
    * Returns physical products matching search term
    */
-  searchSerials: publicProcedure.use(requireManagerOrAbove)
+  searchSerials: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         search: z.string().min(1),
         virtualWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false), // Only show not-issued serials
         limit: z.number().int().min(1).max(100).default(100),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       let query = ctx.supabaseAdmin
@@ -508,7 +539,7 @@ export const serialsRouter = router({
           created_at,
           product:products(id, name, sku),
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
-        `
+        `,
         )
         .ilike("serial_number", `%${input.search}%`);
 
@@ -534,13 +565,14 @@ export const serialsRouter = router({
    * Get serials by product
    * Lists all serials for a specific product
    */
-  getSerialsByProduct: publicProcedure.use(requireManagerOrAbove)
+  getSerialsByProduct: publicProcedure
+    .use(requireManagerOrAbove)
     .input(
       z.object({
         productId: z.string(),
         virtualWarehouseId: z.string().optional(),
         onlyAvailable: z.boolean().default(false),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       let query = ctx.supabaseAdmin
@@ -554,7 +586,7 @@ export const serialsRouter = router({
           user_warranty_end_date,
           created_at,
           virtual_warehouse:virtual_warehouses(id, name, warehouse_type, physical_warehouse:physical_warehouses(id, name))
-        `
+        `,
         )
         .eq("product_id", input.productId);
 
@@ -565,7 +597,9 @@ export const serialsRouter = router({
       // Note: onlyAvailable filter is now redundant - if product exists in DB, it's available
       // (issued products are deleted by trigger)
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
 
       if (error) {
         throw new Error(`Failed to get serials by product: ${error.message}`);
@@ -578,7 +612,8 @@ export const serialsRouter = router({
    * Get compliance metrics for manager dashboard
    * Shows overview of serial entry completion across all receipts
    */
-  getComplianceMetrics: publicProcedure.use(requireManagerOrAbove)
+  getComplianceMetrics: publicProcedure
+    .use(requireManagerOrAbove)
     .query(async ({ ctx }) => {
       // Get all approved/completed receipts with items
       const { data: receipts, error } = await ctx.supabaseAdmin
@@ -593,7 +628,7 @@ export const serialsRouter = router({
             declared_quantity,
             serial_count
           )
-        `
+        `,
         )
         .eq("status", "completed")
         .order("created_at", { ascending: false });
@@ -622,15 +657,23 @@ export const serialsRouter = router({
 
       for (const receipt of receipts) {
         const items = receipt.items || [];
-        const totalDeclared = items.reduce((sum, item) => sum + item.declared_quantity, 0);
-        const totalSerials = items.reduce((sum, item) => sum + (item.serial_count || 0), 0);
+        const totalDeclared = items.reduce(
+          (sum, item) => sum + item.declared_quantity,
+          0,
+        );
+        const totalSerials = items.reduce(
+          (sum, item) => sum + (item.serial_count || 0),
+          0,
+        );
 
         const isComplete = totalDeclared > 0 && totalSerials === totalDeclared;
         const isPending = totalSerials === 0;
 
         // Calculate age in days
         const createdAt = new Date(receipt.created_at);
-        const ageInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        const ageInDays = Math.floor(
+          (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         if (isComplete) {
           completedCount++;
@@ -644,7 +687,8 @@ export const serialsRouter = router({
       }
 
       const totalReceipts = receipts.length;
-      const complianceRate = totalReceipts > 0 ? (completedCount / totalReceipts) * 100 : 0;
+      const complianceRate =
+        totalReceipts > 0 ? (completedCount / totalReceipts) * 100 : 0;
 
       return {
         totalReceipts,
@@ -660,12 +704,13 @@ export const serialsRouter = router({
    * Get serial entry tasks list
    * Returns all receipts that need serial entry work
    */
-  getSerialEntryTasks: publicProcedure.use(requireAnyAuthenticated)
+  getSerialEntryTasks: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         filter: z.enum(["all", "mine", "available", "overdue"]).default("mine"),
         limit: z.number().int().min(1).max(100).default(100),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       if (!ctx.user) {
@@ -689,7 +734,7 @@ export const serialsRouter = router({
             declared_quantity,
             serial_count
           )
-        `
+        `,
         )
         .eq("status", "completed")
         .order("created_at", { ascending: false })
@@ -708,8 +753,14 @@ export const serialsRouter = router({
 
       for (const receipt of receipts) {
         const items = receipt.items || [];
-        const totalDeclared = items.reduce((sum, item) => sum + item.declared_quantity, 0);
-        const totalSerials = items.reduce((sum, item) => sum + (item.serial_count || 0), 0);
+        const totalDeclared = items.reduce(
+          (sum, item) => sum + item.declared_quantity,
+          0,
+        );
+        const totalSerials = items.reduce(
+          (sum, item) => sum + (item.serial_count || 0),
+          0,
+        );
 
         // Skip if all serials complete
         if (totalDeclared > 0 && totalSerials === totalDeclared) {
@@ -717,10 +768,15 @@ export const serialsRouter = router({
         }
 
         const createdAt = new Date(receipt.created_at);
-        const ageInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        const ageInDays = Math.floor(
+          (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         // Get creator info
-        const creatorId = typeof receipt.created_by === 'string' ? receipt.created_by : receipt.created_by || "";
+        const creatorId =
+          typeof receipt.created_by === "string"
+            ? receipt.created_by
+            : receipt.created_by || "";
 
         // Fetch user details
         const { data: creator } = await ctx.supabaseAdmin
@@ -764,14 +820,15 @@ export const serialsRouter = router({
    * Add a single serial to receipt item
    * Simplified version for individual serial entry
    */
-  addSerial: publicProcedure.use(requireAnyAuthenticated)
+  addSerial: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         receiptItemId: z.string(),
         serialNumber: z.string().min(1),
         manufacturerWarrantyEndDate: z.string().optional(),
         userWarrantyEndDate: z.string().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Get receipt item to validate quantity
@@ -788,7 +845,7 @@ export const serialsRouter = router({
       // Check if adding this serial would exceed declared quantity
       if (receiptItem.serial_count + 1 > receiptItem.declared_quantity) {
         throw new Error(
-          `Cannot add serial. Would exceed declared quantity of ${receiptItem.declared_quantity}`
+          `Cannot add serial. Would exceed declared quantity of ${receiptItem.declared_quantity}`,
         );
       }
 
@@ -800,7 +857,9 @@ export const serialsRouter = router({
         .single();
 
       if (existingPhysical) {
-        throw new Error(`Serial ${input.serialNumber} already exists in physical_products`);
+        throw new Error(
+          `Serial ${input.serialNumber} already exists in physical_products`,
+        );
       }
 
       const { data: existingInReceipts } = await ctx.supabaseAdmin
@@ -810,7 +869,9 @@ export const serialsRouter = router({
         .single();
 
       if (existingInReceipts) {
-        throw new Error(`Serial ${input.serialNumber} already exists in receipts`);
+        throw new Error(
+          `Serial ${input.serialNumber} already exists in receipts`,
+        );
       }
 
       // Insert serial
@@ -836,11 +897,12 @@ export const serialsRouter = router({
    * Remove a serial from receipt item
    * Allows correction of mistakes
    */
-  removeSerial: publicProcedure.use(requireAnyAuthenticated)
+  removeSerial: publicProcedure
+    .use(requireAnyAuthenticated)
     .input(
       z.object({
         serialId: z.string(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       // Delete the serial

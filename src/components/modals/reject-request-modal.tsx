@@ -5,16 +5,28 @@
 
 "use client";
 
+import { IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRejectRequest } from "@/hooks/use-service-request";
-import { IconLoader2, IconAlertTriangle } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useRejectRequest } from "@/hooks/use-service-request";
 
 interface RejectRequestModalProps {
   requestId: string | null;
@@ -33,7 +45,11 @@ const REJECTION_REASONS = [
   { value: "cannot_service", label: "Không thể cung cấp dịch vụ" },
 ];
 
-export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequestModalProps) {
+export function RejectRequestModal({
+  requestId,
+  open,
+  onOpenChange,
+}: RejectRequestModalProps) {
   const { rejectRequest, isRejecting } = useRejectRequest();
 
   const [selectedReason, setSelectedReason] = useState("custom");
@@ -70,7 +86,7 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
         onError: (error) => {
           toast.error(`Lỗi: ${error.message}`);
         },
-      }
+      },
     );
   };
 
@@ -86,7 +102,8 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
         <DialogHeader>
           <DialogTitle>Từ chối yêu cầu dịch vụ</DialogTitle>
           <DialogDescription>
-            Vui lòng cung cấp lý do từ chối. Khách hàng sẽ nhận được thông báo qua email.
+            Vui lòng cung cấp lý do từ chối. Khách hàng sẽ nhận được thông báo
+            qua email.
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +112,8 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
           <Alert variant="destructive">
             <IconAlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Hành động này không thể hoàn tác. Khách hàng sẽ nhận được email thông báo về việc từ chối yêu cầu.
+              Hành động này không thể hoàn tác. Khách hàng sẽ nhận được email
+              thông báo về việc từ chối yêu cầu.
             </AlertDescription>
           </Alert>
 
@@ -119,16 +137,18 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
           {/* Custom Reason Textarea */}
           {selectedReason === "custom" && (
             <div className="space-y-2">
-              <Label htmlFor="customReason">
-                Chi tiết lý do từ chối *
-              </Label>
+              <Label htmlFor="customReason">Chi tiết lý do từ chối *</Label>
               <Textarea
                 id="customReason"
                 placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự)"
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
                 rows={4}
-                className={customReason.length > 0 && customReason.length < 10 ? "border-destructive" : ""}
+                className={
+                  customReason.length > 0 && customReason.length < 10
+                    ? "border-destructive"
+                    : ""
+                }
               />
               <p className="text-xs text-muted-foreground">
                 {customReason.length}/10 ký tự tối thiểu
@@ -148,7 +168,11 @@ export function RejectRequestModal({ requestId, open, onOpenChange }: RejectRequ
 
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-4">
-            <Button variant="outline" onClick={handleCancel} disabled={isRejecting}>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isRejecting}
+            >
               Hủy
             </Button>
             <Button

@@ -1,19 +1,19 @@
 // Warehouse Management Hooks
 // Custom hooks for warehouse operations, stock management, and product tracking
 
-'use client';
+"use client";
 
-import { useState, useCallback, useMemo } from 'react';
-import { toast } from 'sonner';
-import { trpc } from '@/components/providers/trpc-provider';
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
 import type {
-  PhysicalWarehouse,
-  VirtualWarehouse,
   PhysicalProduct,
+  PhysicalWarehouse,
+  SerialVerification,
   // WarehouseStockLevel, // TODO: Re-enable when view is recreated
   StockMovement,
-  SerialVerification,
-} from '@/types/warehouse';
+  VirtualWarehouse,
+} from "@/types/warehouse";
 
 /**
  * Story 1.6: Warehouse Hierarchy Setup
@@ -25,7 +25,11 @@ import type {
  * Supports optional filtering by is_active status
  */
 export function usePhysicalWarehouses(filters?: { is_active?: boolean }) {
-  const { data: warehouses, isLoading, error } = trpc.warehouse.listPhysicalWarehouses.useQuery(filters);
+  const {
+    data: warehouses,
+    isLoading,
+    error,
+  } = trpc.warehouse.listPhysicalWarehouses.useQuery(filters);
 
   return {
     warehouses: warehouses ?? [],
@@ -43,10 +47,10 @@ export function useCreatePhysicalWarehouse() {
   const mutation = trpc.warehouse.createPhysicalWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listPhysicalWarehouses.invalidate();
-      toast.success('Physical warehouse created successfully');
+      toast.success("Physical warehouse created successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create physical warehouse');
+      toast.error(error.message || "Failed to create physical warehouse");
     },
   });
 
@@ -65,10 +69,10 @@ export function useUpdatePhysicalWarehouse() {
   const mutation = trpc.warehouse.updatePhysicalWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listPhysicalWarehouses.invalidate();
-      toast.success('Physical warehouse updated successfully');
+      toast.success("Physical warehouse updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update physical warehouse');
+      toast.error(error.message || "Failed to update physical warehouse");
     },
   });
 
@@ -87,10 +91,10 @@ export function useDeletePhysicalWarehouse() {
   const mutation = trpc.warehouse.deletePhysicalWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listPhysicalWarehouses.invalidate();
-      toast.success('Physical warehouse deleted successfully');
+      toast.success("Physical warehouse deleted successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete physical warehouse');
+      toast.error(error.message || "Failed to delete physical warehouse");
     },
   });
 
@@ -105,7 +109,11 @@ export function useDeletePhysicalWarehouse() {
  * These are warehouses representing logical inventory types linked to physical locations
  */
 export function useVirtualWarehouses() {
-  const { data: warehouses, isLoading, error } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const {
+    data: warehouses,
+    isLoading,
+    error,
+  } = trpc.warehouse.listVirtualWarehouses.useQuery();
 
   return {
     warehouses: warehouses ?? [],
@@ -123,10 +131,10 @@ export function useCreateVirtualWarehouse() {
   const mutation = trpc.warehouse.createVirtualWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listVirtualWarehouses.invalidate();
-      toast.success('Virtual warehouse created successfully');
+      toast.success("Virtual warehouse created successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create virtual warehouse');
+      toast.error(error.message || "Failed to create virtual warehouse");
     },
   });
 
@@ -145,10 +153,10 @@ export function useUpdateVirtualWarehouse() {
   const mutation = trpc.warehouse.updateVirtualWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listVirtualWarehouses.invalidate();
-      toast.success('Virtual warehouse updated successfully');
+      toast.success("Virtual warehouse updated successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to update virtual warehouse');
+      toast.error(error.message || "Failed to update virtual warehouse");
     },
   });
 
@@ -167,10 +175,10 @@ export function useDeleteVirtualWarehouse() {
   const mutation = trpc.warehouse.deleteVirtualWarehouse.useMutation({
     onSuccess: () => {
       utils.warehouse.listVirtualWarehouses.invalidate();
-      toast.success('Virtual warehouse deleted successfully');
+      toast.success("Virtual warehouse deleted successfully");
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete virtual warehouse');
+      toast.error(error.message || "Failed to delete virtual warehouse");
     },
   });
 
@@ -187,9 +195,9 @@ export function useDeleteVirtualWarehouse() {
 export function usePhysicalProducts(filters?: {
   physical_warehouse_id?: string;
   virtual_warehouse_id?: string;
-  condition?: 'new' | 'refurbished' | 'used' | 'faulty' | 'for_parts';
-  status?: 'draft' | 'active' | 'transferring' | 'issued' | 'disposed';
-  warranty_status?: 'active' | 'expired' | 'expiring_soon' | 'no_warranty';
+  condition?: "new" | "refurbished" | "used" | "faulty" | "for_parts";
+  status?: "draft" | "active" | "transferring" | "issued" | "disposed";
+  warranty_status?: "active" | "expired" | "expiring_soon" | "no_warranty";
   search?: string;
   limit?: number;
   offset?: number;
@@ -197,16 +205,14 @@ export function usePhysicalProducts(filters?: {
   // Normalize filters to avoid unnecessary re-renders
   const normalizedFilters = filters ?? {};
 
-  const { data, isLoading, error, isFetching } = trpc.physicalProducts.listProducts.useQuery(
-    normalizedFilters,
-    {
+  const { data, isLoading, error, isFetching } =
+    trpc.physicalProducts.listProducts.useQuery(normalizedFilters, {
       staleTime: 30000, // Cache for 30 seconds
       gcTime: 300000, // Keep in cache for 5 minutes
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,
-    }
-  );
+    });
 
   // Return stable references - TanStack Query already handles this
   return {
@@ -220,8 +226,15 @@ export function usePhysicalProducts(filters?: {
 /**
  * Hook for getting a single physical product by ID or serial
  */
-export function usePhysicalProduct(params: { id?: string; serial_number?: string }) {
-  const { data: product, isLoading, error } = trpc.physicalProducts.getProduct.useQuery(params, {
+export function usePhysicalProduct(params: {
+  id?: string;
+  serial_number?: string;
+}) {
+  const {
+    data: product,
+    isLoading,
+    error,
+  } = trpc.physicalProducts.getProduct.useQuery(params, {
     enabled: !!(params.id || params.serial_number),
   });
 
@@ -241,10 +254,10 @@ export function useCreatePhysicalProduct() {
   const mutation = trpc.physicalProducts.createProduct.useMutation({
     onSuccess: () => {
       utils.physicalProducts.listProducts.invalidate();
-      toast.success('Sản phẩm đã được đăng ký thành công');
+      toast.success("Sản phẩm đã được đăng ký thành công");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi đăng ký sản phẩm');
+      toast.error(error.message || "Lỗi khi đăng ký sản phẩm");
     },
   });
 
@@ -265,10 +278,10 @@ export function useUpdatePhysicalProduct() {
     onSuccess: () => {
       utils.physicalProducts.listProducts.invalidate();
       utils.physicalProducts.getProduct.invalidate();
-      toast.success('Thông tin sản phẩm đã được cập nhật');
+      toast.success("Thông tin sản phẩm đã được cập nhật");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi cập nhật sản phẩm');
+      toast.error(error.message || "Lỗi khi cập nhật sản phẩm");
     },
   });
 
@@ -307,10 +320,10 @@ export function useRecordMovement() {
       utils.physicalProducts.listProducts.invalidate();
       utils.physicalProducts.getProduct.invalidate();
       utils.physicalProducts.getMovementHistory.invalidate();
-      toast.success('Đã ghi nhận di chuyển sản phẩm');
+      toast.success("Đã ghi nhận di chuyển sản phẩm");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi ghi nhận di chuyển');
+      toast.error(error.message || "Lỗi khi ghi nhận di chuyển");
     },
   });
 
@@ -324,10 +337,15 @@ export function useRecordMovement() {
 /**
  * Hook for getting product movement history
  */
-export function useMovementHistory(params: { product_id: string; limit?: number; offset?: number }) {
-  const { data, isLoading, error } = trpc.physicalProducts.getMovementHistory.useQuery(params, {
-    enabled: !!params.product_id,
-  });
+export function useMovementHistory(params: {
+  product_id: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const { data, isLoading, error } =
+    trpc.physicalProducts.getMovementHistory.useQuery(params, {
+      enabled: !!params.product_id,
+    });
 
   return {
     movements: data?.movements ?? [],
@@ -348,10 +366,10 @@ export function useAssignToTicket() {
       utils.physicalProducts.listProducts.invalidate();
       utils.physicalProducts.getProduct.invalidate();
       utils.physicalProducts.getMovementHistory.invalidate();
-      toast.success('Đã gán sản phẩm vào phiếu');
+      toast.success("Đã gán sản phẩm vào phiếu");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi gán sản phẩm');
+      toast.error(error.message || "Lỗi khi gán sản phẩm");
     },
   });
 
@@ -392,11 +410,13 @@ export function useBulkProductImport() {
       if (result.error_count === 0) {
         toast.success(`Đã nhập thành công ${result.success_count} sản phẩm`);
       } else {
-        toast.warning(`Đã nhập ${result.success_count} sản phẩm, ${result.error_count} lỗi`);
+        toast.warning(
+          `Đã nhập ${result.success_count} sản phẩm, ${result.error_count} lỗi`,
+        );
       }
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi nhập sản phẩm hàng loạt');
+      toast.error(error.message || "Lỗi khi nhập sản phẩm hàng loạt");
     },
   });
 
@@ -412,7 +432,7 @@ export function useBulkProductImport() {
  * Hook for warehouse analytics
  * TODO: Implement analytics queries
  */
-export function useWarehouseAnalytics(period: string = '30d') {
+export function useWarehouseAnalytics(period: string = "30d") {
   // TODO: Implement with tRPC
   const analytics = null;
   const isLoading = false;
@@ -434,11 +454,12 @@ export function useWarehouseAnalytics(period: string = '30d') {
  * Hook for listing RMA batches with pagination
  */
 export function useRMABatches(filters?: {
-  status?: 'draft' | 'submitted' | 'completed' | 'cancelled';
+  status?: "draft" | "submitted" | "completed" | "cancelled";
   limit?: number;
   offset?: number;
 }) {
-  const { data, isLoading, error } = trpc.physicalProducts.getRMABatches.useQuery(filters ?? {});
+  const { data, isLoading, error } =
+    trpc.physicalProducts.getRMABatches.useQuery(filters ?? {});
 
   return {
     batches: data?.batches ?? [],
@@ -452,10 +473,11 @@ export function useRMABatches(filters?: {
  * Hook for getting RMA batch details
  */
 export function useRMABatchDetails(batchId: string) {
-  const { data, isLoading, error } = trpc.physicalProducts.getRMABatchDetails.useQuery(
-    { batch_id: batchId },
-    { enabled: !!batchId }
-  );
+  const { data, isLoading, error } =
+    trpc.physicalProducts.getRMABatchDetails.useQuery(
+      { batch_id: batchId },
+      { enabled: !!batchId },
+    );
 
   return {
     batch: data?.batch,
@@ -474,10 +496,10 @@ export function useCreateRMABatch() {
   const mutation = trpc.physicalProducts.createRMABatch.useMutation({
     onSuccess: () => {
       utils.physicalProducts.getRMABatches.invalidate();
-      toast.success('Đã tạo lô RMA mới');
+      toast.success("Đã tạo lô RMA mới");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi tạo lô RMA');
+      toast.error(error.message || "Lỗi khi tạo lô RMA");
     },
   });
 
@@ -517,13 +539,15 @@ export function useAddProductsToRMA() {
       utils.physicalProducts.listProducts.invalidate();
 
       if (result.errors && result.errors.length > 0) {
-        toast.warning(`Đã thêm ${result.added} sản phẩm, ${result.errors.length} lỗi`);
+        toast.warning(
+          `Đã thêm ${result.added} sản phẩm, ${result.errors.length} lỗi`,
+        );
       } else {
         toast.success(`Đã thêm ${result.added} sản phẩm vào lô RMA`);
       }
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi thêm sản phẩm vào lô RMA');
+      toast.error(error.message || "Lỗi khi thêm sản phẩm vào lô RMA");
     },
   });
 
@@ -545,10 +569,10 @@ export function useRemoveProductFromRMA() {
       utils.physicalProducts.getRMABatches.invalidate();
       utils.physicalProducts.getRMABatchDetails.invalidate();
       utils.physicalProducts.listProducts.invalidate();
-      toast.success('Đã xóa sản phẩm khỏi lô RMA');
+      toast.success("Đã xóa sản phẩm khỏi lô RMA");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi xóa sản phẩm khỏi lô RMA');
+      toast.error(error.message || "Lỗi khi xóa sản phẩm khỏi lô RMA");
     },
   });
 
@@ -569,10 +593,10 @@ export function useFinalizeRMABatch() {
     onSuccess: () => {
       utils.physicalProducts.getRMABatches.invalidate();
       utils.physicalProducts.getRMABatchDetails.invalidate();
-      toast.success('Đã hoàn tất lô RMA');
+      toast.success("Đã hoàn tất lô RMA");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi hoàn tất lô RMA');
+      toast.error(error.message || "Lỗi khi hoàn tất lô RMA");
     },
   });
 
@@ -595,10 +619,10 @@ export function useCompleteRMABatch() {
       utils.physicalProducts.getRMABatches.invalidate();
       utils.physicalProducts.getRMABatchDetails.invalidate();
       utils.physicalProducts.listProducts.invalidate();
-      toast.success('Đã hoàn thành lô RMA');
+      toast.success("Đã hoàn thành lô RMA");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi hoàn thành lô RMA');
+      toast.error(error.message || "Lỗi khi hoàn thành lô RMA");
     },
   });
 
@@ -620,10 +644,10 @@ export function useCancelRMABatch() {
       utils.physicalProducts.getRMABatches.invalidate();
       utils.physicalProducts.getRMABatchDetails.invalidate();
       utils.physicalProducts.listProducts.invalidate();
-      toast.success('Đã hủy lô RMA');
+      toast.success("Đã hủy lô RMA");
     },
     onError: (error) => {
-      toast.error(error.message || 'Lỗi khi hủy lô RMA');
+      toast.error(error.message || "Lỗi khi hủy lô RMA");
     },
   });
 

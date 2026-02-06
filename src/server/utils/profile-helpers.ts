@@ -20,7 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export async function getProfileIdFromUserId(
   supabaseAdmin: SupabaseClient,
-  userId: string
+  userId: string,
 ): Promise<string> {
   const { data: profile, error } = await supabaseAdmin
     .from("profiles")

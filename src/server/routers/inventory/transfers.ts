@@ -3,6 +3,7 @@
  * SIMPLIFIED: No draft/approval workflow - all transfers are completed immediately
  */
 
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { requireManagerOrAbove } from "../../middleware/requireRole";
 import { publicProcedure, router } from "../../trpc";
@@ -209,6 +210,57 @@ export const transfersRouter = router({
       if (toWarehouse?.warehouse_type === "customer_installed") {
         throw new Error(
           "Không thể chuyển kho vào 'Hàng Đã Bán'. Để xuất hàng cho khách, vui lòng sử dụng Phiếu xuất kho.",
+        );
+      }
+
+      // TC-NEG-008: Validate stock availability before creating transfer
+      const productIds = input.items.map((item) => item.productId);
+      const { data: stockData, error: stockError } = await ctx.supabaseAdmin
+        .from("product_warehouse_stock")
+        .select("product_id, declared_quantity, products(name, sku)")
+        .eq("virtual_warehouse_id", input.fromVirtualWarehouseId)
+        .in("product_id", productIds);
+
+      if (stockError) {
+        throw new Error(
+          `Failed to check stock availability: ${stockError.message}`,
+        );
+      }
+
+      // Create a map of product_id -> available quantity
+      const stockMap = new Map<string, { quantity: number; name: string }>();
+      (stockData || []).forEach((stock: any) => {
+        stockMap.set(stock.product_id, {
+          quantity: stock.declared_quantity || 0,
+          name: stock.products?.name || "Unknown",
+        });
+      });
+
+      // Validate each item has sufficient stock
+      const insufficientStock: string[] = [];
+      for (const item of input.items) {
+        const available = stockMap.get(item.productId);
+        if (!available) {
+          // Product not in source warehouse at all
+          const { data: product } = await ctx.supabaseAdmin
+            .from("products")
+            .select("name")
+            .eq("id", item.productId)
+            .single();
+          insufficientStock.push(
+            `Sản phẩm "${product?.name || item.productId}" không có trong kho nguồn`,
+          );
+        } else if (available.quantity < item.quantity) {
+          // Insufficient quantity
+          insufficientStock.push(
+            `Sản phẩm "${available.name}": Yêu cầu ${item.quantity}, khả dụng ${available.quantity}`,
+          );
+        }
+      }
+
+      if (insufficientStock.length > 0) {
+        throw new Error(
+          `Số lượng yêu cầu vượt quá tồn kho khả dụng:\n${insufficientStock.join("\n")}`,
         );
       }
 
@@ -477,6 +529,14 @@ export const transfersRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (input.serialNumbers.length === 0) {
         throw new Error("No serial numbers provided");
+      }
+
+      // Issue #21: Validate array size to prevent "URI too long" error
+      if (input.serialNumbers.length > 100) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Vui lòng chọn tối đa 100 serials/lần. Hệ thống đã tự động chia nhỏ request.",
+        });
       }
 
       const { data: transferItem } = await ctx.supabaseAdmin

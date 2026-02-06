@@ -5,17 +5,17 @@
  * Integrates with tRPC for automatic task fetching and refresh.
  */
 
-'use client';
+"use client";
 
+import { TicketTaskCard } from "@/components/tickets/ticket-task-card";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { TicketTaskCard } from '@/components/tickets/ticket-task-card';
-import { useEntityTasks } from '@/hooks/use-entity-tasks';
-import type { EntityType } from '@/server/services/entity-adapters/base-adapter';
+} from "@/components/ui/accordion";
+import { useEntityTasks } from "@/hooks/use-entity-tasks";
+import type { EntityType } from "@/server/services/entity-adapters/base-adapter";
 
 interface TaskListAccordionProps {
   entityType: EntityType;
@@ -37,7 +37,10 @@ export function TaskListAccordion({
   entityId,
   allowActions = true,
 }: TaskListAccordionProps) {
-  const { tasks, progress, isLoading, error } = useEntityTasks(entityType, entityId);
+  const { tasks, progress, isLoading, error } = useEntityTasks(
+    entityType,
+    entityId,
+  );
 
   // Loading state
   if (isLoading) {
@@ -71,7 +74,12 @@ export function TaskListAccordion({
   const totalCount = progress?.total ?? tasks.length;
 
   return (
-    <Accordion type="single" collapsible className="w-full" defaultValue="tasks">
+    <Accordion
+      type="single"
+      collapsible
+      className="w-full"
+      defaultValue="tasks"
+    >
       <AccordionItem value="tasks">
         <AccordionTrigger className="hover:no-underline">
           <div className="flex items-center gap-3">

@@ -1,13 +1,13 @@
 "use client";
 
+import { IconArrowLeft, IconClock, IconTicket } from "@tabler/icons-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { trpc } from "@/components/providers/trpc-provider";
-import { IconClock, IconTicket, IconArrowLeft } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import * as React from "react";
 
 interface PageHeaderProps {
   title: string;
@@ -17,7 +17,12 @@ interface PageHeaderProps {
   useBackNavigation?: boolean;
 }
 
-export function PageHeader({ title, children, backHref, useBackNavigation }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  children,
+  backHref,
+  useBackNavigation,
+}: PageHeaderProps) {
   const router = useRouter();
   const [currentTime, setCurrentTime] = React.useState(new Date());
   const { data: pendingCount } = trpc.tickets.getPendingCount.useQuery(
@@ -62,7 +67,12 @@ export function PageHeader({ title, children, backHref, useBackNavigation }: Pag
         {(backHref || useBackNavigation) && (
           <>
             {useBackNavigation ? (
-              <Button variant="ghost" size="sm" className="-ml-1" onClick={() => router.back()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-ml-1"
+                onClick={() => router.back()}
+              >
                 <IconArrowLeft className="h-4 w-4" />
               </Button>
             ) : (

@@ -1,13 +1,14 @@
 // Warranty Tracking Types
 // Types for warranty management and expiration tracking
 
-import type { Database } from './database.types';
+import type { Database } from "./database.types";
 
 // View types
-export type WarrantyExpiringSoon = Database['public']['Views']['v_warranty_expiring_soon']['Row'];
+export type WarrantyExpiringSoon =
+  Database["public"]["Views"]["v_warranty_expiring_soon"]["Row"];
 
 // Warranty status types
-export type WarrantyStatus = 'active' | 'expiring_soon' | 'expired' | 'unknown';
+export type WarrantyStatus = "active" | "expiring_soon" | "expired" | "unknown";
 
 // Extended types
 export interface WarrantyInfo {
@@ -55,7 +56,7 @@ export interface WarrantyExpirationAlert {
   brand_name: string;
   warranty_end_date: string;
   days_remaining: number;
-  alert_level: 'info' | 'warning' | 'critical';
+  alert_level: "info" | "warning" | "critical";
 }
 
 // Warranty analytics

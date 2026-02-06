@@ -6,6 +6,7 @@
 
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,9 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { TaskStatus, EntityType } from "@/server/services/entity-adapters/base-adapter";
+import type {
+  EntityType,
+  TaskStatus,
+} from "@/server/services/entity-adapters/base-adapter";
 
 export interface TaskFilterValues {
   status: TaskStatus | "all";

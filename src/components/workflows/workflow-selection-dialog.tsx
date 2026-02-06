@@ -7,7 +7,12 @@
 
 "use client";
 
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,12 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { trpc } from "@/components/providers/trpc-provider";
-import { toast } from "sonner";
 import type { EntityType } from "@/server/services/entity-adapters/base-adapter";
 
 interface WorkflowSelectionDialogProps {
@@ -61,20 +61,25 @@ export function WorkflowSelectionDialog({
   entityId,
   onSuccess,
 }: WorkflowSelectionDialogProps) {
-  const [selectedWorkflowId, setSelectedWorkflowId] = React.useState<string | null>(null);
+  const [selectedWorkflowId, setSelectedWorkflowId] = React.useState<
+    string | null
+  >(null);
   const utils = trpc.useUtils();
 
   // Fetch workflows for this entity type
-  const { data: workflows = [], isLoading } = trpc.workflow.template.getByEntityType.useQuery(
-    { entityType },
-    { enabled: open }
-  );
+  const { data: workflows = [], isLoading } =
+    trpc.workflow.template.getByEntityType.useQuery(
+      { entityType },
+      { enabled: open },
+    );
 
   // Create tasks from workflow mutation
   const createTasksMutation = trpc.tasks.createTasksFromWorkflow.useMutation({
     onSuccess: (taskCount) => {
       if (taskCount === 0) {
-        toast.success("Đã chọn quy trình. Công việc sẽ được tạo khi gửi yêu cầu.");
+        toast.success(
+          "Đã chọn quy trình. Công việc sẽ được tạo khi gửi yêu cầu.",
+        );
       } else {
         toast.success(`Đã tạo ${taskCount} công việc từ quy trình`);
       }
@@ -176,19 +181,14 @@ export function WorkflowSelectionDialog({
 
                       {/* Workflow Metadata */}
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">
-                          {taskCount} công việc
-                        </Badge>
+                        <Badge variant="secondary">{taskCount} công việc</Badge>
                         {totalDuration > 0 && (
                           <Badge variant="outline" className="gap-1">
-                            <Clock className="h-3 w-3" />
-                            ~{totalDuration} phút
+                            <Clock className="h-3 w-3" />~{totalDuration} phút
                           </Badge>
                         )}
                         {workflow.strict_sequence && (
-                          <Badge variant="outline">
-                            Tuân thủ trình tự
-                          </Badge>
+                          <Badge variant="outline">Tuân thủ trình tự</Badge>
                         )}
                       </div>
 
@@ -202,7 +202,10 @@ export function WorkflowSelectionDialog({
                             </p>
                             <div className="space-y-1">
                               {workflow.workflow_tasks
-                                .sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+                                .sort(
+                                  (a: any, b: any) =>
+                                    a.sequence_order - b.sequence_order,
+                                )
                                 .map((wt: any) => (
                                   <div
                                     key={wt.id}
@@ -212,11 +215,18 @@ export function WorkflowSelectionDialog({
                                       {wt.sequence_order}.
                                     </span>
                                     <div className="flex-1">
-                                      <span className={wt.is_required ? "font-medium" : ""}>
+                                      <span
+                                        className={
+                                          wt.is_required ? "font-medium" : ""
+                                        }
+                                      >
                                         {wt.task.name}
                                       </span>
                                       {!wt.is_required && (
-                                        <Badge variant="outline" className="ml-2 text-xs">
+                                        <Badge
+                                          variant="outline"
+                                          className="ml-2 text-xs"
+                                        >
                                           Tùy chọn
                                         </Badge>
                                       )}
@@ -227,7 +237,8 @@ export function WorkflowSelectionDialog({
                                       )}
                                       {wt.task.estimated_duration_minutes && (
                                         <p className="text-xs text-muted-foreground">
-                                          ~{wt.task.estimated_duration_minutes} phút
+                                          ~{wt.task.estimated_duration_minutes}{" "}
+                                          phút
                                         </p>
                                       )}
                                     </div>
@@ -246,7 +257,11 @@ export function WorkflowSelectionDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={createTasksMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={createTasksMutation.isPending}
+          >
             Hủy
           </Button>
           <Button

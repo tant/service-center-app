@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-import type { Table } from "@tanstack/react-table";
 import {
   IconChevronDown,
   IconChevronLeft,
@@ -9,6 +7,8 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
 } from "@tabler/icons-react";
+import type { Table } from "@tanstack/react-table";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

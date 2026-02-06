@@ -10,9 +10,9 @@
 import type { TRPCContext } from "../../trpc";
 import {
   BaseEntityAdapter,
-  type TaskContext,
-  type CanStartResult,
   type CanAssignWorkflowResult,
+  type CanStartResult,
+  type TaskContext,
 } from "./base-adapter";
 
 /**
@@ -43,7 +43,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
    */
   async canStartTask(
     ctx: TRPCContext,
-    taskId: string
+    taskId: string,
   ): Promise<CanStartResult> {
     const task = await this.getTask(ctx, taskId);
 
@@ -74,7 +74,8 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
       if (receipt.status !== "approved" && receipt.status !== "completed") {
         return {
           canStart: false,
-          reason: "Phải duyệt phiếu nhập kho trước khi nhập serial. Stock sẽ được cập nhật sau khi duyệt.",
+          reason:
+            "Phải duyệt phiếu nhập kho trước khi nhập serial. Stock sẽ được cập nhật sau khi duyệt.",
         };
       }
     }
@@ -97,7 +98,9 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
     const task = await this.getTask(ctx, taskId);
 
     // Log task start (optional - could add to audit logs)
-    console.log(`[InventoryReceipt] Task started: ${task.name} for receipt ${task.entity_id}`);
+    console.log(
+      `[InventoryReceipt] Task started: ${task.name} for receipt ${task.entity_id}`,
+    );
   }
 
   /**
@@ -117,7 +120,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
     // Check if all required tasks are complete
     const allComplete = await this.areAllRequiredTasksComplete(
       ctx,
-      task.entity_id
+      task.entity_id,
     );
 
     if (allComplete) {
@@ -132,11 +135,11 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
       // when serial entry reaches 100%. No manual status update needed here.
       if (receipt?.status === "approved") {
         console.log(
-          `[InventoryReceipt] All tasks complete for receipt ${receipt.receipt_number}. Auto-completion handled by trigger.`
+          `[InventoryReceipt] All tasks complete for receipt ${receipt.receipt_number}. Auto-completion handled by trigger.`,
         );
       } else if (receipt?.status === "completed") {
         console.log(
-          `[InventoryReceipt] Receipt ${receipt.receipt_number} already completed.`
+          `[InventoryReceipt] Receipt ${receipt.receipt_number} already completed.`,
         );
       }
     }
@@ -150,7 +153,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
   async onTaskBlock(
     ctx: TRPCContext,
     taskId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const task = await this.getTask(ctx, taskId);
 
@@ -168,7 +171,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
     });
 
     console.log(
-      `[InventoryReceipt] Task blocked: ${task.name} - Reason: ${reason}`
+      `[InventoryReceipt] Task blocked: ${task.name} - Reason: ${reason}`,
     );
   }
 
@@ -180,7 +183,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
    */
   async getEntityContext(
     ctx: TRPCContext,
-    entityId: string
+    entityId: string,
   ): Promise<TaskContext> {
     const { data: receipt, error } = await ctx.supabaseAdmin
       .from("stock_receipts")
@@ -195,7 +198,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
           name,
           code
         )
-      `
+      `,
       )
       .eq("id", entityId)
       .single();
@@ -218,14 +221,16 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
     if (items && items.length > 0) {
       const totalExpected = items.reduce(
         (sum, item) => sum + Math.abs(item.declared_quantity),
-        0
+        0,
       );
       const totalEntered = items.reduce(
         (sum, item) => sum + (item.serial_count || 0),
-        0
+        0,
       );
       serialCompletionPercentage =
-        totalExpected > 0 ? Math.round((totalEntered / totalExpected) * 100) : 0;
+        totalExpected > 0
+          ? Math.round((totalEntered / totalExpected) * 100)
+          : 0;
     }
 
     // Determine priority based on serial completion
@@ -265,7 +270,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
   async canAssignWorkflow(
     ctx: TRPCContext,
     entityId: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<CanAssignWorkflowResult> {
     const { data: receipt } = await ctx.supabaseAdmin
       .from("stock_receipts")
@@ -302,10 +307,7 @@ export class InventoryReceiptAdapter extends BaseEntityAdapter {
     }
 
     // Check entity_type matches
-    if (
-      workflow.entity_type &&
-      workflow.entity_type !== "inventory_receipt"
-    ) {
+    if (workflow.entity_type && workflow.entity_type !== "inventory_receipt") {
       return {
         canAssign: false,
         reason: `Quy trình này dành cho ${workflow.entity_type}, không phù hợp với phiếu nhập kho`,

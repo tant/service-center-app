@@ -21,8 +21,11 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
 import { z } from "zod";
+import { trpc } from "@/components/providers/trpc-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +53,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
 import {
   Table,
   TableBody,
@@ -59,6 +61,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -66,9 +69,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { trpc } from "@/components/providers/trpc-provider";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 export const brandSchema = z.object({
   id: z.string(),
@@ -198,7 +198,10 @@ function BrandFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]" data-testid="brand-form-dialog">
+      <DialogContent
+        className="sm:max-w-[525px]"
+        data-testid="brand-form-dialog"
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
@@ -260,7 +263,6 @@ function BrandFormDialog({
     </Dialog>
   );
 }
-
 
 export function BrandsTable({ data: initialData }: { data: Brand[] }) {
   const [data, setData] = React.useState(() => initialData);

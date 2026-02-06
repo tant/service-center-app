@@ -45,7 +45,7 @@ export class EntityAdapterRegistry {
   register(adapter: EntityAdapter): void {
     if (this.adapters.has(adapter.entityType)) {
       throw new Error(
-        `Adapter for entity type "${adapter.entityType}" is already registered`
+        `Adapter for entity type "${adapter.entityType}" is already registered`,
       );
     }
 
@@ -69,9 +69,7 @@ export class EntityAdapterRegistry {
     const adapter = this.adapters.get(entityType);
 
     if (!adapter) {
-      throw new Error(
-        `No adapter registered for entity type: ${entityType}`
-      );
+      throw new Error(`No adapter registered for entity type: ${entityType}`);
     }
 
     return adapter;

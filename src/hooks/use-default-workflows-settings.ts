@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
 
-export type DefaultWorkflows = Partial<Record<"service_request" | "service_ticket", string>>;
+export type DefaultWorkflows = Partial<
+  Record<"service_request" | "service_ticket", string>
+>;
 
 type Options = {
   workflows?: { id: string }[];
@@ -21,7 +23,8 @@ export function useDefaultWorkflowsSettings(options?: Options) {
 
   useEffect(() => {
     if (settingsQuery.data && !hasHydrated) {
-      const value = settingsQuery.data.default_workflows as DefaultWorkflows | null;
+      const value = settingsQuery.data
+        .default_workflows as DefaultWorkflows | null;
       setDefaults(value || {});
       setHasHydrated(true);
     }
@@ -31,8 +34,10 @@ export function useDefaultWorkflowsSettings(options?: Options) {
 
   const save = useCallback(async () => {
     const payload: Record<string, string> = {};
-    if (defaults.service_request) payload.service_request = defaults.service_request;
-    if (defaults.service_ticket) payload.service_ticket = defaults.service_ticket;
+    if (defaults.service_request)
+      payload.service_request = defaults.service_request;
+    if (defaults.service_ticket)
+      payload.service_ticket = defaults.service_ticket;
 
     await upsertSettings.mutateAsync({
       settings: [
@@ -49,7 +54,8 @@ export function useDefaultWorkflowsSettings(options?: Options) {
 
   const missing = useMemo(() => {
     // Only compute when caller provides workflows + entityType
-    if (!entityType || !workflows?.length) return { service_request: false, service_ticket: false };
+    if (!entityType || !workflows?.length)
+      return { service_request: false, service_ticket: false };
     const id = defaults[entityType];
     if (!id) return { service_request: false, service_ticket: false };
     const exists = workflows.some((wf) => wf.id === id);

@@ -3,7 +3,11 @@
  * Warranty calculation and status utility functions
  */
 
-export type WarrantyStatus = "active" | "expired" | "expiring_soon" | "no_warranty";
+export type WarrantyStatus =
+  | "active"
+  | "expired"
+  | "expiring_soon"
+  | "no_warranty";
 
 /**
  * Calculate warranty end date from start date and warranty months
@@ -13,7 +17,7 @@ export type WarrantyStatus = "active" | "expired" | "expiring_soon" | "no_warran
  */
 export function calculateWarrantyEndDate(
   startDate: Date | string,
-  warrantyMonths: number
+  warrantyMonths: number,
 ): Date {
   const start = new Date(startDate);
   const endDate = new Date(start);
@@ -26,13 +30,15 @@ export function calculateWarrantyEndDate(
  * @param warrantyEndDate - Warranty end date (Date, ISO string, or null)
  * @returns Warranty status: active, expired, expiring_soon, or no_warranty
  */
-export function getWarrantyStatus(warrantyEndDate: Date | string | null): WarrantyStatus {
+export function getWarrantyStatus(
+  warrantyEndDate: Date | string | null,
+): WarrantyStatus {
   if (!warrantyEndDate) return "no_warranty";
 
   const endDate = new Date(warrantyEndDate);
   const today = new Date();
   const daysRemaining = Math.floor(
-    (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (daysRemaining < 0) return "expired";
@@ -48,7 +54,9 @@ export function getWarrantyStatus(warrantyEndDate: Date | string | null): Warran
 export function getRemainingDays(warrantyEndDate: Date | string): number {
   const endDate = new Date(warrantyEndDate);
   const today = new Date();
-  return Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor(
+    (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
 }
 
 /**
@@ -72,9 +80,12 @@ export function formatWarrantyStatus(status: WarrantyStatus): string {
  * @returns Badge color variant
  */
 export function getWarrantyStatusColor(
-  status: WarrantyStatus
+  status: WarrantyStatus,
 ): "default" | "destructive" | "warning" | "secondary" {
-  const colors: Record<WarrantyStatus, "default" | "destructive" | "warning" | "secondary"> = {
+  const colors: Record<
+    WarrantyStatus,
+    "default" | "destructive" | "warning" | "secondary"
+  > = {
     active: "default",
     expired: "destructive",
     expiring_soon: "warning",

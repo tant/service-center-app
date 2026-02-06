@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { EmptyState, LoadingState } from "@/components/common";
 import { PageHeader } from "@/components/page-header";
-import { LoadingState, EmptyState } from "@/components/common";
 import { WorkflowDetail } from "@/components/workflows/workflow-detail";
 import { useTaskTemplate } from "@/hooks/use-workflow";
 

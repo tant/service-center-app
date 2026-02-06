@@ -43,7 +43,10 @@ export function StockStatusBadge({
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant={config.variant} className={cn(config.className, className)}>
+      <Badge
+        variant={config.variant}
+        className={cn(config.className, className)}
+      >
         {config.label}
       </Badge>
       <span className="text-sm text-muted-foreground">

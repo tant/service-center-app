@@ -5,7 +5,9 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,10 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRecordMovement, usePhysicalWarehouses } from "@/hooks/use-warehouse";
-import { trpc } from "@/components/providers/trpc-provider";
-import type { PhysicalProduct } from "@/types/warehouse";
+import { Textarea } from "@/components/ui/textarea";
 import { WAREHOUSE_TYPE_LABELS } from "@/constants/warehouse";
+import {
+  usePhysicalWarehouses,
+  useRecordMovement,
+} from "@/hooks/use-warehouse";
+import type { PhysicalProduct } from "@/types/warehouse";
 
 interface RecordMovementModalProps {
   open: boolean;
@@ -35,7 +38,12 @@ interface RecordMovementModalProps {
   product: PhysicalProduct | null;
 }
 
-type MovementType = "receipt" | "transfer" | "assignment" | "return" | "disposal";
+type MovementType =
+  | "receipt"
+  | "transfer"
+  | "assignment"
+  | "return"
+  | "disposal";
 
 const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   receipt: "Nhập kho",
@@ -45,21 +53,29 @@ const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   disposal: "Thanh lý",
 };
 
-export function RecordMovementModal({ open, onClose, product }: RecordMovementModalProps) {
+export function RecordMovementModal({
+  open,
+  onClose,
+  product,
+}: RecordMovementModalProps) {
   const [movementType, setMovementType] = useState<MovementType>("transfer");
-  const [toPhysicalWarehouseId, setToPhysicalWarehouseId] = useState<string>("");
+  const [toPhysicalWarehouseId, setToPhysicalWarehouseId] =
+    useState<string>("");
   const [toVirtualWarehouseId, setToVirtualWarehouseId] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { recordMovement, isRecording } = useRecordMovement();
-  const { warehouses: physicalWarehouses } = usePhysicalWarehouses({ is_active: true });
+  const { warehouses: physicalWarehouses } = usePhysicalWarehouses({
+    is_active: true,
+  });
 
   // Fetch virtual warehouses and current product warehouse details
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
   const { data: productDetails } = trpc.physicalProducts.getProduct.useQuery(
     { id: product?.id || "" },
-    { enabled: !!product?.id && open }
+    { enabled: !!product?.id && open },
   );
 
   // Reset form when modal opens
@@ -118,9 +134,7 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Ghi Nhận Di Chuyển Sản Phẩm</DialogTitle>
-          <DialogDescription>
-            Serial: {product.serial_number}
-          </DialogDescription>
+          <DialogDescription>Serial: {product.serial_number}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -135,7 +149,8 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
               {productDetails?.physical_warehouse && (
                 <p>
                   <span className="text-muted-foreground">Kho vật lý: </span>
-                  {productDetails.physical_warehouse.name} ({productDetails.physical_warehouse.code})
+                  {productDetails.physical_warehouse.name} (
+                  {productDetails.physical_warehouse.code})
                 </p>
               )}
             </div>
@@ -170,7 +185,8 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
               value={toVirtualWarehouseId}
               onValueChange={(value) => {
                 setToVirtualWarehouseId(value);
-                if (errors.destination) setErrors({ ...errors, destination: "" });
+                if (errors.destination)
+                  setErrors({ ...errors, destination: "" });
               }}
             >
               <SelectTrigger>
@@ -180,7 +196,13 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
                 <SelectItem value="">-- Không thay đổi --</SelectItem>
                 {virtualWarehouses?.map((vw) => (
                   <SelectItem key={vw.id} value={vw.id}>
-                    {vw.name} ({WAREHOUSE_TYPE_LABELS[vw.warehouse_type as keyof typeof WAREHOUSE_TYPE_LABELS]})
+                    {vw.name} (
+                    {
+                      WAREHOUSE_TYPE_LABELS[
+                        vw.warehouse_type as keyof typeof WAREHOUSE_TYPE_LABELS
+                      ]
+                    }
+                    )
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -194,7 +216,8 @@ export function RecordMovementModal({ open, onClose, product }: RecordMovementMo
               value={toPhysicalWarehouseId}
               onValueChange={(value) => {
                 setToPhysicalWarehouseId(value);
-                if (errors.destination) setErrors({ ...errors, destination: "" });
+                if (errors.destination)
+                  setErrors({ ...errors, destination: "" });
               }}
             >
               <SelectTrigger>

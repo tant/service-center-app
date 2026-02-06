@@ -3,8 +3,8 @@
  */
 
 import { IconArrowLeft } from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
   title: string;

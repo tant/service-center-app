@@ -1,16 +1,16 @@
 // Service Request Hooks
 // Custom hooks for public service request portal
 
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { trpc } from '@/components/providers/trpc-provider';
+import { useCallback, useState } from "react";
+import { trpc } from "@/components/providers/trpc-provider";
 import type {
   ServiceRequest,
+  ServiceRequestFormData,
   // ServiceRequestSummary, // TODO: Re-enable when view is recreated
   TrackingTokenLookup,
-  ServiceRequestFormData,
-} from '@/types/service-request';
+} from "@/types/service-request";
 
 /**
  * Story 1.11: Hook for verifying warranty status by serial number (public)
@@ -56,7 +56,7 @@ export function useTrackServiceRequest(
     enabled?: boolean;
     refetchInterval?: number;
     refetchIntervalInBackground?: boolean;
-  }
+  },
 ) {
   const query = trpc.serviceRequest.track.useQuery(
     { tracking_token: params.tracking_token },
@@ -64,7 +64,7 @@ export function useTrackServiceRequest(
       enabled: options?.enabled,
       refetchInterval: options?.refetchInterval,
       refetchIntervalInBackground: options?.refetchIntervalInBackground,
-    }
+    },
   );
 
   return {
@@ -113,7 +113,7 @@ export function useRequestDetails(requestId: string | null) {
     { request_id: requestId! },
     {
       enabled: !!requestId,
-    }
+    },
   );
 
   return {
@@ -240,7 +240,7 @@ export function usePendingIncomingRequests(params?: {
  * Hook for service request analytics
  * TODO: Implement analytics queries
  */
-export function useServiceRequestAnalytics(period: string = '30d') {
+export function useServiceRequestAnalytics(period: string = "30d") {
   // TODO: Implement with tRPC
   const analytics = null;
   const isLoading = false;
@@ -266,13 +266,13 @@ export function usePhotoUpload() {
     setIsUploading(true);
     setUploadProgress(0);
     try {
-      console.log('Uploading photo:', file.name);
+      console.log("Uploading photo:", file.name);
       // Placeholder progress simulation
       for (let i = 0; i <= 100; i += 20) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         setUploadProgress(i);
       }
-      return 'https://placeholder-url.com/photo.jpg';
+      return "https://placeholder-url.com/photo.jpg";
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

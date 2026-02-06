@@ -10,9 +10,9 @@
 import type { TRPCContext } from "../../trpc";
 import {
   BaseEntityAdapter,
-  type TaskContext,
-  type CanStartResult,
   type CanAssignWorkflowResult,
+  type CanStartResult,
+  type TaskContext,
 } from "./base-adapter";
 
 /**
@@ -44,7 +44,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
    */
   async canStartTask(
     ctx: TRPCContext,
-    taskId: string
+    taskId: string,
   ): Promise<CanStartResult> {
     const task = await this.getTask(ctx, taskId);
 
@@ -106,7 +106,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
     const task = await this.getTask(ctx, taskId);
 
     console.log(
-      `[ServiceRequest] Task started: ${task.name} for request ${task.entity_id}`
+      `[ServiceRequest] Task started: ${task.name} for request ${task.entity_id}`,
     );
   }
 
@@ -124,7 +124,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
     // Check if all required tasks are complete
     const allTasksComplete = await this.areAllRequiredTasksComplete(
       ctx,
-      task.entity_id
+      task.entity_id,
     );
 
     if (allTasksComplete) {
@@ -143,7 +143,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
             ticket_id,
             service_tickets(id, status)
           )
-        `
+        `,
         )
         .eq("id", task.entity_id)
         .single();
@@ -154,12 +154,12 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
 
       // ====== TRIGGER TICKET CREATION AFTER WORKFLOW COMPLETE ======
       // If workflow exists and status is 'received', trigger auto-create tickets
-      if (request.workflow_id && request.status === 'received') {
+      if (request.workflow_id && request.status === "received") {
         // Update receipt_status to 'received' to trigger auto_create_tickets_on_received()
         const { error: updateError } = await ctx.supabaseAdmin
           .from("service_requests")
           .update({
-            receipt_status: 'received',
+            receipt_status: "received",
             // Status will be updated to 'processing' by the trigger
           })
           .eq("id", task.entity_id);
@@ -167,11 +167,11 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
         if (updateError) {
           console.error(
             `[ServiceRequest] Failed to trigger ticket creation for ${request.tracking_token}:`,
-            updateError
+            updateError,
           );
         } else {
           console.log(
-            `[ServiceRequest] Workflow complete for ${request.tracking_token}, triggered ticket creation`
+            `[ServiceRequest] Workflow complete for ${request.tracking_token}, triggered ticket creation`,
           );
         }
 
@@ -205,11 +205,11 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
           .eq("id", task.entity_id);
 
         console.log(
-          `[ServiceRequest] Auto-completed request ${request.tracking_token}`
+          `[ServiceRequest] Auto-completed request ${request.tracking_token}`,
         );
       } else if (request.status === "processing" && !allTicketsResolved) {
         console.log(
-          `[ServiceRequest] Tasks complete but waiting for ${items.length} service tickets to resolve`
+          `[ServiceRequest] Tasks complete but waiting for ${items.length} service tickets to resolve`,
         );
       }
     }
@@ -223,7 +223,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
   async onTaskBlock(
     ctx: TRPCContext,
     taskId: string,
-    reason: string
+    reason: string,
   ): Promise<void> {
     const task = await this.getTask(ctx, taskId);
 
@@ -241,7 +241,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
     });
 
     console.log(
-      `[ServiceRequest] Task blocked: ${task.name} - Reason: ${reason}`
+      `[ServiceRequest] Task blocked: ${task.name} - Reason: ${reason}`,
     );
   }
 
@@ -252,7 +252,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
    */
   async getEntityContext(
     ctx: TRPCContext,
-    entityId: string
+    entityId: string,
   ): Promise<TaskContext> {
     const { data: request, error } = await ctx.supabaseAdmin
       .from("service_requests")
@@ -269,7 +269,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
           id,
           serial_number
         )
-      `
+      `,
       )
       .eq("id", entityId)
       .single();
@@ -284,12 +284,15 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
     let priority: "low" | "normal" | "high" | "urgent" = "normal";
     const createdAt = new Date(request.created_at);
     const ageInDays = Math.floor(
-      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     if (request.status === "pickingup" && ageInDays > 3) {
       priority = "high"; // Waiting for customer pickup > 3 days
-    } else if (request.status === "received" && request.receipt_status !== "received") {
+    } else if (
+      request.status === "received" &&
+      request.receipt_status !== "received"
+    ) {
       priority = "urgent"; // Products received but not confirmed
     } else if (request.status === "processing") {
       priority = "high"; // Active processing
@@ -321,7 +324,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
   async canAssignWorkflow(
     ctx: TRPCContext,
     entityId: string,
-    workflowId: string
+    workflowId: string,
   ): Promise<CanAssignWorkflowResult> {
     const { data: request } = await ctx.supabaseAdmin
       .from("service_requests")
@@ -360,10 +363,7 @@ export class ServiceRequestAdapter extends BaseEntityAdapter {
     }
 
     // Check entity_type matches
-    if (
-      workflow.entity_type &&
-      workflow.entity_type !== "service_request"
-    ) {
+    if (workflow.entity_type && workflow.entity_type !== "service_request") {
       return {
         canAssign: false,
         reason: `Quy trình này dành cho ${workflow.entity_type}, không phù hợp với yêu cầu dịch vụ`,

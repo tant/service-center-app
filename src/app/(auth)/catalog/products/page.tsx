@@ -10,7 +10,6 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
     .from("products")
     .select(`
       *,
-      product_parts(count),
       physical_products(count),
       brands:brand_id (
         id,
@@ -24,10 +23,11 @@ async function getProductData(): Promise<z.infer<typeof productSchema>[]> {
     return [];
   }
 
-  // Transform the data to include parts_count, physical_products_count, and brand_name
+  // Transform the data to include physical_products_count and brand_name
+  // Issue #9: Removed parts_count - Parts feature is disabled for MVP
   const transformedData = (data || []).map((product: any) => ({
     ...product,
-    parts_count: product.product_parts?.[0]?.count || 0,
+    parts_count: 0, // Issue #9: Always 0 for MVP
     physical_products_count: product.physical_products?.[0]?.count || 0,
     brand_name: product.brands?.name || null,
   }));
@@ -40,7 +40,9 @@ export default async function Page() {
   const productData = await getProductData();
 
   // Get current user's role for permission checks
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   let userRole: "admin" | "manager" | "technician" | "reception" = "reception";
 
   if (user) {
@@ -51,7 +53,11 @@ export default async function Page() {
       .single();
 
     if (profile?.role) {
-      userRole = profile.role as "admin" | "manager" | "technician" | "reception";
+      userRole = profile.role as
+        | "admin"
+        | "manager"
+        | "technician"
+        | "reception";
     }
   }
 

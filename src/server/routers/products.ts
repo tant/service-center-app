@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
 import {
   requireAnyAuthenticated,
   requireManagerOrAbove,
 } from "../middleware/requireRole";
+import { publicProcedure, router } from "../trpc";
 
 // Product schemas for validation
 const productTypeEnum = z.enum([
@@ -17,7 +17,7 @@ const productTypeEnum = z.enum([
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
-  sku: z.string().nullable().optional(),
+  sku: z.string().min(1, "SKU is required"), // Issue #22: SKU is now required
   short_description: z.string().nullable().optional(),
   brand_id: z
     .string()
@@ -27,7 +27,10 @@ const createProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum,
   primary_image: z.string().nullable().optional(),
+  supplier_name: z.string().nullable().optional(), // Issue #8: Supplier field
   part_ids: z.array(z.string().uuid()).optional().default([]),
+  // Issue #10: Flag to skip duplicate name warning (after user confirms)
+  skipDuplicateNameWarning: z.boolean().optional().default(false),
 });
 
 const updateProductSchema = z.object({
@@ -43,6 +46,7 @@ const updateProductSchema = z.object({
   model: z.string().nullable().optional(),
   type: productTypeEnum.optional(),
   primary_image: z.string().nullable().optional(),
+  supplier_name: z.string().nullable().optional(), // Issue #8: Supplier field
   part_ids: z.array(z.string().uuid()).optional(),
 });
 
@@ -51,46 +55,81 @@ export const productsRouter = router({
   getNewProducts: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfPrevMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        1,
+      );
 
-    // Get current month's new products
-    const { data: currentMonthData, error: currentError } =
-      await ctx.supabaseAdmin
+      // Get current month's new products
+      const { data: currentMonthData, error: currentError } =
+        await ctx.supabaseAdmin
+          .from("products")
+          .select("count", { count: "exact" })
+          .gte("created_at", startOfMonth.toISOString())
+          .lt("created_at", now.toISOString());
+
+      // Get previous month's new products
+      const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
         .from("products")
         .select("count", { count: "exact" })
-        .gte("created_at", startOfMonth.toISOString())
-        .lt("created_at", now.toISOString());
+        .gte("created_at", startOfPrevMonth.toISOString())
+        .lt("created_at", startOfMonth.toISOString());
 
-    // Get previous month's new products
-    const { data: prevMonthData, error: prevError } = await ctx.supabaseAdmin
-      .from("products")
-      .select("count", { count: "exact" })
-      .gte("created_at", startOfPrevMonth.toISOString())
-      .lt("created_at", startOfMonth.toISOString());
+      if (currentError || prevError) {
+        throw new Error(currentError?.message || prevError?.message);
+      }
 
-    if (currentError || prevError) {
-      throw new Error(currentError?.message || prevError?.message);
-    }
+      const currentCount = currentMonthData?.[0]?.count || 0;
+      const prevCount = prevMonthData?.[0]?.count || 0;
+      const growthRate =
+        prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
 
-    const currentCount = currentMonthData?.[0]?.count || 0;
-    const prevCount = prevMonthData?.[0]?.count || 0;
-    const growthRate =
-      prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
-
-    return {
-      currentMonthCount: currentCount,
-      previousMonthCount: prevCount,
-      growthRate,
-      hasPreviousData: prevCount > 0,
-      latestUpdate: now.toISOString(),
-    };
-  }),
+      return {
+        currentMonthCount: currentCount,
+        previousMonthCount: prevCount,
+        growthRate,
+        hasPreviousData: prevCount > 0,
+        latestUpdate: now.toISOString(),
+      };
+    }),
   createProduct: publicProcedure
     .use(requireManagerOrAbove)
     .input(createProductSchema)
     .mutation(async ({ input, ctx }) => {
+      // Issue #10: Check for duplicate SKU (BLOCK if exists)
+      if (input.sku && input.sku.trim() !== "") {
+        const { data: existingSKU } = await ctx.supabaseAdmin
+          .from("products")
+          .select("id, name, sku")
+          .eq("sku", input.sku)
+          .maybeSingle();
+
+        if (existingSKU) {
+          throw new Error(
+            `DUPLICATE_SKU: SKU "${input.sku}" đã tồn tại trong hệ thống (Sản phẩm: ${existingSKU.name})`,
+          );
+        }
+      }
+
+      // Issue #10: Check for duplicate name (WARNING only)
+      // If user hasn't confirmed yet, throw a special error
+      if (!input.skipDuplicateNameWarning) {
+        const { data: existingName } = await ctx.supabaseAdmin
+          .from("products")
+          .select("id, name, sku")
+          .ilike("name", input.name)
+          .maybeSingle();
+
+        if (existingName) {
+          throw new Error(
+            `DUPLICATE_NAME: Sản phẩm với tên "${existingName.name}" đã tồn tại. Bạn có chắc muốn tiếp tục?`,
+          );
+        }
+      }
+
       // First, create the product
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")
@@ -102,6 +141,7 @@ export const productsRouter = router({
           model: input.model || null,
           type: input.type,
           primary_image: input.primary_image || null,
+          supplier_name: input.supplier_name || null, // Issue #8: Supplier field
         })
         .select()
         .single();
@@ -154,6 +194,8 @@ export const productsRouter = router({
       if (input.type !== undefined) updateData.type = input.type;
       if (input.primary_image !== undefined)
         updateData.primary_image = input.primary_image;
+      if (input.supplier_name !== undefined)
+        updateData.supplier_name = input.supplier_name; // Issue #8: Supplier field
 
       const { data: productData, error: productError } = await ctx.supabaseAdmin
         .from("products")
@@ -267,23 +309,23 @@ export const productsRouter = router({
   getProducts: publicProcedure
     .use(requireAnyAuthenticated)
     .query(async ({ ctx }) => {
-    const { data: products, error } = await ctx.supabaseAdmin
-      .from("products")
-      .select(`
+      const { data: products, error } = await ctx.supabaseAdmin
+        .from("products")
+        .select(`
         *,
         brands:brand_id (
           id,
           name
         )
       `)
-      .order("name", { ascending: true });
+        .order("name", { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch products: ${error.message}`);
-    }
+      if (error) {
+        throw new Error(`Failed to fetch products: ${error.message}`);
+      }
 
-    return products || [];
-  }),
+      return products || [];
+    }),
 });
 
 export type ProductsRouter = typeof productsRouter;

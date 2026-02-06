@@ -5,10 +5,10 @@
  * Main component that composes all workflow detail sub-components
  */
 
+import type { WorkflowDetailData } from "./types";
 import { WorkflowHeaderActions } from "./workflow-header-actions";
 import { WorkflowInfoCard } from "./workflow-info-card";
 import { WorkflowTasksList } from "./workflow-tasks-list";
-import type { WorkflowDetailData } from "./types";
 
 interface WorkflowDetailProps {
   workflow: WorkflowDetailData;

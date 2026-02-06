@@ -5,20 +5,26 @@
  * Form for editing draft stock receipts
  */
 
-import { use, useState, useEffect } from "react";
+import { AlertCircle, ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { trpc } from "@/components/providers/trpc-provider";
+import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
-import { toast } from "sonner";
 
 const RECEIPT_TYPES = [
   { value: "normal", label: "Phiếu nhập bình thường" },
@@ -39,18 +45,24 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
   const router = useRouter();
   const { id } = use(params);
 
-  const [receiptType, setReceiptType] = useState<"normal" | "adjustment">("normal");
+  const [receiptType, setReceiptType] = useState<"normal" | "adjustment">(
+    "normal",
+  );
   const [virtualWarehouseId, setVirtualWarehouseId] = useState("");
-  const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split("T")[0]);
+  const [receiptDate, setReceiptDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [notes, setNotes] = useState("");
   const [referenceDocumentNumber, setReferenceDocumentNumber] = useState("");
   const [items, setItems] = useState<ProductItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { data: receipt, isLoading: receiptLoading } = trpc.inventory.receipts.getById.useQuery({ id });
+  const { data: receipt, isLoading: receiptLoading } =
+    trpc.inventory.receipts.getById.useQuery({ id });
   const updateReceipt = trpc.inventory.receipts.updateFull.useMutation();
   const { data: products } = trpc.products.getProducts.useQuery();
-  const { data: virtualWarehouses } = trpc.warehouse.listVirtualWarehouses.useQuery();
+  const { data: virtualWarehouses } =
+    trpc.warehouse.listVirtualWarehouses.useQuery();
 
   // Redirect immediately - editing is no longer supported
   useEffect(() => {
@@ -65,7 +77,10 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
     if (receipt && !receiptLoading) {
       setReceiptType(receipt.receipt_type as "normal" | "adjustment");
       setVirtualWarehouseId(receipt.virtual_warehouse_id || "");
-      setReceiptDate(receipt.receipt_date?.split("T")[0] || new Date().toISOString().split("T")[0]);
+      setReceiptDate(
+        receipt.receipt_date?.split("T")[0] ||
+          new Date().toISOString().split("T")[0],
+      );
       setNotes(receipt.notes || "");
       setReferenceDocumentNumber(receipt.reference_document_number || "");
 
@@ -76,7 +91,7 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
             id: item.id,
             productId: item.product_id,
             declaredQuantity: item.declared_quantity,
-          }))
+          })),
         );
       }
 
@@ -92,7 +107,11 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof ProductItem, value: any) => {
+  const handleItemChange = (
+    index: number,
+    field: keyof ProductItem,
+    value: any,
+  ) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
@@ -106,14 +125,18 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
 
     // Validate based on type
     if (receiptType === "normal") {
-      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity <= 0);
+      const invalidItems = items.filter(
+        (item) => !item.productId || item.declaredQuantity <= 0,
+      );
       if (invalidItems.length > 0) {
         toast.error("Phiếu nhập bình thường phải có số lượng dương");
         return;
       }
     } else {
       // Adjustment: allow negative but not zero
-      const invalidItems = items.filter((item) => !item.productId || item.declaredQuantity === 0);
+      const invalidItems = items.filter(
+        (item) => !item.productId || item.declaredQuantity === 0,
+      );
       if (invalidItems.length > 0) {
         toast.error("Số lượng không được bằng 0");
         return;
@@ -150,7 +173,9 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  Đang tải...
+                </div>
               </div>
             </div>
           </div>
@@ -167,7 +192,9 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <div className="text-center py-8 text-muted-foreground">Không tìm thấy phiếu nhập</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  Không tìm thấy phiếu nhập
+                </div>
               </div>
             </div>
           </div>
@@ -178,7 +205,9 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
 
   return (
     <>
-      <PageHeader title={`Chỉnh sửa phiếu nhập ${receipt.receipt_number || ""}`} />
+      <PageHeader
+        title={`Chỉnh sửa phiếu nhập ${receipt.receipt_number || ""}`}
+      />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -202,7 +231,12 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Loại phiếu *</Label>
-                      <Select value={receiptType} onValueChange={(v) => setReceiptType(v as "normal" | "adjustment")}>
+                      <Select
+                        value={receiptType}
+                        onValueChange={(v) =>
+                          setReceiptType(v as "normal" | "adjustment")
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn loại phiếu" />
                         </SelectTrigger>
@@ -218,23 +252,33 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
 
                     <div className="grid gap-2">
                       <Label>Kho nhập *</Label>
-                      <Select value={virtualWarehouseId} onValueChange={setVirtualWarehouseId}>
+                      <Select
+                        value={virtualWarehouseId}
+                        onValueChange={setVirtualWarehouseId}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Chọn kho" />
                         </SelectTrigger>
                         <SelectContent>
-                          {virtualWarehouses?.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.id}>
-                              {wh.name}
-                            </SelectItem>
-                          ))}
+                          {/* Issue #26: Only show Kho Chính (main) and Kho Bảo Hành (warranty_stock) */}
+                          {virtualWarehouses
+                            ?.filter((wh) => wh.warehouse_type === "main" || wh.warehouse_type === "warranty_stock")
+                            .map((wh) => (
+                              <SelectItem key={wh.id} value={wh.id}>
+                                {wh.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="grid gap-2">
                       <Label>Ngày nhập *</Label>
-                      <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
+                      <Input
+                        type="date"
+                        value={receiptDate}
+                        onChange={(e) => setReceiptDate(e.target.value)}
+                      />
                     </div>
 
                     <div className="grid gap-2">
@@ -242,7 +286,9 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                       <Input
                         placeholder="VD: PO-2024-001"
                         value={referenceDocumentNumber}
-                        onChange={(e) => setReferenceDocumentNumber(e.target.value)}
+                        onChange={(e) =>
+                          setReferenceDocumentNumber(e.target.value)
+                        }
                       />
                     </div>
                   </div>
@@ -251,7 +297,9 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
-                        <strong>Phiếu điều chỉnh:</strong> Số dương = tăng stock, số âm = giảm stock. Dùng khi kiểm kê hoặc sửa sai sót.
+                        <strong>Phiếu điều chỉnh:</strong> Số dương = tăng
+                        stock, số âm = giảm stock. Dùng khi kiểm kê hoặc sửa sai
+                        sót.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -292,15 +340,21 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                             <Label>Sản phẩm</Label>
                             <Select
                               value={item.productId}
-                              onValueChange={(value) => handleItemChange(index, "productId", value)}
+                              onValueChange={(value) =>
+                                handleItemChange(index, "productId", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Chọn sản phẩm" />
                               </SelectTrigger>
                               <SelectContent>
                                 {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name} {product.sku ? `(${product.sku})` : ""}
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.name}{" "}
+                                    {product.sku ? `(${product.sku})` : ""}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -311,14 +365,30 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                             <Label>Số lượng</Label>
                             <Input
                               type="number"
-                              min={receiptType === "adjustment" ? undefined : "1"}
+                              min={
+                                receiptType === "adjustment" ? undefined : "1"
+                              }
                               value={item.declaredQuantity}
-                              onChange={(e) => handleItemChange(index, "declaredQuantity", Number.parseInt(e.target.value))}
-                              className={item.declaredQuantity < 0 ? "text-red-600 font-medium" : ""}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "declaredQuantity",
+                                  Number.parseInt(e.target.value),
+                                )
+                              }
+                              className={
+                                item.declaredQuantity < 0
+                                  ? "text-red-600 font-medium"
+                                  : ""
+                              }
                             />
                           </div>
 
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(index)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -329,10 +399,14 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
               </Card>
 
               {/* Warning about serials */}
-              {receipt.items?.some((item: any) => item.serials && item.serials.length > 0) && (
+              {receipt.items?.some(
+                (item: any) => item.serials && item.serials.length > 0,
+              ) && (
                 <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700 p-4">
                   <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                    <strong>Lưu ý:</strong> Phiếu nhập này đã có một số serial được nhập. Nếu bạn thay đổi sản phẩm hoặc số lượng, các serial đã nhập có thể bị xóa.
+                    <strong>Lưu ý:</strong> Phiếu nhập này đã có một số serial
+                    được nhập. Nếu bạn thay đổi sản phẩm hoặc số lượng, các
+                    serial đã nhập có thể bị xóa.
                   </div>
                 </div>
               )}
@@ -342,7 +416,10 @@ export default function EditReceiptPage({ params }: EditReceiptPageProps) {
                 <Link href={`/inventory/documents/receipts/${id}`}>
                   <Button variant="outline">Hủy</Button>
                 </Link>
-                <Button onClick={handleSubmit} disabled={updateReceipt.isPending}>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={updateReceipt.isPending}
+                >
                   <Save className="h-4 w-4" />
                   Lưu thay đổi
                 </Button>

@@ -11,12 +11,11 @@
  * Week 4 - Phase 1 Testing
  */
 
-import { test, expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import { login, logout } from "./helpers";
 import { adminUser, testUsers } from "./test-data";
 
 test.describe("Task Dashboard", () => {
-
   test.beforeEach(async ({ page }) => {
     // Login as admin for setup
     await login(page, adminUser);
@@ -38,26 +37,43 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Dashboard Display", () => {
-
-    test("should display the task dashboard page correctly", async ({ page }) => {
+    test("should display the task dashboard page correctly", async ({
+      page,
+    }) => {
       // Verify page title
       await expect(page.locator("h1")).toContainText("Công việc của tôi");
 
       // Verify stats cards are visible (use exact text in muted-foreground)
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Tổng số" })).toBeVisible();
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Chờ xử lý" })).toBeVisible();
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Đang xử lý" })).toBeVisible();
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Hoàn thành" })).toBeVisible();
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Bị chặn" })).toBeVisible();
-      await expect(page.locator('p.text-muted-foreground', { hasText: "Quá hạn" })).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Tổng số" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Chờ xử lý" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Đang xử lý" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Hoàn thành" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Bị chặn" }),
+      ).toBeVisible();
+      await expect(
+        page.locator("p.text-muted-foreground", { hasText: "Quá hạn" }),
+      ).toBeVisible();
 
       // Verify refresh button exists
-      await expect(page.getByRole("button", { name: /làm mới/i })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /làm mới/i }),
+      ).toBeVisible();
     });
 
     test("should show empty state when no tasks exist", async ({ page }) => {
       // Wait for loading spinner to disappear
-      await page.waitForSelector('.animate-spin', { state: 'hidden', timeout: 10000 }).catch(() => {});
+      await page
+        .waitForSelector(".animate-spin", { state: "hidden", timeout: 10000 })
+        .catch(() => {});
 
       // Wait a bit for data to load
       await page.waitForTimeout(1000);
@@ -68,30 +84,38 @@ test.describe("Task Dashboard", () => {
 
       if (hasEmptyState) {
         await expect(emptyState).toBeVisible();
-        await expect(page.getByText("Không tìm thấy công việc nào với bộ lọc hiện tại")).toBeVisible();
+        await expect(
+          page.getByText("Không tìm thấy công việc nào với bộ lọc hiện tại"),
+        ).toBeVisible();
       } else {
         // If no empty state, then there must be task cards
-        const taskCards = page.locator('.grid.gap-4.md\\:grid-cols-2');
+        const taskCards = page.locator(".grid.gap-4.md\\:grid-cols-2");
         await expect(taskCards).toBeVisible();
       }
     });
 
-    test("should display stats summary with correct structure", async ({ page }) => {
+    test("should display stats summary with correct structure", async ({
+      page,
+    }) => {
       // Wait for stats to load
       await page.waitForLoadState("networkidle");
 
       // Verify stats card structure
-      const statsCards = page.locator('[class*="grid"][class*="gap-4"]').first();
+      const statsCards = page
+        .locator('[class*="grid"][class*="gap-4"]')
+        .first();
       await expect(statsCards).toBeVisible();
 
       // Verify each stat has a number and label
-      const totalStat = page.locator('text=Tổng số').locator('..').locator('..');
-      await expect(totalStat.locator('.text-2xl')).toBeVisible();
+      const totalStat = page
+        .locator("text=Tổng số")
+        .locator("..")
+        .locator("..");
+      await expect(totalStat.locator(".text-2xl")).toBeVisible();
     });
   });
 
   test.describe("Task Filtering", () => {
-
     test("should have all filter options available", async ({ page }) => {
       await page.waitForLoadState("networkidle");
 
@@ -104,8 +128,12 @@ test.describe("Task Dashboard", () => {
       await expect(entityTypeFilter).toBeVisible();
 
       // Verify checkbox filters
-      await expect(page.getByText("Chỉ hiển thị công việc quá hạn")).toBeVisible();
-      await expect(page.getByText("Chỉ hiển thị công việc bắt buộc")).toBeVisible();
+      await expect(
+        page.getByText("Chỉ hiển thị công việc quá hạn"),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Chỉ hiển thị công việc bắt buộc"),
+      ).toBeVisible();
     });
 
     test("should filter tasks by status", async ({ page }) => {
@@ -136,11 +164,21 @@ test.describe("Task Dashboard", () => {
       await page.waitForTimeout(500);
 
       // Verify all entity type options exist
-      await expect(page.getByRole("option", { name: "Phiếu sửa chữa" })).toBeVisible();
-      await expect(page.getByRole("option", { name: "Phiếu nhập kho" })).toBeVisible();
-      await expect(page.getByRole("option", { name: "Phiếu xuất kho" })).toBeVisible();
-      await expect(page.getByRole("option", { name: "Phiếu chuyển kho" })).toBeVisible();
-      await expect(page.getByRole("option", { name: "Yêu cầu dịch vụ" })).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: "Phiếu sửa chữa" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: "Phiếu nhập kho" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: "Phiếu xuất kho" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: "Phiếu chuyển kho" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("option", { name: "Yêu cầu dịch vụ" }),
+      ).toBeVisible();
 
       // Close the dropdown by pressing Escape
       await page.keyboard.press("Escape");
@@ -165,7 +203,9 @@ test.describe("Task Dashboard", () => {
       await page.waitForLoadState("networkidle");
 
       // Find and click required-only checkbox
-      const requiredCheckbox = page.getByLabel("Chỉ hiển thị công việc bắt buộc");
+      const requiredCheckbox = page.getByLabel(
+        "Chỉ hiển thị công việc bắt buộc",
+      );
       await requiredCheckbox.check();
 
       // Wait for filter to apply
@@ -184,7 +224,9 @@ test.describe("Task Dashboard", () => {
       await page.getByRole("option", { name: "Đang xử lý" }).click();
 
       // Apply required-only filter
-      const requiredCheckbox = page.getByLabel("Chỉ hiển thị công việc bắt buộc");
+      const requiredCheckbox = page.getByLabel(
+        "Chỉ hiển thị công việc bắt buộc",
+      );
       await requiredCheckbox.check();
 
       // Wait for filters to apply
@@ -196,7 +238,6 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Task Actions", () => {
-
     test.skip("should start a pending task", async ({ page }) => {
       // Skip if no tasks available
       await page.waitForLoadState("networkidle");
@@ -208,7 +249,9 @@ test.describe("Task Dashboard", () => {
         await startButton.click();
 
         // Verify success toast
-        await expect(page.getByText("Đã bắt đầu công việc")).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText("Đã bắt đầu công việc")).toBeVisible({
+          timeout: 5000,
+        });
 
         // Verify button changed
         await page.waitForTimeout(1000);
@@ -220,7 +263,9 @@ test.describe("Task Dashboard", () => {
       await page.waitForLoadState("networkidle");
 
       // Look for a task card with "Hoàn thành" button
-      const completeButton = page.getByRole("button", { name: "Hoàn thành" }).first();
+      const completeButton = page
+        .getByRole("button", { name: "Hoàn thành" })
+        .first();
 
       if (await completeButton.isVisible({ timeout: 2000 })) {
         await completeButton.click();
@@ -230,13 +275,19 @@ test.describe("Task Dashboard", () => {
         await expect(dialog).toBeVisible();
 
         // Fill completion notes
-        await page.getByLabel(/ghi chú/i).fill("Task completed successfully during E2E test");
+        await page
+          .getByLabel(/ghi chú/i)
+          .fill("Task completed successfully during E2E test");
 
         // Click confirm
-        await page.getByRole("button", { name: /xác nhận|hoàn thành/i }).click();
+        await page
+          .getByRole("button", { name: /xác nhận|hoàn thành/i })
+          .click();
 
         // Verify success toast
-        await expect(page.getByText("Đã hoàn thành công việc")).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText("Đã hoàn thành công việc")).toBeVisible({
+          timeout: 5000,
+        });
       }
     });
 
@@ -244,7 +295,9 @@ test.describe("Task Dashboard", () => {
       await page.waitForLoadState("networkidle");
 
       // Look for a task card with "Báo chặn" button
-      const blockButton = page.getByRole("button", { name: "Báo chặn" }).first();
+      const blockButton = page
+        .getByRole("button", { name: "Báo chặn" })
+        .first();
 
       if (await blockButton.isVisible({ timeout: 2000 })) {
         await blockButton.click();
@@ -260,7 +313,9 @@ test.describe("Task Dashboard", () => {
         await page.getByRole("button", { name: /xác nhận|báo chặn/i }).click();
 
         // Verify success toast
-        await expect(page.getByText(/Đã báo chặn công việc|Manager sẽ được thông báo/i)).toBeVisible({ timeout: 5000 });
+        await expect(
+          page.getByText(/Đã báo chặn công việc|Manager sẽ được thông báo/i),
+        ).toBeVisible({ timeout: 5000 });
       }
     });
 
@@ -268,13 +323,17 @@ test.describe("Task Dashboard", () => {
       await page.waitForLoadState("networkidle");
 
       // Look for a task card with "Bỏ chặn" button
-      const unblockButton = page.getByRole("button", { name: "Bỏ chặn" }).first();
+      const unblockButton = page
+        .getByRole("button", { name: "Bỏ chặn" })
+        .first();
 
       if (await unblockButton.isVisible({ timeout: 2000 })) {
         await unblockButton.click();
 
         // Verify success toast
-        await expect(page.getByText("Đã bỏ chặn công việc")).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText("Đã bỏ chặn công việc")).toBeVisible({
+          timeout: 5000,
+        });
       }
     });
 
@@ -282,7 +341,9 @@ test.describe("Task Dashboard", () => {
       await page.waitForLoadState("networkidle");
 
       // Any action button
-      const actionButton = page.getByRole("button", { name: /bắt đầu|hoàn thành|báo chặn/i }).first();
+      const actionButton = page
+        .getByRole("button", { name: /bắt đầu|hoàn thành|báo chặn/i })
+        .first();
 
       if (await actionButton.isVisible({ timeout: 2000 })) {
         // Verify button is not disabled initially
@@ -292,7 +353,6 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Real-time Updates", () => {
-
     test("should have manual refresh button", async ({ page }) => {
       await page.waitForLoadState("networkidle");
 
@@ -302,7 +362,9 @@ test.describe("Task Dashboard", () => {
       await expect(refreshButton).toBeEnabled();
     });
 
-    test("should refresh tasks when refresh button clicked", async ({ page }) => {
+    test("should refresh tasks when refresh button clicked", async ({
+      page,
+    }) => {
       await page.waitForLoadState("networkidle");
 
       // Click refresh button
@@ -324,14 +386,13 @@ test.describe("Task Dashboard", () => {
       await refreshButton.click();
 
       // Check for spinner animation (lucide-react RefreshCw with animate-spin)
-      const spinner = page.locator('.animate-spin').first();
+      const spinner = page.locator(".animate-spin").first();
       // Spinner may be too fast to catch, so we just verify button exists
       await expect(refreshButton).toBeVisible();
     });
   });
 
   test.describe("Error Handling", () => {
-
     test("should handle empty state gracefully", async ({ page }) => {
       await page.waitForLoadState("networkidle");
 
@@ -340,7 +401,9 @@ test.describe("Task Dashboard", () => {
       await statusFilter.click();
       await page.getByRole("option", { name: "Hoàn thành" }).click();
 
-      const requiredCheckbox = page.getByLabel("Chỉ hiển thị công việc bắt buộc");
+      const requiredCheckbox = page.getByLabel(
+        "Chỉ hiển thị công việc bắt buộc",
+      );
       await requiredCheckbox.check();
 
       await page.waitForTimeout(1000);
@@ -360,8 +423,9 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Task Card Display", () => {
-
-    test.skip("should display task card with all information", async ({ page }) => {
+    test.skip("should display task card with all information", async ({
+      page,
+    }) => {
       await page.waitForLoadState("networkidle");
 
       // Wait for task cards to appear
@@ -374,7 +438,9 @@ test.describe("Task Dashboard", () => {
       }
     });
 
-    test.skip("should show overdue indicator for overdue tasks", async ({ page }) => {
+    test.skip("should show overdue indicator for overdue tasks", async ({
+      page,
+    }) => {
       await page.waitForLoadState("networkidle");
 
       // Look for overdue tasks (red border)
@@ -401,7 +467,9 @@ test.describe("Task Dashboard", () => {
       }
     });
 
-    test.skip("should show required badge for required tasks", async ({ page }) => {
+    test.skip("should show required badge for required tasks", async ({
+      page,
+    }) => {
       await page.waitForLoadState("networkidle");
 
       // Look for "Bắt buộc" badge
@@ -414,7 +482,6 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Performance", () => {
-
     test("should load dashboard within acceptable time", async ({ page }) => {
       const startTime = Date.now();
 
@@ -429,7 +496,9 @@ test.describe("Task Dashboard", () => {
       console.log(`Dashboard load time: ${loadTime}ms`);
     });
 
-    test("should handle large number of filters without lag", async ({ page }) => {
+    test("should handle large number of filters without lag", async ({
+      page,
+    }) => {
       await page.waitForLoadState("networkidle");
 
       const startTime = Date.now();
@@ -442,7 +511,9 @@ test.describe("Task Dashboard", () => {
       const overdueCheckbox = page.getByLabel("Chỉ hiển thị công việc quá hạn");
       await overdueCheckbox.check();
 
-      const requiredCheckbox = page.getByLabel("Chỉ hiển thị công việc bắt buộc");
+      const requiredCheckbox = page.getByLabel(
+        "Chỉ hiển thị công việc bắt buộc",
+      );
       await requiredCheckbox.check();
 
       await page.waitForLoadState("networkidle");
@@ -457,7 +528,6 @@ test.describe("Task Dashboard", () => {
   });
 
   test.describe("Mobile Responsiveness", () => {
-
     test("should display correctly on mobile viewport", async ({ page }) => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });

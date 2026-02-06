@@ -4,7 +4,6 @@
 
 import { IconCheck } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Card,
   CardContent,
@@ -12,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { ENTITY_TYPE_LABELS } from "@/lib/constants/workflow";
 import type { WorkflowDetailData } from "./types";
 
@@ -41,7 +41,8 @@ export function WorkflowInfoCard({ workflow }: WorkflowInfoCardProps) {
             </h3>
             <Badge variant="outline">
               {workflow.entity_type
-                ? ENTITY_TYPE_LABELS[workflow.entity_type] || workflow.entity_type
+                ? ENTITY_TYPE_LABELS[workflow.entity_type] ||
+                  workflow.entity_type
                 : "Chưa xác định"}
             </Badge>
           </div>

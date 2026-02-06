@@ -1,12 +1,16 @@
 // Task Workflow Hooks
 // Custom hooks for task templates, task execution, and workflow management
 
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
-import { trpc } from '@/components/providers/trpc-provider';
-import type { Workflow, EntityTask, TaskProgressSummary } from '@/types/workflow';
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import type {
+  EntityTask,
+  TaskProgressSummary,
+  Workflow,
+} from "@/types/workflow";
 
 /**
  * Hook for managing task types
@@ -14,7 +18,11 @@ import type { Workflow, EntityTask, TaskProgressSummary } from '@/types/workflow
  * @param filters - Optional filters: is_active (true/false/undefined for all)
  */
 export function useTaskTypes(filters?: { is_active?: boolean }) {
-  const { data: taskTypes, isLoading, error } = trpc.workflow.taskType.list.useQuery(filters);
+  const {
+    data: taskTypes,
+    isLoading,
+    error,
+  } = trpc.workflow.taskType.list.useQuery(filters);
 
   return {
     taskTypes: taskTypes ?? [],
@@ -32,10 +40,10 @@ export function useCreateTaskType() {
   const mutation = trpc.workflow.taskType.create.useMutation({
     onSuccess: () => {
       utils.workflow.taskType.list.invalidate();
-      toast.success('Loại công việc đã được tạo thành công');
+      toast.success("Loại công việc đã được tạo thành công");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể tạo loại công việc');
+      toast.error(error.message || "Không thể tạo loại công việc");
     },
   });
 
@@ -54,10 +62,10 @@ export function useUpdateTaskType() {
   const mutation = trpc.workflow.taskType.update.useMutation({
     onSuccess: () => {
       utils.workflow.taskType.list.invalidate();
-      toast.success('Loại công việc đã được cập nhật thành công');
+      toast.success("Loại công việc đã được cập nhật thành công");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể cập nhật loại công việc');
+      toast.error(error.message || "Không thể cập nhật loại công việc");
     },
   });
 
@@ -77,13 +85,15 @@ export function useToggleTaskType() {
     onSuccess: (data) => {
       utils.workflow.taskType.list.invalidate();
       toast.success(
-        data.is_active 
-          ? 'Loại công việc đã được kích hoạt' 
-          : 'Loại công việc đã được vô hiệu hóa'
+        data.is_active
+          ? "Loại công việc đã được kích hoạt"
+          : "Loại công việc đã được vô hiệu hóa",
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể thay đổi trạng thái loại công việc');
+      toast.error(
+        error.message || "Không thể thay đổi trạng thái loại công việc",
+      );
     },
   });
 
@@ -98,10 +108,19 @@ export function useToggleTaskType() {
  * Supports filtering by entity type and active status
  */
 export function useTaskTemplates(filters?: {
-  entity_type?: 'service_ticket' | 'inventory_receipt' | 'inventory_issue' | 'inventory_transfer' | 'service_request';
+  entity_type?:
+    | "service_ticket"
+    | "inventory_receipt"
+    | "inventory_issue"
+    | "inventory_transfer"
+    | "service_request";
   is_active?: boolean;
 }) {
-  const { data: templates, isLoading, error } = trpc.workflow.template.list.useQuery(filters);
+  const {
+    data: templates,
+    isLoading,
+    error,
+  } = trpc.workflow.template.list.useQuery(filters);
 
   return {
     templates: templates ?? [],
@@ -115,9 +134,13 @@ export function useTaskTemplates(filters?: {
  * Used for editing templates - loads template with all its tasks
  */
 export function useTaskTemplate(templateId: string | undefined) {
-  const { data: template, isLoading, error } = trpc.workflow.template.getById.useQuery(
+  const {
+    data: template,
+    isLoading,
+    error,
+  } = trpc.workflow.template.getById.useQuery(
     { template_id: templateId! },
-    { enabled: !!templateId } // Only fetch if templateId exists
+    { enabled: !!templateId }, // Only fetch if templateId exists
   );
 
   return {
@@ -136,10 +159,13 @@ export function useCreateTemplate() {
   const mutation = trpc.workflow.template.create.useMutation({
     onSuccess: () => {
       utils.workflow.template.list.invalidate();
-      toast.success('Mẫu quy trình đã được tạo thành công');
+      toast.success("Mẫu quy trình đã được tạo thành công");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể tạo mẫu quy trình. Vui lòng kiểm tra lại thông tin và thử lại');
+      toast.error(
+        error.message ||
+          "Không thể tạo mẫu quy trình. Vui lòng kiểm tra lại thông tin và thử lại",
+      );
     },
   });
 
@@ -160,10 +186,12 @@ export function useUpdateTemplate() {
     onSuccess: () => {
       utils.workflow.template.list.invalidate();
       utils.workflow.template.getById.invalidate();
-      toast.success('Mẫu quy trình đã được cập nhật thành công');
+      toast.success("Mẫu quy trình đã được cập nhật thành công");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể cập nhật mẫu quy trình. Vui lòng thử lại');
+      toast.error(
+        error.message || "Không thể cập nhật mẫu quy trình. Vui lòng thử lại",
+      );
     },
   });
 
@@ -186,12 +214,14 @@ export function useToggleTemplate() {
       utils.workflow.template.getById.invalidate();
       toast.success(
         data.is_active
-          ? 'Mẫu quy trình đã được kích hoạt'
-          : 'Mẫu quy trình đã được vô hiệu hóa'
+          ? "Mẫu quy trình đã được kích hoạt"
+          : "Mẫu quy trình đã được vô hiệu hóa",
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể thay đổi trạng thái mẫu quy trình');
+      toast.error(
+        error.message || "Không thể thay đổi trạng thái mẫu quy trình",
+      );
     },
   });
 
@@ -213,12 +243,15 @@ export function useDeleteTemplate() {
       utils.workflow.template.list.invalidate();
       toast.success(
         data.soft_deleted
-          ? 'Mẫu quy trình đã được vô hiệu hóa'
-          : 'Mẫu quy trình đã được xóa thành công'
+          ? "Mẫu quy trình đã được vô hiệu hóa"
+          : "Mẫu quy trình đã được xóa thành công",
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể xóa mẫu quy trình. Có thể mẫu đang được sử dụng bởi các phiếu dịch vụ đang hoạt động');
+      toast.error(
+        error.message ||
+          "Không thể xóa mẫu quy trình. Có thể mẫu đang được sử dụng bởi các phiếu dịch vụ đang hoạt động",
+      );
     },
   });
 
@@ -270,16 +303,19 @@ export function useTaskProgress(ticketId: string | undefined) {
 export function useApplyTemplate() {
   const [isApplying, setIsApplying] = useState(false);
 
-  const applyTemplate = useCallback(async (ticketId: string, templateId: string) => {
-    // TODO: Implement tRPC mutation
-    setIsApplying(true);
-    try {
-      // Placeholder
-      console.log('Applying template', templateId, 'to ticket', ticketId);
-    } finally {
-      setIsApplying(false);
-    }
-  }, []);
+  const applyTemplate = useCallback(
+    async (ticketId: string, templateId: string) => {
+      // TODO: Implement tRPC mutation
+      setIsApplying(true);
+      try {
+        // Placeholder
+        console.log("Applying template", templateId, "to ticket", ticketId);
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [],
+  );
 
   return {
     applyTemplate,
@@ -294,24 +330,30 @@ export function useApplyTemplate() {
 export function useTaskTransition() {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const canTransition = useCallback((currentStatus: string, newStatus: string): boolean => {
-    // TODO: Implement validation logic based on TASK_STATUS_TRANSITIONS
-    return true;
-  }, []);
+  const canTransition = useCallback(
+    (currentStatus: string, newStatus: string): boolean => {
+      // TODO: Implement validation logic based on TASK_STATUS_TRANSITIONS
+      return true;
+    },
+    [],
+  );
 
-  const transitionTask = useCallback(async (
-    taskId: string,
-    newStatus: string,
-    data?: { notes?: string; reason?: string }
-  ) => {
-    // TODO: Implement tRPC mutation
-    setIsTransitioning(true);
-    try {
-      console.log('Transitioning task', taskId, 'to', newStatus, data);
-    } finally {
-      setIsTransitioning(false);
-    }
-  }, []);
+  const transitionTask = useCallback(
+    async (
+      taskId: string,
+      newStatus: string,
+      data?: { notes?: string; reason?: string },
+    ) => {
+      // TODO: Implement tRPC mutation
+      setIsTransitioning(true);
+      try {
+        console.log("Transitioning task", taskId, "to", newStatus, data);
+      } finally {
+        setIsTransitioning(false);
+      }
+    },
+    [],
+  );
 
   return {
     canTransition,
@@ -330,7 +372,12 @@ export function useTaskTransition() {
  * Supports real-time polling with refetchInterval
  */
 export function useMyTasks() {
-  const { data: tasks, isLoading, error, refetch } = trpc.workflow.myTasks.useQuery(undefined, {
+  const {
+    data: tasks,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.workflow.myTasks.useQuery(undefined, {
     refetchInterval: 30000, // Poll every 30 seconds
   });
 
@@ -352,10 +399,10 @@ export function useUpdateTaskStatus() {
     onSuccess: () => {
       // Invalidate queries to refresh task lists
       utils.workflow.myTasks.invalidate();
-      toast.success('Trạng thái công việc đã được cập nhật');
+      toast.success("Trạng thái công việc đã được cập nhật");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể cập nhật trạng thái công việc');
+      toast.error(error.message || "Không thể cập nhật trạng thái công việc");
     },
   });
 
@@ -374,10 +421,10 @@ export function useAddTaskNotes() {
   const mutation = trpc.workflow.addTaskNotes.useMutation({
     onSuccess: () => {
       utils.workflow.myTasks.invalidate();
-      toast.success('Ghi chú đã được thêm vào công việc');
+      toast.success("Ghi chú đã được thêm vào công việc");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể thêm ghi chú');
+      toast.error(error.message || "Không thể thêm ghi chú");
     },
   });
 
@@ -396,10 +443,10 @@ export function useCompleteTask() {
   const mutation = trpc.workflow.completeTask.useMutation({
     onSuccess: () => {
       utils.workflow.myTasks.invalidate();
-      toast.success('Công việc đã hoàn thành');
+      toast.success("Công việc đã hoàn thành");
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể hoàn thành công việc');
+      toast.error(error.message || "Không thể hoàn thành công việc");
     },
   });
 
@@ -417,7 +464,7 @@ export function useCompleteTask() {
 export function useTaskDependencies(taskId: string | undefined) {
   const { data, isLoading, error } = trpc.workflow.getTaskDependencies.useQuery(
     { task_id: taskId! },
-    { enabled: !!taskId }
+    { enabled: !!taskId },
   );
 
   return {
@@ -442,11 +489,11 @@ export function useSwitchTemplate() {
 
       // Show success toast with summary
       toast.success(
-        `Đã chuyển mẫu quy trình thành công! ${data.summary.tasks_preserved} công việc giữ lại, ${data.summary.tasks_added} công việc mới được thêm.`
+        `Đã chuyển mẫu quy trình thành công! ${data.summary.tasks_preserved} công việc giữ lại, ${data.summary.tasks_added} công việc mới được thêm.`,
       );
     },
     onError: (error) => {
-      toast.error(error.message || 'Không thể chuyển mẫu quy trình');
+      toast.error(error.message || "Không thể chuyển mẫu quy trình");
     },
   });
 

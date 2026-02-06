@@ -6,12 +6,12 @@
  * Supports different variants: mine, available, overdue
  */
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Flame, AlertTriangle, Info, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { AlertTriangle, Flame, Info, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export type TaskPriority = "normal" | "warning" | "critical";
 export type TaskVariant = "mine" | "available";
@@ -47,9 +47,10 @@ export function TaskCard({
   onContinue,
   onReassign,
 }: TaskCardProps) {
-  const percentage = task.progress.total > 0
-    ? Math.round((task.progress.current / task.progress.total) * 100)
-    : 0;
+  const percentage =
+    task.progress.total > 0
+      ? Math.round((task.progress.current / task.progress.total) * 100)
+      : 0;
 
   // Determine priority based on age and progress
   const getPriority = (): TaskPriority => {
@@ -112,7 +113,9 @@ export function TaskCard({
   };
 
   return (
-    <Card className={`${styles.border} ${styles.bg} transition-colors hover:shadow-md`}>
+    <Card
+      className={`${styles.border} ${styles.bg} transition-colors hover:shadow-md`}
+    >
       <CardContent className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -150,8 +153,8 @@ export function TaskCard({
                 percentage === 100
                   ? "bg-green-600"
                   : percentage > 50
-                  ? "bg-yellow-600"
-                  : "bg-red-600"
+                    ? "bg-yellow-600"
+                    : "bg-red-600"
               } transition-all`}
               style={{ width: `${percentage}%` }}
             />
@@ -181,7 +184,12 @@ export function TaskCard({
               <span>
                 <strong>Cần xử lý gấp!</strong>
                 {task.receiptStatus === "completed" && (
-                  <> Stock đã được cập nhật nhưng còn {task.progress.total - task.progress.current} serial chưa nhập.</>
+                  <>
+                    {" "}
+                    Stock đã được cập nhật nhưng còn{" "}
+                    {task.progress.total - task.progress.current} serial chưa
+                    nhập.
+                  </>
                 )}
               </span>
             </p>
@@ -202,11 +210,11 @@ export function TaskCard({
             className="flex-1"
             variant={priority === "critical" ? "destructive" : "default"}
           >
-            {isMine ? (
-              percentage === 0 ? "Bắt đầu" : "Tiếp tục"
-            ) : (
-              "Hỗ trợ hoàn thành"
-            )}
+            {isMine
+              ? percentage === 0
+                ? "Bắt đầu"
+                : "Tiếp tục"
+              : "Hỗ trợ hoàn thành"}
           </Button>
 
           {isMine && onReassign && (

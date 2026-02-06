@@ -9,14 +9,19 @@
  * Based on spec: docs/front-end-spec-serial-lookup.md
  */
 
-import { IconLoader2, IconCircleCheck, IconAlertCircle, IconCircleX } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
+import {
+  IconAlertCircle,
+  IconCircleCheck,
+  IconCircleX,
+  IconLoader2,
+} from "@tabler/icons-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
-type LookupStatus = 'idle' | 'checking' | 'found' | 'not_found' | 'error';
+type LookupStatus = "idle" | "checking" | "found" | "not_found" | "error";
 
-type WarrantyStatus = 'active' | 'expiring_soon' | 'expired' | 'no_warranty';
+type WarrantyStatus = "active" | "expiring_soon" | "expired" | "no_warranty";
 
 interface ProductLookupResult {
   id: string;
@@ -48,14 +53,18 @@ interface SerialLookupResultProps {
   error?: string;
 }
 
-export function SerialLookupResult({ status, product, error }: SerialLookupResultProps) {
+export function SerialLookupResult({
+  status,
+  product,
+  error,
+}: SerialLookupResultProps) {
   // State 1: Idle - No display needed
-  if (status === 'idle') {
+  if (status === "idle") {
     return null;
   }
 
   // State 2: Checking - Loading spinner
-  if (status === 'checking') {
+  if (status === "checking") {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-md animate-pulse">
         <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -65,14 +74,17 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
   }
 
   // State 4: Not Found - Error display
-  if (status === 'not_found') {
+  if (status === "not_found") {
     return (
       <div className="flex items-center gap-2 text-sm p-3 bg-destructive/10 border border-destructive/30 rounded-md">
         <IconCircleX className="h-4 w-4 text-destructive flex-shrink-0" />
         <div className="flex-1">
-          <p className="font-medium text-destructive">Serial không tìm thấy trong kho hàng đã bán</p>
+          <p className="font-medium text-destructive">
+            Serial không tìm thấy trong kho hàng đã bán
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Chỉ sản phẩm đã bán cho khách hàng mới có thể tạo phiếu yêu cầu dịch vụ
+            Chỉ sản phẩm đã bán cho khách hàng mới có thể tạo phiếu yêu cầu dịch
+            vụ
           </p>
         </div>
       </div>
@@ -80,12 +92,14 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
   }
 
   // Error state
-  if (status === 'error') {
+  if (status === "error") {
     return (
       <div className="flex items-center gap-2 text-sm p-3 bg-orange-500/10 border border-orange-500/30 rounded-md">
         <IconAlertCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />
         <div className="flex-1">
-          <p className="font-medium text-orange-700 dark:text-orange-400">Lỗi kết nối</p>
+          <p className="font-medium text-orange-700 dark:text-orange-400">
+            Lỗi kết nối
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {error || "Không thể kiểm tra serial. Vui lòng thử lại."}
           </p>
@@ -95,66 +109,73 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
   }
 
   // State 3: Found - Show product info
-  if (status === 'found' && product) {
+  if (status === "found" && product) {
     // Determine warranty display
     const getWarrantyDisplay = () => {
       if (product.current_ticket_id) {
         // In Service - Special case
         return {
           icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
-          bgColor: 'bg-yellow-500/10',
-          borderColor: 'border-yellow-500/30',
-          textColor: 'text-yellow-700 dark:text-yellow-400',
+          bgColor: "bg-yellow-500/10",
+          borderColor: "border-yellow-500/30",
+          textColor: "text-yellow-700 dark:text-yellow-400",
           label: `Đang sửa (${product.current_ticket_number})`,
-          message: '⚠️ Sản phẩm đang được sửa chữa',
+          message: "⚠️ Sản phẩm đang được sửa chữa",
         };
       }
 
       switch (product.warranty_status) {
-        case 'active':
-          const months = product.days_remaining ? Math.floor(product.days_remaining / 30) : 0;
+        case "active": {
+          const months = product.days_remaining
+            ? Math.floor(product.days_remaining / 30)
+            : 0;
           return {
             icon: <IconCircleCheck className="h-4 w-4 flex-shrink-0" />,
-            bgColor: 'bg-green-500/10',
-            borderColor: 'border-green-500/30',
-            textColor: 'text-green-700 dark:text-green-400',
+            bgColor: "bg-green-500/10",
+            borderColor: "border-green-500/30",
+            textColor: "text-green-700 dark:text-green-400",
             label: `BH: Còn ${months} tháng`,
             message: null,
           };
+        }
 
-        case 'expiring_soon':
+        case "expiring_soon": {
           const days = product.days_remaining || 0;
           return {
             icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
-            bgColor: 'bg-yellow-500/10',
-            borderColor: 'border-yellow-500/30',
-            textColor: 'text-yellow-700 dark:text-yellow-400',
+            bgColor: "bg-yellow-500/10",
+            borderColor: "border-yellow-500/30",
+            textColor: "text-yellow-700 dark:text-yellow-400",
             label: `BH: Còn ${days} ngày`,
-            message: '⚠️ Bảo hành sắp hết hạn',
+            message: "⚠️ Bảo hành sắp hết hạn",
           };
+        }
 
-        case 'expired':
+        case "expired": {
           const expiredDate = product.warranty_end_date
-            ? format(new Date(product.warranty_end_date), 'dd/MM/yyyy', { locale: vi })
-            : '';
+            ? format(new Date(product.warranty_end_date), "dd/MM/yyyy", {
+                locale: vi,
+              })
+            : "";
           return {
             icon: <IconCircleX className="h-4 w-4 flex-shrink-0" />,
-            bgColor: 'bg-red-500/10',
-            borderColor: 'border-red-500/30',
-            textColor: 'text-red-700 dark:text-red-400',
+            bgColor: "bg-red-500/10",
+            borderColor: "border-red-500/30",
+            textColor: "text-red-700 dark:text-red-400",
             label: `BH: Hết hạn (${expiredDate})`,
-            message: '💡 Sửa chữa có phí - Vui lòng thông báo khách hàng',
+            message: "💡 Sửa chữa có phí - Vui lòng thông báo khách hàng",
           };
+        }
 
-        case 'no_warranty':
+        case "no_warranty":
         default:
           return {
             icon: <IconAlertCircle className="h-4 w-4 flex-shrink-0" />,
-            bgColor: 'bg-gray-500/10',
-            borderColor: 'border-gray-500/30',
-            textColor: 'text-gray-700 dark:text-gray-400',
-            label: 'Không có thông tin BH',
-            message: '💡 Cần xác nhận với khách hàng',
+            bgColor: "bg-gray-500/10",
+            borderColor: "border-gray-500/30",
+            textColor: "text-gray-700 dark:text-gray-400",
+            label: "Không có thông tin BH",
+            message: "💡 Cần xác nhận với khách hàng",
           };
       }
     };
@@ -166,7 +187,7 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
         className={cn(
           "flex items-start gap-3 text-sm p-3 rounded-md border",
           warrantyDisplay.bgColor,
-          warrantyDisplay.borderColor
+          warrantyDisplay.borderColor,
         )}
       >
         {warrantyDisplay.icon}
@@ -176,28 +197,45 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
               {product.name}
             </span>
             <span className="text-xs text-muted-foreground">•</span>
-            <span className={cn("text-xs font-medium", warrantyDisplay.textColor)}>
+            <span
+              className={cn("text-xs font-medium", warrantyDisplay.textColor)}
+            >
               {warrantyDisplay.label}
             </span>
           </div>
 
           {warrantyDisplay.message && (
-            <p className="text-xs text-muted-foreground mt-1">{warrantyDisplay.message}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {warrantyDisplay.message}
+            </p>
           )}
 
           <div className="text-xs text-muted-foreground mt-1.5 space-y-0.5">
-            <div>SKU: {product.sku} • {product.brand}</div>
+            <div>
+              SKU: {product.sku} • {product.brand}
+            </div>
 
             {/* Warranty dates display */}
-            {(product.manufacturer_warranty_end_date || product.user_warranty_end_date) && (
+            {(product.manufacturer_warranty_end_date ||
+              product.user_warranty_end_date) && (
               <div className="space-y-0.5">
                 {product.manufacturer_warranty_end_date && (
                   <div>
-                    BH nhà sản xuất: {format(new Date(product.manufacturer_warranty_end_date), 'dd/MM/yyyy', { locale: vi })}
+                    BH nhà sản xuất:{" "}
+                    {format(
+                      new Date(product.manufacturer_warranty_end_date),
+                      "dd/MM/yyyy",
+                      { locale: vi },
+                    )}
                     {(() => {
-                      const endDate = new Date(product.manufacturer_warranty_end_date);
+                      const endDate = new Date(
+                        product.manufacturer_warranty_end_date,
+                      );
                       const today = new Date();
-                      const daysRemaining = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const daysRemaining = Math.floor(
+                        (endDate.getTime() - today.getTime()) /
+                          (1000 * 60 * 60 * 24),
+                      );
 
                       if (daysRemaining < 0) {
                         const daysExpired = Math.abs(daysRemaining);
@@ -212,11 +250,19 @@ export function SerialLookupResult({ status, product, error }: SerialLookupResul
                 )}
                 {product.user_warranty_end_date && (
                   <div>
-                    BH người dùng: {format(new Date(product.user_warranty_end_date), 'dd/MM/yyyy', { locale: vi })}
+                    BH người dùng:{" "}
+                    {format(
+                      new Date(product.user_warranty_end_date),
+                      "dd/MM/yyyy",
+                      { locale: vi },
+                    )}
                     {(() => {
                       const endDate = new Date(product.user_warranty_end_date);
                       const today = new Date();
-                      const daysRemaining = Math.floor((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const daysRemaining = Math.floor(
+                        (endDate.getTime() - today.getTime()) /
+                          (1000 * 60 * 60 * 24),
+                      );
 
                       if (daysRemaining < 0) {
                         const daysExpired = Math.abs(daysRemaining);

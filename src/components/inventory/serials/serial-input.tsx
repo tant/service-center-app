@@ -6,10 +6,17 @@
  * Features: auto-save, duplicate detection, format validation
  */
 
-import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
+import {
+  AlertCircle,
+  Camera,
+  Check,
+  Clipboard,
+  Loader2,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, AlertCircle, Loader2, Camera, Clipboard } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface SerialInputProps {
@@ -30,7 +37,13 @@ interface SerialInputProps {
   };
 }
 
-type ValidationState = "idle" | "validating" | "valid" | "invalid" | "duplicate" | "saving";
+type ValidationState =
+  | "idle"
+  | "validating"
+  | "valid"
+  | "invalid"
+  | "duplicate"
+  | "saving";
 
 export function SerialInput({
   id,
@@ -49,7 +62,8 @@ export function SerialInput({
   },
 }: SerialInputProps) {
   const [localValue, setLocalValue] = useState(value);
-  const [validationState, setValidationState] = useState<ValidationState>("idle");
+  const [validationState, setValidationState] =
+    useState<ValidationState>("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
@@ -59,13 +73,18 @@ export function SerialInput({
   }, [value]);
 
   // Validate format
-  const validateFormat = (val: string): { isValid: boolean; error?: string } => {
+  const validateFormat = (
+    val: string,
+  ): { isValid: boolean; error?: string } => {
     if (!val) return { isValid: false };
 
     const { minLength, maxLength, pattern } = validationRules;
 
     if (minLength && val.length < minLength) {
-      return { isValid: false, error: `Quá ngắn (tối thiểu ${minLength} ký tự)` };
+      return {
+        isValid: false,
+        error: `Quá ngắn (tối thiểu ${minLength} ký tự)`,
+      };
     }
 
     if (maxLength && val.length > maxLength) {
@@ -109,7 +128,10 @@ export function SerialInput({
           await onChange(newValue);
           setValidationState("valid");
         } catch (error: any) {
-          if (error.message?.includes("duplicate") || error.message?.includes("trùng")) {
+          if (
+            error.message?.includes("duplicate") ||
+            error.message?.includes("trùng")
+          ) {
             setValidationState("duplicate");
             setErrorMessage("Serial đã tồn tại trong hệ thống");
           } else {
@@ -189,10 +211,7 @@ export function SerialInput({
             onChange={handleChange}
             placeholder={placeholder}
             disabled={disabled}
-            className={cn(
-              "pr-10 font-mono",
-              getInputClassName()
-            )}
+            className={cn("pr-10 font-mono", getInputClassName())}
           />
           {/* Status Icon */}
           {!disabled && getStatusIcon() && (
@@ -233,25 +252,26 @@ export function SerialInput({
       </div>
 
       {/* Error/Warning Message */}
-      {errorMessage && (validationState === "invalid" || validationState === "duplicate") && (
-        <p className="text-xs text-red-600 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
-          {errorMessage}
-          {validationState === "duplicate" && (
-            <button
-              type="button"
-              className="underline ml-2"
-              onClick={() => {
-                // Allow keeping anyway (for manual override)
-                setValidationState("valid");
-                setErrorMessage("");
-              }}
-            >
-              Giữ lại
-            </button>
-          )}
-        </p>
-      )}
+      {errorMessage &&
+        (validationState === "invalid" || validationState === "duplicate") && (
+          <p className="text-xs text-red-600 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            {errorMessage}
+            {validationState === "duplicate" && (
+              <button
+                type="button"
+                className="underline ml-2"
+                onClick={() => {
+                  // Allow keeping anyway (for manual override)
+                  setValidationState("valid");
+                  setErrorMessage("");
+                }}
+              >
+                Giữ lại
+              </button>
+            )}
+          </p>
+        )}
 
       {/* Saving Indicator */}
       {validationState === "saving" && (

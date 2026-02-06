@@ -7,11 +7,11 @@
  * - Draft mode: Shows serials with delete button for error correction
  */
 
+import { AlertCircle, Check, Copy, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { StockReceiptSerial } from "@/types/inventory";
-import { Button } from "@/components/ui/button";
-import { Check, Copy, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/components/providers/trpc-provider";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { trpc } from "@/components/providers/trpc-provider";
+import type { StockReceiptSerial } from "@/types/inventory";
 
 interface SerialListAccordionProps {
   serials: StockReceiptSerial[];
@@ -37,9 +37,11 @@ export function SerialListAccordion({
 }: SerialListAccordionProps) {
   const [copiedSerial, setCopiedSerial] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [serialToDelete, setSerialToDelete] = useState<StockReceiptSerial | null>(null);
+  const [serialToDelete, setSerialToDelete] =
+    useState<StockReceiptSerial | null>(null);
 
-  const removeSerialMutation = trpc.inventory.serials.removeSerial.useMutation();
+  const removeSerialMutation =
+    trpc.inventory.serials.removeSerial.useMutation();
 
   if (!serials || serials.length === 0) {
     return null;
@@ -97,63 +99,64 @@ export function SerialListAccordion({
           <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 p-3 text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <span>
-              Bạn có thể xóa serial sai trong chế độ Nháp. Sau khi gửi duyệt, serial không thể xóa.
+              Bạn có thể xóa serial sai trong chế độ Nháp. Sau khi gửi duyệt,
+              serial không thể xóa.
             </span>
           </div>
         )}
 
-            {/* Serial List */}
-            <div className="space-y-2">
-              {serials.map((serial, index) => (
-                <div
-                  key={serial.id}
-                  className="flex items-center justify-between p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors group"
+        {/* Serial List */}
+        <div className="space-y-2">
+          {serials.map((serial, index) => (
+            <div
+              key={serial.id}
+              className="flex items-center justify-between p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors group"
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <span className="text-xs text-muted-foreground font-medium w-6">
+                  {index + 1}.
+                </span>
+                <code className="text-sm font-mono font-medium flex-1 truncate">
+                  {serial.serial_number}
+                </code>
+                <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+              </div>
+
+              <div className="flex items-center gap-1 ml-2">
+                {/* Copy Button - Always visible */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => handleCopy(serial.serial_number)}
+                  title="Copy serial"
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-xs text-muted-foreground font-medium w-6">
-                      {index + 1}.
-                    </span>
-                    <code className="text-sm font-mono font-medium flex-1 truncate">
-                      {serial.serial_number}
-                    </code>
-                    <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  </div>
+                  {copiedSerial === serial.serial_number ? (
+                    <Check className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </Button>
 
-                  <div className="flex items-center gap-1 ml-2">
-                    {/* Copy Button - Always visible */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => handleCopy(serial.serial_number)}
-                      title="Copy serial"
-                    >
-                      {copiedSerial === serial.serial_number ? (
-                        <Check className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-
-                    {/* Delete Button - Only in draft mode */}
-                    {isDraft && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteClick(serial)}
-                        disabled={removeSerialMutation.isPending}
-                        title="Xóa serial"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                {/* Delete Button - Only in draft mode */}
+                {isDraft && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteClick(serial)}
+                    disabled={removeSerialMutation.isPending}
+                    title="Xóa serial"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
 
         {/* Summary Footer */}
         <div className="text-xs text-muted-foreground text-right pt-2 border-t border-border/50">
@@ -170,9 +173,15 @@ export function SerialListAccordion({
               <p>Bạn có chắc chắn muốn xóa serial này?</p>
               {serialToDelete && (
                 <div className="rounded-md bg-muted p-3 mt-2">
-                  <p className="text-sm font-medium text-foreground mb-1">Sản phẩm:</p>
-                  <p className="text-sm text-muted-foreground mb-2">{productName}</p>
-                  <p className="text-sm font-medium text-foreground mb-1">Serial:</p>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Sản phẩm:
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {productName}
+                  </p>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Serial:
+                  </p>
                   <code className="text-sm font-mono text-foreground">
                     {serialToDelete.serial_number}
                   </code>

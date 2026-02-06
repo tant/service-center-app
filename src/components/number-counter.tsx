@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { IconMinus, IconPlus } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 
 interface NumberCounterProps {
   value: number;

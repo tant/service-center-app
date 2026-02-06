@@ -142,6 +142,7 @@ CREATE TABLE "products" (
   "sku" TEXT,
   "short_description" TEXT,
   "primary_image" TEXT,
+  "supplier_name" TEXT, -- Issue #8: Supplier/vendor name (optional, free-text for MVP)
   "warranty_period_months" INTEGER CHECK (warranty_period_months >= 0),
   "is_active" BOOLEAN NOT NULL DEFAULT true,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -158,6 +159,7 @@ CREATE INDEX "products_type_idx" ON "products" USING btree ("type");
 CREATE INDEX "products_brand_id_idx" ON "products" USING btree ("brand_id");
 CREATE INDEX "products_model_idx" ON "products" USING btree ("model");
 CREATE INDEX "products_sku_idx" ON "products" USING btree ("sku");
+CREATE INDEX "products_supplier_name_idx" ON "products" USING btree ("supplier_name"); -- Issue #8
 CREATE INDEX "products_is_active_idx" ON "products" USING btree ("is_active") WHERE is_active = true;
 
 -- Triggers

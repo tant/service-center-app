@@ -10,9 +10,9 @@
 import type { TRPCContext } from "../../trpc";
 import {
   BaseEntityAdapter,
-  type TaskContext,
-  type CanStartResult,
   type CanAssignWorkflowResult,
+  type CanStartResult,
+  type TaskContext,
 } from "./base-adapter";
 
 /**

@@ -63,6 +63,12 @@ const baseData = {
   // Operations section - Daily work
   operations: [
     {
+      title: "Phiếu yêu cầu",
+      url: "/operations/service-requests",
+      icon: IconInbox,
+      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
+    },
+    {
       title: "Phiếu dịch vụ",
       url: "/operations/tickets",
       icon: IconClipboardList,
@@ -72,12 +78,6 @@ const baseData = {
         "technician",
         "reception",
       ] as UserRole[],
-    },
-    {
-      title: "Yêu cầu dịch vụ",
-      url: "/operations/service-requests",
-      icon: IconInbox,
-      allowedRoles: ["admin", "manager", "reception"] as UserRole[],
     },
     {
       title: "Giao hàng",

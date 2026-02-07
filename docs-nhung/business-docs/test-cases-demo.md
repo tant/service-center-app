@@ -51,7 +51,7 @@
 | 11 | TC-INV-001 (Test 1) | Bước 1 | Validation | Ngày nhập: Block future date, chỉ cho phép back date tối đa 7 ngày | Medium | **DONE** |
 | 12 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ button "Bắt đầu nhập serial" | Medium | **DONE** |
 | 13 | TC-INV-001 (Test 1) | Bước 1 | UI | Bỏ "Nhập CSV" trong Nhập số Serial - Phiếu nhập | Low | **DONE** |
-| 14 | TC-INV-001 (Test 1) | Bước 1 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | Open |
+| 14 | TC-INV-001 (Test 1) | Bước 1 | Validation | Cảnh báo khi số serial trùng với serial đã có trong hệ thống | High | **DONE** |
 | 15 | TC-INV-001 (Test 1) | Bước 1 | Feature | Thêm trường "Thời hạn bảo hành hãng" khi nhập phiếu nhập kho | **Critical** | **DONE** |
 | 16 | TC-SALE-001 (Test 2) | Bước 1 | Validation | Ngày xuất: Block future date, chỉ cho phép back date tối đa 7 ngày (như phiếu nhập) | Medium | **DONE** |
 | 17 | TC-SALE-001 (Test 2) | Bước 1 | UI | Bỏ "Nhập CSV" trong chọn Serial - Phiếu xuất (như phiếu nhập) | Low | **DONE** |
@@ -67,7 +67,7 @@
 | 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | Open |
 | 29 | TC-WRN-004 (Test 5B) | Bước 4 | Feature | **Gán thời hạn bảo hành sản phẩm thay thế theo sản phẩm cũ:**<br>Khi đổi mới (Warranty Replacement), thời hạn bảo hành của sản phẩm thay thế phải được gán theo **ngày hết hạn bảo hành của sản phẩm cũ** (không tính lại từ đầu) | High | **DONE** |
 
-> **Tổng:** 29 issues (24 DONE, 5 Open)
+> **Tổng:** 29 issues (25 DONE, 4 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---

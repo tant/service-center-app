@@ -330,6 +330,12 @@ export function TeamTable({
   currentUserRole: UserRole;
 }) {
   const [data, setData] = React.useState(() => initialData);
+
+  // Sync state when initialData changes (e.g. after tRPC cache invalidation)
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});

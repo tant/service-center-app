@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     ],
   },
   // Enable standalone output for Docker deployment
-  // output: "standalone",  // Disabled for local development
+  output: "standalone",
   // Exclude volumes directory from Turbopack file system operations
   turbopack: {
     resolveExtensions: [".mdx", ".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"],

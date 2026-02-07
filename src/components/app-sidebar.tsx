@@ -13,7 +13,6 @@ import {
   IconInbox,
   IconInnerShadowTop,
   IconPackage,
-  IconPhone,
   IconReport,
   IconSettings,
   IconTruckDelivery,
@@ -220,11 +219,6 @@ const baseData = {
       title: "Hướng dẫn",
       url: "#",
       icon: IconHelp,
-    },
-    {
-      title: "Gọi hỗ trợ",
-      url: "https://widata.app",
-      icon: IconPhone,
     },
   ],
 };

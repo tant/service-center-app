@@ -2,6 +2,7 @@
  * Receipts Router - Stock receipt (Phiếu Nhập Kho) management
  */
 
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type {
   StockReceipt,

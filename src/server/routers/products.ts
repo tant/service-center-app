@@ -326,6 +326,36 @@ export const productsRouter = router({
 
       return products || [];
     }),
+
+  /**
+   * Get products with inventory counts for the product table view
+   */
+  getProductsForTable: publicProcedure
+    .use(requireAnyAuthenticated)
+    .query(async ({ ctx }) => {
+      const { data, error } = await ctx.supabaseAdmin
+        .from("products")
+        .select(`
+          *,
+          physical_products(count),
+          brands:brand_id (
+            id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch products: ${error.message}`);
+      }
+
+      return (data || []).map((product: any) => ({
+        ...product,
+        parts_count: 0, // Issue #9: Always 0 for MVP
+        physical_products_count: product.physical_products?.[0]?.count || 0,
+        brand_name: product.brands?.name || null,
+      }));
+    }),
 });
 
 export type ProductsRouter = typeof productsRouter;

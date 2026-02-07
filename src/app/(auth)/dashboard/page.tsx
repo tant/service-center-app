@@ -1,13 +1,9 @@
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { SerialComplianceSection } from "@/components/dashboard/serial-compliance-section";
-import { EmployeePerformanceTable } from "@/components/employee-performance-table";
 import { PageHeader } from "@/components/page-header";
 import { SectionCards } from "@/components/section-cards";
-import { getEmployeePerformance } from "./actions";
+import { EmployeePerformanceSection } from "./employee-performance-section";
 
-export default async function Page() {
-  const employeePerformance = await getEmployeePerformance();
-
+export default function Page() {
   return (
     <>
       <PageHeader title="Dashboard" />
@@ -18,9 +14,8 @@ export default async function Page() {
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive />
             </div>
-            <SerialComplianceSection />
             <div className="px-4 lg:px-6">
-              <EmployeePerformanceTable data={employeePerformance} />
+              <EmployeePerformanceSection />
             </div>
           </div>
         </div>

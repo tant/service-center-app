@@ -4,7 +4,6 @@
  */
 
 export { ProductSerialAccordion } from "./product-serial-accordion";
-export { SerialComplianceWidget } from "./serial-compliance-widget";
 export type { SerialEntryStatus } from "./serial-entry-card";
 export { SerialEntryCard } from "./serial-entry-card";
 export { SerialEntryDrawer } from "./serial-entry-drawer";

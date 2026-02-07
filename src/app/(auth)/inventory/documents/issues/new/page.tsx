@@ -15,6 +15,7 @@ import { trpc } from "@/components/providers/trpc-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,11 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  getMaxAllowedDate,
-  getMinAllowedDate,
-  validateInventoryDocumentDate,
-} from "@/lib/date-validation";
+import { validateInventoryDocumentDate } from "@/lib/date-validation";
 import type { StockIssueReason } from "@/types/inventory";
 
 // Issue #4: Hide adjustment type - only normal issues allowed
@@ -209,14 +206,18 @@ export default function CreateIssuePage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Ngày xuất *</Label>
-                      <Input
-                        type="date"
+                      <Label htmlFor="issue-date">
+                        Ngày xuất *{" "}
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          (VD: 010226)
+                        </span>
+                      </Label>
+                      <DatePicker
+                        id="issue-date"
                         value={issueDate}
-                        onChange={(e) => handleDateChange(e.target.value)}
-                        min={getMinAllowedDate()}
-                        max={getMaxAllowedDate()}
-                        className={dateError ? "border-destructive" : ""}
+                        onChange={handleDateChange}
+                        placeholder="dd/mm/yyyy hoặc click lịch"
+                        disabled={createIssue.isPending}
                       />
                       {dateError && (
                         <p className="text-sm text-destructive">{dateError}</p>

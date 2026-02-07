@@ -7,6 +7,7 @@
 "use client";
 
 import * as React from "react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormDrawer } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,33 +59,28 @@ export function EditProductDrawer({
 
   const { updateProduct, isUpdating } = useUpdatePhysicalProduct();
 
-  // Helper function to format date for input[type="date"]
-  const formatDateForInput = (
-    date: string | Date | null | undefined,
-  ): string => {
-    if (!date) return "";
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return "";
-      // Format as YYYY-MM-DD
-      return d.toISOString().split("T")[0];
-    } catch {
-      return "";
-    }
-  };
-
   // Populate form when product changes
   React.useEffect(() => {
     if (product) {
+      // Helper to format date to ISO string (YYYY-MM-DD) for DatePicker
+      const toISODate = (date: string | Date | null | undefined): string => {
+        if (!date) return "";
+        try {
+          const d = new Date(date);
+          if (isNaN(d.getTime())) return "";
+          return d.toISOString().split("T")[0];
+        } catch {
+          return "";
+        }
+      };
+
       setFormData({
         serial_number: product.serial_number || "",
         condition: product.condition || "",
-        manufacturer_warranty_end_date: formatDateForInput(
+        manufacturer_warranty_end_date: toISODate(
           product.manufacturer_warranty_end_date,
         ),
-        user_warranty_end_date: formatDateForInput(
-          product.user_warranty_end_date,
-        ),
+        user_warranty_end_date: toISODate(product.user_warranty_end_date),
       });
       setErrors({});
     }
@@ -223,65 +219,37 @@ export function EditProductDrawer({
       {/* Manufacturer Warranty End Date */}
       <div className="space-y-2">
         <Label htmlFor="manufacturer_warranty_end_date">
-          Ngày Hết Hạn BH Nhà Máy
+          Ngày Hết Hạn BH Nhà Máy{" "}
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            (VD: 311225)
+          </span>
         </Label>
-        <div className="relative">
-          <Input
-            id="manufacturer_warranty_end_date"
-            type="date"
-            value={formData.manufacturer_warranty_end_date}
-            onChange={(e) =>
-              handleChange("manufacturer_warranty_end_date", e.target.value)
-            }
-            className="w-full cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
-            onClick={(e) => {
-              // Ensure date picker opens on click
-              const input = e.currentTarget;
-              if (input.showPicker) {
-                try {
-                  input.showPicker();
-                } catch (error) {
-                  // Fallback: let browser handle it
-                  console.log("showPicker not supported");
-                }
-              }
-            }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Format: YYYY-MM-DD (VD: 2025-12-31)
-        </p>
+        <DatePicker
+          id="manufacturer_warranty_end_date"
+          value={formData.manufacturer_warranty_end_date}
+          onChange={(value) =>
+            handleChange("manufacturer_warranty_end_date", value)
+          }
+          placeholder="dd/mm/yyyy hoặc click lịch"
+          disabled={isUpdating}
+        />
       </div>
 
       {/* User Warranty End Date */}
       <div className="space-y-2">
-        <Label htmlFor="user_warranty_end_date">Ngày Hết Hạn BH User</Label>
-        <div className="relative">
-          <Input
-            id="user_warranty_end_date"
-            type="date"
-            value={formData.user_warranty_end_date}
-            onChange={(e) =>
-              handleChange("user_warranty_end_date", e.target.value)
-            }
-            className="w-full cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
-            onClick={(e) => {
-              // Ensure date picker opens on click
-              const input = e.currentTarget;
-              if (input.showPicker) {
-                try {
-                  input.showPicker();
-                } catch (error) {
-                  // Fallback: let browser handle it
-                  console.log("showPicker not supported");
-                }
-              }
-            }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Format: YYYY-MM-DD (VD: 2026-12-31)
-        </p>
+        <Label htmlFor="user_warranty_end_date">
+          Ngày Hết Hạn BH User{" "}
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            (VD: 311226)
+          </span>
+        </Label>
+        <DatePicker
+          id="user_warranty_end_date"
+          value={formData.user_warranty_end_date}
+          onChange={(value) => handleChange("user_warranty_end_date", value)}
+          placeholder="dd/mm/yyyy hoặc click lịch"
+          disabled={isUpdating}
+        />
       </div>
     </FormDrawer>
   );

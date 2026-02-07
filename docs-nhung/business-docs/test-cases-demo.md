@@ -64,10 +64,10 @@
 | 25 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Lý do nhập kho" chỉ hiển thị: Nhập mua hàng, Nhập RMA về (ẩn các lý do khác) | Medium | **DONE** |
 | 26 | TC-INV-001 (Test 1) | Bước 1 | UI | Dropdown "Kho nhập" chỉ hiển thị: Kho Chính + Kho Bảo Hành (ẩn các kho khác) | Medium | **DONE** |
 | 27 | TC-INV-001 (Test 1) | Bước 1 | Bug | Trường số lượng: khi xóa số mặc định (1) thì hiển thị cứng số 0, cần cho phép xóa toàn bộ để nhập lại | Low | Open |
-| 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | Open |
+| 28 | TC-INV-001 (Test 1) | Bước 1 | UX | Trường ngày tháng: cho phép nhập tự do theo format dd/mm/yy, tự động thêm dấu `/` phân cách và hiển thị lịch theo best practice | Medium | **DONE** |
 | 29 | TC-WRN-004 (Test 5B) | Bước 4 | Feature | **Gán thời hạn bảo hành sản phẩm thay thế theo sản phẩm cũ:**<br>Khi đổi mới (Warranty Replacement), thời hạn bảo hành của sản phẩm thay thế phải được gán theo **ngày hết hạn bảo hành của sản phẩm cũ** (không tính lại từ đầu) | High | **DONE** |
 
-> **Tổng:** 29 issues (25 DONE, 4 Open)
+> **Tổng:** 29 issues (26 DONE, 3 Open)
 > **Validation cho SĐT và Email** → Đã chuyển sang [Improvements & Feature Requests](./improvements-feature-requests.md)
 
 ---

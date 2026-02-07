@@ -3,6 +3,7 @@
  * SIMPLIFIED: No draft/approval workflow - all issues are completed immediately
  */
 
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { StockIssueWithRelations } from "@/types/inventory";
 import { requireManagerOrAbove } from "../../middleware/requireRole";

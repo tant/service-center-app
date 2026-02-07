@@ -67,16 +67,9 @@ supabase/storage/*
 !supabase/storage/service_videos/.gitkeep
 
 # linh tinh AI
-.bmad-core
-_bmad
-.claude
 .vscode
 .gemini
 .codex
-.bmad
-GEMINI.md
-CLAUDE.md
-AGENTS.md
 
 # Playwright
 node_modules/

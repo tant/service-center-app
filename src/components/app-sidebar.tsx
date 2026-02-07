@@ -134,14 +134,13 @@ const baseData = {
       ] as UserRole[],
       readOnly: ["technician", "reception"] as UserRole[],
     },
-    // Issue #9: Hidden - Parts feature is disabled for MVP
-    // {
-    //   title: "Danh mục linh kiện",
-    //   url: "/catalog/parts",
-    //   icon: IconComponents,
-    //   allowedRoles: ["admin", "manager", "technician"] as UserRole[],
-    //   readOnly: ["technician"] as UserRole[],
-    // },
+    {
+      title: "Danh mục linh kiện",
+      url: "/catalog/parts",
+      icon: IconComponents,
+      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+      readOnly: ["technician"] as UserRole[],
+    },
     {
       title: "Nhãn hàng",
       url: "/catalog/brands",

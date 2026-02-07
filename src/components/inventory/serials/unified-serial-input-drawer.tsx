@@ -215,34 +215,27 @@ export function UnifiedSerialInputDrawer({
       setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Save error:", error);
       setProcessingProgress(null);
 
-      if (error.message) {
-        const errorMsg = error.message;
+      // Check if it's a tRPC validation error (CONFLICT, BAD_REQUEST, NOT_FOUND)
+      const isValidationError = ["CONFLICT", "BAD_REQUEST", "NOT_FOUND"].includes(
+        error.data?.code,
+      );
 
-        if (
-          errorMsg.includes("Duplicate") ||
-          errorMsg.includes("not found") ||
-          errorMsg.includes("already")
-        ) {
-          const errors: ValidationError[] = inputSerials
-            .map((serial) => ({
-              serial,
-              error: errorMsg.includes(serial) ? errorMsg : "",
-            }))
-            .filter((e) => e.error);
+      // Only log system errors to console, not validation errors
+      if (!isValidationError) {
+        console.error("System error:", error);
+      }
 
-          if (errors.length > 0) {
-            setValidationErrors(errors);
-          } else {
-            toast.error(errorMsg);
-          }
-        } else {
-          toast.error(errorMsg);
-        }
+      const errorMsg = error.message || "Không thể lưu serial";
+
+      // Handle validation errors with better UX
+      if (isValidationError) {
+        // Show user-friendly validation message
+        toast.error(errorMsg);
       } else {
-        toast.error("Không thể lưu serial");
+        // System errors - show generic message
+        toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
       }
 
       // Show how many were saved before error

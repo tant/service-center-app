@@ -372,7 +372,7 @@ export function UnifiedSerialInputDrawer({
       onOpenChange={onOpenChange}
       direction={isMobile ? "bottom" : "right"}
     >
-      <DrawerContent className="overflow-visible flex flex-col max-h-[95vh]">
+      <DrawerContent className="overflow-visible flex flex-col h-full">
         {/* Header with inline progress */}
         <DrawerHeader className="pb-2">
           <div className="flex items-center justify-between">

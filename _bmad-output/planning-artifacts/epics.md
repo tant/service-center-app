@@ -2,7 +2,7 @@
 stepsCompleted: [step-01-validate-prerequisites, step-01-requirements-confirmed, step-02-epics-approved, step-03-stories-created, step-04-final-validation]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
-  - _bmad-output/planning-artifacts/architecture.md
+  - _bmad-output/planning-artifacts/architecture/ (sharded)
   - _bmad-output/planning-artifacts/ux-design-specification.md
   - (codebase analysis - current source code, 322 TS files, 177 components, 47 pages)
 projectContext: brownfield
@@ -141,6 +141,10 @@ This document provides the epic and story breakdown for service-center-app, focu
 
 **From Architecture:**
 - Sentry integration (client + server + edge) — NOT IMPLEMENTED (6 files needed)
+- Production Docker Compose — NEEDS RECREATION (old file deleted, new one based on ~14 Supabase services + Caddy/Tailscale topology)
+- Production Dockerfile — NEEDS RECREATION (old file deleted)
+- Caddyfile template — NEEDS CREATION (reverse proxy on public VPS, auto-TLS via Let's Encrypt)
+- Type generation npm script (`gen:types`) — MISSING from package.json
 - CI/CD pipeline — DEFERRED (post go-live)
 - Automated testing — DEFERRED (post go-live)
 - Console.log cleanup → proper error handling — NOT DONE
@@ -158,7 +162,7 @@ This document provides the epic and story breakdown for service-center-app, focu
 - Warehouse analytics hooks (use-warehouse.ts) — 4 stubs: movement tracking, analytics queries, movement history
 - Task execution logic (use-workflow.ts) — 3 stubs: execution, progress tracking, status validation
 - Supabase Storage integration — photo/document uploads are placeholder
-- Delivery management — page exists, feature completion needed
+- Delivery management — core confirm flow works, SignatureCanvas NOT integrated into modal, bulk confirm NOT wired, delivery method NOT prompted in confirmation
 
 ### FR Coverage Map
 
@@ -178,9 +182,13 @@ This document provides the epic and story breakdown for service-center-app, focu
 | FR56 | Epic 4 | Nhập kho rma_return liên kết lô RMA |
 | NFR9 | Epic 6 | API rate limiting |
 | Arch | Epic 5 | Sentry error monitoring integration |
+| Arch | Epic 6 | Production infra: Docker Compose + Dockerfile + Caddy/Tailscale |
+| Arch | Epic 6 | Type generation npm script (gen:types) |
 | UX | Epic 6 | Accessibility improvements |
+| Codebase | Epic 2 | Delivery workflow completion (signature, bulk confirm, delivery method) |
 | Codebase | Epic 3 | Warranty tracking hooks |
 | Codebase | Epic 6 | Warehouse analytics hooks |
+| UX | Epic 6 | Staff notification center dropdown (bell icon) |
 
 ## Epic List
 
@@ -189,8 +197,8 @@ Staff và khách hàng có thể upload ảnh/tài liệu cho phiếu yêu cầu
 **FRs covered:** FR24, FR39, FR47
 
 ### Epic 2: Task Execution & Ticket Completion Workflow
-Kỹ thuật viên hoàn thành full workflow sửa chữa — chẩn đoán → chọn kết quả (repaired/replacement/unrepairable) → auto stock movements → phiếu tự đóng. Đây là **defining interaction** của app.
-**FRs covered:** FR34, FR35, FR41, FR46
+Kỹ thuật viên hoàn thành full workflow sửa chữa — chẩn đoán → chọn kết quả (repaired/replacement/unrepairable) → auto stock movements → phiếu tự đóng → delivery confirmation với signature capture. Đây là **defining interaction** của app.
+**FRs covered:** FR34, FR35, FR41, FR46 + Delivery workflow completion
 
 ### Epic 3: Warranty Verification & Monitoring
 Hệ thống tự xác minh bảo hành khi tạo phiếu, cảnh báo sản phẩm sắp hết hạn, cung cấp warranty analytics. Wire các warranty hooks hiện đang là stub.
@@ -205,8 +213,8 @@ Team vận hành có visibility vào lỗi hệ thống qua Sentry — client-si
 **FRs covered:** Architecture requirement (6 files)
 
 ### Epic 6: Production Readiness & Polish
-Hệ thống đạt chuẩn production — accessible (prefers-reduced-motion, skip links, lang="vi"), min stock threshold UI, warehouse analytics, API rate limiting, console.log cleanup.
-**FRs covered:** FR14, NFR9 + UX accessibility gaps + codebase cleanup
+Hệ thống đạt chuẩn production — Docker Compose + Dockerfile + Caddy/Tailscale topology + backup scripts, accessible (prefers-reduced-motion, skip links, lang="vi"), staff notification center (bell icon), min stock threshold UI, warehouse analytics, API rate limiting, console.log cleanup, gen:types script.
+**FRs covered:** FR14, NFR9 + Architecture gaps (Docker, Caddy, gen:types, backup) + UX gaps (accessibility, notification center) + codebase cleanup
 
 ---
 
@@ -214,20 +222,25 @@ Hệ thống đạt chuẩn production — accessible (prefers-reduced-motion, s
 
 Staff và khách hàng có thể upload ảnh/tài liệu cho phiếu yêu cầu, phiếu dịch vụ, và tasks — Supabase Storage integration thay thế placeholder hiện tại.
 
-### Story 1.1: Supabase Storage Infrastructure & Upload API
+### Story 1.1: Supabase Storage Upload API (Wire Existing Buckets)
 
 As a developer,
-I want a configured Supabase Storage bucket with upload/download tRPC procedures,
-So that all file upload features have a shared foundation.
+I want tRPC procedures that wrap Supabase Storage SDK for the existing configured buckets,
+So that all file upload features have a shared, type-safe foundation.
 
 **Acceptance Criteria:**
 
-**Given** the system has Supabase configured
-**When** a storage bucket "attachments" is created with RLS policies
-**Then** authenticated users can upload files up to 10MB (images: jpg/png/webp, docs: pdf)
-**And** files are organized by entity type: `service-requests/{id}/`, `tickets/{id}/`, `tasks/{id}/`
+**Given** Supabase Storage has 4 buckets already configured in `config.toml` with RLS policies in `802_storage_policies.sql`:
+- `service_media` (10MB, image/*, public) — service request/ticket attachments
+- `service_videos` (200MB, video/*, public) — task video recordings
+- `avatars` (5MB, image/*, public) — user profile pictures
+- `product_images` (5MB, image/*, public) — product catalog
+
+**When** tRPC upload procedures are created
+**Then** procedures wrap Supabase Storage SDK calls (`.from(bucket).upload()`, `.createSignedUrl()`, `.remove()`)
+**And** files are organized by entity type within buckets: `{entity_type}/{id}/{filename}`
 **And** tRPC procedures `upload.getSignedUrl`, `upload.deleteFile`, `upload.listFiles` are available
-**And** RLS policies restrict file access to users with appropriate roles
+**And** existing RLS storage policies are validated (authenticated upload/read per bucket)
 
 ### Story 1.2: Service Request Photo Uploads (FR24)
 
@@ -239,10 +252,10 @@ So that technicians can see the issue before receiving the product.
 
 **Given** a user is creating/editing a service request with items
 **When** they select photos via the existing upload UI
-**Then** photos are uploaded to Supabase Storage under `service-requests/{id}/`
+**Then** photos are uploaded to `service_media` bucket under `service-requests/{id}/`
 **And** photo previews display in the form and on the detail page
 **And** public service request form supports camera capture on mobile
-**And** maximum 5 photos per item, each up to 5MB
+**And** maximum 5 photos per item, each up to 10MB (per `config.toml` bucket limit)
 
 ### Story 1.3: Service Ticket Attachments (FR39)
 
@@ -254,7 +267,7 @@ So that diagnostic photos, repair docs, and other evidence are linked to the tic
 
 **Given** a staff member is viewing a service ticket detail page
 **When** they upload attachments via the existing attachment UI
-**Then** files are stored under `tickets/{id}/`
+**Then** files are stored in `service_media` bucket under `tickets/{id}/`
 **And** attachments display with filename, size, upload date, and preview (images)
 **And** download and delete actions are available (role-permissioned)
 **And** audit log records attachment additions/deletions
@@ -269,7 +282,7 @@ So that I can document my work (diagnostic photos, repair evidence).
 
 **Given** a technician is working on a task (My Tasks or task detail)
 **When** they upload files via the task attachment UI
-**Then** files are stored under `tasks/{id}/`
+**Then** photos are stored in `service_media` bucket under `tasks/{id}/`, videos in `service_videos` bucket (up to 200MB)
 **And** camera capture works on mobile for quick photo documentation
 **And** attachments are visible on the task card and in the ticket detail view
 **And** task completion can reference attached evidence
@@ -278,9 +291,9 @@ So that I can document my work (diagnostic photos, repair evidence).
 
 ## Epic 2: Task Execution & Ticket Completion Workflow
 
-Kỹ thuật viên hoàn thành full workflow sửa chữa. Backend (tasks.ts, tickets.ts, task-service.ts) đã hoàn chỉnh — epic này focus vào wire client-side hooks và cleanup legacy code.
+Kỹ thuật viên hoàn thành full workflow sửa chữa. Backend (tasks.ts, tickets.ts, task-service.ts) đã hoàn chỉnh — epic này focus vào wire client-side hooks, cleanup legacy code, và hoàn thiện delivery confirmation workflow (signature capture, bulk confirm).
 
-**Note:** Deep analysis cho thấy setOutcome, auto stock movements, replacement picker, task start/complete/block/skip đều đã implemented ở backend. Gap chỉ ở client hooks.
+**Note:** Deep analysis cho thấy setOutcome, auto stock movements, replacement picker, task start/complete/block/skip đều đã implemented ở backend. Gap chỉ ở client hooks + delivery completion.
 
 ### Story 2.1: Wire Task Execution Hooks to Existing API
 
@@ -310,6 +323,29 @@ So that there's a single source of truth for task operations via `tasks.ts`.
 **Then** all UI components use `tasks.*` procedures instead of `workflow.*` equivalents
 **And** legacy procedures are removed or marked deprecated
 **And** no functionality is lost during migration
+
+### Story 2.3: Delivery Confirmation Workflow Completion
+
+As a reception staff,
+I want the delivery confirmation to capture customer signature, prompt delivery method, and support bulk operations,
+So that the handoff is properly documented and efficient for high-volume days.
+
+**Acceptance Criteria:**
+
+**Given** a ticket has status `ready_for_pickup` and appears on the deliveries page (`/operations/deliveries`)
+**When** staff clicks "Xác nhận bàn giao" on a ticket
+**Then** the DeliveryConfirmationModal prompts delivery method selection (pickup/delivery) using the existing `delivery_method` enum
+**And** the existing SignatureCanvas component (`signature-canvas.tsx`) is integrated into the modal for customer signature capture
+**And** the signature image is stored in `service_media` bucket under `deliveries/{ticket_id}/signature.png`
+**And** if delivery method is "delivery", delivery address is captured or auto-filled from the linked service request
+**And** the `confirmDelivery` mutation is extended with `delivery_method` and `signature_url` fields
+**And** audit log records delivery method, signature reference, and delivery notes
+
+**Given** multiple tickets are selected via checkboxes in DeliveryTable
+**When** staff clicks a bulk confirmation action
+**Then** a bulk confirmation modal shows the list of selected tickets for review
+**And** a `confirmBulkDelivery` tRPC procedure processes all selected tickets in a single transaction
+**And** success/failure feedback shows per-ticket results
 
 ---
 
@@ -398,7 +434,7 @@ So that I can debug issues effectively while respecting privacy.
 
 ## Epic 6: Production Readiness & Polish
 
-Hệ thống đạt chuẩn production — accessible, monitored, sạch logs, rate-limited. Tập hợp các gap nhỏ còn lại.
+Hệ thống đạt chuẩn production — Docker infra (Compose, Dockerfile, Caddy/Tailscale topology, backup scripts), accessible, staff notification center, monitored, sạch logs, rate-limited. Tập hợp các gap còn lại.
 
 ### Story 6.1: Accessibility Improvements
 
@@ -430,7 +466,35 @@ So that I can reorder before running out of warranty replacement stock.
 **And** the dashboard shows a low-stock alert widget (count + link to filtered view)
 **And** warehouse analytics hooks (`use-warehouse.ts` stubs) are wired to existing views
 
-### Story 6.3: API Rate Limiting & Console Cleanup (NFR9)
+### Story 6.3: Production Infrastructure (Docker Compose + Caddy + Tailscale)
+
+As a developer,
+I want a production-ready Docker Compose, Dockerfile, and deployment config recreated based on the updated architecture,
+So that the system can be deployed on the internal machine and accessed via Caddy public VPS through Tailscale.
+
+**Acceptance Criteria:**
+
+**Given** the production topology is: Caddy (public VPS) → Tailscale tunnel → Internal machine (Docker Compose)
+**When** infrastructure files are created based on the architecture document
+
+**Docker Compose & Dockerfile (internal machine):**
+**Then** `docker-compose.yml` includes ~14 Supabase services (db, kong, auth, rest, realtime, storage, imgproxy, meta, functions, analytics, vector, studio, supavisor, mail) + Next.js app
+**And** `Dockerfile` builds Next.js in standalone mode (BUILD_STANDALONE=true)
+**And** optional services (analytics, vector, realtime, edge-runtime) can be disabled for resource savings
+**And** port mapping: 3025 (Next.js app), 8000 (Kong HTTP) — only accessible via Tailscale, not exposed to internet
+**And** `gen:types` npm script is added to package.json: `supabase gen types --local --lang typescript > src/types/database.types.ts`
+
+**Caddy & Tailscale (public VPS):**
+**And** a `docker/caddy/Caddyfile` template is included with two reverse proxy rules: `sc.sstc.cloud` → `{tailscale-ip}:3025`, `spb.sstc.cloud` → `{tailscale-ip}:8000`
+**And** Caddy handles TLS termination via Let's Encrypt auto-provisioning (no manual cert management)
+
+**Environment & Scripts:**
+**And** `.env.docker.example` includes all required environment variables with topology-aware values: `SITE_URL=https://sc.sstc.cloud`, `API_EXTERNAL_URL=https://spb.sstc.cloud`, `SUPABASE_URL=http://localhost:8000` (server-side internal)
+**And** `.env.docker.example` includes SMTP production config section (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SENDER_NAME)
+**And** a `scripts/backup.sh` script implements `pg_dump` scheduled backup (cron-compatible, 30-day retention per NFR13)
+**And** a `scripts/generate-secrets.sh` script generates all required secrets (JWT_SECRET, ANON_KEY, SERVICE_ROLE_KEY, SECRET_KEY_BASE, VAULT_ENC_KEY)
+
+### Story 6.4: API Rate Limiting & Console Cleanup (NFR9)
 
 As an admin,
 I want API endpoints protected by rate limiting and production logs cleaned up,
@@ -444,3 +508,26 @@ So that the system is resilient against abuse and logs are meaningful.
 **And** rate limit exceeded returns HTTP 429 with Vietnamese error message
 **And** `console.log` statements throughout the codebase are removed or replaced with proper error handling
 **And** only intentional logging remains (error boundaries, critical operations)
+
+### Story 6.5: Staff Notification Center (Bell Icon Dropdown)
+
+As a staff member,
+I want a notification bell icon in the page header with a dropdown showing recent events,
+So that I'm aware of new assignments, pending deliveries, and important updates without navigating away.
+
+**Acceptance Criteria:**
+
+**Given** a staff member is logged in on any authenticated page
+**When** the PageHeader renders
+**Then** a bell icon displays next to the clock with an unread count badge (real-time, refetch every 30s)
+**And** clicking the bell opens a Popover dropdown showing recent notifications (newest first, max 10)
+**And** each notification shows: icon, title, relative time ("5 phút trước"), and links to the related entity
+
+**Given** the notification system needs backend support
+**When** the feature is implemented
+**Then** a `staff_notifications` table is created with fields: `id`, `user_id`, `type`, `title`, `message`, `entity_type`, `entity_id`, `read_at`, `created_at`
+**And** tRPC procedures are added: `notifications.getStaffNotifications`, `notifications.markRead`, `notifications.markAllRead`, `notifications.getUnreadCount`
+**And** notifications are generated for events: task assigned to user, ticket status changed on assigned ticket, delivery pending, low stock alert
+**And** "Đánh dấu tất cả đã đọc" action clears the unread badge
+**And** "Xem tất cả" link navigates to a full notifications list page
+**And** notification creation hooks into existing audit log / mutation flows (no separate event bus needed)

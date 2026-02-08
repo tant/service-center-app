@@ -47,7 +47,7 @@ const baseData = {
   // Overview section - Dashboard
   overview: [
     {
-      title: "Dashboard",
+      title: "Tổng quan",
       url: "/dashboard",
       icon: IconDashboard,
       allowedRoles: ["admin", "manager"] as UserRole[],
@@ -134,13 +134,14 @@ const baseData = {
       ] as UserRole[],
       readOnly: ["technician", "reception"] as UserRole[],
     },
-    {
-      title: "Danh mục linh kiện",
-      url: "/catalog/parts",
-      icon: IconComponents,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
-      readOnly: ["technician"] as UserRole[],
-    },
+    // Hidden: Parts catalog
+    // {
+    //   title: "Danh mục linh kiện",
+    //   url: "/catalog/parts",
+    //   icon: IconComponents,
+    //   allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+    //   readOnly: ["technician"] as UserRole[],
+    // },
     {
       title: "Nhãn hàng",
       url: "/catalog/brands",

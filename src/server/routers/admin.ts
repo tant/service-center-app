@@ -69,7 +69,9 @@ export const adminRouter = router({
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminPassword = process.env.ADMIN_PASSWORD;
         const adminName = process.env.ADMIN_NAME;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        // Use internal SUPABASE_URL for server-side (Docker network) or fall back to public URL
+        const supabaseUrl =
+          process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
         console.log("🔧 MUTATION: Environment variables check:");

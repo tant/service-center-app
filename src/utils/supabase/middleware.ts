@@ -9,11 +9,12 @@ const simultaneousRequests = new Set<string>();
 
 // Validate environment variables and throw errors if missing
 function validateSupabaseConfig(): void {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const missing: string[] = [];
-  if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!url) missing.push("SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL");
   if (!anonKey) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   if (missing.length > 0) {
@@ -26,6 +27,7 @@ function validateSupabaseConfig(): void {
     url: `${url?.substring(0, 40)}...`,
     hasKey: !!anonKey,
     isLocal: url?.includes("localhost") || url?.includes("127.0.0.1"),
+    usingInternalUrl: !!process.env.SUPABASE_URL,
   });
 }
 
@@ -56,7 +58,9 @@ export async function updateSession(request: NextRequest) {
     // Validate environment variables first - throw error if missing
     validateSupabaseConfig();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    // Use internal SUPABASE_URL for server-side (Docker network) or fall back to public URL
+    const supabaseUrl =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     console.log(`🔄 [MIDDLEWARE-${requestId}] Environment variables:`, {

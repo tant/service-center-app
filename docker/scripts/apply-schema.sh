@@ -40,23 +40,11 @@ echo -e "${BLUE}📊 Database Status:${NC}"
 docker compose ps db
 echo ""
 
-# Schema files in order
-SCHEMA_FILES=(
-    "00_base_types.sql"
-    "00_base_functions.sql"
-    "core_01_profiles.sql"
-    "core_02_customers.sql"
-    "core_03_brands.sql"
-    "core_04_products.sql"
-    "core_05_parts.sql"
-    "core_06_product_parts.sql"
-    "core_07_service_tickets.sql"
-    "core_08_service_ticket_parts.sql"
-    "core_09_service_ticket_comments.sql"
-    "core_10_service_ticket_attachments.sql"
-    "functions_inventory.sql"
-    "storage_policies.sql"
-)
+# Auto-detect all schema files in numerical order (100-900)
+# Files are processed in order: 100 (ENUMs) → 150 (Functions) → 200-206 (Tables)
+# → 300-301 (Constraints) → 500-502 (Functions) → 600-610 (Triggers)
+# → 700-701 (Views) → 800-802 (RLS) → 900-903 (Seed)
+SCHEMA_FILES=($(cd docs/data/schemas && ls [1-9]*.sql 2>/dev/null | sort -V))
 
 echo -e "${YELLOW}⚠️  This will apply schema files to the production database${NC}"
 echo -e "${YELLOW}   Make sure you have a backup before proceeding!${NC}"
@@ -106,12 +94,30 @@ echo ""
 
 # Verify tables
 echo -e "${BLUE}Tables created:${NC}"
-docker compose exec -T db psql -U postgres -d postgres -c "\dt public.*" | grep -E "profiles|customers|products|parts|service_tickets" || echo "  (checking...)"
+TABLE_COUNT=$(docker compose exec -T db psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';" 2>/dev/null || echo "0")
+if [ "$TABLE_COUNT" -ge 30 ]; then
+    echo -e "${GREEN}  ✓ $TABLE_COUNT tables created${NC}"
+else
+    echo -e "${YELLOW}  ⚠️  Only $TABLE_COUNT tables found (expected 30+)${NC}"
+fi
 
 echo ""
 echo -e "${BLUE}Storage policies:${NC}"
-POLICY_COUNT=$(docker compose exec -T db psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'storage';" 2>/dev/null || echo "0")
-echo "  Found $POLICY_COUNT storage policies"
+POLICY_COUNT=$(docker compose exec -T db psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage';" 2>/dev/null || echo "0")
+if [ "$POLICY_COUNT" -gt 0 ]; then
+    echo -e "${GREEN}  ✓ $POLICY_COUNT storage policies active${NC}"
+else
+    echo -e "${YELLOW}  ⚠️  No storage policies found${NC}"
+fi
+
+echo ""
+echo -e "${BLUE}RBAC functions:${NC}"
+RBAC_COUNT=$(docker compose exec -T db psql -U postgres -d postgres -tAc "SELECT COUNT(*) FROM pg_proc WHERE proname IN ('get_my_role', 'has_role', 'has_any_role');" 2>/dev/null || echo "0")
+if [ "$RBAC_COUNT" -ge 3 ]; then
+    echo -e "${GREEN}  ✓ $RBAC_COUNT RBAC functions verified${NC}"
+else
+    echo -e "${YELLOW}  ⚠️  Only $RBAC_COUNT RBAC functions found${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}🎉 Schema deployment completed!${NC}"

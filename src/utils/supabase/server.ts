@@ -35,8 +35,13 @@ export async function createClient() {
   let getAllCallCount = 0;
   let setAllCallCount = 0;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  // Use internal SUPABASE_URL for server-side (Docker network) or fall back to public URL
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  console.log(`🔧 [SERVER-${clientId}] Using Supabase URL: ${supabaseUrl?.substring(0, 30)}...`);
+  console.log(`🔧 [SERVER-${clientId}] Using internal URL: ${!!process.env.SUPABASE_URL}`);
 
   const client = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

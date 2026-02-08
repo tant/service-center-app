@@ -213,13 +213,8 @@ const baseData = {
       allowedRoles: ["admin"] as UserRole[],
     },
   ],
-  navSecondary: [
-    {
-      title: "Hướng dẫn",
-      url: "#",
-      icon: IconHelp,
-    },
-  ],
+  // Hidden for production - support and help pages not ready
+  navSecondary: [],
 };
 
 function getFilteredData(userRole: UserRole = "reception") {
@@ -363,7 +358,8 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
               />
             )}
 
-            <NavSecondary items={data.navSecondary} className="mt-auto" />
+            {/* Hidden for production - support and help pages not ready */}
+            {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
           </>
         )}
       </SidebarContent>

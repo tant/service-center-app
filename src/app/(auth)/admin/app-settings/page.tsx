@@ -19,22 +19,6 @@ export default function AdminAppSettingsPage() {
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <Card>
               <CardHeader>
-                <CardTitle>Cài đặt chung</CardTitle>
-                <CardDescription>
-                  Thiết lập cấu hình cho ứng dụng
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Đây là trang tạm cho phần Cài đặt Ứng dụng. Tôi sẽ thêm các
-                  mục cấu hình (ví dụ: tên ứng dụng, chế độ bảo trì, tích hợp
-                  3rd party) khi có yêu cầu.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
                 <CardTitle>Thông tin hệ thống</CardTitle>
                 <CardDescription>
                   Trạng thái và thông tin hữu ích
@@ -45,12 +29,12 @@ export default function AdminAppSettingsPage() {
                   <div>
                     <div className="text-sm font-medium">Phiên bản</div>
                     <div className="text-sm text-muted-foreground">
-                      0.0.0-dev
+                      1.0.0
                     </div>
                   </div>
                   <div>
                     <div className="text-sm font-medium">Môi trường</div>
-                    <div className="text-sm text-muted-foreground">local</div>
+                    <div className="text-sm text-muted-foreground">production</div>
                   </div>
                 </div>
               </CardContent>

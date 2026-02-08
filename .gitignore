@@ -52,7 +52,6 @@ next-env.d.ts
 /.claude
 /.specify
 /.vscode/
-CLAUDE.md
 QWEN.md
 
 # Docker runtime data
@@ -65,11 +64,6 @@ supabase/storage/*
 !supabase/storage/product_images/.gitkeep
 !supabase/storage/service_media/.gitkeep
 !supabase/storage/service_videos/.gitkeep
-
-# linh tinh AI
-.vscode
-.gemini
-.codex
 
 # Playwright
 node_modules/

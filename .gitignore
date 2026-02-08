@@ -47,14 +47,6 @@ INSTANCE_INFO.txt
 *.tsbuildinfo
 next-env.d.ts
 
-# local and AI assistant artifacts
-/.github/prompts/
-/.claude
-/.specify
-/.vscode/
-CLAUDE.md
-QWEN.md
-
 # Docker runtime data
 volumes/
 
@@ -65,18 +57,6 @@ supabase/storage/*
 !supabase/storage/product_images/.gitkeep
 !supabase/storage/service_media/.gitkeep
 !supabase/storage/service_videos/.gitkeep
-
-# linh tinh AI
-.bmad-core
-_bmad
-.claude
-.vscode
-.gemini
-.codex
-.bmad
-GEMINI.md
-CLAUDE.md
-AGENTS.md
 
 # Playwright
 node_modules/

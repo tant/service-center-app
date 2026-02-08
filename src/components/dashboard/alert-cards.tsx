@@ -3,6 +3,7 @@
 import {
   IconAlertCircle,
   IconAlertTriangle,
+  IconInfoCircle,
   IconPackage,
   IconUsersGroup,
 } from "@tabler/icons-react";
@@ -17,12 +18,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
  * AlertCards - Display critical alerts grid
- * Shows: Overdue tickets, Aging tickets, Low stock items, Workload imbalance
- * Pattern: Reuses card layout with click-through navigation
+ * Shows: Overdue tickets, Aging tickets, Low stock items, Workflow bottlenecks
+ * Pattern: Reuses card layout with click-through navigation and info tooltips
  */
 export function AlertCards() {
   // Get critical alerts with 30s refresh (as per plan)
@@ -61,6 +67,14 @@ export function AlertCards() {
             <CardDescription className="flex items-center gap-2">
               <IconAlertCircle className="size-4 text-red-600" />
               <span>Phiếu dịch vụ quá hạn</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconInfoCircle className="size-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Số phiếu dịch vụ đã quá 7 ngày chưa hoàn thành
+                </TooltipContent>
+              </Tooltip>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -113,6 +127,14 @@ export function AlertCards() {
             <CardDescription className="flex items-center gap-2">
               <IconAlertTriangle className="size-4 text-yellow-600" />
               <span>Phiếu dịch vụ đọng lâu</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconInfoCircle className="size-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Phiếu từ 5-7 ngày chưa cập nhật trạng thái
+                </TooltipContent>
+              </Tooltip>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -176,6 +198,14 @@ export function AlertCards() {
             <CardDescription className="flex items-center gap-2">
               <IconPackage className="size-4 text-orange-600" />
               <span>Vật tư sắp hết</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconInfoCircle className="size-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Vật tư có tồn kho dưới mức tối thiểu
+                </TooltipContent>
+              </Tooltip>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -225,7 +255,15 @@ export function AlertCards() {
           <CardHeader>
             <CardDescription className="flex items-center gap-2">
               <IconUsersGroup className="size-4 text-blue-600" />
-              <span>Khối lượng công việc không cân bằng</span>
+              <span>Tắc nghẽn quy trình</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconInfoCircle className="size-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Số giai đoạn xử lý có quá nhiều phiếu (trên 50% so với trung bình)
+                </TooltipContent>
+              </Tooltip>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -250,7 +288,7 @@ export function AlertCards() {
                     : "bg-gray-100 text-gray-800",
                 )}
               >
-                {overloadedCount > 0 ? "Cần cân đối" : "Cân bằng"}
+                {overloadedCount > 0 ? "Cần xử lý" : "Trơn tru"}
               </Badge>
             </CardAction>
           </CardHeader>
@@ -258,11 +296,13 @@ export function AlertCards() {
             <div className="line-clamp-1 flex gap-2 font-medium">
               {overloadedCount > 0 ? (
                 <span className="text-blue-600">
-                  {overloadedPerson || "Có thành viên bị quá tải"}
+                  {overloadedCount === 1
+                    ? "1 giai đoạn bị tắc nghẽn"
+                    : `${overloadedCount} giai đoạn bị tắc nghẽn`}
                 </span>
               ) : (
                 <span className="text-muted-foreground">
-                  Công việc được phân bổ đều
+                  Quy trình xử lý trơn tru
                 </span>
               )}
             </div>

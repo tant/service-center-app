@@ -156,7 +156,7 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
           >
             {count}
           </span>
-          <span className="text-xs text-muted-foreground">units</span>
+          <span className="text-xs text-muted-foreground">đơn vị</span>
         </div>
       );
     },
@@ -178,7 +178,7 @@ const columns: ColumnDef<z.infer<typeof productSchema>>[] = [
     cell: ({ row }) => (
       <div className="font-medium">
         {row.original.brand_name || (
-          <span className="text-muted-foreground italic">No brand</span>
+          <span className="text-muted-foreground italic">Không có</span>
         )}
       </div>
     ),

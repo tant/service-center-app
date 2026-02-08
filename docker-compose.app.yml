@@ -1,0 +1,103 @@
+# ============================================
+# Application Stack - Service Center App
+# ============================================
+# This file contains only the Next.js application
+# It connects to Supabase infrastructure via external network
+#
+# Prerequisites:
+#   1. Supabase stack must be running first:
+#      docker compose -f docker-compose.supabase.yml up -d
+#   2. Network 'supabase-public' must exist
+#
+# Usage:
+#   Start:  docker compose -f docker-compose.app.yml up -d
+#   Stop:   docker compose -f docker-compose.app.yml down
+#   Logs:   docker compose -f docker-compose.app.yml logs -f app
+#   Rebuild: docker compose -f docker-compose.app.yml build
+
+name: service-center-app
+
+services:
+  app:
+    image: service-center-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build-time variables embedded in client bundles
+        # These should match the EXTERNAL access URL (from browser perspective)
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
+    container_name: service-center-app
+    restart: unless-stopped
+
+    # Expose app to host machine
+    ports:
+      - "${APP_PORT:-3025}:3025"
+
+    # Connect to Supabase network
+    networks:
+      - app-internal        # App's own network (for future services)
+      - supabase-public     # Connect to Supabase Kong gateway
+
+    environment:
+      # Node environment
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3025
+
+      # Supabase Configuration
+      # IMPORTANT: Use service names from supabase-public network
+
+      # Server-side URL (Docker internal)
+      SUPABASE_URL: ${SUPABASE_URL:-http://supabase-kong:8000}
+
+      # Client-side URL (Browser access)
+      # Use localhost for same-host deployment, or actual domain in production
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:8000}
+
+      # Supabase Keys
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+
+      # Application Configuration
+      SETUP_PASSWORD: ${SETUP_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@service-center.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPassword123!}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin User}
+
+    # Persist user uploads
+    volumes:
+      - app-uploads:/app/public/uploads
+
+    # Health check
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3025/api/health', (r) => {process.exit(0)}).on('error', () => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+networks:
+  # App's internal network (for future microservices)
+  app-internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+  # External network to connect to Supabase
+  supabase-public:
+    external: true
+    name: supabase-public  # Must match network name in docker-compose.supabase.yml
+
+volumes:
+  app-uploads:
+    name: service-center-uploads

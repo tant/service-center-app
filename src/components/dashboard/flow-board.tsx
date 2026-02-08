@@ -53,8 +53,8 @@ const getPriorityColor = (priority: string) => {
 };
 
 /**
- * FlowBoard - Kanban-style workflow visualization
- * Shows: Ticket flow across workflow stages
+ * FlowBoard - Kanban-style quy trình visualization
+ * Shows: Ticket flow across quy trình stages
  * Pattern: Simplified Kanban with top N tickets per column
  */
 export function FlowBoard() {
@@ -77,8 +77,8 @@ export function FlowBoard() {
     return (
       <Card className="mx-4 lg:mx-6">
         <CardHeader>
-          <CardTitle>Flow Board</CardTitle>
-          <CardDescription>Đang tải dữ liệu workflow...</CardDescription>
+          <CardTitle>Luồng xử lý</CardTitle>
+          <CardDescription>Đang tải dữ liệu quy trình...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2 @5xl/main:grid-cols-3">
@@ -94,9 +94,9 @@ export function FlowBoard() {
   return (
     <Card className="mx-4 lg:mx-6">
       <CardHeader>
-        <CardTitle>Flow Board</CardTitle>
+        <CardTitle>Luồng xử lý</CardTitle>
         <CardDescription>
-          Tickets đang ở đâu trong workflow • Cập nhật mỗi 30 giây
+          Phiếu dịch vụ đang ở đâu trong quy trình • Cập nhật mỗi 30 giây
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -138,7 +138,7 @@ export function FlowBoard() {
                   {isBottleneck && (
                     <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                       <IconAlertCircle className="size-3" />
-                      <span>Bottleneck! Cần xử lý gấp</span>
+                      <span>Ùn tắc! Cần xử lý gấp</span>
                     </div>
                   )}
                 </div>
@@ -203,13 +203,13 @@ export function FlowBoard() {
                           href={`/operations/tickets?status=${status}`}
                           className="block text-center py-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                         >
-                          +{count - 5} tickets khác • Click để xem tất cả
+                          +{count - 5} phiếu khác • Xem tất cả
                         </Link>
                       )}
                     </>
                   ) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      <p>Không có tickets</p>
+                      <p>Không có phiếu dịch vụ</p>
                     </div>
                   )}
                 </div>
@@ -226,7 +226,7 @@ export function FlowBoard() {
           </div>
           <div className="flex items-center gap-2">
             <IconAlertCircle className="size-3 text-red-600" />
-            <span>Tickets quá 7 ngày (cần xử lý gấp)</span>
+            <span>Phiếu dịch vụ quá 7 ngày (cần xử lý gấp)</span>
           </div>
         </div>
       </CardContent>

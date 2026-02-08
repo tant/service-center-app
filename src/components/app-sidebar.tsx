@@ -47,7 +47,7 @@ const baseData = {
   // Overview section - Dashboard
   overview: [
     {
-      title: "Dashboard",
+      title: "Tổng quan",
       url: "/dashboard",
       icon: IconDashboard,
       allowedRoles: ["admin", "manager"] as UserRole[],
@@ -134,13 +134,14 @@ const baseData = {
       ] as UserRole[],
       readOnly: ["technician", "reception"] as UserRole[],
     },
-    {
-      title: "Danh mục linh kiện",
-      url: "/catalog/parts",
-      icon: IconComponents,
-      allowedRoles: ["admin", "manager", "technician"] as UserRole[],
-      readOnly: ["technician"] as UserRole[],
-    },
+    // Hidden: Parts catalog
+    // {
+    //   title: "Danh mục linh kiện",
+    //   url: "/catalog/parts",
+    //   icon: IconComponents,
+    //   allowedRoles: ["admin", "manager", "technician"] as UserRole[],
+    //   readOnly: ["technician"] as UserRole[],
+    // },
     {
       title: "Nhãn hàng",
       url: "/catalog/brands",
@@ -213,13 +214,8 @@ const baseData = {
       allowedRoles: ["admin"] as UserRole[],
     },
   ],
-  navSecondary: [
-    {
-      title: "Hướng dẫn",
-      url: "#",
-      icon: IconHelp,
-    },
-  ],
+  // Hidden for production - support and help pages not ready
+  navSecondary: [],
 };
 
 function getFilteredData(userRole: UserRole = "reception") {
@@ -363,7 +359,8 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
               />
             )}
 
-            <NavSecondary items={data.navSecondary} className="mt-auto" />
+            {/* Hidden for production - support and help pages not ready */}
+            {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
           </>
         )}
       </SidebarContent>

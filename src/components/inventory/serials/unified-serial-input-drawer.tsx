@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Loader2,
   Settings2,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -41,6 +42,59 @@ import { useIsMobile } from "@/hooks/use-mobile";
 // Issue #21: Chunk size to avoid "URI too long" error
 // 50 serials @ ~12 chars each = ~600 chars (safe for URL encoding)
 const SERIAL_CHUNK_SIZE = 50;
+
+/**
+ * Issue #14: Parse backend validation errors into structured format
+ * Backend returns errors in 2 formats:
+ * 1. Serial "ABC123" đã tồn tại trong "Kho Chính". Không thể nhập mua hàng với serial đã có.
+ * 2. Serial đã có trong phiếu nhập khác: ABC123, ABC456
+ */
+function parseValidationErrors(errorMessage: string): ValidationError[] {
+  if (!errorMessage) return [];
+
+  const lines = errorMessage.split("\n").filter((line) => line.trim());
+  const errors: ValidationError[] = [];
+
+  for (const line of lines) {
+    // Format 1: Serial "XXX" <error message>
+    const quotedMatch = line.match(/Serial "([^"]+)" (.+)/);
+    if (quotedMatch) {
+      errors.push({
+        serial: quotedMatch[1],
+        error: quotedMatch[2],
+      });
+      continue;
+    }
+
+    // Format 2: Serial <error message>: XXX, YYY
+    // Example: "Serial đã có trong phiếu nhập khác: SP501, SP502"
+    const colonMatch = line.match(/Serial (.+?):\s*(.+)/);
+    if (colonMatch) {
+      const errorText = colonMatch[1]; // "đã có trong phiếu nhập khác"
+      const serialsText = colonMatch[2]; // "SP501, SP502"
+      const serials = serialsText.split(",").map((s) => s.trim());
+
+      for (const serial of serials) {
+        errors.push({
+          serial,
+          error: errorText,
+        });
+      }
+      continue;
+    }
+
+    // Fallback: If line contains "Serial" but doesn't match patterns above
+    // Just show the whole line as error
+    if (line.includes("Serial")) {
+      errors.push({
+        serial: "Unknown",
+        error: line,
+      });
+    }
+  }
+
+  return errors;
+}
 
 type DocumentType = "receipt" | "issue" | "transfer";
 
@@ -215,41 +269,91 @@ export function UnifiedSerialInputDrawer({
       setUserWarrantyDate("");
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Save error:", error);
       setProcessingProgress(null);
 
-      if (error.message) {
-        const errorMsg = error.message;
+      // Check if it's a tRPC validation error (CONFLICT, BAD_REQUEST, NOT_FOUND)
+      const isValidationError = [
+        "CONFLICT",
+        "BAD_REQUEST",
+        "NOT_FOUND",
+      ].includes(error.data?.code);
 
-        if (
-          errorMsg.includes("Duplicate") ||
-          errorMsg.includes("not found") ||
-          errorMsg.includes("already")
-        ) {
-          const errors: ValidationError[] = inputSerials
-            .map((serial) => ({
-              serial,
-              error: errorMsg.includes(serial) ? errorMsg : "",
-            }))
-            .filter((e) => e.error);
+      // Only log system errors to console, not validation errors
+      if (!isValidationError) {
+        console.error("System error:", error);
+      }
 
-          if (errors.length > 0) {
-            setValidationErrors(errors);
-          } else {
-            toast.error(errorMsg);
-          }
+      const errorMsg = error.message || "Không thể lưu serial";
+
+      // Issue #14: Parse validation errors and populate state
+      if (isValidationError) {
+        const parsedErrors = parseValidationErrors(errorMsg);
+
+        if (parsedErrors.length > 0) {
+          // Set validation errors to show detailed error list
+          setValidationErrors(parsedErrors);
+
+          // Show summary toast
+          toast.error(
+            `Có ${parsedErrors.length} serial không hợp lệ. Vui lòng kiểm tra và sửa lỗi.`,
+          );
         } else {
+          // Fallback: Show raw error message if parsing failed
           toast.error(errorMsg);
         }
       } else {
-        toast.error("Không thể lưu serial");
+        // System errors - show generic message
+        toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
       }
 
       // Show how many were saved before error
       if (processedCount > 0) {
-        toast.info(`Đã lưu ${processedCount}/${serialCount} serial trước khi gặp lỗi`);
+        toast.info(
+          `Đã lưu ${processedCount}/${serialCount} serial trước khi gặp lỗi`,
+        );
       }
     }
+  };
+
+  // Issue #14: Remove invalid serials from textarea
+  // Smart removal: For duplicate errors, keep first occurrence; for other errors, remove all
+  const handleRemoveInvalidSerials = () => {
+    const invalidSerialSet = new Set(validationErrors.map((e) => e.serial));
+    const seenSerials = new Map<string, number>(); // Track occurrences
+    const resultSerials: string[] = [];
+    let removedCount = 0;
+
+    for (const serial of inputSerials) {
+      const occurrenceCount = seenSerials.get(serial) || 0;
+
+      if (invalidSerialSet.has(serial)) {
+        // Check if error is about duplication
+        const error = validationErrors.find((e) => e.serial === serial);
+        const isDuplicateError =
+          error?.error.includes("trùng") ||
+          error?.error.includes("duplicate") ||
+          error?.error.toLowerCase().includes("bị trùng");
+
+        if (isDuplicateError && occurrenceCount === 0) {
+          // Keep first occurrence for duplicate errors
+          resultSerials.push(serial);
+          seenSerials.set(serial, 1);
+        } else {
+          // Remove: either duplicate occurrence or non-duplicate error
+          removedCount++;
+        }
+      } else {
+        // Valid serial, keep it
+        resultSerials.push(serial);
+        seenSerials.set(serial, occurrenceCount + 1);
+      }
+    }
+
+    setSerialInput(resultSerials.join("\n"));
+    setValidationErrors([]);
+    toast.success(
+      `Đã xóa ${removedCount} serial không hợp lệ. Còn lại ${resultSerials.length} serial.`,
+    );
   };
 
   // Issue #17: CSV import functionality removed
@@ -268,7 +372,7 @@ export function UnifiedSerialInputDrawer({
       onOpenChange={onOpenChange}
       direction={isMobile ? "bottom" : "right"}
     >
-      <DrawerContent className="overflow-visible flex flex-col max-h-[95vh]">
+      <DrawerContent className="overflow-visible flex flex-col h-full">
         {/* Header with inline progress */}
         <DrawerHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -325,12 +429,17 @@ export function UnifiedSerialInputDrawer({
                         className={
                           serialCount > remaining
                             ? "text-destructive font-medium"
-                            : ""
+                            : validationErrors.length > 0
+                              ? "text-orange-600 dark:text-orange-400 font-medium"
+                              : ""
                         }
                       >
                         Đã nhập {serialCount} serial{" "}
                         {serialCount > remaining &&
                           `(vượt ${serialCount - remaining})`}
+                        {validationErrors.length > 0 &&
+                          serialCount <= remaining &&
+                          `(${validationErrors.length} lỗi)`}
                       </span>
                     ) : (
                       "Có thể paste nhiều serial cùng lúc"
@@ -338,27 +447,58 @@ export function UnifiedSerialInputDrawer({
                   </span>
                   {/* Issue #17: CSV upload removed */}
                 </div>
+
+                {/* Issue #14: Show serial breakdown when there are errors */}
+                {validationErrors.length > 0 && serialCount > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-green-600 dark:text-green-400">
+                      ✓ {serialCount - validationErrors.length} hợp lệ
+                    </span>
+                    <span className="text-destructive">
+                      ✗ {validationErrors.length} không hợp lệ
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Validation Errors */}
+              {/* Validation Errors - Issue #14 */}
               {validationErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <div className="font-medium mb-1">
-                      Có {validationErrors.length} lỗi:
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="font-medium">
+                        Có {validationErrors.length} serial không hợp lệ:
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveInvalidSerials}
+                        className="h-6 px-2 text-xs -mt-1"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Xóa các serial lỗi
+                      </Button>
                     </div>
                     <ul className="list-disc list-inside space-y-0.5 text-xs">
-                      {validationErrors.slice(0, 5).map((err, idx) => (
-                        <li key={idx}>
-                          <span className="font-mono">{err.serial}</span>:{" "}
-                          {err.error}
+                      {validationErrors.slice(0, 5).map((err) => (
+                        <li key={err.serial}>
+                          <span className="font-mono font-semibold">
+                            {err.serial}
+                          </span>
+                          : {err.error}
                         </li>
                       ))}
                       {validationErrors.length > 5 && (
-                        <li>...và {validationErrors.length - 5} lỗi khác</li>
+                        <li className="text-muted-foreground">
+                          ...và {validationErrors.length - 5} lỗi khác
+                        </li>
                       )}
                     </ul>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      💡 Tip: Click "Xóa các serial lỗi" để tự động loại bỏ các
+                      serial không hợp lệ
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -434,7 +574,10 @@ export function UnifiedSerialInputDrawer({
               <Button
                 onClick={handleSave}
                 disabled={
-                  serialCount === 0 || serialCount > remaining || isProcessing
+                  serialCount === 0 ||
+                  serialCount > remaining ||
+                  isProcessing ||
+                  validationErrors.length > 0
                 }
                 className="flex-1"
               >

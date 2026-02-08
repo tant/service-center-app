@@ -48,19 +48,53 @@ export function DatePicker({
   }, [value]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setInputValue(val);
+    let val = e.target.value;
+    const cursorPosition = e.target.selectionStart || 0;
 
-    // Try to parse dd/mm/yyyy format
-    const parts = val.split("/");
-    if (parts.length === 3) {
+    // Issue #28: Auto-format - Remove all non-numeric characters first
+    const numbersOnly = val.replace(/\D/g, "");
+
+    // Issue #28: Auto-insert "/" separators as user types
+    let formatted = "";
+    if (numbersOnly.length > 0) {
+      // Add day (max 2 digits)
+      formatted = numbersOnly.substring(0, 2);
+
+      // Add "/" and month (max 2 digits)
+      if (numbersOnly.length >= 3) {
+        formatted += "/" + numbersOnly.substring(2, 4);
+      }
+
+      // Add "/" and year (max 4 digits)
+      if (numbersOnly.length >= 5) {
+        formatted += "/" + numbersOnly.substring(4, 8);
+      }
+    }
+
+    setInputValue(formatted);
+
+    // Try to parse and validate date
+    const parts = formatted.split("/");
+    if (parts.length === 3 && parts[2].length >= 2) {
       const day = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1; // 0-indexed
-      const year = parseInt(parts[2], 10);
+      let year = parseInt(parts[2], 10);
+
+      // Issue #28: Support 2-digit year (yy → yyyy)
+      if (parts[2].length === 2) {
+        // Assume 20xx for years 00-99
+        year += 2000;
+      }
 
       if (!Number.isNaN(day) && !Number.isNaN(month) && !Number.isNaN(year)) {
         const date = new Date(year, month, day);
-        if (!Number.isNaN(date.getTime())) {
+        // Validate that the date is real (e.g., not 31/02/2026)
+        if (
+          !Number.isNaN(date.getTime()) &&
+          date.getDate() === day &&
+          date.getMonth() === month &&
+          date.getFullYear() === year
+        ) {
           // Valid date, convert to ISO string (YYYY-MM-DD)
           const isoString = format(date, "yyyy-MM-dd");
           onChange?.(isoString);

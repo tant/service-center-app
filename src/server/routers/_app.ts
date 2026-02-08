@@ -5,6 +5,7 @@ import { appSettingsRouter } from "./app-settings";
 import { assignmentsRouter } from "./assignments";
 import { brandsRouter } from "./brands";
 import { customersRouter } from "./customers";
+import { dashboardRouter } from "./dashboard";
 import { inventoryRouter } from "./inventory";
 import { notificationsRouter } from "./notifications";
 import { partsRouter } from "./parts";
@@ -39,6 +40,7 @@ export const appRouter = router({
   analytics: analyticsRouter,
   assignments: assignmentsRouter,
   appSettings: appSettingsRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

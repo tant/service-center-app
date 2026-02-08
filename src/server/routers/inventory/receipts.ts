@@ -220,9 +220,10 @@ export const receiptsRouter = router({
         .single();
 
       if (!profile || !["admin", "manager"].includes(profile.role)) {
-        throw new Error(
-          "Unauthorized: Only admin and manager can create receipts",
-        );
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Chỉ admin và manager mới có quyền tạo phiếu nhập",
+        });
       }
 
       // Insert receipt
@@ -334,9 +335,10 @@ export const receiptsRouter = router({
       // In simplified workflow, receipts are completed immediately.
       // Editing items would affect stock and physical products.
       // Create a new receipt instead, or use adjustment receipt to correct.
-      throw new Error(
-        "Không thể sửa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.",
-      );
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Không thể sửa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi.",
+      });
     }),
 
   /**
@@ -389,7 +391,10 @@ export const receiptsRouter = router({
         .single();
 
       if (!receiptItem?.receipt) {
-        throw new Error("Receipt item not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Không tìm thấy item trong phiếu nhập",
+        });
       }
 
       const receipt = Array.isArray(receiptItem.receipt)
@@ -423,7 +428,10 @@ export const receiptsRouter = router({
           const duplicates = duplicatesInOtherReceipts
             .map((e) => e.serial_number)
             .join(", ");
-          throw new Error(`Serial đã có trong phiếu nhập khác: ${duplicates}`);
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Serial đã có trong phiếu nhập khác: ${duplicates}`,
+          });
         }
       }
 
@@ -517,7 +525,10 @@ export const receiptsRouter = router({
       }
 
       if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join("\n"));
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: validationErrors.join("\n"),
+        });
       }
 
       // Transfer existing physical products to target warehouse
@@ -537,6 +548,35 @@ export const receiptsRouter = router({
         }
       }
 
+      // Check for duplicates within input batch
+      const inputSerialNumbers = input.serials.map((s) => s.serialNumber);
+      const duplicatesInInput = inputSerialNumbers.filter(
+        (serial, index) => inputSerialNumbers.indexOf(serial) !== index,
+      );
+
+      if (duplicatesInInput.length > 0) {
+        const uniqueDuplicates = [...new Set(duplicatesInInput)];
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Serial bị trùng trong danh sách: ${uniqueDuplicates.join(", ")}`,
+        });
+      }
+
+      // Check for duplicates with existing serials in same receipt
+      const { data: existingSerials } = await ctx.supabaseAdmin
+        .from("stock_receipt_serials")
+        .select("serial_number")
+        .eq("receipt_item_id", input.receiptItemId)
+        .in("serial_number", inputSerialNumbers);
+
+      if (existingSerials && existingSerials.length > 0) {
+        const duplicates = existingSerials.map((s) => s.serial_number).join(", ");
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Serial đã có trong phiếu này: ${duplicates}`,
+        });
+      }
+
       // Insert receipt serials
       const serialsToInsert = input.serials.map((s) => ({
         receipt_item_id: input.receiptItemId,
@@ -551,6 +591,7 @@ export const receiptsRouter = router({
         .select();
 
       if (error) {
+        // Unexpected database error (should not happen after validation above)
         throw new Error(`Failed to add serials: ${error.message}`);
       }
 
@@ -591,8 +632,9 @@ export const receiptsRouter = router({
     .mutation(async () => {
       // In simplified workflow, receipts are completed immediately with stock effects.
       // Deleting would cause data inconsistency.
-      throw new Error(
-        "Không thể xóa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.",
-      );
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Không thể xóa phiếu nhập đã hoàn thành. Vui lòng tạo phiếu điều chỉnh nếu cần sửa đổi tồn kho.",
+      });
     }),
 });

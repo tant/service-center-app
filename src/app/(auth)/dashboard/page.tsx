@@ -1,24 +1,31 @@
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { AlertCards } from "@/components/dashboard/alert-cards";
+import { FlowBoard } from "@/components/dashboard/flow-board";
+import { MetricsCards } from "@/components/dashboard/metrics-cards";
+import { TeamStatus } from "@/components/dashboard/team-status";
+import { TrendChart } from "@/components/dashboard/trend-chart";
 import { PageHeader } from "@/components/page-header";
-import { SectionCards } from "@/components/section-cards";
-import { DashboardQuickLinks } from "./dashboard-quick-links";
-import { EmployeePerformanceSection } from "./employee-performance-section";
 
-export default function Page() {
+export default async function Page() {
   return (
     <>
       <PageHeader title="Dashboard" />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <SectionCards />
-            <DashboardQuickLinks />
-            <div className="px-4 lg:px-6">
-              <ChartAreaInteractive />
-            </div>
-            <div className="px-4 lg:px-6">
-              <EmployeePerformanceSection />
-            </div>
+            {/* Critical Alerts - Top Priority */}
+            <AlertCards />
+
+            {/* Flow Board - Kanban View */}
+            <FlowBoard />
+
+            {/* Team Status - Real-time */}
+            <TeamStatus />
+
+            {/* Today's Metrics - 3 Cards */}
+            <MetricsCards />
+
+            {/* Week Performance & Trend Chart */}
+            <TrendChart />
           </div>
         </div>
       </div>

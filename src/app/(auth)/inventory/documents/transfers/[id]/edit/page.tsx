@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/page-header";
 import { trpc } from "@/components/providers/trpc-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -294,11 +295,18 @@ export default function EditTransferPage({ params }: EditTransferPageProps) {
                     )}
 
                     <div className="grid gap-2">
-                      <Label>Ngày chuyển *</Label>
-                      <Input
-                        type="date"
+                      <Label htmlFor="transfer-date">
+                        Ngày chuyển *{" "}
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          (VD: 010226)
+                        </span>
+                      </Label>
+                      <DatePicker
+                        id="transfer-date"
                         value={transferDate}
-                        onChange={(e) => setTransferDate(e.target.value)}
+                        onChange={setTransferDate}
+                        placeholder="dd/mm/yyyy hoặc click lịch"
+                        disabled={updateTransfer.isPending}
                       />
                     </div>
                   </div>

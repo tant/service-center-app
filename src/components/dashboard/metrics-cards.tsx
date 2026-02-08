@@ -102,7 +102,7 @@ export function MetricsCards() {
       {/* Card 3: Cycle Time */}
       <Card className="@container/card col-span-2 @3xl/main:col-span-1">
         <CardHeader>
-          <CardDescription>Cycle Time trung bình</CardDescription>
+          <CardDescription>Thời gian xử lý trung bình</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             {isLoading ? (
               <span className="text-muted-foreground">-</span>

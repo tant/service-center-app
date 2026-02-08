@@ -209,8 +209,8 @@ export function TeamStatus() {
                           <IconUserCircle className="size-4 flex-shrink-0" />
                           <span className="truncate">
                             {status === "available"
-                              ? "Không có task đang thực hiện"
-                              : "Đang chờ task mới"}
+                              ? "Không có công việc đang thực hiện"
+                              : "Đang chờ công việc mới"}
                           </span>
                         </>
                       )}
@@ -263,7 +263,7 @@ export function TeamStatus() {
             </div>
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-red-600" />
-              <span>Quá tải (&gt;6 tasks)</span>
+              <span>Quá tải (&gt;6 công việc)</span>
             </div>
           </div>
         )}

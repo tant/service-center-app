@@ -64,7 +64,7 @@ export function TrendChart() {
       {/* Left: Week Stats Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Week Performance</CardTitle>
+          <CardTitle>Hiệu suất tuần</CardTitle>
           <CardDescription>Tổng quan tuần này</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -105,7 +105,7 @@ export function TrendChart() {
               {/* Throughput */}
               <div className="flex items-center justify-between border-b pb-3">
                 <span className="text-sm font-medium text-muted-foreground">
-                  Throughput (phiếu/ngày)
+                  Năng suất (phiếu/ngày)
                 </span>
                 <span className="text-xl font-bold tabular-nums">
                   {weekPerformance?.throughput?.toFixed(1) ?? "0.0"}
@@ -115,7 +115,7 @@ export function TrendChart() {
               {/* Net Change */}
               <div className="flex items-center justify-between pt-2">
                 <span className="text-sm font-medium text-muted-foreground">
-                  Net Change
+                  Thay đổi ròng
                 </span>
                 <div className="flex items-center gap-2">
                   <span
@@ -136,7 +136,7 @@ export function TrendChart() {
                         netChange > 0 ? "text-orange-600" : "text-green-600"
                       }`}
                     >
-                      {netChange > 0 ? "(Backlog tăng)" : "(Backlog giảm)"}
+                      {netChange > 0 ? "(Tồn đọng tăng)" : "(Tồn đọng giảm)"}
                     </span>
                   )}
                 </div>
@@ -149,7 +149,7 @@ export function TrendChart() {
       {/* Right: 7-Day Trend Chart */}
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>7-Day Trend</CardTitle>
+          <CardTitle>Xu hướng 7 ngày</CardTitle>
           <CardDescription>Xu hướng tiếp nhận & hoàn thành</CardDescription>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -269,11 +269,11 @@ export function TrendChart() {
               <p className="text-xs text-muted-foreground text-center">
                 {netChange > 0 ? (
                   <span className="text-orange-600 font-medium">
-                    ⚠️ Backlog đang tăng - Cần tăng tốc độ hoàn thành
+                    ⚠️ Tồn đọng đang tăng - Cần tăng tốc độ hoàn thành
                   </span>
                 ) : netChange < 0 ? (
                   <span className="text-green-600 font-medium">
-                    ✓ Backlog đang giảm - Team đang làm việc hiệu quả
+                    ✓ Tồn đọng đang giảm - Team đang làm việc hiệu quả
                   </span>
                 ) : (
                   <span>Số lượng tiếp nhận và hoàn thành cân bằng</span>

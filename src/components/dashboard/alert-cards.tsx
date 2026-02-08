@@ -60,7 +60,7 @@ export function AlertCards() {
           <CardHeader>
             <CardDescription className="flex items-center gap-2">
               <IconAlertCircle className="size-4 text-red-600" />
-              <span>Tickets Quá hạn</span>
+              <span>Phiếu dịch vụ quá hạn</span>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -91,11 +91,11 @@ export function AlertCards() {
             <div className="line-clamp-1 flex gap-2 font-medium">
               {overdueCount > 0 ? (
                 <span className="text-red-600">
-                  Tickets đã quá 7 ngày chưa hoàn thành
+                  Phiếu dịch vụ đã quá 7 ngày chưa hoàn thành
                 </span>
               ) : (
                 <span className="text-muted-foreground">
-                  Không có tickets quá hạn
+                  Không có phiếu dịch vụ quá hạn
                 </span>
               )}
             </div>
@@ -112,7 +112,7 @@ export function AlertCards() {
           <CardHeader>
             <CardDescription className="flex items-center gap-2">
               <IconAlertTriangle className="size-4 text-yellow-600" />
-              <span>Tickets Đọng lâu</span>
+              <span>Phiếu dịch vụ đọng lâu</span>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -154,11 +154,11 @@ export function AlertCards() {
             <div className="line-clamp-1 flex gap-2 font-medium">
               {agingCount > 0 ? (
                 <span className="text-yellow-600">
-                  Tickets từ 5-7 ngày chưa cập nhật
+                  Phiếu dịch vụ từ 5-7 ngày chưa cập nhật
                 </span>
               ) : (
                 <span className="text-muted-foreground">
-                  Tất cả tickets đang được xử lý
+                  Tất cả phiếu dịch vụ đang được xử lý
                 </span>
               )}
             </div>
@@ -175,7 +175,7 @@ export function AlertCards() {
           <CardHeader>
             <CardDescription className="flex items-center gap-2">
               <IconPackage className="size-4 text-orange-600" />
-              <span>Vật tư Sắp hết</span>
+              <span>Vật tư sắp hết</span>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (
@@ -225,7 +225,7 @@ export function AlertCards() {
           <CardHeader>
             <CardDescription className="flex items-center gap-2">
               <IconUsersGroup className="size-4 text-blue-600" />
-              <span>Workload Không cân bằng</span>
+              <span>Khối lượng công việc không cân bằng</span>
             </CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
               {isLoading ? (

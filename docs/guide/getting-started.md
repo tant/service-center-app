@@ -7,6 +7,11 @@ Tài liệu dành cho developer mới tham gia dự án.
 - **Node.js** >= 18
 - **pnpm** (package manager)
 - **Docker** (cần thiết để chạy Supabase local)
+- **Supabase CLI** — `brew install supabase/tap/supabase`
+- **psql** (PostgreSQL client) — `brew install libpq` rồi thêm vào PATH:
+  ```bash
+  echo 'export PATH="/opt/homebrew/opt/libpq/bin:$PATH"' >> ~/.zshrc
+  ```
 - **Git**
 
 Kiểm tra nhanh:
@@ -15,6 +20,8 @@ Kiểm tra nhanh:
 node -v
 pnpm -v
 docker --version
+supabase --version
+psql --version
 ```
 
 ## Bước 1: Clone repo và cài dependencies
@@ -38,7 +45,7 @@ Tạm thời giữ nguyên các giá trị mặc định. Sau khi chạy Supabas
 ## Bước 3: Khởi động Supabase
 
 ```bash
-pnpx supabase start
+supabase start
 ```
 
 Lệnh này sẽ pull Docker images (lần đầu mất vài phút) và khởi động các service: PostgreSQL, Auth, Storage, Studio...
@@ -55,7 +62,7 @@ Giá trị `NEXT_PUBLIC_SUPABASE_URL` giữ nguyên `http://127.0.0.1:54321`.
 
 ## Bước 4: Apply database schema
 
-Schema không được quản lý qua migrations mà qua các file SQL trong `docs/data/schemas/`. Chạy script sau để apply toàn bộ:
+Schema được quản lý qua các file SQL trong `docs/data/schemas/`. Chạy script sau để apply toàn bộ (script tự tìm `supabase` và `psql` trên máy):
 
 ```bash
 ./docs/data/schemas/setup_schema.sh
@@ -112,10 +119,10 @@ Supabase Studio cho phép xem/quản lý database trực tiếp trên trình duy
 
 | Lệnh                               | Mô tả                                    |
 | ----------------------------------- | ----------------------------------------- |
-| `pnpx supabase start`              | Khởi động Supabase                        |
-| `pnpx supabase stop`               | Dừng Supabase                             |
-| `pnpx supabase status`             | Xem trạng thái và thông tin kết nối       |
-| `pnpx supabase db reset`           | Reset database (xoá toàn bộ dữ liệu)     |
+| `supabase start`              | Khởi động Supabase                        |
+| `supabase stop`               | Dừng Supabase                             |
+| `supabase status`             | Xem trạng thái và thông tin kết nối       |
+| `supabase db reset`           | Reset database (xoá toàn bộ dữ liệu)     |
 | `./docs/data/schemas/setup_schema.sh` | Apply schema từ file SQL                |
 
 ## Xử lý sự cố
@@ -139,7 +146,7 @@ ls supabase/migrations/
 # Xoá migration lỗi
 rm supabase/migrations/<tên-file>.sql
 # Chạy lại
-pnpx supabase start
+supabase start
 ```
 
 ### Khi nào cần `supabase db reset`?

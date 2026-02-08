@@ -33,6 +33,7 @@ yarn-error.log*
 # env files - ignore actual secrets, allow templates
 .env
 .env.local
+.env.docker
 !.env.example
 !.env.docker.example
 
@@ -55,8 +56,7 @@ CLAUDE.md
 QWEN.md
 
 # Docker runtime data
-volumes/db/data/
-volumes/storage/
+volumes/
 
 # Supabase local storage (ignore uploaded files but keep directory structure)
 supabase/storage/*
@@ -64,6 +64,7 @@ supabase/storage/*
 !supabase/storage/avatars/.gitkeep
 !supabase/storage/product_images/.gitkeep
 !supabase/storage/service_media/.gitkeep
+!supabase/storage/service_videos/.gitkeep
 
 # linh tinh AI
 .bmad-core

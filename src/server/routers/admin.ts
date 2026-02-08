@@ -1,6 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { readFileSync } from "fs";
-import { join } from "path";
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 
@@ -10,98 +8,20 @@ const setupInputSchema = z.object({
 });
 
 export const adminRouter = router({
-  simple: publicProcedure.mutation(async () => {
-    console.log("✨ Simple mutation called (no input)");
-    return { success: true, message: "Hello from tRPC!" };
-  }),
-
-  minimal: publicProcedure.input(z.string()).mutation(async ({ input }) => {
-    console.log("🔍 Minimal mutation called with string:", input);
-    return { success: true, received: input };
-  }),
-
-  manual: publicProcedure.mutation(async ({ input }) => {
-    console.log("🔧 Manual mutation called with input:", input);
-    console.log("🔧 Input type:", typeof input);
-    return { success: true, received: input };
-  }),
-
-  test: publicProcedure
-    .input(z.object({ message: z.string() }))
-    .mutation(async ({ input }) => {
-      console.log("🧪 Test mutation called with:", input);
-      return { success: true, echo: input.message };
-    }),
-
   setup: publicProcedure
     .input(setupInputSchema)
     .mutation(async ({ input, ctx }) => {
-      const mutationStartTime = Date.now();
-      console.log("🔧 MUTATION: Admin setup mutation called");
-      console.log(
-        "📥 MUTATION: Input received:",
-        JSON.stringify(input, null, 2),
-      );
-      console.log("🏗️ MUTATION: Context available:", !!ctx);
-      console.log("🔍 MUTATION: Input type:", typeof input);
-      console.log(
-        "🔍 MUTATION: Input keys:",
-        input ? Object.keys(input) : "No input",
-      );
-
       const { password } = input;
       const { supabaseAdmin } = ctx;
 
-      console.log(
-        "🔐 MUTATION: Password received length:",
-        password?.length || 0,
-      );
-      console.log(
-        "🗄️ MUTATION: Supabase admin client available:",
-        !!supabaseAdmin,
-      );
-
       try {
-        console.log("🔍 MUTATION: Validating environment variables...");
-
         // Validate required environment variables
         const setupPassword = process.env.SETUP_PASSWORD;
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminPassword = process.env.ADMIN_PASSWORD;
         const adminName = process.env.ADMIN_NAME;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-        console.log("🔧 MUTATION: Environment variables check:");
-        console.log("   - SETUP_PASSWORD:", !!setupPassword);
-        console.log(
-          "   - ADMIN_EMAIL:",
-          !!adminEmail,
-          adminEmail ? `(${adminEmail})` : "(missing)",
-        );
-        console.log(
-          "   - ADMIN_PASSWORD:",
-          !!adminPassword,
-          adminPassword ? `(${adminPassword.length} chars)` : "(missing)",
-        );
-        console.log("   - ADMIN_PASSWORD raw value:", `"${adminPassword}"`);
-        console.log(
-          "   - ADMIN_NAME:",
-          !!adminName,
-          adminName ? `(${adminName})` : "(missing)",
-        );
-        console.log("   - SUPABASE_URL:", !!supabaseUrl);
-        console.log("   - SUPABASE_ANON_KEY:", !!supabaseAnonKey);
-
-        if (
-          !setupPassword ||
-          !adminEmail ||
-          !adminPassword ||
-          !adminName ||
-          !supabaseUrl ||
-          !supabaseAnonKey
-        ) {
-          console.error("❌ MUTATION: Missing required environment variables");
+        if (!setupPassword || !adminEmail || !adminPassword || !adminName) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message:
@@ -109,36 +29,19 @@ export const adminRouter = router({
           });
         }
 
-        console.log("🔐 MUTATION: Checking password match...");
-        console.log("🔐 MUTATION: Provided password length:", password.length);
-        console.log(
-          "🔐 MUTATION: Expected password length:",
-          setupPassword.length,
-        );
-
         // Check if the provided password matches the setup password
         if (password !== setupPassword) {
-          console.log("❌ MUTATION: Password mismatch - setup rejected");
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Invalid setup password",
           });
         }
 
-        console.log("✅ MUTATION: Password validated successfully");
-
         // Check if admin user already exists in auth.users table
-        console.log("🔍 AUTH: Checking for existing auth user...");
         const { data: existingAuthUser, error: authUserError } =
           await supabaseAdmin.auth.admin.listUsers();
 
-        console.log("📊 AUTH: User list result:", {
-          userCount: existingAuthUser?.users?.length || 0,
-          error: authUserError,
-        });
-
         if (authUserError) {
-          console.error("❌ AUTH: Failed to list users:", authUserError);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to check existing users: ${authUserError.message}`,
@@ -150,46 +53,21 @@ export const adminRouter = router({
         );
 
         // Check if admin user already exists in profiles table
-        console.log("🔍 DATABASE: Checking for existing admin profile...");
         let existingProfile = null;
         let profilesTableExists = true;
 
         try {
-          const { data: profileData, error: profileFetchError } =
-            await supabaseAdmin
-              .from("profiles")
-              .select("user_id, email, role, full_name")
-              .eq("email", adminEmail)
-              .single();
-
-          console.log("📊 DATABASE: Profile check result:", {
-            data: profileData,
-            error: profileFetchError,
-          });
+          const { data: profileData } = await supabaseAdmin
+            .from("profiles")
+            .select("user_id, email, role, full_name")
+            .eq("email", adminEmail)
+            .single();
 
           existingProfile = profileData;
         } catch (profileCheckError: any) {
-          console.log(
-            "🔍 DATABASE: Profile check threw error:",
-            profileCheckError,
-          );
-          console.log("🔍 DATABASE: Error code:", profileCheckError.code);
-
-          // Check if profiles table doesn't exist
           if (profileCheckError.code === "42P01") {
-            // 42P01 is "UndefinedTable"
-            console.log(
-              "⚠️ DATABASE: Profiles table does not exist (42P01), will create admin from scratch",
-            );
             profilesTableExists = false;
-          } else if (profileCheckError.code === "PGRST116") {
-            // PGRST116 is "No rows returned" - this is fine, means no profile exists
-            console.log("✅ DATABASE: No existing admin profile found");
-          } else {
-            console.error(
-              "❌ DATABASE: Profile check failed with unexpected error:",
-              profileCheckError,
-            );
+          } else if (profileCheckError.code !== "PGRST116") {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Error checking existing profile: ${profileCheckError.message}`,
@@ -197,30 +75,8 @@ export const adminRouter = router({
           }
         }
 
-        // Determine the setup scenario
-        console.log("🔍 SETUP: Analyzing current state...");
-        console.log("   - Auth user exists:", !!existingAuthUserRecord);
-        console.log("   - Profile exists:", !!existingProfile);
-        console.log("   - Profiles table exists:", profilesTableExists);
-
         // Scenario 1: Both auth user and profile exist - Reset password
         if (existingAuthUserRecord && existingProfile) {
-          console.log(
-            "🔄 SETUP: Admin fully configured. Resetting password...",
-          );
-          console.log("   - User ID:", existingAuthUserRecord.id);
-          console.log("   - Email:", adminEmail);
-          console.log("🔐 RESET: Password length:", adminPassword.length);
-          console.log(
-            "🔐 RESET: Password (first 3 chars):",
-            adminPassword.substring(0, 3),
-          );
-          console.log(
-            "🔐 RESET: Password (last 3 chars):",
-            adminPassword.substring(adminPassword.length - 3),
-          );
-          console.log("🔐 RESET: Full password for debug:", adminPassword);
-
           const { error: updateError } =
             await supabaseAdmin.auth.admin.updateUserById(
               existingAuthUserRecord.id,
@@ -228,14 +84,12 @@ export const adminRouter = router({
             );
 
           if (updateError) {
-            console.error("❌ AUTH: Password reset failed:", updateError);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Failed to reset admin password: ${updateError.message}`,
             });
           }
 
-          console.log("✅ SETUP: Admin password reset successfully");
           return {
             message:
               "Setup already completed. Admin password has been reset to the configured value.",
@@ -245,50 +99,30 @@ export const adminRouter = router({
 
         // Scenario 2: Auth user exists but no profile - Create profile
         if (existingAuthUserRecord && !existingProfile && profilesTableExists) {
-          console.log(
-            "🔧 SETUP: Auth user exists but profile missing. Creating profile...",
-          );
-          console.log("   - User ID:", existingAuthUserRecord.id);
-
-          const profileData = {
-            user_id: existingAuthUserRecord.id,
-            full_name: adminName,
-            email: adminEmail,
-            role: "admin",
-            is_active: true,
-          };
-
-          console.log("📊 DATABASE: Profile data to insert:", profileData);
-
           const { error: profileError } = await supabaseAdmin
             .from("profiles")
-            .insert([profileData]);
+            .insert([
+              {
+                user_id: existingAuthUserRecord.id,
+                full_name: adminName,
+                email: adminEmail,
+                role: "admin",
+                is_active: true,
+              },
+            ]);
 
           if (profileError) {
-            console.error(
-              "❌ DATABASE: Profile creation failed:",
-              profileError,
-            );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Failed to create admin profile: ${profileError.message}`,
             });
           }
 
-          console.log("✅ SETUP: Missing profile created successfully");
-
           // Also reset password to ensure it matches
-          const { error: updateError } =
-            await supabaseAdmin.auth.admin.updateUserById(
-              existingAuthUserRecord.id,
-              { password: adminPassword },
-            );
-
-          if (updateError) {
-            console.warn("⚠️ AUTH: Password reset failed:", updateError);
-          } else {
-            console.log("✅ AUTH: Password synchronized");
-          }
+          await supabaseAdmin.auth.admin.updateUserById(
+            existingAuthUserRecord.id,
+            { password: adminPassword },
+          );
 
           return {
             message:
@@ -297,81 +131,29 @@ export const adminRouter = router({
           };
         }
 
-        // Scenario 3: Profile exists but no auth user - Delete profile and recreate everything
+        // Scenario 3: Profile exists but no auth user - Delete orphaned profile
         if (!existingAuthUserRecord && existingProfile) {
-          console.log(
-            "🔧 SETUP: Profile exists but auth user missing. Cleaning up orphaned profile...",
-          );
-          console.log(
-            "   - Orphaned profile user_id:",
-            existingProfile.user_id,
-          );
-
           const { error: deleteError } = await supabaseAdmin
             .from("profiles")
             .delete()
             .eq("email", adminEmail);
 
           if (deleteError) {
-            console.error(
-              "❌ DATABASE: Failed to delete orphaned profile:",
-              deleteError,
-            );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Failed to clean up orphaned profile: ${deleteError.message}`,
             });
           }
-
-          console.log(
-            "✅ DATABASE: Orphaned profile deleted, will create fresh admin account",
-          );
         }
 
-        // Scenario 4: Neither exists OR profile was orphaned - Create everything from scratch
-        console.log(
-          "🆕 SETUP: Creating admin account from scratch (first-time setup or after cleanup)...",
-        );
-
-        // Sign up the admin user
-        console.log("👤 AUTH: Creating admin user account...");
-        console.log("📧 AUTH: Email:", adminEmail);
-        console.log("🔐 AUTH: Password length:", adminPassword.length);
-        console.log(
-          "🔐 AUTH: Password (first 3 chars):",
-          adminPassword.substring(0, 3),
-        );
-        console.log(
-          "🔐 AUTH: Password (last 3 chars):",
-          adminPassword.substring(adminPassword.length - 3),
-        );
-        console.log("🔐 AUTH: Full password for debug:", adminPassword);
-        console.log("🔐 AUTH: Password type:", typeof adminPassword);
-        console.log(
-          "🔐 AUTH: Password includes special chars:",
-          /[!@#$%^&*]/.test(adminPassword),
-        );
-
+        // Scenario 4: Neither exists OR profile was orphaned - Create from scratch
         const { data: signUpData, error: signUpError } =
           await supabaseAdmin.auth.signUp({
             email: adminEmail,
             password: adminPassword,
           });
 
-        console.log("📊 AUTH: Sign up result:", {
-          user: signUpData?.user
-            ? {
-                id: signUpData.user.id,
-                email: signUpData.user.email,
-                created_at: signUpData.user.created_at,
-              }
-            : null,
-          session: !!signUpData?.session,
-          error: signUpError,
-        });
-
         if (signUpError) {
-          console.error("❌ AUTH: Sign up failed:", signUpError);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to sign up admin user: ${signUpError.message}`,
@@ -381,76 +163,41 @@ export const adminRouter = router({
         const userId = signUpData.user?.id;
 
         if (!userId) {
-          console.error("❌ AUTH: No user ID returned from sign up");
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Failed to get user ID after sign up",
           });
         }
 
-        console.log("✅ AUTH: User created successfully with ID:", userId);
-
         // Add the user to the profiles table with admin role
-        console.log("👤 DATABASE: Creating admin profile...");
-        const profileData = {
-          user_id: userId,
-          full_name: adminName,
-          email: adminEmail,
-          role: "admin", // Admin role
-          is_active: true,
-        };
-
-        console.log("📊 DATABASE: Profile data to insert:", profileData);
-
         const { error: profileError } = await supabaseAdmin
           .from("profiles")
-          .insert([profileData]);
-
-        console.log("📊 DATABASE: Profile insert result:", {
-          error: profileError,
-        });
+          .insert([
+            {
+              user_id: userId,
+              full_name: adminName,
+              email: adminEmail,
+              role: "admin",
+              is_active: true,
+            },
+          ]);
 
         if (profileError) {
-          console.error("❌ DATABASE: Profile creation failed:", profileError);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to create admin profile: ${profileError.message}`,
           });
         }
 
-        console.log("✅ DATABASE: Admin profile created successfully");
-
-        const mutationDuration = Date.now() - mutationStartTime;
-        console.log("🏁 MUTATION: Setup completed successfully");
-        console.log("⏱️ MUTATION: Total duration:", `${mutationDuration}ms`);
-
         return {
           message: "Setup completed successfully. Admin account created.",
           action: "created",
         };
       } catch (error: any) {
-        const mutationDuration = Date.now() - mutationStartTime;
-        console.error(
-          "❌ MUTATION: Setup failed after",
-          `${mutationDuration}ms`,
-        );
-        console.error("🔴 MUTATION: Error details:", {
-          name: error.name,
-          message: error.message,
-          code: error.code,
-          stack: error.stack?.split("\n").slice(0, 3).join("\n"),
-        });
-
-        // Re-throw TRPCError instances
         if (error instanceof TRPCError) {
-          console.log(
-            "🔄 MUTATION: Re-throwing TRPCError with code:",
-            error.code,
-          );
           throw error;
         }
 
-        console.error("💥 MUTATION: Unexpected error during setup:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `An error occurred during setup: ${error.message}`,
@@ -458,875 +205,4 @@ export const adminRouter = router({
       }
     }),
 
-  // Create a random Issue using available serials from a virtual warehouse
-  createRandomIssue: publicProcedure
-    .input(
-      z
-        .object({
-          virtualWarehouseId: z.string().optional(),
-          maxItems: z.number().int().min(1).max(10).optional(),
-        })
-        .optional(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { supabaseAdmin } = ctx;
-      // Find admin/manager profile for created_by
-      const { data: adminProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("role", "admin")
-        .limit(1)
-        .single();
-      const { data: managerProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("email", "manager@sstc.vn")
-        .limit(1)
-        .single();
-      const createdById = adminProfile?.id || managerProfile?.id;
-      if (!createdById)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Missing admin/manager profile",
-        });
-
-      // Choose source virtual warehouse with available stock
-      let sourceVwId = input?.virtualWarehouseId || "";
-      if (!sourceVwId) {
-        const result = await supabaseAdmin.rpc(
-          "get_virtual_warehouses_with_stock",
-        ); // optional, may not exist
-        const vwWithStock = result.error ? null : result.data;
-        if (vwWithStock && vwWithStock.length > 0) {
-          sourceVwId = vwWithStock[0].id;
-        } else {
-          // Fallback: pick any VW that has at least 1 physical product
-          const { data: anyPP } = await supabaseAdmin
-            .from("physical_products")
-            .select("virtual_warehouse_id")
-            .limit(1);
-          if (!anyPP || anyPP.length === 0)
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "No physical products available",
-            });
-          sourceVwId = anyPP[0].virtual_warehouse_id as string;
-        }
-      }
-
-      // Pull up to 30 available physical products from source VW, then sample
-      const { data: candidates, error: candErr } = await supabaseAdmin
-        .from("physical_products")
-        .select("id, product_id, serial_number")
-        .eq("virtual_warehouse_id", sourceVwId)
-        .limit(30);
-      if (candErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: candErr.message,
-        });
-      if (!candidates || candidates.length === 0)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No stock in selected warehouse",
-        });
-
-      // Randomly pick 3-8 or maxItems
-      const maxItems = input?.maxItems ?? 6;
-      const pickCount = Math.min(
-        Math.max(3, Math.floor(Math.random() * 6) + 3),
-        candidates.length,
-        maxItems * 3,
-      );
-      const shuffled = [...candidates]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, pickCount);
-
-      // Group by product_id
-      const byProduct = new Map<
-        string,
-        { productId: string; pps: { id: string; serial_number: string }[] }
-      >();
-      for (const pp of shuffled) {
-        const g =
-          byProduct.get(pp.product_id) ||
-          ({ productId: pp.product_id, pps: [] } as any);
-        g.pps.push({ id: pp.id, serial_number: pp.serial_number });
-        byProduct.set(pp.product_id, g);
-      }
-
-      // Create issue (status defaults to 'completed' per simplified schema)
-      const issueNumber = `GIN-SEED-${Date.now()}`;
-      const { data: issue, error: issueErr } = await supabaseAdmin
-        .from("stock_issues")
-        .insert({
-          issue_number: issueNumber,
-          issue_type: "normal",
-          virtual_warehouse_id: sourceVwId,
-          issue_date: new Date().toISOString(),
-          // status defaults to 'completed' - no approval workflow
-          created_by_id: createdById,
-          notes: "Generated by admin.createRandomIssue",
-        })
-        .select("id")
-        .single();
-      if (issueErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: issueErr.message,
-        });
-
-      // Create items
-      const itemsToInsert = Array.from(byProduct.values()).map((g) => ({
-        issue_id: issue!.id,
-        product_id: g.productId,
-        quantity: g.pps.length,
-      }));
-      const { data: items, error: itemsErr } = await supabaseAdmin
-        .from("stock_issue_items")
-        .insert(itemsToInsert)
-        .select("id, product_id");
-      if (itemsErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: itemsErr.message,
-        });
-
-      // Map product->itemId
-      const itemByProduct = new Map(
-        items!.map((it: any) => [it.product_id, it.id]),
-      );
-      const serialRows = [] as any[];
-      for (const g of byProduct.values()) {
-        const itemId = itemByProduct.get(g.productId);
-        for (const pp of g.pps) {
-          serialRows.push({
-            issue_item_id: itemId,
-            physical_product_id: pp.id,
-            serial_number: pp.serial_number,
-          });
-        }
-      }
-      if (serialRows.length > 0) {
-        const { error: serErr } = await supabaseAdmin
-          .from("stock_issue_serials")
-          .insert(serialRows);
-        if (serErr)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: serErr.message,
-          });
-      }
-
-      return {
-        id: issue!.id,
-        issueNumber,
-        sourceVwId,
-        items: items?.length || 0,
-        serials: serialRows.length,
-      };
-    }),
-
-  // Create a random Transfer using available serials from a virtual warehouse
-  createRandomTransfer: publicProcedure
-    .input(
-      z
-        .object({
-          fromVirtualWarehouseId: z.string().optional(),
-          toVirtualWarehouseId: z.string().optional(),
-          maxItems: z.number().int().min(1).max(10).optional(),
-        })
-        .optional(),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { supabaseAdmin } = ctx;
-      // Find admin/manager profile for created_by
-      const { data: adminProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("role", "admin")
-        .limit(1)
-        .single();
-      const { data: managerProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("email", "manager@sstc.vn")
-        .limit(1)
-        .single();
-      const createdById = adminProfile?.id || managerProfile?.id;
-      if (!createdById)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Missing admin/manager profile",
-        });
-
-      // Choose source warehouse
-      let fromVwId = input?.fromVirtualWarehouseId || "";
-      if (!fromVwId) {
-        const { data: anyPP } = await supabaseAdmin
-          .from("physical_products")
-          .select("virtual_warehouse_id")
-          .limit(1);
-        if (!anyPP || anyPP.length === 0)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "No physical products available",
-          });
-        fromVwId = anyPP[0].virtual_warehouse_id as string;
-      }
-
-      // Choose destination warehouse (different from source)
-      let toVwId = input?.toVirtualWarehouseId || "";
-      if (!toVwId) {
-        const { data: allVw } = await supabaseAdmin
-          .from("virtual_warehouses")
-          .select("id");
-        const other = (allVw || [])
-          .map((v) => v.id)
-          .filter((id: string) => id !== fromVwId);
-        if (other.length === 0)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "No destination warehouse available",
-          });
-        toVwId = other[Math.floor(Math.random() * other.length)];
-      }
-
-      // Pull candidates from source VW
-      const { data: candidates, error: candErr } = await supabaseAdmin
-        .from("physical_products")
-        .select("id, product_id, serial_number")
-        .eq("virtual_warehouse_id", fromVwId)
-        .limit(30);
-      if (candErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: candErr.message,
-        });
-      if (!candidates || candidates.length === 0)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No stock in source warehouse",
-        });
-
-      const maxItems = input?.maxItems ?? 6;
-      const pickCount = Math.min(
-        Math.max(3, Math.floor(Math.random() * 6) + 3),
-        candidates.length,
-        maxItems * 3,
-      );
-      const shuffled = [...candidates]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, pickCount);
-
-      const byProduct = new Map<
-        string,
-        { productId: string; pps: { id: string; serial_number: string }[] }
-      >();
-      for (const pp of shuffled) {
-        const g =
-          byProduct.get(pp.product_id) ||
-          ({ productId: pp.product_id, pps: [] } as any);
-        g.pps.push({ id: pp.id, serial_number: pp.serial_number });
-        byProduct.set(pp.product_id, g);
-      }
-
-      // Create transfer (status defaults to 'completed' per simplified schema)
-      const transferNumber = `TRF-SEED-${Date.now()}`;
-      const { data: transfer, error: trfErr } = await supabaseAdmin
-        .from("stock_transfers")
-        .insert({
-          transfer_number: transferNumber,
-          from_virtual_warehouse_id: fromVwId,
-          to_virtual_warehouse_id: toVwId,
-          transfer_date: new Date().toISOString(),
-          // status defaults to 'completed' - no approval workflow
-          created_by_id: createdById,
-          notes: "Generated by admin.createRandomTransfer",
-        })
-        .select("id")
-        .single();
-      if (trfErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: trfErr.message,
-        });
-
-      const itemsToInsert = Array.from(byProduct.values()).map((g) => ({
-        transfer_id: transfer!.id,
-        product_id: g.productId,
-        quantity: g.pps.length,
-      }));
-      const { data: items, error: itemsErr } = await supabaseAdmin
-        .from("stock_transfer_items")
-        .insert(itemsToInsert)
-        .select("id, product_id");
-      if (itemsErr)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: itemsErr.message,
-        });
-
-      const itemByProduct = new Map(
-        items!.map((it: any) => [it.product_id, it.id]),
-      );
-      const serialRows = [] as any[];
-      for (const g of byProduct.values()) {
-        const itemId = itemByProduct.get(g.productId);
-        for (const pp of g.pps) {
-          serialRows.push({
-            transfer_item_id: itemId,
-            physical_product_id: pp.id,
-            serial_number: pp.serial_number,
-          });
-        }
-      }
-      if (serialRows.length > 0) {
-        const { error: serErr } = await supabaseAdmin
-          .from("stock_transfer_serials")
-          .insert(serialRows);
-        if (serErr)
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: serErr.message,
-          });
-      }
-
-      return {
-        id: transfer!.id,
-        transferNumber,
-        fromVwId,
-        toVwId,
-        items: items?.length || 0,
-        serials: serialRows.length,
-      };
-    }),
-
-  seedMockData: publicProcedure.mutation(async ({ ctx }) => {
-    console.log("🌱 SEED: Starting mock data seeding process...");
-    const { supabaseAdmin } = ctx;
-    const results: string[] = [];
-
-    try {
-      // Read mock data file
-      const mockDataPath = join(
-        process.cwd(),
-        "docs",
-        "data",
-        "mock-data.json",
-      );
-      console.log("📂 SEED: Reading mock data from:", mockDataPath);
-      const mockDataContent = readFileSync(mockDataPath, "utf-8");
-      const mockData = JSON.parse(mockDataContent);
-      console.log("✅ SEED: Mock data loaded successfully");
-      results.push("✅ Đọc file mock-data.json thành công");
-
-      // Get admin user ID from database for created_by fields
-      const { data: adminProfile, error: adminError } = await supabaseAdmin
-        .from("profiles")
-        .select("id, user_id")
-        .eq("role", "admin")
-        .limit(1)
-        .single();
-
-      if (adminError || !adminProfile) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No admin user found in database. Please run /setup first.",
-        });
-      }
-
-      const adminUserId = adminProfile.id;
-      console.log(`✅ SEED: Using admin user ID: ${adminUserId}`);
-
-      // Step 1: Create Staff Users
-      console.log("\n👥 SEED STEP 1: Creating staff users...");
-      results.push("👥 Bước 1: Tạo Staff Users...");
-
-      for (const staffUser of mockData.staffUsers) {
-        try {
-          // Check if user already exists in profiles
-          const { data: existingProfile } = await supabaseAdmin
-            .from("profiles")
-            .select("email")
-            .eq("email", staffUser.email)
-            .single();
-
-          if (existingProfile) {
-            console.log(
-              `⚠️ SEED: User ${staffUser.email} already exists, skipping...`,
-            );
-            results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
-            continue;
-          }
-
-          // Create auth user
-          const { data: authData, error: authError } =
-            await supabaseAdmin.auth.admin.createUser({
-              email: staffUser.email,
-              password: staffUser.password,
-              email_confirm: true,
-            });
-
-          if (authError) {
-            if (authError.message.includes("already registered")) {
-              console.log(
-                `⚠️ SEED: User ${staffUser.email} already registered in auth, skipping...`,
-              );
-              results.push(`⚠️ ${staffUser.email} đã tồn tại, bỏ qua`);
-              continue;
-            }
-            throw authError;
-          }
-
-          // Create profile
-          const { error: profileError } = await supabaseAdmin
-            .from("profiles")
-            .insert({
-              user_id: authData.user.id,
-              email: staffUser.email,
-              full_name: staffUser.fullName,
-              role: staffUser.role,
-              is_active: true,
-            });
-
-          if (profileError) {
-            console.error(
-              `❌ SEED: Failed to create profile for ${staffUser.email}:`,
-              profileError,
-            );
-            results.push(`❌ Lỗi tạo profile cho ${staffUser.email}`);
-          } else {
-            console.log(
-              `✅ SEED: Created user ${staffUser.email} with role ${staffUser.role}`,
-            );
-            results.push(`✅ Tạo ${staffUser.email} (${staffUser.role})`);
-          }
-        } catch (error: any) {
-          console.error(
-            `❌ SEED: Error creating user ${staffUser.email}:`,
-            error,
-          );
-          results.push(`❌ Lỗi tạo ${staffUser.email}: ${error.message}`);
-        }
-      }
-
-      // Step 2: Create Customers
-      console.log("\n👤 SEED STEP 2: Creating customers...");
-      results.push("👤 Bước 2: Tạo Customers...");
-
-      const customerMap = new Map<string, string>(); // phone -> id mapping
-
-      for (const customer of mockData.customers) {
-        try {
-          // Check if customer already exists by phone (unique)
-          const { data: existingCustomer } = await supabaseAdmin
-            .from("customers")
-            .select("id, phone")
-            .eq("phone", customer.phone)
-            .single();
-
-          if (existingCustomer) {
-            console.log(
-              `⚠️ SEED: Customer ${customer.phone} already exists, skipping...`,
-            );
-            results.push(
-              `⚠️ Khách hàng ${customer.fullName} đã tồn tại, bỏ qua`,
-            );
-            customerMap.set(customer.phone, existingCustomer.id);
-            continue;
-          }
-
-          const { data: customerData, error: customerError } =
-            await supabaseAdmin
-              .from("customers")
-              .insert({
-                name: customer.fullName,
-                phone: customer.phone,
-                email: customer.email || null,
-                address: customer.address || null,
-                notes: customer.notes || null,
-              })
-              .select("id")
-              .single();
-
-          if (customerError) {
-            console.error(
-              `❌ SEED: Failed to create customer ${customer.fullName}:`,
-              customerError,
-            );
-            results.push(
-              `❌ Lỗi tạo khách hàng ${customer.fullName}: ${customerError.message}`,
-            );
-            continue;
-          }
-
-          customerMap.set(customer.phone, customerData.id);
-          console.log(
-            `✅ SEED: Created customer ${customer.fullName} (${customer.phone})`,
-          );
-          results.push(`✅ Tạo khách hàng ${customer.fullName}`);
-        } catch (error: any) {
-          console.error(
-            `❌ SEED: Error creating customer ${customer.fullName}:`,
-            error,
-          );
-          results.push(
-            `❌ Lỗi tạo khách hàng ${customer.fullName}: ${error.message}`,
-          );
-        }
-      }
-
-      // Step 3: Query default virtual warehouses (created by seed.sql)
-      console.log("\n🗂️ SEED STEP 3: Querying default virtual warehouses...");
-      results.push("🗂️ Bước 3: Lấy danh sách kho ảo mặc định...");
-
-      const virtualWarehouseMap = new Map<string, string>(); // name -> id mapping
-
-      // Query all virtual warehouses created by default system
-      const { data: defaultVWs, error: vwQueryError } = await supabaseAdmin
-        .from("virtual_warehouses")
-        .select("id, name, warehouse_type");
-
-      if (vwQueryError) {
-        console.error(
-          "❌ SEED: Failed to query virtual warehouses:",
-          vwQueryError,
-        );
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to query virtual warehouses: ${vwQueryError.message}`,
-        });
-      }
-
-      if (defaultVWs && defaultVWs.length > 0) {
-        console.log(
-          `✅ SEED: Found ${defaultVWs.length} default virtual warehouses`,
-        );
-        for (const vw of defaultVWs) {
-          virtualWarehouseMap.set(vw.name, vw.id);
-          console.log(`  → ${vw.name} (${vw.warehouse_type})`);
-        }
-        results.push(`✅ Tìm thấy ${defaultVWs.length} kho ảo mặc định`);
-      } else {
-        console.error(
-          "❌ SEED: No virtual warehouses found. Please ensure database has been seeded properly.",
-        );
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message:
-            "No virtual warehouses found. Please run 'pnpx supabase db reset' first.",
-        });
-      }
-
-      // Step 4: Create Brands
-      console.log("\n🏷️ SEED STEP 4: Creating brands...");
-      results.push("🏷️ Bước 4: Tạo Brands...");
-
-      const brandMap = new Map<string, string>(); // name -> id mapping
-
-      for (const brand of mockData.brands) {
-        try {
-          // Check if brand already exists
-          const { data: existingBrand } = await supabaseAdmin
-            .from("brands")
-            .select("id, name")
-            .eq("name", brand.name)
-            .single();
-
-          if (existingBrand) {
-            console.log(
-              `⚠️ SEED: Brand ${brand.name} already exists, skipping...`,
-            );
-            results.push(`⚠️ Nhãn hàng ${brand.name} đã tồn tại, bỏ qua`);
-            brandMap.set(brand.name, existingBrand.id);
-            continue;
-          }
-
-          const { data: brandData, error: brandError } = await supabaseAdmin
-            .from("brands")
-            .insert({
-              name: brand.name,
-              description: brand.description,
-            })
-            .select("id")
-            .single();
-
-          if (brandError) {
-            console.error(
-              `❌ SEED: Failed to create brand ${brand.name}:`,
-              brandError,
-            );
-            results.push(
-              `❌ Lỗi tạo nhãn hàng ${brand.name}: ${brandError.message}`,
-            );
-            continue;
-          }
-
-          brandMap.set(brand.name, brandData.id);
-          console.log(`✅ SEED: Created brand ${brand.name}`);
-          results.push(`✅ Tạo nhãn hàng ${brand.name}`);
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating brand ${brand.name}:`, error);
-          results.push(`❌ Lỗi tạo nhãn hàng ${brand.name}: ${error.message}`);
-        }
-      }
-
-      // Step 5: Create Products
-      console.log("\n📦 SEED STEP 5: Creating products...");
-      console.log(
-        `📦 SEED: Total products to create: ${mockData.products?.length || 0}`,
-      );
-      results.push("📦 Bước 5: Tạo Products...");
-      results.push(
-        `📦 Tổng số sản phẩm cần tạo: ${mockData.products?.length || 0}`,
-      );
-
-      const productMap = new Map<string, string>(); // sku -> id mapping
-
-      for (const product of mockData.products) {
-        console.log(`\n🔍 SEED: Processing product: ${product.name}`);
-        try {
-          // Check if product already exists
-          const { data: existingProduct } = await supabaseAdmin
-            .from("products")
-            .select("id, sku")
-            .eq("sku", product.sku)
-            .single();
-
-          if (existingProduct) {
-            console.log(
-              `⚠️ SEED: Product ${product.sku} already exists, skipping...`,
-            );
-            results.push(`⚠️ Sản phẩm ${product.name} đã tồn tại, bỏ qua`);
-            productMap.set(product.sku, existingProduct.id);
-            continue;
-          }
-
-          const brandId = brandMap.get(product.brand);
-
-          if (!brandId) {
-            console.error(
-              `❌ SEED: Brand ${product.brand} not found for product ${product.name}`,
-            );
-            results.push(
-              `❌ Không tìm thấy brand ${product.brand} cho ${product.name}`,
-            );
-            continue;
-          }
-
-          console.log(
-            `🔄 SEED: Inserting product: ${product.name}, SKU: ${product.sku}, Brand ID: ${brandId}`,
-          );
-
-          const { data: productData, error: productError } = await supabaseAdmin
-            .from("products")
-            .insert({
-              name: product.name,
-              type: product.type,
-              brand_id: brandId,
-              model: product.model,
-              sku: product.sku,
-              warranty_period_months: product.warrantyMonths,
-            })
-            .select("id")
-            .single();
-
-          console.log(
-            `📊 SEED: Insert result - Data:`,
-            productData,
-            `Error:`,
-            productError,
-          );
-
-          if (productError) {
-            console.error(
-              `❌ SEED: Failed to create product ${product.name}:`,
-              productError,
-            );
-            results.push(
-              `❌ Lỗi tạo sản phẩm ${product.name}: ${productError.message}`,
-            );
-            continue;
-          }
-
-          productMap.set(product.sku, productData.id);
-          console.log(`✅ SEED: Created product ${product.name}`);
-          results.push(`✅ Tạo sản phẩm ${product.name}`);
-        } catch (error: any) {
-          console.error(
-            `❌ SEED: Error creating product ${product.name}:`,
-            error,
-          );
-          results.push(`❌ Lỗi tạo sản phẩm ${product.name}: ${error.message}`);
-        }
-      }
-
-      // Step 6: Create Task Library
-      console.log("\n📝 SEED STEP 6: Creating task library...");
-      results.push("📝 Bước 6: Tạo Task Library...");
-
-      const taskLibraryMap = new Map<string, string>(); // taskName -> id mapping
-
-      for (const task of mockData.taskLibrary.tasks) {
-        try {
-          // Check if task already exists
-          const { data: existingTask } = await supabaseAdmin
-            .from("tasks")
-            .select("id, name")
-            .eq("name", task.name)
-            .single();
-
-          if (existingTask) {
-            console.log(
-              `⚠️ SEED: Task ${task.name} already exists, skipping...`,
-            );
-            results.push(`⚠️ Task ${task.name} đã tồn tại, bỏ qua`);
-            taskLibraryMap.set(task.name, existingTask.id);
-            continue;
-          }
-
-          const { data: taskData, error: taskError } = await supabaseAdmin
-            .from("tasks")
-            .insert({
-              name: task.name,
-              category: task.category,
-              estimated_duration_minutes: task.estimatedMinutes || null,
-              description: task.description || null,
-            })
-            .select("id")
-            .single();
-
-          if (taskError) {
-            console.error(
-              `❌ SEED: Failed to create task ${task.name}:`,
-              taskError,
-            );
-            results.push(`❌ Lỗi tạo task ${task.name}: ${taskError.message}`);
-            continue;
-          }
-
-          taskLibraryMap.set(task.name, taskData.id);
-          console.log(`✅ SEED: Created task ${task.name}`);
-          results.push(`✅ Tạo task ${task.name}`);
-        } catch (error: any) {
-          console.error(`❌ SEED: Error creating task ${task.name}:`, error);
-          results.push(`❌ Lỗi tạo task ${task.name}: ${error.message}`);
-        }
-      }
-
-      // Step 7: Create Workflow Templates
-      console.log("\n📋 SEED STEP 7: Creating workflow templates...");
-      results.push("📋 Bước 7: Tạo Workflow Templates...");
-
-      const workflowMap = new Map<string, string>(); // workflowName -> id mapping
-
-      for (const workflow of mockData.workflows.templates) {
-        try {
-          // Check if workflow already exists
-          const { data: existingWorkflow } = await supabaseAdmin
-            .from("workflows")
-            .select("id, name")
-            .eq("name", workflow.name)
-            .single();
-
-          if (existingWorkflow) {
-            console.log(
-              `⚠️ SEED: Workflow ${workflow.name} already exists, skipping...`,
-            );
-            results.push(`⚠️ Workflow ${workflow.name} đã tồn tại, bỏ qua`);
-            workflowMap.set(workflow.name, existingWorkflow.id);
-            continue;
-          }
-
-          const { data: workflowData, error: workflowError } =
-            await supabaseAdmin
-              .from("workflows")
-              .insert({
-                name: workflow.name,
-                description: workflow.description || null,
-                entity_type: workflow.entityType,
-                strict_sequence: workflow.enforceSequence,
-                is_active: workflow.isActive,
-                created_by_id: adminUserId,
-              })
-              .select("id")
-              .single();
-
-          if (workflowError) {
-            console.error(
-              `❌ SEED: Failed to create workflow ${workflow.name}:`,
-              workflowError,
-            );
-            results.push(
-              `❌ Lỗi tạo workflow ${workflow.name}: ${workflowError.message}`,
-            );
-            continue;
-          }
-
-          workflowMap.set(workflow.name, workflowData.id);
-          console.log(`✅ SEED: Created workflow ${workflow.name}`);
-          results.push(`✅ Tạo workflow ${workflow.name}`);
-
-          // Create workflow tasks
-          for (const task of workflow.tasks) {
-            const taskId = taskLibraryMap.get(task.taskName);
-
-            if (!taskId) {
-              console.warn(
-                `⚠️ SEED: Task ${task.taskName} not found for workflow ${workflow.name}`,
-              );
-              continue;
-            }
-
-            const { error: workflowTaskError } = await supabaseAdmin
-              .from("workflow_tasks")
-              .insert({
-                workflow_id: workflowData.id,
-                task_id: taskId,
-                sequence_order: task.sequenceOrder,
-                is_required: task.isRequired,
-                custom_instructions: task.customInstructions || null,
-              });
-
-            if (workflowTaskError) {
-              console.error(
-                `❌ SEED: Failed to add task ${task.taskName} to workflow ${workflow.name}:`,
-                workflowTaskError,
-              );
-            } else {
-              console.log(
-                `✅ SEED: Added task ${task.taskName} to workflow ${workflow.name}`,
-              );
-            }
-          }
-
-          results.push(`  ↳ Thêm ${workflow.tasks.length} tasks vào workflow`);
-        } catch (error: any) {
-          console.error(
-            `❌ SEED: Error creating workflow ${workflow.name}:`,
-            error,
-          );
-          results.push(
-            `❌ Lỗi tạo workflow ${workflow.name}: ${error.message}`,
-          );
-        }
-      }
-
-      console.log("\n✅ SEED: Mock data seeding completed successfully");
-      results.push("✅ Hoàn tất tạo dữ liệu test!");
-
-      return {
-        success: true,
-        message: "Mock data seeded successfully",
-        results,
-      };
-    } catch (error: any) {
-      console.error("❌ SEED: Fatal error during seeding:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: `Failed to seed mock data: ${error.message}`,
-      });
-    }
-  }),
 });

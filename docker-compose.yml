@@ -11,7 +11,7 @@ services:
 
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2025.10.01-sha-8460121
+    image: public.ecr.aws/supabase/studio:2026.01.27-sha-2a37755
     restart: unless-stopped
     # Expose Studio port for reverse proxy access
     # Configure STUDIO_PORT in .env (default: 3000)
@@ -59,7 +59,7 @@ services:
 
   kong:
     container_name: supabase-kong
-    image: kong:2.8.1
+    image: public.ecr.aws/supabase/kong:2.8.1
     restart: unless-stopped
     # Expose Kong API Gateway for browser access to Supabase
     # Configure KONG_PORT in .env (default: 8000)
@@ -99,7 +99,7 @@ services:
 
   auth:
     container_name: supabase-auth
-    image: supabase/gotrue:v2.180.0
+    image: public.ecr.aws/supabase/gotrue:v2.186.0
     restart: unless-stopped
     healthcheck:
       test:
@@ -182,7 +182,7 @@ services:
 
   rest:
     container_name: supabase-rest
-    image: postgrest/postgrest:v13.0.7
+    image: public.ecr.aws/supabase/postgrest:v14.3
     restart: unless-stopped
     depends_on:
       db:
@@ -206,7 +206,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.51.11
+    image: public.ecr.aws/supabase/realtime:v2.73.2
     restart: unless-stopped
     depends_on:
       db:
@@ -251,7 +251,7 @@ services:
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.28.0
+    image: public.ecr.aws/supabase/storage-api:v1.35.3
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -294,7 +294,7 @@ services:
 
   imgproxy:
     container_name: supabase-imgproxy
-    image: darthsim/imgproxy:v3.8.0
+    image: public.ecr.aws/supabase/imgproxy:v3.8.0
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -316,7 +316,7 @@ services:
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.91.6
+    image: public.ecr.aws/supabase/postgres-meta:v0.95.2
     restart: unless-stopped
     depends_on:
       db:
@@ -335,7 +335,7 @@ services:
 
   functions:
     container_name: supabase-edge-functions
-    image: supabase/edge-runtime:v1.69.6
+    image: public.ecr.aws/supabase/edge-runtime:v1.70.0
     restart: unless-stopped
     volumes:
       - ./volumes/functions:/home/deno/functions:Z
@@ -359,7 +359,7 @@ services:
 
   analytics:
     container_name: supabase-analytics
-    image: supabase/logflare:1.22.6
+    image: public.ecr.aws/supabase/logflare:1.30.5
     restart: unless-stopped
     # No ports exposed - Only accessed by Studio via http://analytics:4000
     # Uncomment to use Big Query backend for analytics
@@ -407,7 +407,7 @@ services:
   # Comment out everything below this point if you are using an external Postgres database
   db:
     container_name: supabase-db
-    image: supabase/postgres:15.8.1.085
+    image: public.ecr.aws/supabase/postgres:17.6.1.075
     restart: unless-stopped
     volumes:
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
@@ -464,7 +464,7 @@ services:
 
   vector:
     container_name: supabase-vector
-    image: timberio/vector:0.28.1-alpine
+    image: public.ecr.aws/supabase/vector:0.28.1-alpine
     restart: unless-stopped
     volumes:
       - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
@@ -553,6 +553,7 @@ services:
   # Application Service - Next.js
   # ============================================
   app:
+    image: service-center-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -567,6 +568,7 @@ services:
     environment:
       # Node environment
       NODE_ENV: production
+      HOSTNAME: 0.0.0.0
       PORT: 3025
 
       # Supabase configuration (using internal Docker network)
@@ -599,10 +601,10 @@ services:
           "CMD",
           "node",
           "-e",
-          "require('http').get('http://localhost:3025/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+          "require('http').get('http://localhost:3025/api/health', (r) => {process.exit(0)}).on('error', () => process.exit(1))"
         ]
       interval: 30s
-      timeout: 3s
+      timeout: 5s
       retries: 3
       start_period: 40s
 

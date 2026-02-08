@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { trpc } from "@/components/providers/trpc-provider";
 
 export default function SetupPage() {
@@ -10,19 +10,7 @@ export default function SetupPage() {
   const router = useRouter();
 
   const setupMutation = trpc.admin.setup.useMutation({
-    onMutate: (variables) => {
-      console.log(
-        "🚀 CLIENT: Starting setup mutation with variables:",
-        variables,
-      );
-      return variables;
-    },
-    onSuccess: (data, variables) => {
-      console.log("✅ CLIENT: Setup mutation successful");
-      console.log("📦 CLIENT: Response data:", data);
-      console.log("📝 CLIENT: Original variables:", variables);
-
-      // Show different messages based on action
+    onSuccess: (data) => {
       if (data.action === "password_reset") {
         alert("Admin password has been reset successfully!");
       } else if (data.action === "profile_created") {
@@ -31,54 +19,17 @@ export default function SetupPage() {
         alert("Setup completed successfully! Admin account created.");
       }
 
-      router.push("/login"); // Redirect to login after successful setup
+      router.push("/login");
     },
-    onError: (error, variables) => {
-      console.error("❌ CLIENT: Setup mutation failed");
-      console.error("🔴 CLIENT: Error details:", error);
-      console.error("📝 CLIENT: Failed variables:", variables);
+    onError: (error) => {
       setError(error.message || "An error occurred during setup");
     },
-    onSettled: (data, error, variables) => {
-      console.log("🏁 CLIENT: Setup mutation settled");
-      console.log(
-        "📊 CLIENT: Final state - data:",
-        data,
-        "error:",
-        error,
-        "variables:",
-        variables,
-      );
-    },
   });
-
-  // Debug: expose mutation object shape at runtime once
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      // eslint-disable-next-line no-console
-      console.log(
-        "🔎 CLIENT: setupMutation keys ->",
-        Object.keys(setupMutation),
-      );
-    } catch (_e) {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setupMutation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    console.log("📝 CLIENT: Form submitted");
-    console.log("🔐 CLIENT: Password length:", password.length);
-    console.log("🎯 CLIENT: Mutation payload:", { password });
-    console.log("🚀 CLIENT: Calling setupMutation.mutate()");
-
     setupMutation.mutate({ password });
-
-    console.log("⏳ CLIENT: Mutation call initiated, waiting for response...");
   };
 
   return (
